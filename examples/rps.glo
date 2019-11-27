@@ -1,0 +1,58 @@
+#lang yasal
+
+// Implicity generates the thing on the right:
+//   Hand.get               inputHand    inputs the user a Hand
+//   Hand.is_element        isHand       checks whether it's a Hand
+//   Hand.toNat             HandToNat    converts a Hand to a Nat
+//   Hand.fromNat           NatToHand    converts a Nat to a Hand
+//   Hand.values.ROCK       ROCK         typed constant value
+//   Hand.values.PAPER      PAPER        typed constant value
+//   Hand.values.SCISSORS   SCISSORS     typed constant value
+enum Hand { ROCK, PAPER, SCISSORS };
+
+enum Outcome { B_WINS, DRAW, A_WINS };
+
+function winner(handA : Hand, handB : Hand) : Outcome {
+    NatToOutcome(HandToNat(handA) + (4 - HantToNat(handB)) % 3) }
+
+@Interaction(participants = [A, B])
+function rockPaperScissors(A, B, wagerAmount) {
+    @A {
+      // NB: implicitly, A will have to drop an escrow or have one already during this transaction,
+      // because there is a step in the future of A where A may (actually must) publish a message.
+      const handA = input("First player, pick your hand", Hand);
+      assert! canReach(end, end.outcome == A_WINS); // inside @A, canReach means that A can win even *against* others.
+      const salt = randomUInt256();
+      @verifiably const commitment = digest(salt, handA);
+      publish! commitment;
+      pay! wagerAmount + escrowAmount;
+    }
+    // commit; // Maybe the commit is implicit at the transition between @A and @B ???
+
+    @B {
+      assert! canReach(end, end.outcome == B_WINS); // inside @B, the canReach means B can win *against* A
+      // NB: no implicit escrow for B, because this is B's only message.
+      const handB = input("Second player, pick your hand", Hand);
+      publish! handB;
+      pay! wagerAmount;
+    }
+    // require! isHand(handB); // Maybe this require! is implicit from the type of B being Hand?
+    // commit; // Maybe the commit is implicit at the transition between @B and @A ???
+
+    @A { publish! salt, handA; } // NB: A will get her escrow back, since that's her last message.
+    verify! commitment; // invokes the recipe from @verifiably, runs *on the consensus*
+    // require! isHand(handA); // implicitly runs on the consensus because of handA's type
+    const outcome = winner(handA, handB);
+
+    const proceedsA, proceedsB =
+          if (outcome == A_WINS) {
+              values (2 * wagerAmount), 0 }
+          else if (outcome == B_WINS) {
+              values 0, (2 * wagerAmount) }
+          else {
+              values wagerAmount, wagerAmount };
+    transfer! A <- proceedsA);
+    transfer! B <- proceedsB;
+    // commit; // Implicit since at end of interaction
+  end: // This label is used by the two canReach() assertions, that refer to the values of bindings at the end.
+    outcome } // we return the outcome
