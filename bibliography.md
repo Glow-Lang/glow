@@ -37,7 +37,11 @@ We never released those:
 ### Compilers
 
 * [Nanopass compilers](https://nanopass.org/documentation.html), and [this example](https://github.com/akeep/scheme-to-c/blob/master/c.ss)
+* [Urlang](https://github.com/soegaard/urlang), compiling from SEXP syntax with macros to JavaScript as a Racket #lang using a nanopass compiler.
 
+### Debugging
+
+* Omniscient Debugging: [Pernosco](https://pernos.co/about/related-work/), rr, TTD, UndoDB, ODB, Chronon, TOD, Chronomancer, Qira, [Reven](https://www.tetrane.com/), SteamDrill.
 
 ### Help with Gerbil Scheme
 
