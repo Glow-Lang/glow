@@ -1,0 +1,7 @@
+@interaction(participants=[Buyer, Seller])
+function payForSignature(digest : Digest, price : Assets) {
+   @Buyer deposit! price;
+   @Seller @verifiably const signature = sign(digest);
+   @Seller publish! signature;
+   verify! signature;
+   withdraw! Seller <- price; }

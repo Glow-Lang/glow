@@ -15,26 +15,26 @@ enum Outcome { B_WINS, DRAW, A_WINS };
 function winner(handA : Hand, handB : Hand) : Outcome {
     NatToOutcome(HandToNat(handA) + (4 - HantToNat(handB)) % 3) }
 
-@Interaction(participants = [A, B])
-function rockPaperScissors(A, B, wagerAmount) {
+@interaction(participants = [A, B])
+function rockPaperScissors(wagerAmount) {
     @A {
       // NB: implicitly, A will have to drop an escrow or have one already during this transaction,
       // because there is a step in the future of A where A may (actually must) publish a message.
-      const handA = input("First player, pick your hand", Hand);
+      const handA = inputHand("First player, pick your hand");
       assert! canReach(end, end.outcome == A_WINS); // inside @A, canReach means that A can win even *against* others.
       const salt = randomUInt256();
       @verifiably const commitment = digest(salt, handA);
       publish! commitment;
-      pay! wagerAmount + escrowAmount;
+      deposit! wagerAmount + escrowAmount;
     }
     // commit; // Maybe the commit is implicit at the transition between @A and @B ???
 
     @B {
       assert! canReach(end, end.outcome == B_WINS); // inside @B, the canReach means B can win *against* A
       // NB: no implicit escrow for B, because this is B's only message.
-      const handB = input("Second player, pick your hand", Hand);
+      const handB = inputHand("Second player, pick your hand");
       publish! handB;
-      pay! wagerAmount;
+      deposit! wagerAmount;
     }
     // require! isHand(handB); // Maybe this require! is implicit from the type of B being Hand?
     // commit; // Maybe the commit is implicit at the transition between @B and @A ???
@@ -44,15 +44,11 @@ function rockPaperScissors(A, B, wagerAmount) {
     // require! isHand(handA); // implicitly runs on the consensus because of handA's type
     const outcome = winner(handA, handB);
 
-    const proceedsA, proceedsB =
-          if (outcome == A_WINS) {
-              values (2 * wagerAmount), 0 }
-          else if (outcome == B_WINS) {
-              values 0, (2 * wagerAmount) }
-          else {
-              values wagerAmount, wagerAmount };
-    transfer! A <- proceedsA);
-    transfer! B <- proceedsB;
+    switch(outcome) {
+      case A_WINS: withdraw! Alice <- 2*wagerAmount; break;
+      case B_WINS: withdraw! Bob <- 2*wagerAmount; break;
+      case DRAW: withdraw! Alice <- wagerAmount;
+                 withdraw! Bob <- wagerAmount; break; }
     // commit; // Implicit since at end of interaction
   end: // This label is used by the two canReach() assertions, that refer to the values of bindings at the end.
     outcome } // we return the outcome
