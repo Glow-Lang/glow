@@ -1,4 +1,4 @@
-#lang yasal
+#lang glow
 
 // Generates JS code like
 //   let Hand = Enum("Rock", "Paper", "Scissors");
