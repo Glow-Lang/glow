@@ -1,16 +1,18 @@
 #lang yasal
 
+// Generates JS code like
+//   let Hand = Enum("Rock", "Paper", "Scissors");
 // Implicity generates the thing on the right:
 //   Hand.get               inputHand    inputs the user a Hand
 //   Hand.is_element        isHand       checks whether it's a Hand
 //   Hand.toNat             HandToNat    converts a Hand to a Nat
-//   Hand.fromNat           NatToHand    converts a Nat to a Hand
-//   Hand.values.ROCK       ROCK         typed constant value
-//   Hand.values.PAPER      PAPER        typed constant value
-//   Hand.values.SCISSORS   SCISSORS     typed constant value
-enum Hand { ROCK, PAPER, SCISSORS };
+//   Hand.fromNat           NatToHand    converts a Nat to a Hand // only available contract-side if the constructors have no parameters?
+//   Hand.values.Rock       Rock         typed constant value
+//   Hand.values.Paper      Paper        typed constant value
+//   Hand.values.Scissors   Scissors     typed constant value
+type Hand = | Rock | Paper | Scissors;
 
-enum Outcome { B_WINS, DRAW, A_WINS };
+type Outcome = | B_Wins | Draw | A_Wins;
 
 function winner(handA : Hand, handB : Hand) : Outcome {
     NatToOutcome(HandToNat(handA) + (4 - HantToNat(handB)) % 3) }
@@ -20,19 +22,19 @@ function rockPaperScissors(wagerAmount) {
     @A {
       // NB: implicitly, A will have to drop an escrow or have one already during this transaction,
       // because there is a step in the future of A where A may (actually must) publish a message.
-      const handA = inputHand("First player, pick your hand");
-      assert! canReach(end, end.outcome == A_WINS); // inside @A, canReach means that A can win even *against* others.
-      const salt = randomUInt256();
-      @verifiably const commitment = digest(salt, handA);
+      let handA = inputHand("First player, pick your hand");
+      assert! canReach(end, end.outcome == A_Wins); // inside @A, canReach means that A can win even *against* others.
+      let salt = randomUInt256();
+      @verifiably let commitment = digest(salt, handA);
       publish! commitment;
       deposit! wagerAmount + escrowAmount;
     }
     // commit; // Maybe the commit is implicit at the transition between @A and @B ???
 
     @B {
-      assert! canReach(end, end.outcome == B_WINS); // inside @B, the canReach means B can win *against* A
+      assert! canReach(end, end.outcome == B_Wins); // inside @B, the canReach means B can win *against* A
       // NB: no implicit escrow for B, because this is B's only message.
-      const handB = inputHand("Second player, pick your hand");
+      let handB = inputHand("Second player, pick your hand");
       publish! handB;
       deposit! wagerAmount;
     }
@@ -42,13 +44,13 @@ function rockPaperScissors(wagerAmount) {
     @A { publish! salt, handA; } // NB: A will get her escrow back, since that's her last message.
     verify! commitment; // invokes the recipe from @verifiably, runs *on the consensus*
     // require! isHand(handA); // implicitly runs on the consensus because of handA's type
-    const outcome = winner(handA, handB);
+    let outcome = winner(handA, handB);
 
     switch(outcome) {
-      case A_WINS: withdraw! Alice <- 2*wagerAmount; break;
-      case B_WINS: withdraw! Bob <- 2*wagerAmount; break;
-      case DRAW: withdraw! Alice <- wagerAmount;
-                 withdraw! Bob <- wagerAmount; break; }
+      | A_Wins => withdraw! Alice <- 2*wagerAmount
+      | B_Wins => withdraw! Bob <- 2*wagerAmount
+      | Draw => withdraw! Alice <- wagerAmount;
+                withdraw! Bob <- wagerAmount }
     // commit; // Implicit since at end of interaction
   end: // This label is used by the two canReach() assertions, that refer to the values of bindings at the end.
     outcome } // we return the outcome
