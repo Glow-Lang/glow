@@ -1,12 +1,16 @@
-# Bibliography for MuKnGlow
+# Bibliography for Glow
 
-## By the authors of MuKnGlow
+## By the authors of Glow
 
 ### Active websites
 
-* [Alacrity-lang.org](https://Alacrity-lang.org/), September 2019 (the predecessor to MuKnGlow).
+Current whitepaper:
+* [Glow whitepaper](https://docs.google.com/document/d/1nBmI28yISX2HynodZnYWW0Px6re4JyYNNw2ncaFfJSg/)
 
-### Talks about MuKnGlow and its predecessors
+The predecessor to Glow:
+* [Alacrity-lang.org](https://alacrity-lang.org/), September 2019
+
+### Talks about Glow and its predecessors
 
 * [Alacrity: A DSL for Simple, Formally-Verified DApps](https://github.com/AlacrisIO/alacrity/blob/master/docs/paper.md), October 2019
 * [Language Abstraction for [V]erifiable Blockchain Distributed Applications](http://github.com/alacrisio/lavbda), April 2019 (has video)
@@ -42,6 +46,10 @@ We never released those:
 ### Debugging
 
 * Omniscient Debugging: [Pernosco](https://pernos.co/about/related-work/), rr, TTD, UndoDB, ODB, Chronon, TOD, Chronomancer, Qira, [Reven](https://www.tetrane.com/), SteamDrill.
+
+### Game Theory
+
+* [Jules Hedges's compositional game theory bibliography](https://julesh.com/compositional-game-theory-bibliography/), including [The game semantics of game theory](https://arxiv.org/abs/1904.11287).
 
 ### Help with Gerbil Scheme
 
