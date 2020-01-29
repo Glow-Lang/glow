@@ -10,15 +10,15 @@
 //   Hand.values.Rock       Rock         typed constant value
 //   Hand.values.Paper      Paper        typed constant value
 //   Hand.values.Scissors   Scissors     typed constant value
-type Hand = | Rock | Paper | Scissors;
+data Hand = | Rock | Paper | Scissors;
 
-type Outcome = | B_Wins | Draw | A_Wins;
+data Outcome = | B_Wins | Draw | A_Wins;
 
-function winner(handA : Hand, handB : Hand) : Outcome {
-    NatToOutcome(HandToNat(handA) + (4 - HantToNat(handB)) % 3) }
+let winner = (handA : Hand, handB : Hand) : Outcome => {
+    NatToOutcome(HandToNat(handA) + (4 - HandToNat(handB)) % 3) }
 
-@interaction(participants = [A, B])
-function rockPaperScissors(wagerAmount) {
+@interaction([A, B])
+let rockPaperScissors = (wagerAmount) => {
     @A {
       // NB: implicitly, A will have to drop an escrow or have one already during this transaction,
       // because there is a step in the future of A where A may (actually must) publish a message.
@@ -28,7 +28,7 @@ function rockPaperScissors(wagerAmount) {
       @verifiably let commitment = digest(salt, handA);
       publish! commitment;
       deposit! wagerAmount + escrowAmount;
-    }
+    };
     // commit; // Maybe the commit is implicit at the transition between @A and @B ???
 
     @B {
@@ -37,11 +37,11 @@ function rockPaperScissors(wagerAmount) {
       let handB = inputHand("Second player, pick your hand");
       publish! handB;
       deposit! wagerAmount;
-    }
+    };
     // require! isHand(handB); // Maybe this require! is implicit from the type of B being Hand?
     // commit; // Maybe the commit is implicit at the transition between @B and @A ???
 
-    @A { publish! salt, handA; } // NB: A will get her escrow back, since that's her last message.
+    @A publish! salt, handA; // NB: A will get her escrow back, since that's her last message.
     verify! commitment; // invokes the recipe from @verifiably, runs *on the consensus*
     // require! isHand(handA); // implicitly runs on the consensus because of handA's type
     let outcome = winner(handA, handB);
@@ -50,7 +50,8 @@ function rockPaperScissors(wagerAmount) {
       | A_Wins => withdraw! Alice <- 2*wagerAmount
       | B_Wins => withdraw! Bob <- 2*wagerAmount
       | Draw => withdraw! Alice <- wagerAmount;
-                withdraw! Bob <- wagerAmount }
+                withdraw! Bob <- wagerAmount };
     // commit; // Implicit since at end of interaction
   end: // This label is used by the two canReach() assertions, that refer to the values of bindings at the end.
-    outcome } // we return the outcome
+    outcome // we return the outcome
+};

@@ -1,9 +1,10 @@
 #lang glow
 
-@interaction(participants=[Buyer, Seller])
-function payForSignature(digest : Digest, price : Assets) {
+@interaction([Buyer, Seller])
+let payForSignature = (digest : Digest, price : Assets) => {
    @Buyer deposit! price;
    @Seller @verifiably let signature = sign(digest);
    @Seller publish! signature;
    verify! signature;
-   withdraw! Seller <- price; }
+   withdraw! Seller <- price;
+};
