@@ -1,4 +1,4 @@
-# MuKnGlow
+# Glow
 
 MuKnGlow is a language to write safe Decentralized Applications (DApps)
 interacting with cryptocurrency blockchains.
@@ -8,12 +8,12 @@ that a DApp is indeed safe for people to use.
 ### Copyright and License
 
 Copyright 2019 Mutual Knowledge Systems, Inc. All rights reserved.
-MuKnGlow is distributed under the Apache License, version 2.0. See the file [LICENSE](LICENSE).
+Glow is distributed under the Apache License, version 2.0. See the file [LICENSE](LICENSE).
 
 
 ### Being worked on
 
-You can watch on our [gitlab repository](https://gitlab.com/mukn/muknglow)
+You can watch on our [gitlab repository](https://gitlab.com/mukn/glow)
 what we are currently working on.
 
 For background information, see the predecessor language [Alacrity](https://alacrity-lang.org/),
