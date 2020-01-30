@@ -2,37 +2,37 @@
 Intended input for `buy_sig.glo`:
 
 ```glow
-@interaction(participants=[Buyer, Seller])
-function payForSignature(digest : Digest, price : Assets) {
+@interaction([Buyer, Seller])
+let payForSignature = (digest : Digest, price : Assets) => {
    @Buyer deposit! price;
-   @Seller @publicly const signature = sign(digest);
-   withdraw! Seller <- price; }
+   @Seller @publicly let signature = sign(digest);
+   withdraw! Seller <- price; };
 ```
 
 Which after expansion of the `@publicly` becomes:
 
 ```glow
-@interaction(participants=[Buyer, Seller])
-function payForSignature(digest : Digest, price : Assets) {
+@interaction([Buyer, Seller])
+let payForSignature = (digest : Digest, price : Assets) => {
    @Buyer deposit! price;
-   @Seller @verifiably const signature = sign(digest);
+   @Seller @verifiably let signature = sign(digest);
    @Seller publish! signature;
    verify! signature;
-   withdraw! Seller <- price; }
+   withdraw! Seller <- price; };
 ```
 
 Intended input form (exact form to be negotiated with DrewC):
 
 ```scheme
-(@at
-  (interaction participants: (Buyer Seller))
-  (function payForSignature ((:: digest Digest) (:: price Assets))
-     (@at Buyer (deposit! price))
-     (@at Seller (@at verifiably (const signature (sign digest))))
+(@ (interaction (@list Buyer Seller))
+  (def payForSignature
+   (λ ((digest : Digest) (price : Assets))
+     (@ Buyer (deposit! price))
+     (@ Seller (@ verifiably (def signature (sign digest))))
      ;; or @publicly instead of @verifiably above, and the two lines below can be omitted:
-     (@at Seller (publish! signature))
+     (@ Seller (publish! signature))
      (verify! signature)
-     (withdraw! Seller price)))
+     (withdraw! Seller price))))
 ```
 
 Intended output JS:
