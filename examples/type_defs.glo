@@ -1,0 +1,52 @@
+#lang glow
+
+data yn = Yes | No;
+
+data ordering = LT | EQ | GT;
+
+data pos2d = Posn(int, int);
+
+type colorRGB = { r: int, g: int, b: int };
+
+data pair('a, 'b) = Pair('a, 'b);
+
+let pair_tuple = (p: pair('a, 'b)) : ('a, 'b) => {
+  switch (p) { Pair(a, b) => (a, b) }
+};
+
+let tuple_pair = (t: ('a, 'b)) : pair('a, 'b) => {
+  switch (t) { (a, b) => Pair(a, b) }
+};
+
+data option('a) = Some('a) | None;
+
+data result('a, 'b) = Ok('a) | Error('b);
+
+let option_result = (o: option('a)) : result('a, ()) => {
+  switch (o) {
+  | Some(a) => Ok(a)
+  | None => Error(())
+  }
+};
+
+data natural =
+  | Zero
+  | Succ(natural);
+
+data conslist('a) =
+  | Empty
+  | Cons('a, conslist('a));
+
+type assocpairlist('a, 'b) = conslist(pair('a, 'b));
+
+data lcexpr('lit) =
+  | Lit('lit)
+  | Var(natural)
+  | Lam(lcexpr('lit))
+  | App(lcexpr('lit), lcexpr('lit));
+
+type lcintexpr = lcexpr(int);
+
+data nothing = ;
+
+type purelcexpr = lcexpr(nothing);
