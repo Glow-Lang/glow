@@ -1,4 +1,5 @@
-(import <expander-runtime>
+(import :std/iter
+        <expander-runtime>
         (for-template :gerbil/core)
         :clan/pure/dict/symdict)
 
@@ -19,6 +20,36 @@
 (defstruct type:tuple (args))
 (defstruct type:record (field-args))
 (def (type? v) (or (type:name? v) (type:var? v) (type:app? v) (type:tuple? v) (type:record? v)))
+
+;; type-actual : Type -> Type
+(def (type-actual t)
+  (match t
+    ((type:name _ (box #t)) t)
+    ((type:name x (box #f)) (error x "unknown type"))
+    ((type:name _ (box ty)) ty)))
+
+;; type=? : Type Type -> Bool
+(def (type=? a b)
+  (let ((a (type-actual a)) (b (type-actual b)))
+    (and (subtype? a b) (subtype? b a))))
+
+;; subtype? : Type Type -> Bool
+(def (subtype? a b)
+  (match* ((type-actual a) (type-actual b))
+    (((type:name x (box #t)) (type:name y (box #t))) (eq? x y))
+    (((type:var x) (type:var y)) (eq? x y))
+    (((type:tuple as) (type:tuple bs))
+     (and (= (length as) (length bs))
+          (andmap subtype? as bs)))
+    (((type:record as) (type:record bs))
+     (symdict=? as bs subtype?))
+    (((type:app f1 a1s) (type:app f2 a2s))
+     ;; TODO: allow type constructors to specify covariant, contravariant, or invariant
+     ;; for now conservatively assume everything is invariant
+     (and (= (length a1s) (length a2s))
+          (type=? f1 f2)
+          (andmap type=? a1s a2s)))
+    ((_ _) #f)))
 
 ;; An EnvEntry is one of:
 ;;  - (entry:val Type)
@@ -79,6 +110,23 @@
           (def tyvars2 (symdict-put/list tyvars (map cons xs as)))
           (parse-type env tyvars2 b)))))))
 
+;; parse-param-name : ParamStx -> Symbol
+(def (parse-param-name p)
+  (syntax-e (if (identifier? p) p (stx-car p))))
+
+;; parse-param-type : Env ParamStx -> (U #f Type)
+(def (parse-param-type env p)
+  (syntax-case p (:)
+    (x (identifier? #'x) #f)
+    ((x : type) (parse-type env empty-symdict #'type))))
+
+;; tc-body : Env BodyStx -> Type
+(def (tc-body env stx)
+  (cond ((stx-null? stx) (type:tuple []))
+        ((stx-null? (stx-cdr stx)) (tc-expr env (stx-car stx)))
+        (else
+         (tc-body (tc-stmt env (stx-car stx)) (stx-cdr stx)))))
+
 ;; tc-stmt : Env StmtStx -> Env
 (def (tc-stmt env stx)
   (syntax-case stx (@ : quote def λ deftype defdata publish! verify!)
@@ -108,7 +156,18 @@
        (tc-defdata-variants (symdict-put env s (entry:type xs b))
                             xs
                             b
-                            #'(variant ...))))))
+                            #'(variant ...))))
+    ((def f (λ params : out-type body ...)) (identifier? #'f)
+     (let ((s (syntax-e #'f))
+           (xs (stx-map parse-param-name #'params))
+           (in-ts (stx-map (lambda (p) (parse-param-type env p)) #'params))
+           (out-t (parse-type env empty-symdict #'out-type)))
+       (symdict-put env s (tc-function env xs in-ts out-t #'(body ...)))))
+    ((def f (λ params body ...)) (identifier? #'f)
+     (let ((s (syntax-e #'f))
+           (xs (stx-map parse-param-name #'params))
+           (in-ts (stx-map (lambda (p) (parse-param-type env p)) #'params)))
+       (symdict-put env s (tc-function env xs in-ts #f #'(body ...)))))))
 
 ;; tc-defdata-variant : Env [Listof Symbol] Type VariantStx -> [Cons Symbol EnvEntry]
 (def (tc-defdata-variant env xs b stx)
@@ -125,6 +184,25 @@
   ;; tcvariant : VariantStx -> [Cons Symbol EnvEntry]
   (def (tcvariant v) (tc-defdata-variant env xs b v))
   (symdict-put/list env (stx-map tcvariant stx)))
+
+;; tc-function : Env [Listof Symbol] [Listof (U #f Type)] (U #f Type) BodyStx -> EnvEntry
+(def (tc-function env xs in-tys exp-out-ty body)
+  ;; TODO: type inference on missing in-tys
+  ;; until then, error when any are missing
+  (for ((x xs) (in-ty in-tys))
+    (unless in-ty (error x "missing type annotation on function parameter")))
+  ;; in-tys : [Listof Type]
+  ;; body-env : Env
+  (def body-env (symdict-put/list env (map cons xs in-tys)))
+  (def actual-ty (tc-body body-env body))
+  (unless (or (not exp-out-ty) (subtype? actual-ty exp-out-ty))
+    (error 'tc-function "function output type mismatch"))
+  (def out-ty (or exp-out-ty actual-ty))
+  (entry:fun [] in-tys out-ty))
+
+;; tc-expr : Env ExprStx -> Type
+(def (tc-expr env stx)
+  (error 'tc-expr "TODO"))
 
 #|
 
