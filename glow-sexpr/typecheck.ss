@@ -95,10 +95,36 @@
                     s
                     (entry:type xs (parse-type env tyvars #'b)))))
     ((defdata x variant ...) (identifier? #'x)
-     (error 'TODO))
+     (let ((s (syntax-e #'x)))
+       (def b (type:name (gensym s) (box #t)))
+       (tc-defdata-variants (symdict-put env s (entry:type [] b))
+                            []
+                            b
+                            #'(variant ...))))
     ((defdata (f 'x ...) variant ...) (identifier? #'f)
-     (error 'TODO))))
+     (let ((s (syntax-e #'f))
+           (xs (stx-map syntax-e #'(x ...))))
+       (def b (type:app (type:name (gensym s) (box #t)) (map make-type:var xs)))
+       (tc-defdata-variants (symdict-put env s (entry:type xs b))
+                            xs
+                            b
+                            #'(variant ...))))))
 
+;; tc-defdata-variant : Env [Listof Symbol] Type VariantStx -> [Cons Symbol EnvEntry]
+(def (tc-defdata-variant env xs b stx)
+  ;; party : TypeStx -> Type
+  (def (party s) (parse-type env xs s))
+  (syntax-case stx ()
+    (x (identifier? #'x)
+     (cons (syntax-e #'x) (entry:ctor xs [] b)))
+    ((f a ...) (identifier? #'f)
+     (cons (syntax-e #'f) (entry:ctor xs (stx-map party #'(a ...)) b)))))
+
+;; tc-defdata-variants : Env [Listof Symbol] Type [StxListof VariantStx] -> Env
+(def (tc-defdata-variants env xs b stx)
+  ;; tcvariant : VariantStx -> [Cons Symbol EnvEntry]
+  (def (tcvariant v) (tc-defdata-variant env xs b v))
+  (symdict-put/list env (stx-map tcvariant stx)))
 
 #|
 
