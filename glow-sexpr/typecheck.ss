@@ -22,12 +22,14 @@
 
 ;; An EnvEntry is one of:
 ;;  - (entry:val Type)
-;;  - (entry:fun [Listof Type] Type)
+;;  - (entry:fun [Listof Symbol] [Listof Type] Type)
+;;  - (entry:ctor [Listof Symbol] [Listof Type] Type)
 ;;  - (entry:type [Listof Symbol] Type)
 (defstruct entry:val (type))
-(defstruct entry:fun (input-types output-type))
+(defstruct entry:fun (typarams input-types output-type))
+(defstruct entry:ctor (typarams input-types output-type))
 (defstruct entry:type (params type))
-(def (env-entry? v) (or (entry:val? v) (entry:fun? v) (entry:type? v)))
+(def (env-entry? v) (or (entry:val? v) (entry:fun? v) (entry:ctor? v) (entry:type? v)))
 
 ;; An Env is a [Symdictof EnvEntry]
 ;; A TyvarEnv is a [Symdictof Type]
@@ -76,6 +78,27 @@
             (error 'parse-type "wrong number of type arguments"))
           (def tyvars2 (symdict-put/list tyvars (map cons xs as)))
           (parse-type env tyvars2 b)))))))
+
+;; tc-stmt : Env StmtStx -> Env
+(def (tc-stmt env stx)
+  (syntax-case stx (@ : quote def λ deftype defdata publish! verify!)
+    ((@ _ _) (error 'tc-stmt "TODO: deal with @"))
+    ((deftype x t) (identifier? #'x)
+     (symdict-put env
+                  (syntax-e #'x)
+                  (entry:type [] (parse-type env empty-symdict #'t))))
+    ((deftype (f 'x ...) b) (identifier? #'f)
+     (let ((s (syntax-e #'f))
+           (xs (stx-map syntax-e #'(x ...))))
+       (def tyvars (list->symdict (map cons xs (map make-type:var xs))))
+       (symdict-put env
+                    s
+                    (entry:type xs (parse-type env tyvars #'b)))))
+    ((defdata x variant ...) (identifier? #'x)
+     (error 'TODO))
+    ((defdata (f 'x ...) variant ...) (identifier? #'f)
+     (error 'TODO))))
+
 
 #|
 
