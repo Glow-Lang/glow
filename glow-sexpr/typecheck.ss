@@ -167,7 +167,15 @@
      (let ((s (syntax-e #'f))
            (xs (stx-map parse-param-name #'params))
            (in-ts (stx-map (lambda (p) (parse-param-type env p)) #'params)))
-       (symdict-put env s (tc-function env xs in-ts #f #'(body ...)))))))
+       (symdict-put env s (tc-function env xs in-ts #f #'(body ...)))))
+    ((def x : type expr) (identifier? #'x)
+     (let ((s (syntax-e #'x))
+           (t (parse-type env empty-symdict #'type)))
+       (tc-expr/check env #'expr t)
+       (symdict-put env s (entry:val t))))
+    ((def x expr) (identifier? #'x)
+     (let ((s (syntax-e #'x)))
+       (symdict-put env s (entry:val (tc-expr env #'expr)))))))
 
 ;; tc-defdata-variant : Env [Listof Symbol] Type VariantStx -> [Cons Symbol EnvEntry]
 (def (tc-defdata-variant env xs b stx)
@@ -203,6 +211,14 @@
 ;; tc-expr : Env ExprStx -> Type
 (def (tc-expr env stx)
   (error 'tc-expr "TODO"))
+
+;; tc-expr/check : Env ExprStx (U #f Type) -> TypeOrError
+;; returns expected-ty on success, actual-ty if no expected, otherwise error
+(def (tc-expr/check env stx expected-ty)
+  (def actual-ty (tc-expr env stx))
+  (unless (or (not expected-ty) (subtype? actual-ty expected-ty))
+    (error 'tc-expr/check "type mismatch"))
+  (or expected-ty actual-ty))
 
 #|
 
