@@ -1,4 +1,6 @@
 (import :std/iter
+        :gerbil/gambit/exact
+        :gerbil/gambit/bytes
         <expander-runtime>
         (for-template :gerbil/core)
         :clan/pure/dict/symdict)
@@ -9,24 +11,35 @@
 ;; to ReasonML, but Record types are structural.
 
 ;; A Type is one of:
+;;  - (type:bottom)
 ;;  - (type:name Symbol [Boxof (U Bool Type)])
 ;;  - (type:var Symbol)
 ;;  - (type:app Type [Listof Type])
 ;;  - (type:tuple [Listof Type])
 ;;  - (type:record [Symdictof Type])
+(defstruct type:bottom ())
 (defstruct type:name (sym box))
 (defstruct type:var (sym))
 (defstruct type:app (fun args))
 (defstruct type:tuple (args))
 (defstruct type:record (field-args))
-(def (type? v) (or (type:name? v) (type:var? v) (type:app? v) (type:tuple? v) (type:record? v)))
+(def (type? v) (or (type:bottom? v) (type:name? v) (type:var? v) (type:app? v) (type:tuple? v) (type:record? v)))
+
+(def type:int (type:name 'int (box #t)))
+(def type:bool (type:name 'bool (box #t)))
+(def type:bytestr (type:name 'bytestr (box #t)))
+
+;; TODO: specify lists are covariant
+(def typector:listof (type:name 'listof (box #t)))
+(def (type:listof t) (type:app typector:listof [t]))
 
 ;; type-actual : Type -> Type
 (def (type-actual t)
   (match t
     ((type:name _ (box #t)) t)
     ((type:name x (box #f)) (error x "unknown type"))
-    ((type:name _ (box ty)) ty)))
+    ((type:name _ (box ty)) ty)
+    (_ t)))
 
 ;; type=? : Type Type -> Bool
 (def (type=? a b)
@@ -36,6 +49,7 @@
 ;; subtype? : Type Type -> Bool
 (def (subtype? a b)
   (match* ((type-actual a) (type-actual b))
+    (((type:bottom) _) #t)
     (((type:name x (box #t)) (type:name y (box #t))) (eq? x y))
     (((type:var x) (type:var y)) (eq? x y))
     (((type:tuple as) (type:tuple bs))
@@ -50,6 +64,22 @@
           (type=? f1 f2)
           (andmap type=? a1s a2s)))
     ((_ _) #f)))
+
+;; type-join : Type Type -> Type
+;; finds the type that is a supertype of both types
+(def (type-join a b)
+  (cond ((subtype? a b) b)
+        ((subtype? b a) a)
+        (else (error 'type-join "incompatible types"))))
+
+;; types-join : [Listof Type] -> Type
+;; finds the type that is a supertype of all types in the list
+(def (types-join ts)
+  (match ts
+    ([] (type:bottom))
+    ([t] t)
+    ([a b] (type-join a b))
+    (_ (type-join (car ts) (types-join (cdr ts))))))
 
 ;; An EnvEntry is one of:
 ;;  - (entry:val Type)
@@ -77,7 +107,7 @@
 
 (def (stx-atomic-literal? v)
   (def e (stx-e v))
-  (or (integer? e) (string? e) (boolean? e)))
+  (or (integer? e) (string? e) (bytes? e) (boolean? e)))
 
 ;; parse-type : Env TyvarEnv TypeStx -> Type
 (def (parse-type env tyvars stx)
@@ -210,7 +240,30 @@
 
 ;; tc-expr : Env ExprStx -> Type
 (def (tc-expr env stx)
-  (error 'tc-expr "TODO"))
+  ;; tce : ExprStx -> Type
+  (def (tce e) (tc-expr env e))
+  (syntax-case stx (@ : ann @tuple @record @list if block switch require! assert! deposit! withdraw!)
+    ((@ _ _) (error 'tc-expr "TODO: deal with @"))
+    ((ann expr type)
+     (tc-expr/check env #'expr (parse-type env empty-symdict #'type)))
+    (x (identifier? #'x)
+     (let ((s (syntax-e #'x)))
+       (match (symdict-ref env s)
+         ((entry:val t) t)
+         ((entry:ctor [] [] t) t))))
+    (lit (stx-atomic-literal? #'lit) (tc-literal #'lit))
+    ((@tuple e ...)
+     (type:tuple (stx-map tce #'(e ...))))
+    ((@record (x e) ...)
+     (and (stx-andmap identifier? #'(x ...))
+          (check-duplicate-identifiers #'(x ...)))
+     (let ((s (stx-map syntax-e #'(x ...))))
+       (type:record
+        (list->symdict (map cons s (stx-map tce #'(e ...)))))))
+    ((@list e ...)
+     (let ((ts (stx-map tce #'(e ...))))
+       (type:listof (types-join ts))))))
+
 
 ;; tc-expr/check : Env ExprStx (U #f Type) -> TypeOrError
 ;; returns expected-ty on success, actual-ty if no expected, otherwise error
@@ -219,6 +272,15 @@
   (unless (or (not expected-ty) (subtype? actual-ty expected-ty))
     (error 'tc-expr/check "type mismatch"))
   (or expected-ty actual-ty))
+
+;; tc-literal : LiteralStx -> Type
+(def (tc-literal stx)
+  (def e (stx-e stx))
+  (cond ((exact-integer? e) type:int)
+        ((boolean? e) type:bool)
+        ((string? e) type:bytestr) ; represent as bytestrs using UTF-8
+        ((bytes? e) type:bytestr)
+        (else (error 'tc-literal "unrecognized literal"))))
 
 #|
 
