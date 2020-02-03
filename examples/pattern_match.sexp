@@ -41,7 +41,7 @@
   ((Lam (App f (Var 0)))
    (if (not (member 0 (freevars f)))
        "eta"
-       "not immediate))
+       "not immediate"))
   (_ "not immediate"))
 
 (data ymn Yes Maybe No)
