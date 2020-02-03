@@ -1,8 +1,11 @@
+(export #t)
+
 (import :std/iter
         :gerbil/gambit/exact
         :gerbil/gambit/bytes
         <expander-runtime>
         (for-template :gerbil/core)
+        :clan/pure/dict/assq
         :clan/pure/dict/symdict)
 
 ;; Typechecking glow-sexpr
@@ -17,13 +20,15 @@
 ;;  - (type:app Type [Listof Type])
 ;;  - (type:tuple [Listof Type])
 ;;  - (type:record [Symdictof Type])
-(defstruct type:bottom ())
-(defstruct type:name (sym box))
-(defstruct type:var (sym))
-(defstruct type:app (fun args))
-(defstruct type:tuple (args))
+(defstruct type:bottom () transparent: #t)
+(defstruct type:name (sym box) transparent: #t)
+(defstruct type:var (sym) transparent: #t)
+(defstruct type:app (fun args) transparent: #t)
+(defstruct type:tuple (args) transparent: #t)
 (defstruct type:record (field-args))
 (def (type? v) (or (type:bottom? v) (type:name? v) (type:var? v) (type:app? v) (type:tuple? v) (type:record? v)))
+
+;; A Pattys is an [Assqof Symbol Type]
 
 (def type:int (type:name 'int (box #t)))
 (def type:bool (type:name 'bool (box #t)))
@@ -32,6 +37,15 @@
 ;; TODO: specify lists are covariant
 (def typector:listof (type:name 'listof (box #t)))
 (def (type:listof t) (type:app typector:listof [t]))
+(def (type:listof? t)
+  (match t
+    ((type:app c [_]) (eq? c typector:listof))
+    (_ #f)))
+(def (type:listof-elem t)
+  (match t
+    ((type:app c [e])
+     (unless (eq? c typector:listof) (error 'listof-elem "expected a listof type"))
+     e)))
 
 ;; type-actual : Type -> Type
 (def (type-actual t)
@@ -66,7 +80,7 @@
     ((_ _) #f)))
 
 ;; type-join : Type Type -> Type
-;; finds the type that is a supertype of both types
+;; finds the type that is a supertype of both types, otherwise error
 (def (type-join a b)
   (cond ((subtype? a b) b)
         ((subtype? b a) a)
@@ -81,19 +95,59 @@
     ([a b] (type-join a b))
     (_ (type-join (car ts) (types-join (cdr ts))))))
 
+;; pattys-join : [Listof Pattys] -> Pattys
+;; intersection of keys, join of types for same key
+;; used for or-patterns
+(def (pattys-join ps)
+  (cond ((null? ps) [])
+        ((null? (cdr ps)) (car ps))
+        (else
+         (for/collect ((k (assq-keys (car ps)))
+                       when
+                       (andmap (lambda (o) (assq-has-key? o k)) (cdr ps)))
+           (cons k (types-join (map (lambda (p) (assq-ref p k)) ps)))))))
+
+;; pattys-append : [Listof Pattys] -> Pattys
+;; append, but check no duplicate keys
+;; used for combinations of patterns in the same scope other than "or"
+(def (pattys-append ps)
+  (def p (apply append ps))
+  (check-duplicate-symbols (map car p))
+ p)
+
+;; check-duplicate-symbols : [Listof Symbol] -> TrueOrError
+;; true if there are no duplicates, error otherwise
+(def (check-duplicate-symbols syms)
+  (match syms
+    ([] #t)
+    ([a . bs]
+     (if (memq a bs)
+         (error a "duplicate identifier")
+         (check-duplicate-symbols bs)))))
+
 ;; An EnvEntry is one of:
 ;;  - (entry:val Type)
 ;;  - (entry:fun [Listof Symbol] [Listof Type] Type)
 ;;  - (entry:ctor [Listof Symbol] [Listof Type] Type)
 ;;  - (entry:type [Listof Symbol] Type)
-(defstruct entry:val (type))
-(defstruct entry:fun (typarams input-types output-type))
-(defstruct entry:ctor (typarams input-types output-type))
-(defstruct entry:type (params type))
+(defstruct entry:val (type) transparent: #t)
+(defstruct entry:fun (typarams input-types output-type) transparent: #t)
+(defstruct entry:ctor (typarams input-types output-type) transparent: #t)
+(defstruct entry:type (params type) transparent: #t)
 (def (env-entry? v) (or (entry:val? v) (entry:fun? v) (entry:ctor? v) (entry:type? v)))
 
 ;; An Env is a [Symdictof EnvEntry]
 ;; A TyvarEnv is a [Symdictof Type]
+
+;; not-bound-as-ctor? : Env Symbol -> Bool
+(def (not-bound-as-ctor? env s)
+  (or (not (symdict-has-key? env s))
+      (not (entry:ctor? (symdict-ref env s)))))
+
+;; bound-as-ctor? : Env Symbol -> Bool
+(def (bound-as-ctor? env s)
+  (and (symdict-has-key? env s)
+       (entry:ctor? (symdict-ref env s))))
 
 ; literals:
 ;   common:
@@ -128,6 +182,8 @@
              (else (type:var s)))))
     (x (identifier? #'x)
      (let ((s (syntax-e #'x)))
+       (unless (symdict-has-key? env s)
+         (error s "unknown type"))
        (match (symdict-ref env s)
          ((entry:type [] t) t))))
     ((f a ...) (identifier? #'f)
@@ -205,7 +261,15 @@
        (symdict-put env s (entry:val t))))
     ((def x expr) (identifier? #'x)
      (let ((s (syntax-e #'x)))
-       (symdict-put env s (entry:val (tc-expr env #'expr)))))))
+       (symdict-put env s (entry:val (tc-expr env #'expr)))))
+    ((publish! x ...) (stx-andmap identifier? #'(x ...))
+     (error 'tc-stmt "TODO: deal with publish!"))
+    ((verify! x ...) (stx-andmap identifier? #'(x ...))
+     (error 'tc-stmt "TODO: deal with verify!"))
+    (expr
+     (let ()
+       (tc-expr env #'expr)
+       env))))
 
 ;; tc-defdata-variant : Env [Listof Symbol] Type VariantStx -> [Cons Symbol EnvEntry]
 (def (tc-defdata-variant env xs b stx)
@@ -231,7 +295,7 @@
     (unless in-ty (error x "missing type annotation on function parameter")))
   ;; in-tys : [Listof Type]
   ;; body-env : Env
-  (def body-env (symdict-put/list env (map cons xs in-tys)))
+  (def body-env (symdict-put/list env (map cons xs (map make-entry:val in-tys))))
   (def actual-ty (tc-body body-env body))
   (unless (or (not exp-out-ty) (subtype? actual-ty exp-out-ty))
     (error 'tc-function "function output type mismatch"))
@@ -248,6 +312,8 @@
      (tc-expr/check env #'expr (parse-type env empty-symdict #'type)))
     (x (identifier? #'x)
      (let ((s (syntax-e #'x)))
+       (unless (symdict-has-key? env s)
+         (error s "unbound identifier"))
        (match (symdict-ref env s)
          ((entry:val t) t)
          ((entry:ctor [] [] t) t))))
@@ -262,7 +328,41 @@
         (list->symdict (map cons s (stx-map tce #'(e ...)))))))
     ((@list e ...)
      (let ((ts (stx-map tce #'(e ...))))
-       (type:listof (types-join ts))))))
+       (type:listof (types-join ts))))
+    ((block b ...)
+     (tc-body #'(b ...)))
+    ((if c t e)
+     (let ()
+       (tc-expr/check env #'c type:bool)
+       (type-join (tc-expr env #'t) (tc-expr env #'e))))
+    ((switch e swcase ...)
+     (let ((t (tc-expr env #'e)))
+       ;; TODO: implement exhaustiveness checking
+       (types-join
+        (stx-map (lambda (c) (tc-switch-case env t c)) #'(swcase ...)))))
+    ((require! e)
+     (error 'tc-expr "TODO: deal with require!"))
+    ((assert! e)
+     (error 'tc-expr "TODO: deal with assert!"))
+    ((deposit! e)
+     (error 'tc-expr "TODO: deal with deposit!"))
+    ((withdraw! x e) (identifier? #'x)
+     (error 'tc-expr "TODO: deal with withdraw!"))
+    ((f a ...) (identifier? #'f)
+     (let ((s (syntax-e #'f)))
+       (unless (symdict-has-key? env s)
+         (error s "unbound identifier"))
+       (match (symdict-ref env s)
+         ;; monomorphic case
+         ;; TODO: handle polymorphic case with unification
+         ((or (entry:fun [] in-tys out-ty)
+              (entry:ctor [] in-tys out-ty))
+          (unless (= (stx-length #'(a ...)) (length in-tys))
+            (error s "wrong number of arguments"))
+          (stx-for-each (lambda (a t) (tc-expr/check env a t))
+                        #'(a ...)
+                        in-tys)
+          out-ty))))))
 
 
 ;; tc-expr/check : Env ExprStx (U #f Type) -> TypeOrError
@@ -281,6 +381,107 @@
         ((string? e) type:bytestr) ; represent as bytestrs using UTF-8
         ((bytes? e) type:bytestr)
         (else (error 'tc-literal "unrecognized literal"))))
+
+;; tc-switch-case : Env Type SwitchCaseStx -> Type
+(def (tc-switch-case env valty stx)
+  (syntax-case stx ()
+    ((pat body ...)
+     (let ((pattys (tc-pat env valty #'pat)))
+       (def env/pattys
+         (symdict-put/list
+          env
+          (map (lambda (p) (cons (car p) (entry:val (cdr p))))
+               pattys)))
+       (tc-body env/pattys #'(body ...))))))
+
+
+;; tc-pat : Env Type PatStx -> Pattys
+(def (tc-pat env valty stx)
+  (syntax-case stx (@ : ann @tuple @record @list @or-pat)
+    ((@ _ _) (error 'tc-pat "TODO: deal with @"))
+    ((ann pat type)
+     (let ((t (parse-type env empty-symdict #'type)))
+       ;; valty <: t
+       ;; because passing valty into a context expecting t
+       ;; (switch (ann 5 nat) ((ann x int) x))
+       (unless (subtype? valty t)
+         (error 'tc-pat "type mismatch"))
+       (tc-pat env t #'pat)))
+    (blank (and (identifier? #'blank) (free-identifier=? #'blank #'_))
+     [])
+    (x (and (identifier? #'x) (not-bound-as-ctor? env (syntax-e #'x)))
+     (let ((s (syntax-e #'x)))
+       [(cons s valty)]))
+    (x (and (identifier? #'x) (bound-as-ctor? env (syntax-e #'x)))
+     (let ((s (syntax-e #'x)))
+       (match (symdict-ref env s)
+         ((entry:ctor [] [] t)
+          ;; t doesn't necessarily have to be a supertype,
+          ;; but does need to be join-compatible so that
+          ;; valty <: (type-join valty t)
+          (type-join valty t)
+          []))))
+    (lit (stx-atomic-literal? #'lit)
+     (let ((t (tc-literal #'lit)))
+       ;; t doesn't necessarily have to be a supertype,
+       ;; but does need to be join-compatible so that
+       ;; valty <: (type-join valty t)
+       (type-join valty t)
+       []))
+    ((@or-pat p ...)
+     (pattys-join (stx-map (lambda (p) (tc-pat env valty p)) #'(p ...))))
+    ((@list p ...)
+     (cond
+       ((type:listof? valty)
+        (let ((elem-ty (type:listof-elem valty)))
+          (def ptys (stx-map (lambda (p) (tc-pat env elem-ty p)) #'(p ...)))
+          (pattys-append ptys)))
+       (else
+        (error 'tc-pat "TODO: handle list patterns better, unification?"))))
+    ((@tuple p ...)
+     (match valty
+       ((type:tuple ts)
+        (unless (= (stx-length #'(p ...)) (length ts))
+          (error 'tuple "wrong number of elements in tuple pattern"))
+        (def ptys (stx-map (lambda (t p) (tc-pat env t p)) ts #'(p ...)))
+        (pattys-append ptys))
+       (_ (error 'tc-pat "TODO: handle tuple patterns better, unification?"))))
+    ((@record (x p) ...) (stx-andmap identifier? #'(x ...))
+     (let ((s (stx-map syntax-e #'(x ...))))
+       (match valty
+         ((type:record fldtys)
+          (def flds (symdict-keys fldtys))
+          ;; s ⊆ flds
+          (for (x s)
+            (unless (symdict-has-key? fldtys x)
+              (error x "unexpected key in record pattern")))
+          ;; flds ⊆ s
+          (for (f flds)
+            (unless (member f s)
+              (error f "missing key in record pattern")))
+          (def ptys
+            (stx-map (lambda (x p)
+                       (tc-pat env (symdict-ref fldtys x) p))
+                     s
+                     #'(p ...)))
+          (pattys-append ptys))
+         (_ (error 'tc-pat "TODO: handle tuple patterns better, unification?")))))
+    ((f a ...) (and (identifier? #'f) (bound-as-ctor? env (syntax-e #'f)))
+     (let ((s (syntax-e #'f)))
+       (unless (symdict-has-key? env s)
+         (error s "unbound pattern constructor"))
+       (match (symdict-ref env s)
+         ((entry:ctor [] in-tys out-ty)
+          ;; valty <: out-ty
+          ;; because passing valty into a context expecting out-ty
+          (unless (= (stx-length #'(a ...)) (length in-tys))
+            (error s "wrong number of arguments to data constructor"))
+          (def ptys
+            (stx-map (lambda (t p) (tc-pat env t p))
+                     in-tys
+                     #'(a ...)))
+          (pattys-append ptys))
+         (_ (error 'tc-pat "TODO: handle data constructor patterns better")))))))
 
 #|
 
