@@ -88,6 +88,16 @@
   (let ((a (type-actual a)) (b (type-actual b)))
     (and (subtype? a b) (subtype? b a))))
 
+;; variance-type~? : Variance Type Type -> Bool
+;; (~? irrelavent a b) = #t
+;; (~? covariant a b) = (subtype? a b)
+;; (~? contravariant a b) = (subtype? b a)
+;; (~? invariant a b) = (type=? a b)
+(def (variance-type~? v a b)
+  (let ((a (type-actual a)) (b (type-actual b)))
+    (and (or (variance-covariant? v) (subtype? b a))
+         (or (variance-contravariant? v) (subtype? a b)))))
+
 ;; subtype? : Type Type -> Bool
 (def (subtype? a b)
   (match* ((type-actual a) (type-actual b))
@@ -100,12 +110,11 @@
           (andmap subtype? as bs)))
     (((type:record as) (type:record bs))
      (symdict=? as bs subtype?))
-    (((type:app f1 a1s) (type:app f2 a2s))
-     ;; TODO: allow type constructors to specify covariant, contravariant, or invariant
-     ;; for now conservatively assume everything is invariant
-     (and (= (length a1s) (length a2s))
-          (type=? f1 f2)
-          (andmap type=? a1s a2s)))
+    (((type:app (type:name f1 v1s _) a1s) (type:app (type:name f2 v2s _) a2s))
+     (and (eq? f1 f2)
+          (equal? v1s v2s)
+          (= (length v1s) (length a1s) (length a2s))
+          (andmap variance-type~? v1s a1s a2s)))
     ((_ _) #f)))
 
 ;; type-join : Type Type -> Type
