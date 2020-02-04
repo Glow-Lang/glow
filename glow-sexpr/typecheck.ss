@@ -149,6 +149,26 @@
   (and (symdict-has-key? env s)
        (entry:ctor? (symdict-ref env s))))
 
+;; type-subst : TyvarEnv Type -> Type
+(def (type-subst tyvars t)
+  ;; sub : Type -> Type
+  (def (sub t) (type-subst tyvars t))
+  (match t
+    ((type:bottom) t)
+    ((type:name _ _) t)
+    ((type:var s)
+     (cond ((symdict-has-key? tyvars s) (symdict-ref tyvars s))
+           (else t)))
+    ((type:app f as)
+     (type:app (sub f) (map sub as)))
+    ((type:tuple as)
+     (type:tuple (map sub as)))
+    ((type:record fldtys)
+     (type:record
+      (list->symdict
+       (map (lambda (p) (cons (car p) (sub (cdr p))))
+            fldtys))))))
+
 ; literals:
 ;   common:
 ;     \@
@@ -194,7 +214,7 @@
           (unless (= (length xs) (length as))
             (error 'parse-type "wrong number of type arguments"))
           (def tyvars2 (symdict-put/list tyvars (map cons xs as)))
-          (parse-type env tyvars2 b)))))))
+          (type-subst tyvars2 b)))))))
 
 ;; parse-param-name : ParamStx -> Symbol
 (def (parse-param-name p)
@@ -370,6 +390,8 @@
 ;; tc-expr/check : Env ExprStx (U #f Type) -> TypeOrError
 ;; returns expected-ty on success, actual-ty if no expected, otherwise error
 (def (tc-expr/check env stx expected-ty)
+  (unless (or (not expected-ty) (type? expected-ty))
+    (error 'tc-expr/check "expected (U #f Type) for 3rd argument"))
   (def actual-ty (tc-expr env stx))
   (unless (or (not expected-ty) (subtype? actual-ty expected-ty))
     (error 'tc-expr/check "type mismatch"))
