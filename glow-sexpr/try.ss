@@ -3,6 +3,7 @@
 ;; Runs the typchecker on the `.sexp` files in `../examples`.
 
 (import :std/iter
+        :std/misc/repr
         :clan/pure/dict
         "typecheck.ss")
 
@@ -34,9 +35,28 @@
   (filter (lambda (p) (string=? ".sexp" (path-extension p))) ps))
 
 ;; main
-(def files
-  (map (lambda (p) (path-expand p "../examples"))
-       (only-sexp-files (directory-files "../examples"))))
-(def progs
-  (map read-syntax-from-file files))
-(map tc-prog/list progs)
+(def (main . args)
+  (match args
+    ([] (main "all"))
+    (["all"]
+     (def names (only-sexp-files (directory-files "../examples")))
+     (def files (map (lambda (p) (path-expand p "../examples")) names))
+     (if (null? files)
+         (displayln "nothing to build")
+         (apply main files)))
+    ([file]
+     (def prog (read-syntax-from-file file))
+     (displayln file)
+     (print-representation (tc-prog/list prog))
+     (newline))
+    (files
+     (def progs (map read-syntax-from-file files))
+     (for ((f files) (p progs))
+       (displayln f)
+       (with-catch
+        (lambda (e) (display-exception e))
+        (lambda ()
+          (print-representation (tc-prog/list p))
+          (newline)))
+       (newline)))))
+
