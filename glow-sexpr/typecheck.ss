@@ -273,8 +273,10 @@
 
 ;; tc-defdata-variant : Env [Listof Symbol] Type VariantStx -> [Cons Symbol EnvEntry]
 (def (tc-defdata-variant env xs b stx)
+  ;; tyvars : TyvarEnv
+  (def tyvars (list->symdict (map cons xs (map make-type:var xs))))
   ;; party : TypeStx -> Type
-  (def (party s) (parse-type env xs s))
+  (def (party s) (parse-type env tyvars s))
   (syntax-case stx ()
     (x (identifier? #'x)
      (cons (syntax-e #'x) (entry:ctor xs [] b)))
