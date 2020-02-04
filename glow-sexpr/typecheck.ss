@@ -13,15 +13,43 @@
 ;; Type system and scoping rules are closest
 ;; to ReasonML, but Record types are structural.
 
+;; A Variance is a (variance Bool Bool)
+(defstruct variance (covariant? contravariant?) transparent: #t)
+(def irrelevant    (variance #t #t)) ; bottom, ignored
+(def covariant     (variance #t #f))
+(def contravariant (variance #f #t))
+(def invariant     (variance #f #f)) ; top, constrained
+;; variance-irrelevant? : Variance -> Bool
+(def (variance-irrelevant? v)
+  (and (variance-covariant? v) (variance-contravariant? v)))
+;; variance-invariant? : Variance -> Bool
+(def (variance-invariant? v)
+  (and (not (variance-covariant? v)) (not (variance-contravariant? v))))
+;; variance-join : Variance Variance -> Variance
+;; irrelevant ⊔ a = a
+;; invariant ⊔ a = invariant
+(def (variance-join a b)
+  (with (((variance ap an) a) ((variance bp bn) b))
+    (variance (and ap bp) (and an bn))))
+;; variance-compose : Variance Variance -> Variance
+;; irrelevant ∘ a = irrelevant
+;; covariant ∘ a = a
+;; contravariant ∘ (variance p n) = (variance n p)
+;; invariant ∘ (variance p n) = (variance (and p n) (and p n))
+(def (variance-compose a b)
+  (with (((variance ap an) a) ((variance bp bn) b))
+    (variance (and (or ap bn) (or an bp))
+              (and (or ap bp) (or an bn)))))
+
 ;; A Type is one of:
 ;;  - (type:bottom)
-;;  - (type:name Symbol [Boxof (U Bool Type)])
+;;  - (type:name Symbol [Listof Variance] [Boxof (U Bool Type)])
 ;;  - (type:var Symbol)
 ;;  - (type:app Type [Listof Type])
 ;;  - (type:tuple [Listof Type])
 ;;  - (type:record [Symdictof Type])
 (defstruct type:bottom () transparent: #t)
-(defstruct type:name (sym box) transparent: #t)
+(defstruct type:name (sym vances box) transparent: #t)
 (defstruct type:var (sym) transparent: #t)
 (defstruct type:app (fun args) transparent: #t)
 (defstruct type:tuple (args) transparent: #t)
@@ -30,12 +58,12 @@
 
 ;; A Pattys is an [Assqof Symbol Type]
 
-(def type:int (type:name 'int (box #t)))
-(def type:bool (type:name 'bool (box #t)))
-(def type:bytestr (type:name 'bytestr (box #t)))
+(def type:int (type:name 'int [] (box #t)))
+(def type:bool (type:name 'bool [] (box #t)))
+(def type:bytestr (type:name 'bytestr [] (box #t)))
 
-;; TODO: specify lists are covariant
-(def typector:listof (type:name 'listof (box #t)))
+;; lists are covariant, so (listof a) <: (listof b) when a <: b
+(def typector:listof (type:name 'listof [covariant] (box #t)))
 (def (type:listof t) (type:app typector:listof [t]))
 (def (type:listof? t)
   (match t
@@ -50,9 +78,9 @@
 ;; type-actual : Type -> Type
 (def (type-actual t)
   (match t
-    ((type:name _ (box #t)) t)
-    ((type:name x (box #f)) (error x "unknown type"))
-    ((type:name _ (box ty)) ty)
+    ((type:name _ _ (box #t)) t)
+    ((type:name x _ (box #f)) (error x "unknown type"))
+    ((type:name _ _ (box ty)) ty)
     (_ t)))
 
 ;; type=? : Type Type -> Bool
@@ -64,7 +92,8 @@
 (def (subtype? a b)
   (match* ((type-actual a) (type-actual b))
     (((type:bottom) _) #t)
-    (((type:name x (box #t)) (type:name y (box #t))) (eq? x y))
+    (((type:name x vxs (box #t)) (type:name y vys (box #t)))
+     (and (eq? x y) (equal? vxs vys)))
     (((type:var x) (type:var y)) (eq? x y))
     (((type:tuple as) (type:tuple bs))
      (and (= (length as) (length bs))
@@ -155,7 +184,7 @@
   (def (sub t) (type-subst tyvars t))
   (match t
     ((type:bottom) t)
-    ((type:name _ _) t)
+    ((type:name _ _ _) t)
     ((type:var s)
      (cond ((symdict-has-key? tyvars s) (symdict-ref tyvars s))
            (else t)))
@@ -250,7 +279,7 @@
                     (entry:type xs (parse-type env tyvars #'b)))))
     ((defdata x variant ...) (identifier? #'x)
      (let ((s (syntax-e #'x)))
-       (def b (type:name (gensym s) (box #t)))
+       (def b (type:name (gensym s) [] (box #t)))
        (tc-defdata-variants (symdict-put env s (entry:type [] b))
                             []
                             b
@@ -258,7 +287,9 @@
     ((defdata (f 'x ...) variant ...) (identifier? #'f)
      (let ((s (syntax-e #'f))
            (xs (stx-map syntax-e #'(x ...))))
-       (def b (type:app (type:name (gensym s) (box #t)) (map make-type:var xs)))
+       ;; TODO: allow variances to be either annotated or inferred
+       (def vances (map (lambda (x) invariant) xs))
+       (def b (type:app (type:name (gensym s) vances (box #t)) (map make-type:var xs)))
        (tc-defdata-variants (symdict-put env s (entry:type xs b))
                             xs
                             b
