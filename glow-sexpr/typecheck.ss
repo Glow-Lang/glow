@@ -381,13 +381,7 @@
     ((@ _ _) (error 'tc-expr "TODO: deal with @"))
     ((ann expr type)
      (tc-expr/check env #'expr (parse-type env empty-symdict #'type)))
-    (x (identifier? #'x)
-     (let ((s (syntax-e #'x)))
-       (unless (symdict-has-key? env s)
-         (error s "unbound identifier"))
-       (match (symdict-ref env s)
-         ((entry:val t) t)
-         ((entry:ctor [] [] t) t))))
+    (x (identifier? #'x) (tc-expr-val-id env stx))
     (lit (stx-atomic-literal? #'lit) (tc-literal #'lit))
     ((@tuple e ...)
      (type:tuple (stx-map tce #'(e ...))))
@@ -421,13 +415,10 @@
      (error 'tc-expr "TODO: deal with withdraw!"))
     ((f a ...) (identifier? #'f)
      (let ((s (syntax-e #'f)))
-       (unless (symdict-has-key? env s)
-         (error s "unbound identifier"))
-       (match (symdict-ref env s)
+       (match (tc-expr-fun-id env #'f)
          ;; monomorphic case
          ;; TODO: handle polymorphic case with unification
-         ((or (entry:fun [] in-tys out-ty)
-              (entry:ctor [] in-tys out-ty))
+         ((entry:fun [] in-tys out-ty)
           (unless (= (stx-length #'(a ...)) (length in-tys))
             (error s "wrong number of arguments"))
           (stx-for-each (lambda (a t) (tc-expr/check env a t))
@@ -435,6 +426,25 @@
                         in-tys)
           out-ty))))))
 
+;; tc-expr-val-id : Env Identifier -> Type
+(def (tc-expr-val-id env x)
+  (def s (syntax-e x))
+  (unless (symdict-has-key? env s)
+    (error s "unbound identifier"))
+  (match (symdict-ref env s)
+    ((entry:val t) t)
+    ((entry:ctor [] [] t) t)))
+
+;; tc-expr-fun-id : Env Identifier -> EnvEntry
+;; Treat entry:fun and entry:ctor the same as functions
+(def (tc-expr-fun-id env f)
+  (def s (syntax-e f))
+  (unless (symdict-has-key? env s)
+    (error s "unbound identifier"))
+  (match (symdict-ref env s)
+    ((or (entry:fun vs in-tys out-ty)
+         (entry:ctor vs in-tys out-ty))
+     (entry:fun vs in-tys out-ty))))
 
 ;; tc-expr/check : Env ExprStx (U #f Type) -> TypeOrError
 ;; returns expected-ty on success, actual-ty if no expected, otherwise error
