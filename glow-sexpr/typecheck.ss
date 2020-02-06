@@ -1,6 +1,7 @@
 (export #t)
 
 (import :std/iter
+        :std/misc/list
         :gerbil/gambit/exact
         :gerbil/gambit/bytes
         <expander-runtime>
@@ -56,6 +57,20 @@
 (defstruct type:record (field-args))
 (def (type? v) (or (type:bottom? v) (type:name? v) (type:var? v) (type:app? v) (type:tuple? v) (type:record? v)))
 
+;; PTypes are types used for outputs, while NTypes are types used for inputs.
+;; PTypes are extended to allow unions, while NTypes allow intersections.
+;; subtype is PType <: NType
+;; join is PType ⊔ PType
+;; meet is NType ⊓ NType
+
+;; A covariant position within a PType has a PType.
+;; A covariant position within an NType has an NType.
+;; A contravariant position within a PType has an NType.
+;; A contravariant position within an NType has a PType.
+;; An invaraint position within either has a Type, with no unions or intersections.
+(defstruct ptype:union (types) transparent: #t)
+(defstruct ntype:intersection (types) transparent: #t)
+
 ;; A Pattys is an [Assqof Symbol Type]
 ;; for the types of the pattern variables within a pattern
 
@@ -89,7 +104,7 @@
   (and (or (variance-covariant? v) (subtype? b a))
        (or (variance-contravariant? v) (subtype? a b))))
 
-;; subtype? : Type Type -> Bool
+;; subtype? : PType NType -> Bool
 (def (subtype? a b)
   (match* (a b)
     (((type:bottom) _) #t)
@@ -106,14 +121,23 @@
           (equal? v1s v2s)
           (= (length v1s) (length a1s) (length a2s))
           (andmap variance-type~? v1s a1s a2s)))
+    (((ptype:union as) b)
+     (andmap (lambda (a) (subtype? a b)) as))
+    ((a (ntype:intersection bs))
+     (andmap (lambda (b) (subtype? a b)) bs))
     ((_ _) #f)))
 
-;; type-join : Type Type -> Type
+;; type-join : PType PType -> PType
 ;; finds the type that is a supertype of both types, otherwise error
 (def (type-join a b)
-  (cond ((subtype? a b) b)
-        ((subtype? b a) a)
-        (else (error 'type-join "incompatible types"))))
+  (match* (a b)
+    (((ptype:union as) (ptype:union bs)) (ptype:union (append as bs)))
+    (((ptype:union as) b) (ptype:union (append1 as b)))
+    ((a (ptype:union bs)) (ptype:union (cons a bs)))
+    ((a b)
+     (cond ((subtype? a b) b)
+           ((subtype? b a) a)
+           (else (ptype:union (list a b)))))))
 
 ;; types-join : [Listof Type] -> Type
 ;; finds the type that is a supertype of all types in the list
