@@ -12,7 +12,7 @@
   (list->symdict
    [(cons 'int (entry:type [] type:int))
     (cons 'bool (entry:type [] type:bool))
-    (cons 'bytestr (entry:type [] type:bytestr))
+    (cons 'bytes (entry:type [] type:bytes))
     (cons 'not (entry:fun [] [type:bool] type:bool))
     (cons '< (entry:fun [] [type:int type:int] type:bool))
     (cons '+ (entry:fun [] [type:int type:int] type:int))
