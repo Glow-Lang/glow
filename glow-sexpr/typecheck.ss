@@ -43,13 +43,13 @@
 
 ;; A Type is one of:
 ;;  - (type:bottom)
-;;  - (type:name Symbol [Listof Variance] [Boxof (U Bool Type)])
+;;  - (type:name Symbol [Listof Variance])  ;; TODO: add srcloc
 ;;  - (type:var Symbol)
 ;;  - (type:app Type [Listof Type])
 ;;  - (type:tuple [Listof Type])
 ;;  - (type:record [Symdictof Type])
 (defstruct type:bottom () transparent: #t)
-(defstruct type:name (sym vances box) transparent: #t)
+(defstruct type:name (sym vances) transparent: #t)  ;; TODO: add srcloc
 (defstruct type:var (sym) transparent: #t)
 (defstruct type:app (fun args) transparent: #t)
 (defstruct type:tuple (args) transparent: #t)
@@ -57,13 +57,14 @@
 (def (type? v) (or (type:bottom? v) (type:name? v) (type:var? v) (type:app? v) (type:tuple? v) (type:record? v)))
 
 ;; A Pattys is an [Assqof Symbol Type]
+;; for the types of the pattern variables within a pattern
 
-(def type:int (type:name 'int [] (box #t)))
-(def type:bool (type:name 'bool [] (box #t)))
-(def type:bytestr (type:name 'bytestr [] (box #t)))
+(def type:int (type:name 'int []))
+(def type:bool (type:name 'bool []))
+(def type:bytes (type:name 'bytes []))
 
 ;; lists are covariant, so (listof a) <: (listof b) when a <: b
-(def typector:listof (type:name 'listof [covariant] (box #t)))
+(def typector:listof (type:name 'listof [covariant]))
 (def (type:listof t) (type:app typector:listof [t]))
 (def (type:listof? t)
   (match t
@@ -75,18 +76,9 @@
      (unless (eq? c typector:listof) (error 'listof-elem "expected a listof type"))
      e)))
 
-;; type-actual : Type -> Type
-(def (type-actual t)
-  (match t
-    ((type:name _ _ (box #t)) t)
-    ((type:name x _ (box #f)) (error x "unknown type"))
-    ((type:name _ _ (box ty)) ty)
-    (_ t)))
-
 ;; type=? : Type Type -> Bool
 (def (type=? a b)
-  (let ((a (type-actual a)) (b (type-actual b)))
-    (and (subtype? a b) (subtype? b a))))
+  (and (subtype? a b) (subtype? b a)))
 
 ;; variance-type~? : Variance Type Type -> Bool
 ;; (~? irrelavent a b) = #t
@@ -94,15 +86,14 @@
 ;; (~? contravariant a b) = (subtype? b a)
 ;; (~? invariant a b) = (type=? a b)
 (def (variance-type~? v a b)
-  (let ((a (type-actual a)) (b (type-actual b)))
-    (and (or (variance-covariant? v) (subtype? b a))
-         (or (variance-contravariant? v) (subtype? a b)))))
+  (and (or (variance-covariant? v) (subtype? b a))
+       (or (variance-contravariant? v) (subtype? a b))))
 
 ;; subtype? : Type Type -> Bool
 (def (subtype? a b)
-  (match* ((type-actual a) (type-actual b))
+  (match* (a b)
     (((type:bottom) _) #t)
-    (((type:name x vxs (box #t)) (type:name y vys (box #t)))
+    (((type:name x vxs) (type:name y vys))
      (and (eq? x y) (equal? vxs vys)))
     (((type:var x) (type:var y)) (eq? x y))
     (((type:tuple as) (type:tuple bs))
@@ -110,7 +101,7 @@
           (andmap subtype? as bs)))
     (((type:record as) (type:record bs))
      (symdict=? as bs subtype?))
-    (((type:app (type:name f1 v1s _) a1s) (type:app (type:name f2 v2s _) a2s))
+    (((type:app (type:name f1 v1s) a1s) (type:app (type:name f2 v2s) a2s))
      (and (eq? f1 f2)
           (equal? v1s v2s)
           (= (length v1s) (length a1s) (length a2s))
@@ -193,7 +184,7 @@
   (def (sub t) (type-subst tyvars t))
   (match t
     ((type:bottom) t)
-    ((type:name _ _ _) t)
+    ((type:name _ _) t)
     ((type:var s)
      (cond ((symdict-has-key? tyvars s) (symdict-ref tyvars s))
            (else t)))
@@ -272,6 +263,8 @@
          (tc-body (tc-stmt env (stx-car stx)) (stx-cdr stx)))))
 
 ;; tc-stmt : Env StmtStx -> Env
+;; TODO: reorganize into one case for each keyword, possibly delegating to a function with
+;; the multiple cases within a single keyword
 (def (tc-stmt env stx)
   (syntax-case stx (@ : quote def λ deftype defdata publish! verify!)
     ((@ _ _) (error 'tc-stmt "TODO: deal with @"))
@@ -288,7 +281,7 @@
                     (entry:type xs (parse-type env tyvars #'b)))))
     ((defdata x variant ...) (identifier? #'x)
      (let ((s (syntax-e #'x)))
-       (def b (type:name (gensym s) [] (box #t)))
+       (def b (type:name (gensym s) []))
        (tc-defdata-variants (symdict-put env s (entry:type [] b))
                             []
                             b
@@ -298,7 +291,7 @@
            (xs (stx-map syntax-e #'(x ...))))
        ;; TODO: allow variances to be either annotated or inferred
        (def vances (map (lambda (x) invariant) xs))
-       (def b (type:app (type:name (gensym s) vances (box #t)) (map make-type:var xs)))
+       (def b (type:app (type:name (gensym s) vances) (map make-type:var xs)))
        (tc-defdata-variants (symdict-put env s (entry:type xs b))
                             xs
                             b
@@ -442,8 +435,8 @@
   (def e (stx-e stx))
   (cond ((exact-integer? e) type:int)
         ((boolean? e) type:bool)
-        ((string? e) type:bytestr) ; represent as bytestrs using UTF-8
-        ((bytes? e) type:bytestr)
+        ((string? e) type:bytes) ; represent as bytess using UTF-8
+        ((bytes? e) type:bytes)
         (else (error 'tc-literal "unrecognized literal"))))
 
 ;; tc-switch-case : Env Type SwitchCaseStx -> Type
