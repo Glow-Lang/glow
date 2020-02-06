@@ -268,6 +268,21 @@
 (def (tc-stmt env stx)
   (syntax-case stx (@ : quote def λ deftype defdata publish! verify!)
     ((@ _ _) (error 'tc-stmt "TODO: deal with @"))
+    ((deftype . _) (tc-stmt-deftype env stx))
+    ((defdata . _) (tc-stmt-defdata env stx))
+    ((def . _) (tc-stmt-def env stx))
+    ((publish! x ...) (stx-andmap identifier? #'(x ...))
+     (error 'tc-stmt "TODO: deal with publish!"))
+    ((verify! x ...) (stx-andmap identifier? #'(x ...))
+     (error 'tc-stmt "TODO: deal with verify!"))
+    (expr
+     (let ()
+       (tc-expr env #'expr)
+       env))))
+
+;; tc-stmt-deftype : Env StmtStx -> Env
+(def (tc-stmt-deftype env stx)
+  (syntax-case stx (@ : quote deftype defdata)
     ((deftype x t) (identifier? #'x)
      (symdict-put env
                   (syntax-e #'x)
@@ -278,7 +293,11 @@
        (def tyvars (list->symdict (map cons xs (map make-type:var xs))))
        (symdict-put env
                     s
-                    (entry:type xs (parse-type env tyvars #'b)))))
+                    (entry:type xs (parse-type env tyvars #'b)))))))
+
+;; tc-stmt-defdata : Env StmtStx -> Env
+(def (tc-stmt-defdata env stx)
+  (syntax-case stx (@ : quote deftype defdata)
     ((defdata x variant ...) (identifier? #'x)
      (let ((s (syntax-e #'x)))
        (def b (type:name (gensym s) []))
@@ -295,34 +314,8 @@
        (tc-defdata-variants (symdict-put env s (entry:type xs b))
                             xs
                             b
-                            #'(variant ...))))
-    ((def f (λ params : out-type body ...)) (identifier? #'f)
-     (let ((s (syntax-e #'f))
-           (xs (stx-map parse-param-name #'params))
-           (in-ts (stx-map (lambda (p) (parse-param-type env p)) #'params))
-           (out-t (parse-type env empty-symdict #'out-type)))
-       (symdict-put env s (tc-function env xs in-ts out-t #'(body ...)))))
-    ((def f (λ params body ...)) (identifier? #'f)
-     (let ((s (syntax-e #'f))
-           (xs (stx-map parse-param-name #'params))
-           (in-ts (stx-map (lambda (p) (parse-param-type env p)) #'params)))
-       (symdict-put env s (tc-function env xs in-ts #f #'(body ...)))))
-    ((def x : type expr) (identifier? #'x)
-     (let ((s (syntax-e #'x))
-           (t (parse-type env empty-symdict #'type)))
-       (tc-expr/check env #'expr t)
-       (symdict-put env s (entry:val t))))
-    ((def x expr) (identifier? #'x)
-     (let ((s (syntax-e #'x)))
-       (symdict-put env s (entry:val (tc-expr env #'expr)))))
-    ((publish! x ...) (stx-andmap identifier? #'(x ...))
-     (error 'tc-stmt "TODO: deal with publish!"))
-    ((verify! x ...) (stx-andmap identifier? #'(x ...))
-     (error 'tc-stmt "TODO: deal with verify!"))
-    (expr
-     (let ()
-       (tc-expr env #'expr)
-       env))))
+                            #'(variant ...))))))
+
 
 ;; tc-defdata-variant : Env [Listof Symbol] Type VariantStx -> [Cons Symbol EnvEntry]
 (def (tc-defdata-variant env xs b stx)
@@ -341,6 +334,29 @@
   ;; tcvariant : VariantStx -> [Cons Symbol EnvEntry]
   (def (tcvariant v) (tc-defdata-variant env xs b v))
   (symdict-put/list env (stx-map tcvariant stx)))
+
+;; tc-stmt-def : Env StmtStx -> Env
+(def (tc-stmt-def env stx)
+  (syntax-case stx (@ : quote def λ)
+    ((def f (λ params : out-type body ...)) (identifier? #'f)
+     (let ((s (syntax-e #'f))
+           (xs (stx-map parse-param-name #'params))
+           (in-ts (stx-map (lambda (p) (parse-param-type env p)) #'params))
+           (out-t (parse-type env empty-symdict #'out-type)))
+       (symdict-put env s (tc-function env xs in-ts out-t #'(body ...)))))
+    ((def f (λ params body ...)) (identifier? #'f)
+     (let ((s (syntax-e #'f))
+           (xs (stx-map parse-param-name #'params))
+           (in-ts (stx-map (lambda (p) (parse-param-type env p)) #'params)))
+       (symdict-put env s (tc-function env xs in-ts #f #'(body ...)))))
+    ((def x : type expr) (identifier? #'x)
+     (let ((s (syntax-e #'x))
+           (t (parse-type env empty-symdict #'type)))
+       (tc-expr/check env #'expr t)
+       (symdict-put env s (entry:val t))))
+    ((def x expr) (identifier? #'x)
+     (let ((s (syntax-e #'x)))
+       (symdict-put env s (entry:val (tc-expr env #'expr)))))))
 
 ;; tc-function : Env [Listof Symbol] [Listof (U #f Type)] (U #f Type) BodyStx -> EnvEntry
 (def (tc-function env xs in-tys exp-out-ty body)
