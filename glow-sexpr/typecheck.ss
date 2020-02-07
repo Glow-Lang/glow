@@ -139,7 +139,7 @@
            ((subtype? b a) a)
            (else (ptype:union (list a b)))))))
 
-;; types-join : [Listof Type] -> Type
+;; types-join : [Listof PType] -> PType
 ;; finds the type that is a supertype of all types in the list
 (def (types-join ts)
   (match ts
@@ -147,6 +147,19 @@
     ([t] t)
     ([a b] (type-join a b))
     (_ (type-join (car ts) (types-join (cdr ts))))))
+
+;; type-meet : NType NType -> NType
+;; finds the type that is a subtype of both types, otherwise error
+;; NOTE: the meet of non-overlapping types is still different from bottom
+(def (type-meet a b)
+  (match* (a b)
+    (((ntype:intersection as) (ntype:intersection bs)) (ntype:intersection (append as bs)))
+    (((ntype:intersection as) b) (ntype:intersection (append1 as b)))
+    ((a (ntype:intersection bs)) (ntype:intersection (cons a bs)))
+    ((a b)
+     (cond ((subtype? a b) a)
+           ((subtype? b a) b)
+           (else (ntype:intersection (list a b)))))))
 
 ;; pattys-join : [Listof Pattys] -> Pattys
 ;; intersection of keys, join of types for same key
