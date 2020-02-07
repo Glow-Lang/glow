@@ -205,6 +205,18 @@
 ;; An Env is a [Symdictof EnvEntry]
 ;; A TyvarEnv is a [Symdictof Type]
 
+;; A TyvarBisubst is a [Symdictof TypeInterval]
+;; A TypeInterval is a (type-interval NType PType)
+;; maps negative occurrences of type variables to the NType,
+;; and positive occurrences of type variables to the PType
+;; should be idempotent: applying a bisubst a 2nd time shouldn't matter
+;; should be stable: the NType should be a subtype of the PType
+(defstruct type-interval (ntype ptype) transparent: #t)
+;; for example applying the bisubst
+;; (symdict ('a (type-interval B C)))
+;; to the identity function with type ('a -> 'a)
+;; results in (B -> C), where a value of type B flows into C
+
 ;; not-bound-as-ctor? : Env Symbol -> Bool
 (def (not-bound-as-ctor? env s)
   (or (not (symdict-has-key? env s))
@@ -233,7 +245,76 @@
      (type:record
       (list->symdict
        (map (lambda (p) (cons (car p) (sub (cdr p))))
-            fldtys))))))
+            fldtys))))
+    ((ptype:union ts)
+     (ptype:union (map sub ts)))
+    ((ntype:intersection ts)
+     (ntype:intersection (map sub ts)))))
+
+;; ptype-bisubst : TyvarBisubst PType -> PType
+(def (ptype-bisubst tybi t)
+  ;; psub : PType -> PType
+  (def (psub pt) (ptype-bisubst tybi pt))
+  ;; nsub : NType -> NType
+  (def (nsub nt) (ntype-bisubst tybi nt))
+  ;; vsub : Variance PNType -> PNType
+  (def (vsub v t)
+    (cond ((variance-covariant? v) (psub t))
+          ((variance-contravariant? v) (nsub t))
+          (else (error 'bisubst "TODO: invariant positions"))))
+  (match t
+    ((type:bottom) t)
+    ((type:name _ _) t)
+    ((type:var s)
+     (cond ((symdict-has-key? tybi s)
+            (type-interval-ptype (symdict-ref tybi s)))
+           (else t)))
+    ((type:app (type:name f vs) as)
+     (unless (= (length vs) (length as))
+       (error f "wrong number of arguments to type constructor"))
+     (type:app (type:name f vs) (map vsub vs as)))
+    ((type:tuple as)
+     (type:tuple (map psub as)))
+    ((type:record fldtys)
+     (type:record
+      (list->symdict
+       (map (lambda (p) (cons (car p) (psub (cdr p))))
+            fldtys))))
+    ((ptype:union ts)
+     (ptype:union (map psub ts)))))
+
+;; ntype-bisubst : TyvarBisubst NType -> NType
+(def (ntype-bisubst tybi t)
+  ;; psub : PType -> PType
+  (def (psub pt) (ptype-bisubst tybi pt))
+  ;; nsub : NType -> NType
+  (def (nsub nt) (ntype-bisubst tybi nt))
+  ;; vsub : Variance PNType -> PNType
+  (def (vsub v t)
+    ;; covariant is nsub because nt is already in a contravariant pos
+    (cond ((variance-covariant? v) (nsub t))
+          ((variance-contravariant? v) (psub t))
+          (else (error 'bisubst "TODO: invariant positions"))))
+  (match t
+    ((type:bottom) t)
+    ((type:name _ _) t)
+    ((type:var s)
+     (cond ((symdict-has-key? tybi s)
+            (type-interval-ntype (symdict-ref tybi s)))
+           (else t)))
+    ((type:app (type:name f vs) as)
+     (unless (= (length vs) (length as))
+       (error f "wrong number of arguments to type constructor"))
+     (type:app (type:name f vs) (map vsub vs as)))
+    ((type:tuple as)
+     (type:tuple (map nsub as)))
+    ((type:record fldtys)
+     (type:record
+      (list->symdict
+       (map (lambda (p) (cons (car p) (nsub (cdr p))))
+            fldtys))))
+    ((ntype:intersection ts)
+     (ntype:intersection (map nsub ts)))))
 
 ; literals:
 ;   common:
