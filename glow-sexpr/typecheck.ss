@@ -59,6 +59,7 @@
 
 ;; PTypes are types used for outputs, while NTypes are types used for inputs.
 ;; PTypes are extended to allow unions, while NTypes allow intersections.
+;; PTypes represent lower bounds for values, while NTypes represent upper bounds for contexts.
 ;; subtype is PType <: NType
 ;; join is PType ⊔ PType
 ;; meet is NType ⊓ NType
@@ -67,7 +68,7 @@
 ;; A covariant position within an NType has an NType.
 ;; A contravariant position within a PType has an NType.
 ;; A contravariant position within an NType has a PType.
-;; An invaraint position within either has a Type, with no unions or intersections.
+;; An invariant position within either has a Type, with no unions or intersections.
 (defstruct ptype:union (types) transparent: #t)
 (defstruct ntype:intersection (types) transparent: #t)
 
@@ -290,6 +291,91 @@
      (ptype:union (map sub ts)))
     ((ntype:intersection ts)
      (ntype:intersection (map sub ts)))))
+
+;; A Constraints is a [Listof Constraint]
+;; A Constraint is one of:
+;;  - (constraint:subtype PType NType)
+;;  - (constraint:type-equal Type Type)
+(defstruct constraint:subtype (a b) transparent: #t)
+(defstruct constraint:type-equal (a b) transparent: #t)
+
+;; constraints-from-variance : Variance PNType PNType -> Constraints
+(def (constraints-from-variance v a b)
+  (cond ((variance-irrelevant? v) [])
+        ((variance-covariant? v) [(constraint:subtype a b)])
+        ((variance-contravariant? v) [(constraint:subtype b a)])
+        (else [(constraint:type-equal a b)])))
+
+;; constraints-bisubst : TyvarBisubst Constraints -> Constraints
+(def (constraints-bisubst tybi cs)
+  (map (lambda (c) (constraint-bisubst tybi c)) cs))
+
+;; constraint-bisubst : TyvarBisubst Constraint -> Constraint
+(def (constraint-bisubst tybi c)
+  (match c
+    ((constraint:subtype a b)
+     (constraint:subtype (type-bisubst tybi contravariant a)
+                         (type-bisubst tybi covariant b)))
+    ((constraint:type-equal a b)
+     (constraint:type-equal (type-bisubst tybi invariant a)
+                            (type-bisubst tybi invariant b)))))
+
+;; symdict-key-set=? : [Symdict Any] [Symdict Any] -> Bool
+(def (symdict-key-set=? a b) (symdict=? a b true))
+
+;; biunify : Constraints TyvarBisubst -> TyvarBisubst
+(def (biunify cs tybi)
+  (match cs
+    ([] tybi)
+    ([fst . rst]
+     (match fst
+       ((constraint:type-equal a b)
+        (biunify (cons* (constraint:subtype a b) (constraint:subtype b a) rst) tybi))
+       ((constraint:subtype (type:bottom) _)
+        (biunify rst tybi))
+       ((constraint:subtype (type:name x vxs) (type:name y vys))
+        (unless (eq? x y) (error 'subtype "type mismatch"))
+        (unless (equal? vxs vys) (error 'subtype "inconsistant variances"))
+        (biunify rst tybi))
+       ((constraint:subtype (type:var a) (type:var b))
+        (cond
+          ((eq? a b) (biunify rst tybi))
+          ; a does not occur in b
+          ((symdict-has-key? tybi a)
+           (with (((type-interval tn tp) (symdict-ref tybi a)))
+             (error "TODO")))
+          (else
+           (let ((tybi2 (symdict-put tybi a (type-interval (type:var a) (type:var b)))))
+             (biunify (constraints-bisubst tybi2 rst) tybi2)))))
+       ((constraint:subtype (type:tuple as) (type:tuple bs))
+        (unless (length=? as bs)
+          (error 'subtype "tuples lengths don't match"))
+        (biunify (append (map make-constraint:subtype as bs) rst) tybi))
+       ((constraint:subtype (type:record as) (type:record bs))
+        (unless (symdict-key-set=? as bs)
+          (error 'subtype "record fields don't match"))
+        (biunify (append (map (lambda (k)
+                                (constraint:subtype (symdict-ref as k) (symdict-ref bs k)))
+                              (symdict-keys as))
+                         rst)
+                 tybi))
+       ((constraint:subtype (type:app (type:name f1 v1s) a1s) (type:app (type:name f2 v2s) a2s))
+        (unless (eq? f1 f2) (error 'subtype "type mismatch"))
+        (unless (equal? v1s v2s) (error 'subtype "inconsistant variances"))
+        (unless (= (length v1s) (length a1s) (length a2s))
+          (error 'subtype "wrong number of arguments to type constructor"))
+        (biunify (foldr (lambda (v a1 a2 rst)
+                          (append (constraints-from-variance v a1 a2) rst))
+                        rst
+                        v1s
+                        a1s
+                        a2s)
+                 tybi))
+       ((constraint:subtype (ptype:union as) b)
+        (biunify (append (map (lambda (a) (constraint:subtype a b)) as) rst) tybi))
+       ((constraint:subtype a (ntype:intersection bs))
+        (biunify (append (map (lambda (b) (constraint:subtype a b)) bs) rst) tybi))
+       (_ (error 'biunify "TODO"))))))
 
 ; literals:
 ;   common:
