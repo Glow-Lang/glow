@@ -228,6 +228,21 @@
   (and (symdict-has-key? env s)
        (entry:ctor? (symdict-ref env s))))
 
+;; type-has-var? : Type Symbol -> Bool
+(def (type-has-var? t x)
+  (def (hv? t) (type-has-var? t x))
+  (match t
+    ((type:bottom) #f)
+    ((type:name s _) #f)
+    ((type:var s) (eq? x s))
+    ((type:app f as)
+     (or (hv? f) (ormap hv? as)))
+    ((type:tuple as)
+     (ormap hv? as))
+    ((type:record flds)
+     (ormap (lambda (k) (hv? (symdict-ref flds k)))
+            (symdict-keys flds)))))
+
 ;; type-subst : TyvarEnv Type -> Type
 (def (type-subst tyvars t)
   ;; sub : Type -> Type
@@ -333,6 +348,10 @@
         (biunify (cons* (constraint:subtype a b) (constraint:subtype b a) rst) tybi))
        ((constraint:subtype (type:bottom) _)
         (biunify rst tybi))
+       ((constraint:subtype (ptype:union as) b)
+        (biunify (append (map (lambda (a) (constraint:subtype a b)) as) rst) tybi))
+       ((constraint:subtype a (ntype:intersection bs))
+        (biunify (append (map (lambda (b) (constraint:subtype a b)) bs) rst) tybi))
        ((constraint:subtype (type:name x vxs) (type:name y vys))
         (unless (eq? x y) (error 'subtype "type mismatch"))
         (unless (equal? vxs vys) (error 'subtype "inconsistant variances"))
@@ -343,9 +362,32 @@
           ; a does not occur in b
           ((symdict-has-key? tybi a)
            (with (((type-interval tn tp) (symdict-ref tybi a)))
-             (error "TODO")))
+             (def tybi2 (symdict-put tybi a (type-interval (type-meet tn (type:var b)) tp)))
+             (biunify (constraints-bisubst tybi2 rst) tybi2)))
           (else
-           (let ((tybi2 (symdict-put tybi a (type-interval (type:var a) (type:var b)))))
+           (let ((tybi2 (symdict-put tybi a (type-interval (type-meet (type:var a) (type:var b)) (type:var a)))))
+             (biunify (constraints-bisubst tybi2 rst) tybi2)))))
+       ((constraint:subtype (type:var a) b)
+        (cond
+          ((type-has-var? b a) (error 'subtype "recursive types are not yet supported"))
+          ; a does not occur in b
+          ((symdict-has-key? tybi a)
+           (with (((type-interval tn tp) (symdict-ref tybi a)))
+             (def tybi2 (symdict-put tybi a (type-interval (type-meet tn b) tp)))
+             (biunify (constraints-bisubst tybi2 rst) tybi2)))
+          (else
+           (let ((tybi2 (symdict-put tybi a (type-interval (type-meet (type:var a) b) (type:var a)))))
+             (biunify (constraints-bisubst tybi2 rst) tybi2)))))
+       ((constraint:subtype a (type:var b))
+        (cond
+          ((type-has-var? a b) (error 'subtype "recursive types are not yet supported"))
+          ; b does not occur in a
+          ((symdict-has-key? tybi b)
+           (with (((type-interval tn tp) (symdict-ref tybi b)))
+             (def tybi2 (symdict-put tybi b (type-interval tn (type-join tp a))))
+             (biunify (constraints-bisubst tybi2 rst) tybi2)))
+          (else
+           (let ((tybi2 (symdict-put tybi b (type-interval (type:var b) (type-join (type:var b) a)))))
              (biunify (constraints-bisubst tybi2 rst) tybi2)))))
        ((constraint:subtype (type:tuple as) (type:tuple bs))
         (unless (length=? as bs)
@@ -371,10 +413,6 @@
                         a1s
                         a2s)
                  tybi))
-       ((constraint:subtype (ptype:union as) b)
-        (biunify (append (map (lambda (a) (constraint:subtype a b)) as) rst) tybi))
-       ((constraint:subtype a (ntype:intersection bs))
-        (biunify (append (map (lambda (b) (constraint:subtype a b)) bs) rst) tybi))
        (_ (error 'biunify "TODO"))))))
 
 ; literals:
