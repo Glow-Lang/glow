@@ -193,9 +193,9 @@
          (check-duplicate-symbols bs)))))
 
 ;; An EnvEntry is one of:
-;;  - (entry:val Type)
-;;  - (entry:fun [Listof Symbol] [Listof Type] Type)
-;;  - (entry:ctor [Listof Symbol] [Listof Type] Type)
+;;  - (entry:val PType)
+;;  - (entry:fun [Listof Symbol] [Listof NType] PType) ; N for inputs, P for outputs
+;;  - (entry:ctor [Listof Symbol] [Listof Type] Type)  ; note ctor does not have N or P, just Type
 ;;  - (entry:type [Listof Symbol] Type)
 (defstruct entry:val (type) transparent: #t)
 (defstruct entry:fun (typarams input-types output-type) transparent: #t)
@@ -695,7 +695,7 @@
        (tc-body env/pattys #'(body ...))))))
 
 
-;; tc-pat : Env Type PatStx -> Pattys
+;; tc-pat : Env PType PatStx -> Pattys
 (def (tc-pat env valty stx)
   (syntax-case stx (@ : ann @tuple @record @list @or-pat)
     ((@ _ _) (error 'tc-pat "TODO: deal with @"))
@@ -774,6 +774,8 @@
          ((entry:ctor [] in-tys out-ty)
           ;; valty <: out-ty
           ;; because passing valty into a context expecting out-ty
+          (unless (subtype? valty out-ty)
+            (error 'tc-pat "type mismatch"))
           (unless (= (stx-length #'(a ...)) (length in-tys))
             (error s "wrong number of arguments to data constructor"))
           (def ptys
@@ -781,6 +783,22 @@
                      in-tys
                      #'(a ...)))
           (pattys-append ptys))
+         ((entry:ctor xs in-tys out-ty)
+          (let ((xs* (map gensym xs)))
+            (def tve (list->symdict (map cons xs (map make-type:var xs*))))
+            (def (ty* t) (type-subst tve t))
+            (def out-ty* (ty* out-ty))
+            ;; valty <: out-ty*
+            (def bity (biunify [(constraint:subtype valty out-ty*)] empty-symdict))
+            (def (ntybity t) (type-bisubst bity contravariant t))
+            (def in-tys* (map ntybity (map ty* in-tys)))
+            (unless (= (stx-length #'(a ...)) (length in-tys*))
+              (error s "wrong number of arguments to data constructor"))
+            (def ptys
+              (stx-map (lambda (t p) (tc-pat env t p))
+                       in-tys*
+                       #'(a ...)))
+            (pattys-append ptys)))
          (_ (error 'tc-pat "TODO: handle data constructor patterns better")))))))
 
 #|
