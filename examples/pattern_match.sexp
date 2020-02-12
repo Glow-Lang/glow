@@ -30,12 +30,17 @@
 (switch v
   ((@record (x x) (y y)) (sqrt (+ (sqr x) (sqr y)))))
 
-(data lcexpr
+(defdata lcexpr
   (Var int)
   (Lam lcexpr)
   (App lcexpr lcexpr))
 (def omega (App (Lam (App (Var 0) (Var 0)))
                 (Lam (App (Var 0) (Var 0)))))
+(def freevars
+  (λ ((e : lcexpr))
+    (switch e
+      ((Var x) (@list x))
+      (_ (@list 0 1 2 3 4 5 6 7 8 9))))) ; TODO: fix when we add recursion
 (switch omega
   ((App (Lam b) a) "beta")
   ((Lam (App f (Var 0)))
@@ -44,18 +49,18 @@
        "not immediate"))
   (_ "not immediate"))
 
-(data ymn Yes Maybe No)
+(defdata ymn Yes Maybe No)
 (def ans Maybe)
 (def possible
-  (λ ((a: ymn)) : bool
+  (λ ((a : ymn)) : bool
     (switch a
-      ((@or-pat Yes Maybe) true)
-      (No false))))
+      ((@or-pat Yes Maybe) #t)
+      (No #f))))
 (def definite
-  (λ ((a: ymn)) : bool
+  (λ ((a : ymn)) : bool
     (switch a
-      (Yes true)
-      ((@or-pat No Maybe) false))))
+      (Yes #t)
+      ((@or-pat No Maybe) #f))))
 (switch (@tuple (possible ans) (definite ans))
   ((@tuple #t #t) "yes")
   ((@tuple #t #f) "maybe")

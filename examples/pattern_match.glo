@@ -43,6 +43,11 @@ data lcexpr =
   | App(lcexpr, lcexpr);
 let omega = App(Lam(App(Var(0), Var(0))),
                 Lam(App(Var(0), Var(0))));
+let freevars = (e : lcexpr) =>
+  switch e {
+  | Var(x) => [x]
+  | _ => [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] // TODO: fix when we add recursion
+  };
 switch (omega) {
 | App(Lam(b), a) => "beta"
 | Lam(App(f, Var(0))) =>
