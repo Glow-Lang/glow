@@ -1,4 +1,7 @@
-(export #t)
+(export #t
+        (import:
+         "variance.ss"
+         "type.ss"))
 
 (import :std/iter
         :std/misc/list
@@ -7,92 +10,14 @@
         <expander-runtime>
         (for-template :gerbil/core)
         :clan/pure/dict/assq
-        :clan/pure/dict/symdict)
+        :clan/pure/dict/symdict
+        "variance.ss"
+        "type.ss")
 
 ;; Typechecking glow-sexpr
 
 ;; Type system and scoping rules are closest
 ;; to ReasonML, but Record types are structural.
-
-;; A Variance is a (variance Bool Bool)
-(defstruct variance (covariant? contravariant?) transparent: #t)
-(def irrelevant    (variance #t #t)) ; bottom, ignored
-(def covariant     (variance #t #f))
-(def contravariant (variance #f #t))
-(def invariant     (variance #f #f)) ; top, constrained
-;; variance-irrelevant? : Variance -> Bool
-(def (variance-irrelevant? v)
-  (and (variance-covariant? v) (variance-contravariant? v)))
-;; variance-invariant? : Variance -> Bool
-(def (variance-invariant? v)
-  (and (not (variance-covariant? v)) (not (variance-contravariant? v))))
-;; variance-join : Variance Variance -> Variance
-;; irrelevant ⊔ a = a
-;; invariant ⊔ a = invariant
-(def (variance-join a b)
-  (with (((variance ap an) a) ((variance bp bn) b))
-    (variance (and ap bp) (and an bn))))
-;; variance-compose : Variance Variance -> Variance
-;; irrelevant ∘ a = irrelevant
-;; covariant ∘ a = a
-;; contravariant ∘ (variance p n) = (variance n p)
-;; invariant ∘ (variance p n) = (variance (and p n) (and p n))
-(def (variance-compose a b)
-  (with (((variance ap an) a) ((variance bp bn) b))
-    (variance (and (or ap bn) (or an bp))
-              (and (or ap bp) (or an bn)))))
-
-;; A Type is one of:
-;;  - (type:bottom)
-;;  - (type:name Symbol [Listof Variance])  ;; TODO: add srcloc
-;;  - (type:var Symbol)
-;;  - (type:app Type [Listof Type])
-;;  - (type:tuple [Listof Type])
-;;  - (type:record [Symdictof Type])
-;;  - (type:arrow [Listof Type] Type)
-(defstruct type:bottom () transparent: #t)
-(defstruct type:name (sym vances) transparent: #t)  ;; TODO: add srcloc
-(defstruct type:var (sym) transparent: #t)
-(defstruct type:app (fun args) transparent: #t)
-(defstruct type:tuple (args) transparent: #t)
-(defstruct type:record (field-args))
-(defstruct type:arrow (in-tys out-ty) transparent: #t)
-(def (type? v) (or (type:bottom? v) (type:name? v) (type:var? v) (type:app? v) (type:tuple? v) (type:record? v) (type:arrow? v)))
-
-;; PTypes are types used for outputs, while NTypes are types used for inputs.
-;; PTypes are extended to allow unions, while NTypes allow intersections.
-;; PTypes represent lower bounds for values, while NTypes represent upper bounds for contexts.
-;; subtype is PType <: NType
-;; join is PType ⊔ PType
-;; meet is NType ⊓ NType
-
-;; A covariant position within a PType has a PType.
-;; A covariant position within an NType has an NType.
-;; A contravariant position within a PType has an NType.
-;; A contravariant position within an NType has a PType.
-;; An invariant position within either has a Type, with no unions or intersections.
-(defstruct ptype:union (types) transparent: #t)
-(defstruct ntype:intersection (types) transparent: #t)
-
-;; A Pattys is an [Assqof Symbol Type]
-;; for the types of the pattern variables within a pattern
-
-(def type:int (type:name 'int []))
-(def type:bool (type:name 'bool []))
-(def type:bytes (type:name 'bytes []))
-
-;; lists are covariant, so (listof a) <: (listof b) when a <: b
-(def typector:listof (type:name 'listof [covariant]))
-(def (type:listof t) (type:app typector:listof [t]))
-(def (type:listof? t)
-  (match t
-    ((type:app c [_]) (eq? c typector:listof))
-    (_ #f)))
-(def (type:listof-elem t)
-  (match t
-    ((type:app c [e])
-     (unless (eq? c typector:listof) (error 'listof-elem "expected a listof type"))
-     e)))
 
 ;; type=? : Type Type -> Bool
 (def (type=? a b)
@@ -167,6 +92,9 @@
      (cond ((subtype? a b) a)
            ((subtype? b a) b)
            (else (ntype:intersection (list a b)))))))
+
+;; A Pattys is an [Assqof Symbol Type]
+;; for the types of the pattern variables within a pattern
 
 ;; pattys-join : [Listof Pattys] -> Pattys
 ;; intersection of keys, join of types for same key
@@ -267,45 +195,6 @@
 (def (bound-as-ctor? env s)
   (and (symdict-has-key? env s)
        (entry:ctor? (symdict-ref env s))))
-
-;; type-has-var? : Type Symbol -> Bool
-(def (type-has-var? t x)
-  (def (hv? t) (type-has-var? t x))
-  (match t
-    ((type:bottom) #f)
-    ((type:name s _) #f)
-    ((type:var s) (eq? x s))
-    ((type:app f as)
-     (or (hv? f) (ormap hv? as)))
-    ((type:tuple as)
-     (ormap hv? as))
-    ((type:record flds)
-     (ormap (lambda (k) (hv? (symdict-ref flds k)))
-            (symdict-keys flds)))))
-
-;; type-subst : TyvarEnv Type -> Type
-(def (type-subst tyvars t)
-  ;; sub : Type -> Type
-  (def (sub t) (type-subst tyvars t))
-  (match t
-    ((type:bottom) t)
-    ((type:name _ _) t)
-    ((type:var s)
-     (cond ((symdict-has-key? tyvars s) (symdict-ref tyvars s))
-           (else t)))
-    ((type:app f as)
-     (type:app (sub f) (map sub as)))
-    ((type:tuple as)
-     (type:tuple (map sub as)))
-    ((type:record fldtys)
-     (type:record
-      (list->symdict
-       (map (lambda (p) (cons (car p) (sub (cdr p))))
-            fldtys))))
-    ((ptype:union ts)
-     (ptype:union (map sub ts)))
-    ((ntype:intersection ts)
-     (ntype:intersection (map sub ts)))))
 
 ;; tyvar-bisubst : TypeInterval Variance Symbol -> PNType
 (def (tyvar-bisubst tvl v s)
