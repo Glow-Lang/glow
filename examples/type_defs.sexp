@@ -13,7 +13,7 @@
     (switch p
       ((Pair a b) (@tuple a b)))))
 
-(def tuple_pair =
+(def tuple_pair
   (λ ((t : (@tuple 'a 'b))) : (pair 'a 'b)
     (switch t
       ((@tuple a b) (Pair a b)))))
