@@ -39,8 +39,8 @@
   (match args
     ([] (main "all"))
     (["all"]
-     (def names (only-sexp-files (directory-files "../examples")))
-     (def files (map (lambda (p) (path-expand p "../examples")) names))
+     (def names (only-sexp-files (directory-files "../../examples")))
+     (def files (map (lambda (p) (path-expand p "../../examples")) names))
      (if (null? files)
          (displayln "nothing to build")
          (apply main files)))
