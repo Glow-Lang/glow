@@ -49,13 +49,15 @@
 ;;  - (type:app Type [Listof Type])
 ;;  - (type:tuple [Listof Type])
 ;;  - (type:record [Symdictof Type])
+;;  - (type:arrow [Listof Type] Type)
 (defstruct type:bottom () transparent: #t)
 (defstruct type:name (sym vances) transparent: #t)  ;; TODO: add srcloc
 (defstruct type:var (sym) transparent: #t)
 (defstruct type:app (fun args) transparent: #t)
 (defstruct type:tuple (args) transparent: #t)
 (defstruct type:record (field-args))
-(def (type? v) (or (type:bottom? v) (type:name? v) (type:var? v) (type:app? v) (type:tuple? v) (type:record? v)))
+(defstruct type:arrow (in-tys out-ty) transparent: #t)
+(def (type? v) (or (type:bottom? v) (type:name? v) (type:var? v) (type:app? v) (type:tuple? v) (type:record? v) (type:arrow? v)))
 
 ;; PTypes are types used for outputs, while NTypes are types used for inputs.
 ;; PTypes are extended to allow unions, while NTypes allow intersections.
@@ -109,6 +111,10 @@
 (def (subtype? a b)
   (match* (a b)
     (((type:bottom) _) #t)
+    (((ptype:union as) b)
+     (andmap (lambda (a) (subtype? a b)) as))
+    ((a (ntype:intersection bs))
+     (andmap (lambda (b) (subtype? a b)) bs))
     (((type:name x vxs) (type:name y vys))
      (and (eq? x y) (equal? vxs vys)))
     (((type:var x) (type:var y)) (eq? x y))
@@ -117,15 +123,15 @@
           (andmap subtype? as bs)))
     (((type:record as) (type:record bs))
      (symdict=? as bs subtype?))
+    (((type:arrow a1s b1) (type:arrow a2s b2))
+     (and (equal? (length a1s) (length a2s))
+          (andmap subtype? a2s a1s)
+          (subtype? b1 b2)))
     (((type:app (type:name f1 v1s) a1s) (type:app (type:name f2 v2s) a2s))
      (and (eq? f1 f2)
           (equal? v1s v2s)
           (= (length v1s) (length a1s) (length a2s))
           (andmap variance-type~? v1s a1s a2s)))
-    (((ptype:union as) b)
-     (andmap (lambda (a) (subtype? a b)) as))
-    ((a (ntype:intersection bs))
-     (andmap (lambda (b) (subtype? a b)) bs))
     ((_ _) #f)))
 
 ;; type-join : PType PType -> PType
@@ -192,19 +198,53 @@
          (error a "duplicate identifier")
          (check-duplicate-symbols bs)))))
 
+;; A MonoEnv is a [Symdictof NType]
+;; monotype environments ∆ bind λ-bound variables only,
+;; no known-type/let-bound variables, don't have ∀-quantifiers
+
+;; menv-meet : MonoEnv MonoEnv -> MonoEnv
+;; union of keys, type-meet of values
+(def (menv-meet as bs)
+  (for/fold (acc as) ((k (symdict-keys bs)))
+    (def b (symdict-ref bs k))
+    (cond
+      ((symdict-has-key? acc k) (symdict-update acc k (lambda (a) (type-meet a b)) b))
+      (else                     (symdict-put acc k b)))))
+
+;; menvs-meet : [Listof MonoEnv] -> MonoEnv
+;; union of keys, type-meet of values
+(def (menvs-meet menvs)
+  (for/fold (acc empty-symdict) ((me menvs)) (menv-meet acc me)))
+
+;; A TypingScheme is a (typing-scheme MonoEnv PType)
+;; Representing both the type of an expression and the types of its
+;; free λ-bound variables. A polar typing scheme [D⁻]t⁺ is a typing
+;; scheme where the types D⁻(x) of λ-bound variables are given by
+;; negative type terms, and the type of the result t⁺ is given by a
+;; positive type term.
+(defstruct typing-scheme (menv type) transparent: #t)
+
+;; typing-schemes-join : [Listof TypingScheme] -> TypingScheme
+;; meet on menvs, join on types
+(def (typing-schemes-join ts)
+  (typing-scheme (menvs-meet (map typing-scheme-menv ts))
+                 (types-join (map typing-scheme-type ts))))
+
 ;; An EnvEntry is one of:
-;;  - (entry:val PType)
-;;  - (entry:fun [Listof Symbol] [Listof NType] PType) ; N for inputs, P for outputs
-;;  - (entry:ctor [Listof Symbol] [Listof Type] Type)  ; note ctor does not have N or P, just Type
+;;  - (entry:unknown)             ; lambda-bound with no type annotation
+;;  - (entry:known TypingScheme)  ; let-bound, or lambda-bound with annotation
+;;  - (entry:ctor TypingScheme)   ; note ctor does not have N or P, just Type
 ;;  - (entry:type [Listof Symbol] Type)
-(defstruct entry:val (type) transparent: #t)
-(defstruct entry:fun (typarams input-types output-type) transparent: #t)
-(defstruct entry:ctor (typarams input-types output-type) transparent: #t)
+(defstruct entry:unknown () transparent: #t)
+(defstruct entry:known (ts) transparent: #t)
+(defstruct entry:ctor (ts) transparent: #t)
 (defstruct entry:type (params type) transparent: #t)
-(def (env-entry? v) (or (entry:val? v) (entry:fun? v) (entry:ctor? v) (entry:type? v)))
+(def (env-entry? v) (or (entry:unknown? v) (entry:known? v) (entry:ctor? v) (entry:type? v)))
 
 ;; An Env is a [Symdictof EnvEntry]
-;; A TyvarEnv is a [Symdictof Type]
+;; Instead of type environments Γ, the reformulated rules use typing
+;; environments Π to assign typing schemes (not type schemes) to
+;; known-type/let-bound variables.
 
 ;; A TyvarBisubst is a [Symdictof TypeInterval]
 ;; A TypeInterval is a (type-interval NType PType)
@@ -472,9 +512,13 @@
     (x (identifier? #'x) #f)
     ((x : type) (parse-type env empty-symdict #'type))))
 
-;; tc-body : Env BodyStx -> Type
+;; The reformulated rules produce judgements of the form
+;; Π ⊩ e : [∆]τ
+;; Function signatures follow: Env ExprStx -> TypingScheme
+
+;; tc-body : Env BodyStx -> TypingScheme
 (def (tc-body env stx)
-  (cond ((stx-null? stx) (type:tuple []))
+  (cond ((stx-null? stx) (typing-scheme empty-symdict (type:tuple [])))
         ((stx-null? (stx-cdr stx)) (tc-expr env (stx-car stx)))
         (else
          (tc-body (tc-stmt env (stx-car stx)) (stx-cdr stx)))))
@@ -542,9 +586,12 @@
   (def (party s) (parse-type env tyvars s))
   (syntax-case stx ()
     (x (identifier? #'x)
-     (cons (syntax-e #'x) (entry:ctor xs [] b)))
+     (cons (syntax-e #'x)
+           (entry:ctor (typing-scheme empty-symdict b))))
     ((f a ...) (identifier? #'f)
-     (cons (syntax-e #'f) (entry:ctor xs (stx-map party #'(a ...)) b)))))
+     (cons (syntax-e #'f)
+           (entry:ctor (typing-scheme empty-symdict
+                                      (type:arrow (stx-map party #'(a ...)) b)))))))
 
 ;; tc-defdata-variants : Env [Listof Symbol] Type [StxListof VariantStx] -> Env
 (def (tc-defdata-variants env xs b stx)
@@ -569,59 +616,83 @@
     ((def x : type expr) (identifier? #'x)
      (let ((s (syntax-e #'x))
            (t (parse-type env empty-symdict #'type)))
-       (tc-expr/check env #'expr t)
-       (symdict-put env s (entry:val t))))
+       (symdict-put env s (entry:known (tc-expr/check env #'expr t)))))
     ((def x expr) (identifier? #'x)
      (let ((s (syntax-e #'x)))
-       (symdict-put env s (entry:val (tc-expr env #'expr)))))))
+       (symdict-put env s (entry:known (tc-expr env #'expr)))))))
 
 ;; tc-function : Env [Listof Symbol] [Listof (U #f Type)] (U #f Type) BodyStx -> EnvEntry
 (def (tc-function env xs in-tys exp-out-ty body)
-  ;; TODO: type inference on missing in-tys
-  ;; until then, error when any are missing
-  (for ((x xs) (in-ty in-tys))
-    (unless in-ty (error x "missing type annotation on function parameter")))
-  ;; in-tys : [Listof Type]
+  ;; in-ents* : [Listof EnvEntry]
+  ;; entry:unknown for parameters that weren't annotated
+  (def in-ents*
+    (map (lambda (in-ty)
+           (cond (in-ty (entry:known (typing-scheme empty-symdict in-ty)))
+                 (else  (entry:unknown))))
+         in-tys))
   ;; body-env : Env
-  (def body-env (symdict-put/list env (map cons xs (map make-entry:val in-tys))))
-  (def actual-ty (tc-body body-env body))
+  (def body-env (symdict-put/list env (map cons xs in-ents*)))
+  (def actual-ts (tc-body body-env body))
+  (def body-menv (typing-scheme-menv actual-ts))
+  (def actual-ty (typing-scheme-type actual-ts))
   (unless (or (not exp-out-ty) (subtype? actual-ty exp-out-ty))
     (error 'tc-function "function output type mismatch"))
+  ;; in-tys* : [Listof NType]
+  (def in-tys*
+    (map (lambda (x in-ty)
+           (or in-ty (symdict-ref body-menv x)))
+         xs
+         in-tys))
+  (def menv (for/fold (acc body-menv) ((x xs) (in-ty in-tys))
+              (cond (in-ty acc)
+                    (else (symdict-remove acc x)))))
   (def out-ty (or exp-out-ty actual-ty))
-  (entry:fun [] in-tys out-ty))
+  (entry:known (typing-scheme menv (type:arrow in-tys* out-ty))))
 
-;; tc-expr : Env ExprStx -> Type
+;; tc-expr : Env ExprStx -> TypingScheme
 (def (tc-expr env stx)
-  ;; tce : ExprStx -> Type
+  ;; tce : ExprStx -> TypingScheme
   (def (tce e) (tc-expr env e))
   (syntax-case stx (@ : ann @tuple @record @list if block switch require! assert! deposit! withdraw!)
     ((@ _ _) (error 'tc-expr "TODO: deal with @"))
     ((ann expr type)
      (tc-expr/check env #'expr (parse-type env empty-symdict #'type)))
-    (x (identifier? #'x) (tc-expr-val-id env stx))
-    (lit (stx-atomic-literal? #'lit) (tc-literal #'lit))
+    (x (identifier? #'x) (tc-expr-id env stx))
+    (lit (stx-atomic-literal? #'lit) (typing-scheme empty-symdict (tc-literal #'lit)))
     ((@tuple e ...)
-     (type:tuple (stx-map tce #'(e ...))))
+     (let ((ts (stx-map tce #'(e ...))))
+       (typing-scheme (menvs-meet (map typing-scheme-menv ts))
+                      (type:tuple (map typing-scheme-type ts)))))
     ((@record (x e) ...)
      (and (stx-andmap identifier? #'(x ...))
           (check-duplicate-identifiers #'(x ...)))
-     (let ((s (stx-map syntax-e #'(x ...))))
-       (type:record
-        (list->symdict (map cons s (stx-map tce #'(e ...)))))))
+     (let ((s (stx-map syntax-e #'(x ...)))
+           (ts (stx-map tce #'(e ...))))
+       (typing-scheme
+        (menvs-meet (map typing-scheme-menv ts))
+        (type:record
+         (list->symdict (map cons s (map typing-scheme-type ts)))))))
     ((@list e ...)
      (let ((ts (stx-map tce #'(e ...))))
-       (type:listof (types-join ts))))
+       (typing-scheme
+        (menvs-meet (map typing-scheme-menv ts))
+        (type:listof (types-join (map typing-scheme-type ts))))))
     ((block b ...)
      (tc-body #'(b ...)))
     ((if c t e)
-     (let ()
-       (tc-expr/check env #'c type:bool)
-       (type-join (tc-expr env #'t) (tc-expr env #'e))))
+     (let ((ct (tc-expr/check env #'c type:bool))
+           (tt (tc-expr env #'t))
+           (et (tc-expr env #'e)))
+       (typing-scheme (menvs-meet (map typing-scheme-menv [ct tt et]))
+                      (type-join (typing-scheme-type tt) (typing-scheme-type et)))))
     ((switch e swcase ...)
-     (let ((t (tc-expr env #'e)))
+     (let ((ts (tc-expr env #'e)))
+       (def vt (typing-scheme-type ts))
        ;; TODO: implement exhaustiveness checking
-       (types-join
-        (stx-map (lambda (c) (tc-switch-case env t c)) #'(swcase ...)))))
+       (def cts (stx-map (lambda (c) (tc-switch-case env vt c)) #'(swcase ...)))
+       (def bt (typing-schemes-join cts))
+       (typing-scheme (menv-meet (typing-scheme-menv ts) (typing-scheme-menv bt))
+                      (typing-scheme-type bt))))
     ((require! e)
      (error 'tc-expr "TODO: deal with require!"))
     ((assert! e)
@@ -631,47 +702,45 @@
     ((withdraw! x e) (identifier? #'x)
      (error 'tc-expr "TODO: deal with withdraw!"))
     ((f a ...) (identifier? #'f)
-     (let ((s (syntax-e #'f)))
-       (match (tc-expr-fun-id env #'f)
+     (let ((s (syntax-e #'f))
+           (ft (tc-expr-id env #'f)))
+       (match (typing-scheme-type ft)
          ;; monomorphic case
          ;; TODO: handle polymorphic case with unification
-         ((entry:fun [] in-tys out-ty)
+         ((type:arrow in-tys out-ty)
           (unless (= (stx-length #'(a ...)) (length in-tys))
             (error s "wrong number of arguments"))
-          (stx-for-each (lambda (a t) (tc-expr/check env a t))
-                        #'(a ...)
-                        in-tys)
-          out-ty))))))
+          (def ats
+            (stx-map (lambda (a t) (tc-expr/check env a t))
+                     #'(a ...)
+                     in-tys))
+          (typing-scheme (menvs-meet (cons (typing-scheme-menv ft) (map typing-scheme-menv ats)))
+                         out-ty)))))))
 
-;; tc-expr-val-id : Env Identifier -> Type
-(def (tc-expr-val-id env x)
+;; tc-expr-id : Env Identifier -> TypingScheme
+(def (tc-expr-id env x)
   (def s (syntax-e x))
   (unless (symdict-has-key? env s)
     (error s "unbound identifier"))
   (match (symdict-ref env s)
-    ((entry:val t) t)
-    ((entry:ctor [] [] t) t)))
+    ((entry:unknown)
+     (let ((a (gensym s)))
+       (typing-scheme (list->symdict [(cons s (type:var a))])
+                      (type:var a))))
+    ((entry:known t) t)
+    ((entry:ctor t) t)))
 
-;; tc-expr-fun-id : Env Identifier -> EnvEntry
-;; Treat entry:fun and entry:ctor the same as functions
-(def (tc-expr-fun-id env f)
-  (def s (syntax-e f))
-  (unless (symdict-has-key? env s)
-    (error s "unbound identifier"))
-  (match (symdict-ref env s)
-    ((or (entry:fun vs in-tys out-ty)
-         (entry:ctor vs in-tys out-ty))
-     (entry:fun vs in-tys out-ty))))
-
-;; tc-expr/check : Env ExprStx (U #f Type) -> TypeOrError
+;; tc-expr/check : Env ExprStx (U #f Type) -> TypingSchemeOrError
 ;; returns expected-ty on success, actual-ty if no expected, otherwise error
 (def (tc-expr/check env stx expected-ty)
   (unless (or (not expected-ty) (type? expected-ty))
     (error 'tc-expr/check "expected (U #f Type) for 3rd argument"))
-  (def actual-ty (tc-expr env stx))
+  (def actual-ts (tc-expr env stx))
+  (def menv (typing-scheme-menv actual-ts))
+  (def actual-ty (typing-scheme-type actual-ts))
   (unless (or (not expected-ty) (subtype? actual-ty expected-ty))
     (error 'tc-expr/check "type mismatch"))
-  (or expected-ty actual-ty))
+  (typing-scheme menv (or expected-ty actual-ty)))
 
 ;; tc-literal : LiteralStx -> Type
 (def (tc-literal stx)
@@ -682,7 +751,7 @@
         ((bytes? e) type:bytes)
         (else (error 'tc-literal "unrecognized literal"))))
 
-;; tc-switch-case : Env Type SwitchCaseStx -> Type
+;; tc-switch-case : Env Type SwitchCaseStx -> TypingScheme
 (def (tc-switch-case env valty stx)
   (syntax-case stx ()
     ((pat body ...)
@@ -690,7 +759,7 @@
        (def env/pattys
          (symdict-put/list
           env
-          (map (lambda (p) (cons (car p) (entry:val (cdr p))))
+          (map (lambda (p) (cons (car p) (entry:known (typing-scheme empty-symdict (cdr p)))))
                pattys)))
        (tc-body env/pattys #'(body ...))))))
 
@@ -715,7 +784,8 @@
     (x (and (identifier? #'x) (bound-as-ctor? env (syntax-e #'x)))
      (let ((s (syntax-e #'x)))
        (match (symdict-ref env s)
-         ((entry:ctor [] [] t)
+         ((entry:ctor (typing-scheme menv t))
+          (unless (symdict-empty? menv) (error 'tc-pat "handle constructors constraining inputs"))
           ;; t doesn't necessarily have to be a supertype,
           ;; but does need to be join-compatible so that
           ;; valty <: (type-join valty t)
@@ -771,7 +841,8 @@
        (unless (symdict-has-key? env s)
          (error s "unbound pattern constructor"))
        (match (symdict-ref env s)
-         ((entry:ctor [] in-tys out-ty)
+         ((entry:ctor (typing-scheme menv (type:arrow in-tys out-ty)))
+          (unless (symdict-empty? menv) (error 'tc-pat "handle constructors constraining inputs"))
           ;; valty <: out-ty
           ;; because passing valty into a context expecting out-ty
           (unless (subtype? valty out-ty)
@@ -783,22 +854,6 @@
                      in-tys
                      #'(a ...)))
           (pattys-append ptys))
-         ((entry:ctor xs in-tys out-ty)
-          (let ((xs* (map gensym xs)))
-            (def tve (list->symdict (map cons xs (map make-type:var xs*))))
-            (def (ty* t) (type-subst tve t))
-            (def out-ty* (ty* out-ty))
-            ;; valty <: out-ty*
-            (def bity (biunify [(constraint:subtype valty out-ty*)] empty-symdict))
-            (def (ntybity t) (type-bisubst bity contravariant t))
-            (def in-tys* (map ntybity (map ty* in-tys)))
-            (unless (= (stx-length #'(a ...)) (length in-tys*))
-              (error s "wrong number of arguments to data constructor"))
-            (def ptys
-              (stx-map (lambda (t p) (tc-pat env t p))
-                       in-tys*
-                       #'(a ...)))
-            (pattys-append ptys)))
          (_ (error 'tc-pat "TODO: handle data constructor patterns better")))))))
 
 #|
