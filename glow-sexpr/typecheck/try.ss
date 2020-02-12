@@ -3,6 +3,7 @@
 ;; Runs the typchecker on the `.sexp` files in `../examples`.
 
 (import :std/iter
+        :std/format
         :std/misc/repr
         :clan/pure/dict
         "typecheck.ss")
@@ -34,6 +35,28 @@
 (def (only-sexp-files ps)
   (filter (lambda (p) (string=? ".sexp" (path-extension p))) ps))
 
+;; print-env : Env -> Void
+(def (print-env env)
+  (for ((x (symdict-keys env)))
+    (def e (symdict-ref env x))
+    (match e
+      ((entry:type [] b)
+       (printf "type ~s = ~y" x (type->sexpr b)))
+      ((entry:type as b)
+       (printf "type ~s~s = ~y" x as (type->sexpr b)))
+      ((entry:unknown)
+       (printf "unknown ~s\n" x))
+      ((entry:known (typing-scheme me t))
+       (unless (symdict-empty? me)
+         (printf "constraints ")
+         (print-representation me))
+       (printf "val ~s : ~y" x (type->sexpr t)))
+      ((entry:ctor (typing-scheme me t))
+       (unless (symdict-empty? me)
+         (printf "constraints ")
+         (print-representation me))
+       (printf "constructor ~s : ~y" x (type->sexpr t))))))
+
 ;; main
 (def (main . args)
   (match args
@@ -47,7 +70,7 @@
     ([file]
      (def prog (read-syntax-from-file file))
      (displayln file)
-     (print-representation (tc-prog/list prog))
+     (print-env (tc-prog prog))
      (newline))
     (files
      (def progs (map read-syntax-from-file files))
@@ -56,7 +79,7 @@
        (with-catch
         (lambda (e) (display-exception e))
         (lambda ()
-          (print-representation (tc-prog/list p))
+          (print-env (tc-prog p))
           (newline)))
        (newline)))))
 
