@@ -347,6 +347,17 @@
     ((ntype:intersection ts)
      (ntype:intersection (map sub ts)))))
 
+;; menv-bisubst : TyvarBisubst MonoEnv -> MonoEnv
+(def (menv-bisubst tybi menv)
+  (for/fold (acc empty-symdict) ((k (symdict-keys menv)))
+    (symdict-put acc k (type-bisubst tybi contravariant (symdict-ref menv k)))))
+
+;; typing-scheme-bisubst : TyvarBisubst TypingScheme -> TypingScheme
+(def (typing-scheme-bisubst tybi ts)
+  (with (((typing-scheme menv ty) ts))
+    (typing-scheme (menv-bisubst tybi menv)
+                   (type-bisubst tybi covariant ty))))
+
 ;; A Constraints is a [Listof Constraint]
 ;; A Constraint is one of:
 ;;  - (constraint:subtype PType NType)
@@ -523,6 +534,16 @@
         (else
          (tc-body (tc-stmt env (stx-car stx)) (stx-cdr stx)))))
 
+;; tc-body/check : Env BodyStx (U #f Type) -> TypingScheme
+(def (tc-body/check env stx expected-ty)
+  (cond ((stx-null? stx)
+         (unless (or (not expected-ty) (subtype? (type:tuple []) expected-ty))
+           (error 'tc-body/check "type mismatch with implicit unit at end of body"))
+         (typing-scheme empty-symdict (or expected-ty (type:tuple []))))
+        ((stx-null? (stx-cdr stx)) (tc-expr/check env (stx-car stx) expected-ty))
+        (else
+         (tc-body/check (tc-stmt env (stx-car stx)) (stx-cdr stx) expected-ty))))
+
 ;; tc-stmt : Env StmtStx -> Env
 ;; TODO: reorganize into one case for each keyword, possibly delegating to a function with
 ;; the multiple cases within a single keyword
@@ -632,11 +653,9 @@
          in-tys))
   ;; body-env : Env
   (def body-env (symdict-put/list env (map cons xs in-ents*)))
-  (def actual-ts (tc-body body-env body))
-  (def body-menv (typing-scheme-menv actual-ts))
-  (def actual-ty (typing-scheme-type actual-ts))
-  (unless (or (not exp-out-ty) (subtype? actual-ty exp-out-ty))
-    (error 'tc-function "function output type mismatch"))
+  (def body-ts (tc-body/check body-env body exp-out-ty))
+  (def body-menv (typing-scheme-menv body-ts))
+  (def body-ty (typing-scheme-type body-ts))
   ;; in-tys* : [Listof NType]
   (def in-tys*
     (map (lambda (x in-ty)
@@ -646,8 +665,7 @@
   (def menv (for/fold (acc body-menv) ((x xs) (in-ty in-tys))
               (cond (in-ty acc)
                     (else (symdict-remove acc x)))))
-  (def out-ty (or exp-out-ty actual-ty))
-  (entry:known (typing-scheme menv (type:arrow in-tys* out-ty))))
+  (entry:known (typing-scheme menv (type:arrow in-tys* body-ty))))
 
 ;; tc-expr : Env ExprStx -> TypingScheme
 (def (tc-expr env stx)
@@ -736,11 +754,14 @@
   (unless (or (not expected-ty) (type? expected-ty))
     (error 'tc-expr/check "expected (U #f Type) for 3rd argument"))
   (def actual-ts (tc-expr env stx))
-  (def menv (typing-scheme-menv actual-ts))
-  (def actual-ty (typing-scheme-type actual-ts))
-  (unless (or (not expected-ty) (subtype? actual-ty expected-ty))
-    (error 'tc-expr/check "type mismatch"))
-  (typing-scheme menv (or expected-ty actual-ty)))
+  (cond
+    ((not expected-ty) actual-ts)
+    (else
+     (with (((typing-scheme menv actual-ty) actual-ts))
+       (def bity (biunify [(constraint:subtype actual-ty expected-ty)] empty-symdict))
+       (typing-scheme-bisubst
+        bity
+        (typing-scheme menv expected-ty))))))
 
 ;; tc-literal : LiteralStx -> Type
 (def (tc-literal stx)
