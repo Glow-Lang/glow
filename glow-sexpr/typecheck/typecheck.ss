@@ -213,6 +213,7 @@
   ;; variance is within v, so must compose with v
   (def (vsub v2 t)
     (type-bisubst tybi (variance-compose v v2) t))
+  (def (nsub t) (vsub contravariant t))
   (match t
     ((type:bottom) t)
     ((type:name _ _) t)
@@ -231,6 +232,8 @@
       (list->symdict
        (map (lambda (p) (cons (car p) (sub (cdr p))))
             fldtys))))
+    ((type:arrow as b)
+     (type:arrow (map nsub as) (sub b)))
     ((ptype:union ts)
      (ptype:union (map sub ts)))
     ((ntype:intersection ts)
@@ -352,6 +355,13 @@
                         v1s
                         a1s
                         a2s)
+                 tybi))
+       ((constraint:subtype (type:arrow a1s b1) (type:arrow a2s b2))
+        (unless (length=? a1s a2s)
+          (error 'subype "type mismatch, wrong number of arguments"))
+        (biunify (append (map make-constraint:subtype a2s a1s)
+                         [(constraint:subtype b1 b2)]
+                         rst)
                  tybi))
        (_ (error 'biunify "TODO"))))))
 
@@ -612,8 +622,6 @@
      (let ((s (syntax-e #'f))
            (ft (tc-expr-id env #'f)))
        (match (typing-scheme-type ft)
-         ;; monomorphic case
-         ;; TODO: handle polymorphic case with unification
          ((type:arrow in-tys out-ty)
           (unless (= (stx-length #'(a ...)) (length in-tys))
             (error s "wrong number of arguments"))
@@ -622,7 +630,31 @@
                      #'(a ...)
                      in-tys))
           (typing-scheme (menvs-meet (cons (typing-scheme-menv ft) (map typing-scheme-menv ats)))
-                         out-ty)))))))
+                         out-ty))
+         ((type:var v)
+          ;; fresh type variables
+          (def avs (stx-map (lambda (a)
+                              (cond ((identifier? a) (gensym (syntax-e a)))
+                                    (else (gensym s))))
+                            #'(a ...)))
+          (def bv (gensym s))
+          ;; unify against arrow
+          ;; v <: (-> avs bv)
+          (def fty (type:arrow (map make-type:var avs) (type:var bv)))
+          (def atss (stx-map (lambda (a) (tc-expr env a)) #'(a ...)))
+          (def ats (map typing-scheme-type atss))
+          (def bisub
+            (biunify (cons (constraint:subtype (type:var v) fty)
+                           (map (lambda (at av)
+                                  (constraint:subtype at (type:var av)))
+                                ats
+                                avs))
+                     empty-symdict))
+          (typing-scheme-bisubst
+           bisub
+           (typing-scheme (menvs-meet (cons (typing-scheme-menv ft) (map typing-scheme-menv atss)))
+                          (type:var bv)))))))))
+
 
 ;; tc-expr-id : Env Identifier -> TypingScheme
 (def (tc-expr-id env x)
