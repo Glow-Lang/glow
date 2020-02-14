@@ -2,7 +2,8 @@
 
 ;; Runs the typchecker on the `.sexp` files in `../examples`.
 
-(import :std/iter
+(import :gerbil/gambit/exceptions
+        :std/iter
         :std/format
         :std/misc/repr
         :clan/pure/dict
