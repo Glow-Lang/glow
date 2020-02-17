@@ -3,8 +3,10 @@
          "variance.ss"
          "type.ss"))
 
-(import :std/iter
+(import :std/format
+        :std/iter
         :std/misc/list
+        :std/misc/repr
         :gerbil/gambit/exact
         :gerbil/gambit/bytes
         <expander-runtime>
@@ -58,40 +60,6 @@
           (= (length v1s) (length a1s) (length a2s))
           (andmap variance-type~? v1s a1s a2s)))
     ((_ _) #f)))
-
-;; type-join : PType PType -> PType
-;; finds the type that is a supertype of both types, otherwise error
-(def (type-join a b)
-  (match* (a b)
-    (((ptype:union as) (ptype:union bs)) (ptype:union (append as bs)))
-    (((ptype:union as) b) (ptype:union (append1 as b)))
-    ((a (ptype:union bs)) (ptype:union (cons a bs)))
-    ((a b)
-     (cond ((subtype? a b) b)
-           ((subtype? b a) a)
-           (else (ptype:union (list a b)))))))
-
-;; types-join : [Listof PType] -> PType
-;; finds the type that is a supertype of all types in the list
-(def (types-join ts)
-  (match ts
-    ([] (type:bottom))
-    ([t] t)
-    ([a b] (type-join a b))
-    (_ (type-join (car ts) (types-join (cdr ts))))))
-
-;; type-meet : NType NType -> NType
-;; finds the type that is a subtype of both types, otherwise error
-;; NOTE: the meet of non-overlapping types is still different from bottom
-(def (type-meet a b)
-  (match* (a b)
-    (((ntype:intersection as) (ntype:intersection bs)) (ntype:intersection (append as bs)))
-    (((ntype:intersection as) b) (ntype:intersection (append1 as b)))
-    ((a (ntype:intersection bs)) (ntype:intersection (cons a bs)))
-    ((a b)
-     (cond ((subtype? a b) a)
-           ((subtype? b a) b)
-           (else (ntype:intersection (list a b)))))))
 
 ;; A Pattys is an [Assqof Symbol Type]
 ;; for the types of the pattern variables within a pattern
@@ -151,6 +119,17 @@
 ;; negative type terms, and the type of the result t⁺ is given by a
 ;; positive type term.
 (defstruct typing-scheme (menv type) transparent: #t)
+
+(def (print-typing-scheme ts)
+  (with (((typing-scheme menv t) ts))
+    (display-separated
+     (symdict-keys menv)
+     prefix: "["
+     suffix: "]"
+     separator: ", "
+     display-element: (lambda (k out)
+                        (fprintf out "~a: ~s" k (type->sexpr (symdict-ref menv k)))))
+    (write (type->sexpr t))))
 
 ;; typing-schemes-join : [Listof TypingScheme] -> TypingScheme
 ;; meet on menvs, join on types
@@ -235,9 +214,9 @@
     ((type:arrow as b)
      (type:arrow (map nsub as) (sub b)))
     ((ptype:union ts)
-     (ptype:union (map sub ts)))
+     (types-join (map sub ts)))
     ((ntype:intersection ts)
-     (ntype:intersection (map sub ts)))))
+     (types-meet (map sub ts)))))
 
 ;; menv-bisubst : TyvarBisubst MonoEnv -> MonoEnv
 (def (menv-bisubst tybi menv)
@@ -680,9 +659,9 @@
     (else
      (with (((typing-scheme menv actual-ty) actual-ts))
        (def bity (biunify [(constraint:subtype actual-ty expected-ty)] empty-symdict))
-       (typing-scheme-bisubst
-        bity
-        (typing-scheme menv expected-ty))))))
+       (def ts-before (typing-scheme menv expected-ty))
+       (def ts-after (typing-scheme-bisubst bity ts-before))
+       ts-after))))
 
 ;; tc-literal : LiteralStx -> Type
 (def (tc-literal stx)
