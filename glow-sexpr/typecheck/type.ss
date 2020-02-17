@@ -1,6 +1,7 @@
 (export #t)
 
-(import :std/format
+(import :std/iter
+        :std/format
         :std/misc/list
         :clan/pure/dict/symdict
         "variance.ss")
@@ -53,6 +54,65 @@
     ((type:app c [e])
      (unless (eq? c typector:listof) (error 'listof-elem "expected a listof type"))
      e)))
+
+;; --------------------------------------------------------
+
+;; type-join : PType PType -> PType
+;; the type that is a supertype of both types
+(def (type-join a b)
+  (match* (a b)
+    (((ptype:union as) (ptype:union bs))
+     (ptype:union
+      (for/fold (bs bs) ((a (reverse as)))
+        (cond ((member a bs) bs)
+              (else (cons a bs))))))
+    (((ptype:union as) b)
+     (ptype:union (cond ((member b as) as)
+                        (else (append1 as b)))))
+    ((a (ptype:union bs))
+     (ptype:union (cond ((member a bs) bs)
+                        (else (cons a bs)))))
+    ((a b)
+     (cond ((equal? a b) a)
+           (else (ptype:union (list a b)))))))
+
+;; types-join : [Listof PType] -> PType
+;; the type that is a supertype of all types in the list
+(def (types-join ts)
+  (match ts
+    ([] (type:bottom))
+    ([t] t)
+    ([a b] (type-join a b))
+    (_ (type-join (car ts) (types-join (cdr ts))))))
+
+;; type-meet : NType NType -> NType
+;; the type that is a subtype of both types
+;; NOTE: the meet of non-overlapping types is still different from bottom
+(def (type-meet a b)
+  (match* (a b)
+    (((ntype:intersection as) (ntype:intersection bs))
+     (ntype:intersection
+      (for/fold (bs bs) ((a (reverse as)))
+        (cond ((member a bs) bs)
+              (else (cons a bs))))))
+    (((ntype:intersection as) b)
+     (ntype:intersection (cond ((member b as) as)
+                               (else (append1 as b)))))
+    ((a (ntype:intersection bs))
+     (ntype:intersection (cond ((member a bs) bs)
+                               (else (cons a bs)))))
+    ((a b)
+     (cond ((equal? a b) a)
+           (else (ntype:intersection (list a b)))))))
+
+;; types-meet : [Listof NType] -> NType
+;; the type that is a subtype of all types in the list
+(def (types-meet ts)
+  (match ts
+    ([] (ntype:intersection []))
+    ([t] t)
+    ([a b] (type-meet a b))
+    (_ (type-meet (car ts) (types-meet (cdr ts))))))
 
 ;; --------------------------------------------------------
 
@@ -119,9 +179,9 @@
     ((type:arrow as b)
      (type:arrow (map sub as) (sub b)))
     ((ptype:union ts)
-     (ptype:union (map sub ts)))
+     (types-join (map sub ts)))
     ((ntype:intersection ts)
-     (ntype:intersection (map sub ts)))))
+     (types-meet (map sub ts)))))
 
 ;; --------------------------------------------------------
 
@@ -138,7 +198,7 @@
                                    (symdict-keys flds))))
     ((type:arrow as b) (cons '-> (append1 (map type->sexpr as) (type->sexpr b))))
     ((ptype:union ts) (cons '∪ (map type->sexpr ts)))
-    ((ntype:intersection ts) (cons '∩ (map type-vars ts)))))
+    ((ntype:intersection ts) (cons '∩ (map type->sexpr ts)))))
 
 ;; type->string : Type -> String
 (def (type->string t) (format "~y" (type->sexpr t)))
