@@ -260,24 +260,54 @@
 ;; symdict-key-set=? : [Symdict Any] [Symdict Any] -> Bool
 (def (symdict-key-set=? a b) (symdict=? a b true))
 
+;; sub-constraints : Constraint -> Constraints
+;; correponds to sub_B, non-recursive
+;; internal error if the constraint is atomic
+;; type error if the constraint is a type mismatch
+(def (sub-constraints c)
+  (match c
+    ((constraint:type-equal a b)
+     [(constraint:subtype a b) (constraint:subtype b a)])
+    ((constraint:subtype (type:bottom) _)
+     [])
+    ((constraint:subtype (ptype:union as) b)
+     (map (lambda (a) (constraint:subtype a b)) as))
+    ((constraint:subtype a (ntype:intersection bs))
+     (map (lambda (b) (constraint:subtype a b)) bs))
+    ((constraint:subtype (type:name x vxs) (type:name y vys))
+     (unless (eq? x y) (error 'subtype "type mismatch"))
+     (unless (equal? vxs vys) (error 'subtype "inconsistant variances"))
+     [])
+    ((constraint:subtype (type:tuple as) (type:tuple bs))
+     (map make-constraint:subtype as bs))
+    ((constraint:subtype (type:record as) (type:record bs))
+     (map (lambda (k)
+            (constraint:subtype (symdict-ref as k) (symdict-ref bs k)))
+          (symdict-keys as)))
+    ((constraint:subtype (type:app (type:name f1 v1s) a1s) (type:app (type:name f2 v2s) a2s))
+     (unless (eq? f1 f2) (error 'subtype "type mismatch"))
+     (unless (equal? v1s v2s) (error 'subtype "inconsistant variances"))
+     (unless (= (length v1s) (length a1s) (length a2s))
+       (error 'subtype "wrong number of arguments to type constructor"))
+     (flatten1 (map constraints-from-variance v1s a1s a2s)))
+    ((constraint:subtype (type:arrow a1s b1) (type:arrow a2s b2))
+     (unless (length=? a1s a2s)
+       (error 'subype "type mismatch, wrong number of arguments"))
+     (append (map make-constraint:subtype a2s a1s)
+             [(constraint:subtype b1 b2)]))
+    ((constraint:subtype (type:var _) _)
+     (error 'sub-constraints "internal error, expected a non-atomic constraint"))
+    ((constraint:subtype _ (type:var _))
+     (error 'sub-constraints "internal error, expected a non-atomic constraint"))
+    (_
+     (error 'sub-constraints (format "unknown constraint: ~r" c)))))
+
 ;; biunify : Constraints TyvarBisubst -> TyvarBisubst
 (def (biunify cs tybi)
   (match cs
     ([] tybi)
     ([fst . rst]
      (match fst
-       ((constraint:type-equal a b)
-        (biunify (cons* (constraint:subtype a b) (constraint:subtype b a) rst) tybi))
-       ((constraint:subtype (type:bottom) _)
-        (biunify rst tybi))
-       ((constraint:subtype (ptype:union as) b)
-        (biunify (append (map (lambda (a) (constraint:subtype a b)) as) rst) tybi))
-       ((constraint:subtype a (ntype:intersection bs))
-        (biunify (append (map (lambda (b) (constraint:subtype a b)) bs) rst) tybi))
-       ((constraint:subtype (type:name x vxs) (type:name y vys))
-        (unless (eq? x y) (error 'subtype "type mismatch"))
-        (unless (equal? vxs vys) (error 'subtype "inconsistant variances"))
-        (biunify rst tybi))
        ((constraint:subtype (type:var a) (type:var b))
         (cond
           ((eq? a b) (biunify rst tybi))
@@ -311,38 +341,8 @@
           (else
            (let ((tybi2 (symdict-put tybi b (type-interval (type:var b) (type-join (type:var b) a)))))
              (biunify (constraints-bisubst tybi2 rst) tybi2)))))
-       ((constraint:subtype (type:tuple as) (type:tuple bs))
-        (unless (length=? as bs)
-          (error 'subtype "tuples lengths don't match"))
-        (biunify (append (map make-constraint:subtype as bs) rst) tybi))
-       ((constraint:subtype (type:record as) (type:record bs))
-        (unless (symdict-key-set=? as bs)
-          (error 'subtype "record fields don't match"))
-        (biunify (append (map (lambda (k)
-                                (constraint:subtype (symdict-ref as k) (symdict-ref bs k)))
-                              (symdict-keys as))
-                         rst)
-                 tybi))
-       ((constraint:subtype (type:app (type:name f1 v1s) a1s) (type:app (type:name f2 v2s) a2s))
-        (unless (eq? f1 f2) (error 'subtype "type mismatch"))
-        (unless (equal? v1s v2s) (error 'subtype "inconsistant variances"))
-        (unless (= (length v1s) (length a1s) (length a2s))
-          (error 'subtype "wrong number of arguments to type constructor"))
-        (biunify (foldr (lambda (v a1 a2 rst)
-                          (append (constraints-from-variance v a1 a2) rst))
-                        rst
-                        v1s
-                        a1s
-                        a2s)
-                 tybi))
-       ((constraint:subtype (type:arrow a1s b1) (type:arrow a2s b2))
-        (unless (length=? a1s a2s)
-          (error 'subype "type mismatch, wrong number of arguments"))
-        (biunify (append (map make-constraint:subtype a2s a1s)
-                         [(constraint:subtype b1 b2)]
-                         rst)
-                 tybi))
-       (_ (error 'biunify "TODO"))))))
+       (_
+        (biunify (append (sub-constraints fst) rst) tybi))))))
 
 ; literals:
 ;   common:
