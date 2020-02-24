@@ -1,5 +1,6 @@
 # Compiler-generated files
 compiled/
+build-deps
 
 # Editor-generated files
 *~

@@ -46,7 +46,7 @@ We never released those:
 
 ### Debugging
 
-* Omniscient Debugging: [Pernosco](https://pernos.co/about/related-work/), rr, TTD, UndoDB, ODB, Chronon, TOD, Chronomancer, Qira, [Reven](https://www.tetrane.com/), SteamDrill.
+* Omniscient Debugging: [Pernosco](https://pernos.co/about/related-work/), [rr](https://rr-project.org), TTD, UndoDB, ODB, Chronon, TOD, Chronomancer, Qira, [Reven](https://www.tetrane.com/), SteamDrill.
 
 ### Game Theory
 

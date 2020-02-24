@@ -11,19 +11,25 @@ else
     echo "Unknown shell and \$this not defined" ; unset this ; set -u ; return 1
 fi
 
+export GERBIL_HOME="$(dirname $(dirname $(realpath $(which gxi))))"
+
 export GLOW_SRC="$(dirname $this)"
-srcdir="$(realpath "$GLOW_SRC/..")"
 export GLOW_HOME
 : ${GLOW_HOME:=/home/glow}
 bindir=${GLOW_SRC}/.build_outputs
 GERBIL_PACKAGE=gerbil-unstable
+
+#srcdir="$(realpath "$GLOW_SRC/..")"
+### export GERBIL_LOADPATH=$GLOW_SRC:$srcdir/gerbil-utils
+# Don't change the GERBIL_LOADPATH, instead configure your gxpkg with:
+#   gxpkg link github.com/fare/gerbil-utils $srcdir/gerbil-utils
 
 # Manage the git submodule
 subm_reset () {(cd $GLOW_SRC ; git submodule update --init )} # Reset to version pinned in git
 subm_update () {(cd $GLOW_SRC ; git submodule update --remote )} # Update version from upstream
 subm_remove () {(cd $GLOW_SRC ; git submodule deinit . )} # Remove contents altogether
 
-. $srcdir/gerbil-utils/gerbil-nix-env.sh
+#. $srcdir/gerbil-utils/gerbil-nix-env.sh
 
 build_glo () {(
   cd "$GLOW_SRC" &&

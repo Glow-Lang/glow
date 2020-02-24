@@ -1,0 +1,19 @@
+#!/bin/sh
+# You can use this file as your M-x run-scheme interpreter
+# by putting a line such as the following one in your .emacs:
+# (setq scheme-program-name "/home/fricfrac/src/fricfrac/gerbil/my-gxi")
+
+this=$0
+here=$(dirname "$this")
+
+#. "$here/env.sh"
+export GERBIL_HOME="$(dirname $(dirname $(realpath $(which gxi))))"
+
+case "${1-}" in
+    --swank) swank="-e (spawn/name'swank\`,start-swank)" ; shift ;;
+    *) swank= ;;
+esac
+if [ $# = 0 ] ; then
+    interaction="$GERBIL_HOME/lib/init.ss -"
+fi
+exec gxi ${here}/all-glow.ss $swank $interaction "$@"
