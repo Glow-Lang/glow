@@ -1,6 +1,6 @@
 #!/usr/bin/env gxi
 
-;; Runs the typchecker on the `.sexp` files in `../examples`.
+;; Runs the typchecker on the `.sexp` files in `../../examples`.
 
 (import :gerbil/gambit/exceptions
         :std/iter
