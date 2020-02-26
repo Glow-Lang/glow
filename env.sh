@@ -11,13 +11,13 @@ else
     echo "Unknown shell and \$this not defined" ; unset this ; set -u ; return 1
 fi
 
-export GERBIL_HOME="$(dirname $(dirname $(realpath $(which gxi))))"
-
 export GLOW_SRC="$(dirname $this)"
 export GLOW_HOME
 : ${GLOW_HOME:=/home/glow}
 bindir=${GLOW_SRC}/.build_outputs
 GERBIL_PACKAGE=gerbil-unstable
+
+. "${HOME}/.gerbil/pkg/github.com/fare/gerbil-utils/gerbil-nix-env.sh"
 
 #srcdir="$(realpath "$GLOW_SRC/..")"
 ### export GERBIL_LOADPATH=$GLOW_SRC:$srcdir/gerbil-utils
@@ -36,7 +36,7 @@ build_glo () {(
   ./build.ss "$@"
 )}
 
-glo_dirs () { : }
+glo_dirs () { : ;}
 glo_proxy () { glo_dirs ; exec "$bindir/glow" run-proxy-server > ~/data/proxy.log 2>&1 & }
 _glo () { "$bindir/glow" "$@" ;}
 glo () { build_glo build-only && _glo "$@" ;}

@@ -6,8 +6,7 @@
 this=$0
 here=$(dirname "$this")
 
-#. "$here/env.sh"
-export GERBIL_HOME="$(dirname $(dirname $(realpath $(which gxi))))"
+. "$here/env.sh"
 
 case "${1-}" in
     --swank) swank="-e (spawn/name'swank\`,start-swank)" ; shift ;;
