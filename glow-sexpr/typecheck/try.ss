@@ -26,7 +26,10 @@
 ;; tc-prog : [Listof StmtStx] -> Env
 (def (tc-prog stmts)
   (for/fold (env init-env) (stmt stmts)
-    (tc-stmt env stmt)))
+    (let-values (((penv nenv) (tc-stmt env stmt)))
+      (unless (symdict-empty? nenv)
+        (error 'tc-prog "non-empty D⁻ for free lambda-bound vars at top level"))
+      penv)))
 
 ;; tc-prog/list : [Listof StmtStx] -> [Assqof Symbol EnvEntry]
 (def (tc-prog/list path)
