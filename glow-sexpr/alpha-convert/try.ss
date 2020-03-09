@@ -8,6 +8,7 @@
         :std/misc/repr
         :clan/pure/dict
         <expander-runtime>
+        "../common.ss"
         "alpha-convert.ss")
 
 ;; only-sexp-files : [Listof Path] -> [Listof Path]
@@ -31,7 +32,11 @@
      (print-representation env) (newline)
      (for ((stmt prog2))
        (printf "~y" (syntax->datum stmt)))
-     (newline))
+     (cond
+       ((stx-deep-source=? prog prog2)
+        (printf ";; ✓ source locations preserved exactly\n"))
+       (else
+        (printf ";; ✗ source locations not preserved\n"))))
     (files
      (def progs (map read-syntax-from-file files))
      (for ((f files) (p progs))
@@ -43,6 +48,10 @@
           (print-representation env) (newline)
           (for ((stmt prog2))
             (printf "~y" (syntax->datum stmt)))
-          (newline)))
+          (cond
+            ((stx-deep-source=? p prog2)
+             (printf ";; ✓ source locations preserved exactly\n"))
+            (else
+             (printf ";; ✗ source locations not preserved\n")))))
        (newline)))))
 
