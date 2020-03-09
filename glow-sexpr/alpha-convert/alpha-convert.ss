@@ -43,10 +43,14 @@
 ;; Keys are symbols that do not end in numbers.
 ;; Values are lists where unused nats can be appended with
 ;; the key to make an unused symbol.
+;; make-unused-table : -> UnusedTable
 (def (make-unused-table) (make-hash-table-eq))
 
 ;; current-unused-table : [Parameterof UnusedTable]
 (def current-unused-table (make-parameter (make-unused-table)))
+
+;; copy-current-unused-table : -> UnusedTable
+(define (copy-current-unused-table) (hash-copy (current-unused-table)))
 
 ;; symbol-fresh : Symbol -> Symbol
 ;; finds an symbol not used so far, marks it used, and returns it
@@ -413,4 +417,38 @@
 ;; symbols that are not shared by all are renamed differently in each one
 ;; used for @or-pat
 (def (ac-pats-join env pats)
-  (error 'alpha-convert-pat "TODO: or patterns, a binding position in each pattern"))
+  ;; strategy, two pases:
+  ;;  * traverse pats to get pattern-variable-symbols
+  ;;  * alpha-convert pats using an env binding the common symbols as ctors
+  (def syms
+    (symbol-list-set-intersect
+     (map (lambda (p) (pattern-variable-symbols env p)) pats)))
+  (def new-syms (map symbol-fresh syms))
+  (def env/vars
+    (for/fold (acc empty-symdict) ((s1 syms) (s2 new-syms))
+      (symdict-put acc s1 (entry s2 #f))))
+  (def env/ctors
+    (for/fold (acc env) ((s1 syms) (s2 new-syms))
+      (symdict-put acc s1 (entry s2 #t))))
+  (values env/vars
+          (map (lambda (p)
+                 (let-values (((env3 p3) (alpha-convert-pat env/ctors p)))
+                   p3))
+               pats)))
+
+;; pattern-variable-symbols : Env PatStx -> [Listof Symbol]
+(def (pattern-variable-symbols env pat)
+  ;; copy because mutable, don't mutate existing, mutate copy instead
+  (parameterize ((current-unused-table (copy-current-unused-table)))
+    (let-values (((env2 pat2) (alpha-convert-pat env pat)))
+      (symdict-keys env2))))
+
+;; symbol-list-set-intersect : [Listof [Listof Symbol]] -> [Listof Symbol]
+(def (symbol-list-set-intersect ls)
+  (match ls
+    ([] [])
+    ([l] l)
+    ([l1 . rst]
+     (filter (lambda (s)
+               (andmap (lambda (l) (memq s l)) rst))
+             l1))))
