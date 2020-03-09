@@ -1,5 +1,6 @@
 (export #t
         (import:
+         "../common.ss"
          "variance.ss"
          "type.ss"))
 
@@ -13,6 +14,7 @@
         (for-template :gerbil/core)
         :clan/pure/dict/assq
         :clan/pure/dict/symdict
+        "../common.ss"
         "variance.ss"
         "type.ss")
 
@@ -363,10 +365,6 @@
 ;   type:
 ;     quote \@tuple \@record
 
-(def (stx-atomic-literal? v)
-  (def e (stx-e v))
-  (or (integer? e) (string? e) (bytes? e) (boolean? e)))
-
 ;; parse-type : Env TyvarEnv TypeStx -> Type
 (def (parse-type env tyvars stx)
   ;; party : TypeStx -> Type
@@ -596,7 +594,7 @@
         (menvs-meet (map typing-scheme-menv ts))
         (type:listof (types-join (map typing-scheme-type ts))))))
     ((block b ...)
-     (tc-body #'(b ...)))
+     (tc-body env #'(b ...)))
     ((if c t e)
      (let ((ct (tc-expr/check env #'c type:bool))
            (tt (tc-expr env #'t))
