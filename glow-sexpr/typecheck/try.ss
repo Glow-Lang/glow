@@ -7,6 +7,7 @@
         :std/format
         :std/misc/repr
         :clan/pure/dict
+        "../alpha-convert/alpha-convert.ss"
         "typecheck.ss")
 
 ;; init-env : Env
@@ -25,7 +26,8 @@
 
 ;; tc-prog : [Listof StmtStx] -> Env
 (def (tc-prog stmts)
-  (for/fold (env init-env) (stmt stmts)
+  (defvalues (acrenom stmts2) (alpha-convert-prog stmts))
+  (for/fold (env init-env) (stmt stmts2)
     (let-values (((penv nenv) (tc-stmt env stmt)))
       (unless (symdict-empty? nenv)
         (error 'tc-prog "non-empty D⁻ for free lambda-bound vars at top level"))
