@@ -17,28 +17,6 @@
 
 ;; Preserve the original source location
 
-;; head-id : Stx -> (U Id #f)
-(def (head-id stx)
-  (cond ((identifier? stx) stx)
-        ((stx-pair? stx) (head-id (stx-car stx)))
-        (else #f)))
-
-;; restx1 : Stx Any -> Stx
-(def (restx1 stx e)
-  (datum->syntax (head-id stx) e (stx-source stx)))
-
-;; restx : Stx Any -> Stx
-;; multiple levels for a nested list / tree
-(def (restx stx e)
-  (cond ((and (list? e) (stx-list? stx) (= (length e) (stx-length stx)))
-         (restx1 stx (stx-map restx stx e)))
-        ((and (pair? e) (stx-pair? stx))
-         (let ((p (cons (restx (stx-car stx) (car e))
-                        (restx (stx-cdr stx) (cdr e)))))
-           (if (pair? stx) p (restx1 stx p))))
-        (else
-         (restx1 stx e))))
-
 ;; An UnusedTable is a [Hashof Symbol UnusedList]
 ;; Keys are symbols that do not end in numbers.
 ;; Values are lists where unused nats can be appended with
