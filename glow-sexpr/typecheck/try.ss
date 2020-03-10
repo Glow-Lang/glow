@@ -10,29 +10,6 @@
         "../alpha-convert/alpha-convert.ss"
         "typecheck.ss")
 
-;; init-env : Env
-(def init-env
-  (list->symdict
-   [(cons 'int (entry:type [] type:int))
-    (cons 'bool (entry:type [] type:bool))
-    (cons 'bytes (entry:type [] type:bytes))
-    (cons 'not (entry:known (typing-scheme empty-symdict (type:arrow [type:bool] type:bool))))
-    (cons '< (entry:known (typing-scheme empty-symdict (type:arrow [type:int type:int] type:bool))))
-    (cons '+ (entry:known (typing-scheme empty-symdict (type:arrow [type:int type:int] type:int))))
-    (cons 'sqr (entry:known (typing-scheme empty-symdict (type:arrow [type:int] type:int))))
-    (cons 'sqrt (entry:known (typing-scheme empty-symdict (type:arrow [type:int] type:int))))
-    ;; TODO: make polymorphic
-    (cons 'member (entry:known (typing-scheme empty-symdict (type:arrow [type:int (type:listof type:int)] type:bool))))]))
-
-;; tc-prog : [Listof StmtStx] -> Env
-(def (tc-prog stmts)
-  (defvalues (acrenom stmts2) (alpha-convert-prog stmts))
-  (for/fold (env init-env) (stmt stmts2)
-    (let-values (((penv nenv) (tc-stmt env stmt)))
-      (unless (symdict-empty? nenv)
-        (error 'tc-prog "non-empty D⁻ for free lambda-bound vars at top level"))
-      penv)))
-
 ;; tc-prog/list : [Listof StmtStx] -> [Assqof Symbol EnvEntry]
 (def (tc-prog/list path)
   (symdict->list (tc-prog path)))

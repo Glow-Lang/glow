@@ -15,6 +15,7 @@
         :clan/pure/dict/assq
         :clan/pure/dict/symdict
         "../common.ss"
+        "../alpha-convert/alpha-convert.ss"
         "variance.ss"
         "type.ss")
 
@@ -22,6 +23,22 @@
 
 ;; Type system and scoping rules are closest
 ;; to ReasonML, but Record types are structural.
+
+;; A SymbolNTypeTable is a [Hashof Symbol NType]
+;; Keys are symbols from unannotated lambda-bound identifiers in the program.
+;; These have been alpha-renamed to be unique beforehand.
+;; Values are the types associated with those identifiers after type inference.
+;; They will be negative types because unannotated lambda-bound variables.
+;; make-symbol-ntype-table : -> SymbolTypeTable
+(def (make-symbol-ntype-table) (make-hash-table-eq))
+
+;; current-symbol-ntype-table : [Parameterof SymbolNTypeTable]
+(def current-symbol-ntype-table (make-parameter (make-symbol-ntype-table)))
+
+;; put-ntype! : Symbol NType -> Void
+;; Adds the symbol and type to the current-symbol-ntype-table
+(define (put-ntype! s t)
+  (hash-put! (current-symbol-ntype-table) s t))
 
 ;; type=? : Type Type -> Bool
 (def (type=? a b)
@@ -412,6 +429,30 @@
 ;; Π ⊩ e : [∆]τ
 ;; Function signatures follow: Env ExprStx -> TypingScheme
 
+;; init-env : Env
+(def init-env
+  (symdict
+   ('int (entry:type [] type:int))
+   ('bool (entry:type [] type:bool))
+   ('bytes (entry:type [] type:bytes))
+   ('not (entry:known (typing-scheme empty-symdict (type:arrow [type:bool] type:bool))))
+   ('< (entry:known (typing-scheme empty-symdict (type:arrow [type:int type:int] type:bool))))
+   ('+ (entry:known (typing-scheme empty-symdict (type:arrow [type:int type:int] type:int))))
+   ('sqr (entry:known (typing-scheme empty-symdict (type:arrow [type:int] type:int))))
+   ('sqrt (entry:known (typing-scheme empty-symdict (type:arrow [type:int] type:int))))
+   ;; TODO: make polymorphic
+   ('member (entry:known (typing-scheme empty-symdict (type:arrow [type:int (type:listof type:int)] type:bool))))))
+
+;; tc-prog : [Listof StmtStx] -> Env
+(def (tc-prog stmts)
+  (defvalues (acrenom stmts2) (alpha-convert-prog stmts))
+  (parameterize ((current-symbol-ntype-table (make-symbol-ntype-table)))
+    (for/fold (env init-env) (stmt stmts2)
+      (let-values (((penv nenv) (tc-stmt env stmt)))
+        (unless (symdict-empty? nenv)
+          (error 'tc-prog "non-empty D⁻ for free lambda-bound vars at top level"))
+        penv))))
+
 ;; tc-body : Env BodyStx -> TypingScheme
 (def (tc-body env stx)
   (cond ((stx-null? stx) (typing-scheme empty-symdict (type:tuple [])))
@@ -497,12 +538,12 @@
   (def (party s) (parse-type env tyvars s))
   (syntax-case stx ()
     (x (identifier? #'x)
-     (cons (syntax-e #'x)
-           (entry:ctor (typing-scheme empty-symdict b))))
+     (let ((s (syntax-e #'x)))
+       (cons s (entry:ctor (typing-scheme empty-symdict b)))))
     ((f a ...) (identifier? #'f)
-     (cons (syntax-e #'f)
-           (entry:ctor (typing-scheme empty-symdict
-                                      (type:arrow (stx-map party #'(a ...)) b)))))))
+     (let ((s (syntax-e #'f))
+           (t (type:arrow (stx-map party #'(a ...)) b)))
+       (cons s (entry:ctor (typing-scheme empty-symdict t)))))))
 
 ;; tc-defdata-variants : Env [Listof Symbol] Type [StxListof VariantStx] -> (values Env MonoEnv)
 (def (tc-defdata-variants env xs b stx)
