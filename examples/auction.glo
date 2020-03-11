@@ -1,0 +1,43 @@
+#lang glow
+
+// Simple English (open ascending price) forward candle auction.
+
+// ILLUSTRATES FEATURE: one role with an open set of participants
+// ILLUSTRATES FEATURE: explicit timeouts
+// ILLUSTRATES FEATURE: any basket of fungible or non-fungible assets as goods being sold
+// ILLUSTRATES FEATURE: generalization for both goods and services as thing being sold
+
+data Action = Bid | Close;
+
+@interaction({Seller : FixedParticipant, Bidder : AnyParticipant})
+let simpleAuction = (goods : Assets, expirationTime : Timestamp) => {
+   @Seller deposit! goods;
+   let rec auction = (currentBid : TokenAmount, currentBidder : AnyParticipant) => {
+     assert! @deposited == goods + currentBid;
+     choice {
+       | @bidder { publish! Bid ; deposit! bid;} =>
+         @bidder assume! @value(goods) > @value(bid);
+         require! currentTime() < expirationTime;
+         require! bid > currentBid;
+         withdraw! currentBidder, currentBid;
+         auction(bid, bidder);
+       | @_ { publish! Close; } => // only Seller and currentBidder are interested in it.
+         require! currentTime() >= expirationTime;
+         withdraw! Seller, currentBid;
+         withdraw! currentBidder, goods;
+     };
+   auction(0, Seller);
+}
+
+// TODO:
+// - Ensure that types statically ensure what a single specific type of token
+//   is used for the auction, e.g. Bitcoin, Ethereum, some given ERC20, etc.
+// - Support minimum bid, increment, buyout, reserve, dynamic closing, etc.
+// - Have a general notion of goods or services such that this covers selling
+//   a signature as well as selling tokens of a different kind than used to
+//   pay, etc.
+// - Have a timeout exception primitive construct that conceptually expands
+//   into the above? Not clear that it helps that much,
+//   especially considering the way it has to commute with state management.
+// - Instead of a special syntax for matching events, a special data type
+//   data message = Message('sender, 'data, 'asset)

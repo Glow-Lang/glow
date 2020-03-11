@@ -1,0 +1,25 @@
+#lang glow
+
+data or_timeout('a) = Action('a) | Timeout;
+
+let callWithTimeout = (fun : message('s, 'i, 'd) -> 'o,
+                       handler : unit -> 'o
+                       expirationTime : Timestamp) => {
+   switch (@event) {
+   | Message(sender, Action(i), deposit) => fun(Message(sender, i, deposit))
+   | Timeout => handler()
+   }
+
+// MEH. That form is quite verbose. Maybe have some syntax for it?
+// the Message() syntax doesn't match the sending syntax. Should we use @sender { publish! action; deposit! deposit; } instead?
+// @syntax let timeout = (stx) => { ... }
+
+// TODO:
+// - have a timeout exception primitive construct that conceptually expands
+//   into the above?
+// - Support minimum bid, increment, buyout, reserve, dynamic closing, etc.
+// - ensure that types statically ensure what a single specific type of token
+//   is used for the auction, e.g. Bitcoin, Ethereum, some given ERC20, etc.
+// - have a general notion of goods or services such that this covers selling
+//   a signature as well as selling tokens of a different kind than used to
+//   pay, etc.

@@ -19,25 +19,33 @@ let winner = (handA : Hand, handB : Hand) : Outcome => {
 
 @interaction([A, B])
 let rockPaperScissors = (wagerAmount) => {
-    @A {
-      // NB: implicitly, A will have to drop an escrow or have one already during this transaction,
-      // because there is a step in the future of A where A may (actually must) publish a message.
-      let handA = inputHand("First player, pick your hand");
-      assert! canReach(end, end.outcome == A_Wins); // inside @A, canReach means that A can win even *against* others.
-      let salt = randomUInt256();
-      @verifiably let commitment = digest(salt, handA);
-      publish! commitment;
-      deposit! wagerAmount + escrowAmount;
-    };
+    // NB: implicitly, A will have to drop an escrow or have one already during this transaction,
+    // because there is a step in the future of A where A may (actually must) publish a message.
+    @A let handA = inputHand("First player, pick your hand");
+    // canReach = EF. can = E, must = A. Reach = F. Maintain = G ?
+    // (Where EF AF EG AG EX AX are the modal operators from CTL).
+    // Except that since we're in an @A, each subsequent move by B inserts an AX (or conjunction thereof)
+    // and move by us inserts another EX (or disjunction thereof), and
+    // we take the fixpoint over all branches.
+    // Now, B is supposed to have a (non-deterministic?) computable strategy that only uses
+    // the information B has, in an abstract setting where you can't see inside digests and encryption,
+    // but can compare for equality and later verify contents (also, non-free equations allowed
+    // for commutative encryption?)
+    // And this is true because B's strategy cannot depend on breaking the encryption of the commitment,
+    // so we can assume that B's choice is made from information already available at this point,
+    @A assert! canReach(end, end.outcome == A_Wins); // inside @A, canReach means that A can win even *against* others.
+    @A let salt = randomUInt256();
+    @A @verifiably let commitment = digest(salt, handA);
+    @A publish! commitment;
+    @A deposit! wagerAmount;
     // commit; // Maybe the commit is implicit at the transition between @A and @B ???
 
-    @B {
-      assert! canReach(end, end.outcome == B_Wins); // inside @B, the canReach means B can win *against* A
+    @B assert! canReach(end, end.outcome == B_Wins); // inside @B, the canReach means B can win *against* A
       // NB: no implicit escrow for B, because this is B's only message.
-      let handB = inputHand("Second player, pick your hand");
-      publish! handB;
-      deposit! wagerAmount;
-    };
+    @B let handB = inputHand("Second player, pick your hand");
+    @B publish! handB;
+    @B deposit! wagerAmount;
+
     // require! isHand(handB); // Maybe this require! is implicit from the type of B being Hand?
     // commit; // Maybe the commit is implicit at the transition between @B and @A ???
 
