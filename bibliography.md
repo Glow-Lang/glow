@@ -56,3 +56,15 @@ We never released those:
 
 * [GitHub Workflows CI for Gerbil](https://github.com/belmarca/gerbil-fwd/blob/master/.github/workflows/main.yml)
 * For complex information propagation during type analysis, ekmett suggests Rete + propagators?
+
+### Proofs for Blockchain
+
+* Algorand proof of correctness and controversy:
+  [announce by runtime verification](https://runtimeverification.com/blog/formally-verifying-algorand-reinforcing-a-chain-of-steel-modeling-and-safety/),
+  [medium article](https://medium.com/algorand/formal-verification-of-the-algorand-protocol-bbde5a52b830).
+  [Counter-example](https://arxiv.org/abs/1905.04463),
+  [also this](https://arxiv.org/pdf/1907.05523.pdf).
+
+### Issues with Solidity
+
+* [Consensys: known attacks](https://consensys.github.io/smart-contract-best-practices/known_attacks/)
