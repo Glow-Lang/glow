@@ -7,21 +7,29 @@
 // ILLUSTRATES FEATURE: any basket of fungible or non-fungible assets as goods being sold
 // ILLUSTRATES FEATURE: generalization for both goods and services as thing being sold
 
-data Action = Bid | Close;
+// TODO: write versions of this program for multiple language levels
+// 1. with choice, no explicit Action data type.
+// 2. with explicit Action data type, no choice
+// 3. with end-point projection
+
+
+data Action = Bid(TokenAmount) | Close;
 
 @interaction({Seller : FixedParticipant, Bidder : AnyParticipant})
 let simpleAuction = (goods : Assets, expirationTime : Timestamp) => {
-   @Seller deposit! goods;
+   @Seller deposit! goods; // or escrow for included services (?)
    let rec auction = (currentBid : TokenAmount, currentBidder : AnyParticipant) => {
      assert! @deposited == goods + currentBid;
      choice {
-       | @bidder { publish! Bid ; deposit! bid;} =>
-         @bidder assume! @value(goods) > @value(bid);
-         require! currentTime() < expirationTime;
-         require! bid > currentBid;
-         withdraw! currentBidder, currentBid;
-         auction(bid, bidder);
-       | @_ { publish! Close; } => // only Seller and currentBidder are interested in it.
+       | forall (bidder : Bidder) {
+           @bidder bid = Bid(input(["Enter next bid"], okenAmout));
+           @bidder publish! bid ; @bidder deposit! bid.
+           @bidder assume! @value(goods) > @value(bid);
+           require! currentTime() < expirationTime;
+           require! bid > currentBid;
+           withdraw! currentBidder, currentBid;
+          auction(bid, bidder);
+      | @_ { publish! Close; } => // only Seller and currentBidder are interested in it.
          require! currentTime() >= expirationTime;
          withdraw! Seller, currentBid;
          withdraw! currentBidder, goods;
