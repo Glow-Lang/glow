@@ -19,6 +19,7 @@
 
 ;; restx1 : Stx Any -> Stx
 ;; restore the lexical-context and source-location from stx onto e
+;; TODO: also preserve any "syntax properties" such as type, visibility, etc.
 (def (restx1 stx e)
   (datum->syntax (head-id stx) e (stx-source stx)))
 

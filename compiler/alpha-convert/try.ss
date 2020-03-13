@@ -17,7 +17,7 @@
 
 ;; alpha-convert-prog-display : [Listof Stmt] -> Void
 (def (alpha-convert-prog-display prog)
-  (defvalues (env prog2) (alpha-convert-prog prog))
+  (defvalues (_unused-table env prog2) (alpha-convert-prog prog))
   (print-representation env) (newline)
   (for ((stmt prog2))
     (printf "~y" (syntax->datum stmt)))

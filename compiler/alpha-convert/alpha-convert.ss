@@ -5,7 +5,7 @@
         <expander-runtime>
         (for-template :gerbil/core)
         "../common.ss"
-        "symbolnat.ss")
+        "symbol-fresh.ss")
 
 ;; alpha-convert
 
@@ -16,41 +16,6 @@
 ;; Keep track of names that have been used before in a mutable hash-table.
 
 ;; Preserve the original source location
-
-;; An UnusedTable is a [Hashof Symbol UnusedList]
-;; Keys are symbols that do not end in numbers.
-;; Values are lists where unused nats can be appended with
-;; the key to make an unused symbol.
-;; make-unused-table : -> UnusedTable
-(def (make-unused-table) (make-hash-table-eq))
-
-;; current-unused-table : [Parameterof UnusedTable]
-(def current-unused-table (make-parameter (make-unused-table)))
-
-;; copy-current-unused-table : -> UnusedTable
-(define (copy-current-unused-table) (hash-copy (current-unused-table)))
-
-;; symbol-fresh : Symbol -> Symbol
-;; finds an symbol not used so far, marks it used, and returns it
-(def (symbol-fresh sym)
-  (unless (symbol? sym)
-    (error 'symbol-fresh "expected symbol"))
-  (let-values (((s n) (symbol-split sym)))
-    (def ut (current-unused-table))
-    (def ul (hash-ref ut s []))
-    (cond ((unusedlist-unused? ul n)
-           (hash-put! ut s (unusedlist-remove ul n))
-           (symbolnat s n))
-          (else
-           (hash-put! ut s (unusedlist-rest ul))
-           (symbolnat s (unusedlist-first ul))))))
-
-;; identifier-fresh : Identifer -> Identifier
-;; wraps the freshened symbol in the same marks and source location
-(def (identifier-fresh id)
-  (unless (identifier? id)
-    (error 'identifier-fresh "expected identifier"))
-  (restx id (symbol-fresh (stx-e id))))
 
 ;; An Env is a [Symdictof Entry]
 ;; An Entry is an (entry Symbol Bool)
@@ -85,7 +50,7 @@
 ;; init-syms : [Listof Sym]
 (def init-syms '(int bool bytes not < + sqr sqrt member))
 
-;; alpha-convert-prog : [Listof StmtStx] -> (values Env [Listof StmtStx])
+;; alpha-convert-prog : [Listof StmtStx] -> (values UnusedTable Env [Listof StmtStx])
 (def (alpha-convert-prog stmts)
   (parameterize ((current-unused-table (make-unused-table)))
     (def init-env
@@ -93,7 +58,7 @@
         (symdict-put acc x (entry (symbol-fresh x) #f))))
     (let loop ((env init-env) (stmts stmts) (acc []))
       (match stmts
-        ([] (values env (reverse acc)))
+        ([] (values (current-unused-table) env (reverse acc)))
         ([stmt . rst]
          (let-values (((env2 stmt2) (alpha-convert-stmt env stmt)))
            (loop (env-put/env env env2) rst (cons stmt2 acc))))))))
