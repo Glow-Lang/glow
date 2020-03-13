@@ -43,6 +43,8 @@ We never released those:
 * [Jay McCarthy's course on compiler construction](https://jeapostrophe.github.io/courses/2019/spring/406/course/)
 * [Nanopass compilers](https://nanopass.org/documentation.html), and [this example](https://github.com/akeep/scheme-to-c/blob/master/c.ss)
 * [Urlang](https://github.com/soegaard/urlang), compiling from SEXP syntax with macros to JavaScript as a Racket #lang using a nanopass compiler.
+* Not to be confused with Chlipala's [Ur](http://www.impredicative.com/ur/) is a very different language, that supports metaprogramming using row types.
+* Daniel Patterson on [proving a compiler fully abstract](https://dbp.io/essays/2018-04-19-how-to-prove-a-compiler-fully-abstract.html)
 
 ### Debugging
 
