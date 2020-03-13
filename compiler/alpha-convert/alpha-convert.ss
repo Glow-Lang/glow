@@ -68,7 +68,7 @@
   ;; acty : TypeStx -> TypeStx
   (def (acty t) (alpha-convert-type env t))
   (syntax-case stx (@ quote @tuple @record)
-    ((@ _ _) (error 'parse-type "TODO: deal with @"))
+    ((@ _ _) (error 'parse-type "@ annotation not allowed in type"))
     ((@tuple t ...)
      (restx stx (cons (stx-car stx) (stx-map acty #'(t ...)))))
     ((@record (fld t) ...)
@@ -189,8 +189,9 @@
 ;; alpha-convert-stmt : Env StmtStx -> (values Env StmtStx)
 ;; the env result contains only the new symbols introduced by the statement
 (def (alpha-convert-stmt env stx)
-  (syntax-case stx (@ : quote def λ deftype defdata publish! verify!)
-    ((@ _ _) (error 'alpha-convert-stmt "TODO: deal with @"))
+  (syntax-case stx (@ interaction : quote def λ deftype defdata publish! verify!)
+    ((@ (interaction . _) _) (ac-stmt-interaction env stx))
+    ((@ p _) (identifier? #'p) (ac-stmt-at-participant env stx))
     ((deftype . _) (ac-stmt-deftype env stx))
     ((defdata . _) (ac-stmt-defdata env stx))
     ((def . _) (ac-stmt-def env stx))
@@ -198,6 +199,27 @@
     ((verify! . _) (ac-stmt-verify env stx))
     (expr
      (values empty-symdict (alpha-convert-expr env #'expr)))))
+
+;; ac-stmt-interaction : Env StmtStx -> (values Env StmtStx)
+(def (ac-stmt-interaction env stx)
+  (syntax-case stx (@ interaction @list)
+    ((a (i (@list p ...)) s) (stx-andmap identifier? #'(p ...))
+     (let ((ps2 (stx-map identifier-fresh #'(p ...))))
+       (def env2
+         (symdict-put/list env
+                           (map (lambda (s p2) (list s (entry (stx-e p2) #f)))
+                                (syntax->datum #'(p ...))
+                                ps2)))
+       (defvalues (env3 stmt3) (alpha-convert-stmt env2 #'s))
+       (values env3 (restx stx [#'a [#'i (cons '@list ps2)] stmt3]))))))
+
+;; at-stmt-at-participant : Env StmtStx -> (values Env StmtStx)
+(def (ac-stmt-at-participant env stx)
+  (syntax-case stx (@)
+    ((a p s) (identifier? #'p)
+     (with-syntax ((p2 (identifier-refer env #'p)))
+       (let-values (((env2 s2) (alpha-convert-stmt env #'s)))
+         (values env2 (restx stx [#'a #'p2 s2])))))))
 
 ;; ac-stmt-deftype : Env StmtStx -> (values Env StmtStx)
 ;; the env result contains only the new symbols introduced by the statement
