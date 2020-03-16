@@ -92,6 +92,8 @@
      (restx stx [(stx-car stx) (ace #'expr) (alpha-convert-type env #'type)]))
     (x (identifier? #'x) (identifier-refer env #'x))
     (lit (stx-atomic-literal? #'lit) #'lit)
+    ((@dot e x) (identifier? #'x)
+     (restx stx [(stx-car stx) (ace #'e) #'x]))
     ((@tuple e ...)
      (restx stx (cons (stx-car stx) (stx-map ace #'(e ...)))))
     ((@list e ...)
