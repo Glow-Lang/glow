@@ -42,6 +42,7 @@
 (def type:bool (type:name 'bool []))
 (def type:bytes (type:name 'bytes []))
 
+(def type:Participant (type:name 'Participant []))
 (def type:Digest (type:name 'Digest []))
 (def type:Assets (type:name 'Assets []))
 (def type:Signature (type:name 'Signature []))
