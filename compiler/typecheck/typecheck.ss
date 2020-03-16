@@ -441,7 +441,11 @@
    ('sqr (entry:known (typing-scheme empty-symdict (type:arrow [type:int] type:int))))
    ('sqrt (entry:known (typing-scheme empty-symdict (type:arrow [type:int] type:int))))
    ;; TODO: make polymorphic
-   ('member (entry:known (typing-scheme empty-symdict (type:arrow [type:int (type:listof type:int)] type:bool))))))
+   ('member (entry:known (typing-scheme empty-symdict (type:arrow [type:int (type:listof type:int)] type:bool))))
+   ('Digest (entry:type [] type:Digest))
+   ('Assets (entry:type [] type:Assets))
+   ('Signature (entry:type [] type:Signature))
+   ('sign (entry:known (typing-scheme empty-symdict (type:arrow [type:Digest] type:Signature))))))
 
 ;; tc-prog : [Listof StmtStx] -> Env
 (def (tc-prog stmts)

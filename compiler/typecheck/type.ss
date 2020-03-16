@@ -42,6 +42,10 @@
 (def type:bool (type:name 'bool []))
 (def type:bytes (type:name 'bytes []))
 
+(def type:Digest (type:name 'Digest []))
+(def type:Assets (type:name 'Assets []))
+(def type:Signature (type:name 'Signature []))
+
 ;; lists are covariant, so (listof a) <: (listof b) when a <: b
 (def typector:listof (type:name 'listof [covariant]))
 (def (type:listof t) (type:app typector:listof [t]))
