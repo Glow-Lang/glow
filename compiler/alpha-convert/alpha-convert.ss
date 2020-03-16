@@ -48,7 +48,7 @@
   (restx id (symbol-refer env (stx-e id))))
 
 ;; init-syms : [Listof Sym]
-(def init-syms '(int bool bytes not < + sqr sqrt member))
+(def init-syms '(int bool bytes not < + sqr sqrt member Digest Assets sign))
 
 ;; alpha-convert-prog : [Listof StmtStx] -> (values UnusedTable Env [Listof StmtStx])
 (def (alpha-convert-prog stmts)
@@ -68,7 +68,7 @@
   ;; acty : TypeStx -> TypeStx
   (def (acty t) (alpha-convert-type env t))
   (syntax-case stx (@ quote @tuple @record)
-    ((@ _ _) (error 'parse-type "TODO: deal with @"))
+    ((@ _ _) (error 'parse-type "@ annotation not allowed in type"))
     ((@tuple t ...)
      (restx stx (cons (stx-car stx) (stx-map acty #'(t ...)))))
     ((@record (fld t) ...)
@@ -92,6 +92,8 @@
      (restx stx [(stx-car stx) (ace #'expr) (alpha-convert-type env #'type)]))
     (x (identifier? #'x) (identifier-refer env #'x))
     (lit (stx-atomic-literal? #'lit) #'lit)
+    ((@dot e x) (identifier? #'x)
+     (restx stx [(stx-car stx) (ace #'e) #'x]))
     ((@tuple e ...)
      (restx stx (cons (stx-car stx) (stx-map ace #'(e ...)))))
     ((@list e ...)
@@ -189,8 +191,11 @@
 ;; alpha-convert-stmt : Env StmtStx -> (values Env StmtStx)
 ;; the env result contains only the new symbols introduced by the statement
 (def (alpha-convert-stmt env stx)
-  (syntax-case stx (@ : quote def λ deftype defdata publish! verify!)
-    ((@ _ _) (error 'alpha-convert-stmt "TODO: deal with @"))
+  (syntax-case stx (@ interaction verifiably publicly : quote def λ deftype defdata publish! verify!)
+    ((@ (interaction . _) _) (ac-stmt-interaction env stx))
+    ((@ verifiably _) (ac-stmt-at-verifiably env stx))
+    ((@ publicly _) (ac-stmt-at-publicly env stx))
+    ((@ p _) (identifier? #'p) (ac-stmt-at-participant env stx))
     ((deftype . _) (ac-stmt-deftype env stx))
     ((defdata . _) (ac-stmt-defdata env stx))
     ((def . _) (ac-stmt-def env stx))
@@ -198,6 +203,41 @@
     ((verify! . _) (ac-stmt-verify env stx))
     (expr
      (values empty-symdict (alpha-convert-expr env #'expr)))))
+
+;; ac-stmt-interaction : Env StmtStx -> (values Env StmtStx)
+(def (ac-stmt-interaction env stx)
+  (syntax-case stx (@ interaction @list)
+    ((a (i (@list p ...)) s) (stx-andmap identifier? #'(p ...))
+     (let ((ps2 (stx-map identifier-fresh #'(p ...))))
+       (def env2
+         (symdict-put/list env
+                           (map (lambda (s p2) (cons s (entry (stx-e p2) #f)))
+                                (syntax->datum #'(p ...))
+                                ps2)))
+       (defvalues (env3 stmt3) (alpha-convert-stmt env2 #'s))
+       (values env3 (restx stx [#'a [#'i (cons '@list ps2)] stmt3]))))))
+
+;; ac-stmt-at-verifiably : Env StmtStx -> (values Env StmtStx)
+(def (ac-stmt-at-verifiably env stx)
+  (syntax-case stx ()
+    ((a v s)
+     (let-values (((env2 s2) (alpha-convert-stmt env #'s)))
+       (values env2 (restx stx [#'a #'v s2]))))))
+
+;; ac-stmt-at-publicly : Env StmtStx -> (values Env StmtStx)
+(def (ac-stmt-at-publicly env stx)
+  (syntax-case stx ()
+    ((a p s)
+     (let-values (((env2 s2) (alpha-convert-stmt env #'s)))
+       (values env2 (restx stx [#'a #'p s2]))))))
+
+;; at-stmt-at-participant : Env StmtStx -> (values Env StmtStx)
+(def (ac-stmt-at-participant env stx)
+  (syntax-case stx (@)
+    ((a p s) (identifier? #'p)
+     (with-syntax ((p2 (identifier-refer env #'p)))
+       (let-values (((env2 s2) (alpha-convert-stmt env #'s)))
+         (values env2 (restx stx [#'a #'p2 s2])))))))
 
 ;; ac-stmt-deftype : Env StmtStx -> (values Env StmtStx)
 ;; the env result contains only the new symbols introduced by the statement
