@@ -43,7 +43,7 @@
 
 (def (main . args)
   (when (or (null? args)
-            (member (first args '("deps" "compile"))))
+            (member (first args) '("deps" "compile")))
     (update-version))
   (defbuild-script
     (append

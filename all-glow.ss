@@ -50,6 +50,7 @@
   :glow/compiler/alpha-convert/symbolnat :glow/compiler/alpha-convert/fresh
   :glow/compiler/alpha-convert/alpha-convert
   :glow/compiler/anf/anf
+  :glow/compiler/t/common
 )
 
 (import :clan/poo/brace)
