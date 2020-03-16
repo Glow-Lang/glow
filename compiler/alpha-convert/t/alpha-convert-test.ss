@@ -4,18 +4,17 @@
 
 (export #t)
 
-(import :gerbil/gambit/exceptions
-        :std/format
-        :std/iter
-        :std/misc/repr
-        :std/srfi/13
-        :std/test
-        :clan/utils/filesystem
-        :clan/pure/dict
-        <expander-runtime>
-        :glow/compiler/common
-        :glow/config/path
-        :glow/compiler/alpha-convert/alpha-convert)
+(import
+  <expander-runtime>
+  :gerbil/gambit/exceptions
+  :std/format
+  :std/iter
+  :std/misc/repr
+  :std/test
+  :clan/pure/dict
+  :glow/compiler/common
+  :glow/compiler/t/common
+  :glow/compiler/alpha-convert/alpha-convert)
 
 ;; alpha-convert-prog-display : [Listof Stmt] -> Void
 (def (alpha-convert-prog-display prog)
@@ -29,17 +28,7 @@
     (else
      (printf ";; ✗ source locations not preserved\n"))))
 
-;; examples.sexp : -> [Listof Path]
-(def (examples.sexp)
-  (find-files (path-normalize (path-expand "examples" (glow-src)) 'shortest)
-              (cut string-suffix? ".sexp" <>)))
-
-;; test-file : Path -> Void
-(def (test-file file)
-  (def prog (read-syntax-from-file file))
-  (displayln file)
-  (alpha-convert-prog-display prog))
-
+;; test-files : (Listof Path) -> Void
 (def (test-files files)
   (def progs (map read-syntax-from-file files))
   (for ((f files) (p progs))

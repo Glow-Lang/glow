@@ -29,7 +29,6 @@
 (def (bool-exit b)
   (exit (if b 0 1)))
 
-;; main
 (def (main . args)
   (bool-exit
    (match args
