@@ -4,7 +4,7 @@
         <expander-runtime>
         (for-template :gerbil/core)
         ../common.ss
-        ../alpha-convert/symbol-fresh)
+        ../alpha-convert/fresh)
 
 ;; Conversion to A-Normal Form https://en.wikipedia.org/wiki/A-normal_form
 ;; We assume that variables have already been alpha-converted, typed, etc.

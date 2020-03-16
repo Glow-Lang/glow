@@ -4,8 +4,8 @@
         :clan/pure/dict/symdict
         <expander-runtime>
         (for-template :gerbil/core)
-        "../common.ss"
-        "symbol-fresh.ss")
+        ../common
+        ./fresh)
 
 ;; alpha-convert
 

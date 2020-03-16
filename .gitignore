@@ -1,6 +1,7 @@
-# Compiler-generated files
+# Build-generated files
 compiled/
 build-deps
+config/version.ss
 
 # Editor-generated files
 *~
