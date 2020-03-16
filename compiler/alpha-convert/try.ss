@@ -40,6 +40,12 @@
      (printf ";; ✓ source locations preserved exactly\n"))
     (else
      (printf ";; ✗ source locations not preserved\n")))
+  (defvalues (_unused-table3 env3 prog3) (alpha-convert-prog prog2))
+  (cond
+    ((and (stx-deep-source=? prog2 prog3) (stx-sexpr=? prog2 prog3))
+     (printf ";; ✓ idempotent, alpha-twice = alpha-once\n"))
+    (else
+     (printf ";; ✗ not idempotent, alpha-twice is different\n")))
   (when maybe-alpha
     (cond ((stx-sexpr=? prog2 maybe-alpha)
            (printf ";; ✓ matches expected alpha output\n"))
