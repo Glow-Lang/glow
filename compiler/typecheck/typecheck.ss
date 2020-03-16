@@ -442,6 +442,7 @@
    ('sqrt (entry:known (typing-scheme empty-symdict (type:arrow [type:int] type:int))))
    ;; TODO: make polymorphic
    ('member (entry:known (typing-scheme empty-symdict (type:arrow [type:int (type:listof type:int)] type:bool))))
+   ('Participant (entry:type [] type:Participant))
    ('Digest (entry:type [] type:Digest))
    ('Assets (entry:type [] type:Assets))
    ('Signature (entry:type [] type:Signature))
@@ -480,8 +481,11 @@
 ;; TODO: reorganize into one case for each keyword, possibly delegating to a function with
 ;; the multiple cases within a single keyword
 (def (tc-stmt env stx)
-  (syntax-case stx (@ : quote def λ deftype defdata publish! verify!)
-    ((@ _ _) (error 'tc-stmt "TODO: deal with @"))
+  (syntax-case stx (@ interaction verifiably publicly : quote def λ deftype defdata publish! verify!)
+    ((@ (interaction . _) _) (tc-stmt-interaction env stx))
+    ((@ verifiably _) (tc-stmt-at-verifiably env stx))
+    ((@ publicly _) (tc-stmt-at-publicly env stx))
+    ((@ p _) (identifier? #'p) (tc-stmt-at-participant env stx))
     ((deftype . _) (tc-stmt-deftype env stx))
     ((defdata . _) (tc-stmt-defdata env stx))
     ((def . _) (tc-stmt-def env stx))
@@ -492,6 +496,30 @@
     (expr
      (with (((typing-scheme menv _) (tc-expr env #'expr)))
        (values env menv)))))
+
+;; tc-stmt-interaction : Env StmtStx -> (values Env MonoEnv)
+(def (tc-stmt-interaction env stx)
+  (syntax-case stx (@ interaction @list def λ)
+    ((@ (interaction (@list p ...)) (def f (λ params . body))) (stx-andmap identifier? #'(p ...))
+     (tc-stmt-def env #'(def f (λ ((p : Participant) ... . params) . body))))))
+
+;; tc-stmt-at-verifiably : Env StmtStx -> (values Env MonoEnv)
+(def (tc-stmt-at-verifiably env stx)
+  (syntax-case stx (@ verifiably)
+    ((@ verifiably s)
+     (error 'tc-stmt-at-verifiably "TODO"))))
+
+;; tc-stmt-at-publicly : Env StmtStx -> (values Env MonoEnv)
+(def (tc-stmt-at-publicly env stx)
+  (syntax-case stx (@ publicly)
+    ((@ publicly s)
+     (error 'tc-stmt-at-publicly "TODO"))))
+
+;; tc-stmt-at-participant : Env StmtStx -> (values Env MonoEnv)
+(def (tc-stmt-at-participant env stx)
+  (syntax-case stx (@)
+    ((@ p s)
+     (error 'tc-stmt-at-participant "TODO"))))
 
 ;; tc-stmt-deftype : Env StmtStx -> (values Env MonoEnv)
 (def (tc-stmt-deftype env stx)
