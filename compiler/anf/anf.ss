@@ -19,11 +19,6 @@
 ;; Treatment of conditionals, which includes if's and switch's (maybe in the future have if a macro for switch?) [and choice's?]:
 ;; - assuming these branches are simple enough and do not introduce escaping bindings, and do not do non-local exits or other transaction-breaking side-effects, we can have branching on the right side of a definition.
 
-;; anf-prog : UnusedTable [Listof StmtStx] -> [Listof StmtStx]
-(def (anf-prog unused-table stmts)
-  (parameterize ((current-unused-table unused-table))
-    (reverse (anf-stmts stmts []))))
-
 ;; anf-stmts : [Listof StmtStx] [Listof StmtStx] -> [Listof StmtStx]
 ;; the first argument is list of statements *to reduce*
 ;; the second argument is a reversed list of accumulated *reduced* statements
@@ -160,3 +155,9 @@
      (restx stx `(,#'l params : ,#'out-type ,@(anf-standalone-body #'(body ...)))))
     ((l params body ...)
      (restx stx `(,#'l params ,@(anf-standalone-body #'(body ...)))))))
+
+;; Conform to pass convention.
+;; anf : [Listof StmtStx] UnusedTable Env -> (values [Listof StmtStx] UnusedTable Env)
+(def (anf stmts unused-table env)
+  (parameterize ((current-unused-table unused-table))
+    (values (reverse (anf-stmts stmts [])) unused-table env)))

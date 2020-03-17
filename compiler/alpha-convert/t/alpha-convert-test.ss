@@ -16,12 +16,11 @@
   :glow/compiler/t/common
   :glow/compiler/alpha-convert/alpha-convert)
 
-;; alpha-convert-prog-display : [Listof Stmt] -> Void
-(def (alpha-convert-prog-display prog)
-  (defvalues (_unused-table env prog2) (alpha-convert-prog prog))
+;; alpha-convert-display : [Listof Stmt] -> Void
+(def (alpha-convert-display prog)
+  (defvalues (prog2 _unused-table env) (alpha-convert prog))
   (print-representation env) (newline)
-  (for ((stmt prog2))
-    (printf "~y" (syntax->datum stmt)))
+  (write-sexps prog2)
   (cond
     ((stx-deep-source=? prog prog2)
      (printf ";; ✓ source locations preserved exactly\n"))
@@ -30,12 +29,12 @@
 
 ;; test-files : (Listof Path) -> Void
 (def (test-files files)
-  (def progs (map read-syntax-from-file files))
+  (def progs (map read-sexp-file files))
   (for ((f files) (p progs))
     (displayln f)
     (with-catch
      (lambda (e) (display-exception e))
-     (lambda () (alpha-convert-prog-display p)))
+     (lambda () (alpha-convert-display p)))
     (newline)))
 
 (def alpha-convert-test

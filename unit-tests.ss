@@ -4,7 +4,7 @@
   :gerbil/expander
   :std/test :std/srfi/1 :std/misc/repr
   :clan/utils/base :clan/utils/filesystem
-  :glow/config/path)
+  :glow/config/path :glow/compiler/passes :glow/compiler/multipass)
 
 (current-directory (glow-src))
 
@@ -35,6 +35,7 @@
      ([] (main "all"))
      (["all"] (run-tests (find-test-files ".")))
      (["test" . files] (run-tests files))
+     (["process" . files] (for-each run-passes files))
      (["pass" pass . files]
       ;; TODO: given a pass by name, and for each specified files,
       ;; identify the language in which the file is written, by file extension,
@@ -43,4 +44,6 @@
       ;; and compare these results to pre-recorded results if available;
       ;; unless the pre-recorded results exist and match, print the pass results.
       ;; Either way, print test results.
-      (error 'not-implemented-yet #f)))))
+      (def pass-sym (string->symbol pass))
+      (for-each (λ (file) (run-passes file pass: pass-sym)) files)
+      #t))))
