@@ -453,76 +453,84 @@
   (defvalues (_unused-table acrenom stmts2) (alpha-convert-prog stmts))
   (parameterize ((current-symbol-ntype-table (make-symbol-ntype-table)))
     (for/fold (env init-env) (stmt stmts2)
-      (let-values (((penv nenv) (tc-stmt env stmt)))
+      (let-values (((penv nenv) (tc-stmt #f env stmt)))
         (unless (symdict-empty? nenv)
           (error 'tc-prog "non-empty D⁻ for free lambda-bound vars at top level"))
         penv))))
 
-;; tc-body : Env BodyStx -> TypingScheme
-(def (tc-body env stx)
-  (cond ((stx-null? stx) (typing-scheme empty-symdict (type:tuple [])))
-        ((stx-null? (stx-cdr stx)) (tc-expr env (stx-car stx)))
-        (else
-         (let-values (((penv nenv) (tc-stmt env (stx-car stx))))
-           (typing-scheme/menv nenv (tc-body penv (stx-cdr stx)))))))
+;; A MPart is one of:
+;;  - #f      ; no participant, or consensus
+;;  - Symbol  ; within the named participant
 
-;; tc-body/check : Env BodyStx (U #f Type) -> TypingScheme
-(def (tc-body/check env stx expected-ty)
+;; tc-body : MPart Env BodyStx -> TypingScheme
+(def (tc-body part env stx)
+  (cond ((stx-null? stx) (typing-scheme empty-symdict (type:tuple [])))
+        ((stx-null? (stx-cdr stx)) (tc-expr part env (stx-car stx)))
+        (else
+         (let-values (((penv nenv) (tc-stmt part env (stx-car stx))))
+           (typing-scheme/menv nenv (tc-body part penv (stx-cdr stx)))))))
+
+;; tc-body/check : MPart Env BodyStx (U #f Type) -> TypingScheme
+(def (tc-body/check part env stx expected-ty)
   (cond ((stx-null? stx)
          (unless (or (not expected-ty) (subtype? (type:tuple []) expected-ty))
            (error 'tc-body/check "type mismatch with implicit unit at end of body"))
          (typing-scheme empty-symdict (or expected-ty (type:tuple []))))
-        ((stx-null? (stx-cdr stx)) (tc-expr/check env (stx-car stx) expected-ty))
+        ((stx-null? (stx-cdr stx)) (tc-expr/check part env (stx-car stx) expected-ty))
         (else
-         (let-values (((penv nenv) (tc-stmt env (stx-car stx))))
-           (typing-scheme/menv nenv (tc-body/check penv (stx-cdr stx) expected-ty))))))
+         (let-values (((penv nenv) (tc-stmt part env (stx-car stx))))
+           (typing-scheme/menv nenv (tc-body/check part penv (stx-cdr stx) expected-ty))))))
 
-;; tc-stmt : Env StmtStx -> (values Env MonoEnv)
+;; tc-stmt : MPart Env StmtStx -> (values Env MonoEnv)
 ;; TODO: reorganize into one case for each keyword, possibly delegating to a function with
 ;; the multiple cases within a single keyword
-(def (tc-stmt env stx)
+(def (tc-stmt part env stx)
   (syntax-case stx (@ interaction verifiably publicly : quote def λ deftype defdata publish! verify!)
-    ((@ (interaction . _) _) (tc-stmt-interaction env stx))
-    ((@ verifiably _) (tc-stmt-at-verifiably env stx))
-    ((@ publicly _) (tc-stmt-at-publicly env stx))
-    ((@ p _) (identifier? #'p) (tc-stmt-at-participant env stx))
-    ((deftype . _) (tc-stmt-deftype env stx))
-    ((defdata . _) (tc-stmt-defdata env stx))
-    ((def . _) (tc-stmt-def env stx))
+    ((@ (interaction . _) _) (tc-stmt-interaction part env stx))
+    ((@ verifiably _) (tc-stmt-at-verifiably part env stx))
+    ((@ publicly _) (tc-stmt-at-publicly part env stx))
+    ((@ p _) (identifier? #'p) (tc-stmt-at-participant part env stx))
+    ((deftype . _) (tc-stmt-deftype part env stx))
+    ((defdata . _) (tc-stmt-defdata part env stx))
+    ((def . _) (tc-stmt-def part env stx))
     ((publish! x ...) (stx-andmap identifier? #'(x ...))
      (error 'tc-stmt "TODO: deal with publish!"))
     ((verify! x ...) (stx-andmap identifier? #'(x ...))
      (error 'tc-stmt "TODO: deal with verify!"))
     (expr
-     (with (((typing-scheme menv _) (tc-expr env #'expr)))
+     (with (((typing-scheme menv _) (tc-expr part env #'expr)))
        (values env menv)))))
 
-;; tc-stmt-interaction : Env StmtStx -> (values Env MonoEnv)
-(def (tc-stmt-interaction env stx)
+;; tc-stmt-interaction : MPart Env StmtStx -> (values Env MonoEnv)
+(def (tc-stmt-interaction part env stx)
+  (when part
+    (error 'interaction "not allowed within a specific participant"))
   (syntax-case stx (@ interaction @list def λ)
     ((@ (interaction (@list p ...)) (def f (λ params . body))) (stx-andmap identifier? #'(p ...))
-     (tc-stmt-def env #'(def f (λ ((p : Participant) ... . params) . body))))))
+     (tc-stmt-def part env #'(def f (λ ((p : Participant) ... . params) . body))))))
 
-;; tc-stmt-at-verifiably : Env StmtStx -> (values Env MonoEnv)
-(def (tc-stmt-at-verifiably env stx)
+;; tc-stmt-at-verifiably : MPart Env StmtStx -> (values Env MonoEnv)
+(def (tc-stmt-at-verifiably part env stx)
   (syntax-case stx (@ verifiably)
     ((@ verifiably s)
      (error 'tc-stmt-at-verifiably "TODO"))))
 
-;; tc-stmt-at-publicly : Env StmtStx -> (values Env MonoEnv)
-(def (tc-stmt-at-publicly env stx)
+;; tc-stmt-at-publicly : MPart Env StmtStx -> (values Env MonoEnv)
+(def (tc-stmt-at-publicly part env stx)
   (syntax-case stx (@ publicly)
     ((@ publicly s)
      (error 'tc-stmt-at-publicly "TODO"))))
 
-;; tc-stmt-at-participant : Env StmtStx -> (values Env MonoEnv)
-(def (tc-stmt-at-participant env stx)
+;; tc-stmt-at-participant : MPart Env StmtStx -> (values Env MonoEnv)
+(def (tc-stmt-at-participant part env stx)
+  (when part
+    (error 'at-participant "already within a participant"))
   (syntax-case stx (@)
     ((@ p s)
      (error 'tc-stmt-at-participant "TODO"))))
 
-;; tc-stmt-deftype : Env StmtStx -> (values Env MonoEnv)
-(def (tc-stmt-deftype env stx)
+;; tc-stmt-deftype : MPart Env StmtStx -> (values Env MonoEnv)
+(def (tc-stmt-deftype part env stx)
   (syntax-case stx (@ : quote deftype defdata)
     ((deftype x t) (identifier? #'x)
      (values
@@ -540,13 +548,14 @@
                      (entry:type xs (parse-type env tyvars #'b)))
         empty-symdict)))))
 
-;; tc-stmt-defdata : Env StmtStx -> (values Env MonoEnv)
-(def (tc-stmt-defdata env stx)
+;; tc-stmt-defdata : MPart Env StmtStx -> (values Env MonoEnv)
+(def (tc-stmt-defdata part env stx)
   (syntax-case stx (@ : quote deftype defdata)
     ((defdata x variant ...) (identifier? #'x)
      (let ((s (syntax-e #'x)))
        (def b (type:name (gensym s) []))
-       (tc-defdata-variants (symdict-put env s (entry:type [] b))
+       (tc-defdata-variants part
+                            (symdict-put env s (entry:type [] b))
                             []
                             b
                             #'(variant ...))))
@@ -556,14 +565,15 @@
        ;; TODO: allow variances to be either annotated or inferred
        (def vances (map (lambda (x) invariant) xs))
        (def b (type:app (type:name (gensym s) vances) (map make-type:var xs)))
-       (tc-defdata-variants (symdict-put env s (entry:type xs b))
+       (tc-defdata-variants part
+                            (symdict-put env s (entry:type xs b))
                             xs
                             b
                             #'(variant ...))))))
 
 
-;; tc-defdata-variant : Env [Listof Symbol] Type VariantStx -> [Cons Symbol EnvEntry]
-(def (tc-defdata-variant env xs b stx)
+;; tc-defdata-variant : MPart Env [Listof Symbol] Type VariantStx -> [Cons Symbol EnvEntry]
+(def (tc-defdata-variant part env xs b stx)
   ;; tyvars : TyvarEnv
   (def tyvars (list->symdict (map cons xs (map make-type:var xs))))
   ;; party : TypeStx -> Type
@@ -577,44 +587,44 @@
            (t (type:arrow (stx-map party #'(a ...)) b)))
        (cons s (entry:ctor (typing-scheme empty-symdict t)))))))
 
-;; tc-defdata-variants : Env [Listof Symbol] Type [StxListof VariantStx] -> (values Env MonoEnv)
-(def (tc-defdata-variants env xs b stx)
+;; tc-defdata-variants : MPart Env [Listof Symbol] Type [StxListof VariantStx] -> (values Env MonoEnv)
+(def (tc-defdata-variants part env xs b stx)
   ;; tcvariant : VariantStx -> [Cons Symbol EnvEntry]
-  (def (tcvariant v) (tc-defdata-variant env xs b v))
+  (def (tcvariant v) (tc-defdata-variant part env xs b v))
   (values
    (symdict-put/list env (stx-map tcvariant stx))
    empty-symdict))
 
-;; tc-stmt-def : Env StmtStx -> (values Env MonoEnv)
-(def (tc-stmt-def env stx)
+;; tc-stmt-def : MPart Env StmtStx -> (values Env MonoEnv)
+(def (tc-stmt-def part env stx)
   (syntax-case stx (@ : quote def λ)
     ((def f (λ params : out-type body ...)) (identifier? #'f)
      (let ((s (syntax-e #'f))
            (xs (stx-map parse-param-name #'params))
            (in-ts (stx-map (lambda (p) (parse-param-type env p)) #'params))
            (out-t (parse-type env empty-symdict #'out-type)))
-       (tc-stmt-def/typing-scheme env s (tc-function env xs in-ts out-t #'(body ...)))))
+       (tc-stmt-def/typing-scheme part env s (tc-function part env xs in-ts out-t #'(body ...)))))
     ((def f (λ params body ...)) (identifier? #'f)
      (let ((s (syntax-e #'f))
            (xs (stx-map parse-param-name #'params))
            (in-ts (stx-map (lambda (p) (parse-param-type env p)) #'params)))
-       (tc-stmt-def/typing-scheme env s (tc-function env xs in-ts #f #'(body ...)))))
+       (tc-stmt-def/typing-scheme part env s (tc-function part env xs in-ts #f #'(body ...)))))
     ((def x : type expr) (identifier? #'x)
      (let ((s (syntax-e #'x))
            (t (parse-type env empty-symdict #'type)))
-       (tc-stmt-def/typing-scheme env s (tc-expr/check env #'expr t))))
+       (tc-stmt-def/typing-scheme part env s (tc-expr/check part env #'expr t))))
     ((def x expr) (identifier? #'x)
      (let ((s (syntax-e #'x)))
-       (tc-stmt-def/typing-scheme env s (tc-expr env #'expr))))))
+       (tc-stmt-def/typing-scheme part env s (tc-expr part env #'expr))))))
 
-;; tc-stmt-def/typing-scheme : Env Symbol TypingScheme -> (values Env MonoEnv)
-(def (tc-stmt-def/typing-scheme env s ts)
+;; tc-stmt-def/typing-scheme : MPart Env Symbol TypingScheme -> (values Env MonoEnv)
+(def (tc-stmt-def/typing-scheme part env s ts)
   (values
    (symdict-put env s (entry:known ts))
    (typing-scheme-menv ts)))
 
-;; tc-function : Env [Listof Symbol] [Listof (U #f Type)] (U #f Type) BodyStx -> TypingScheme
-(def (tc-function env xs in-tys exp-out-ty body)
+;; tc-function : MPart Env [Listof Symbol] [Listof (U #f Type)] (U #f Type) BodyStx -> TypingScheme
+(def (tc-function part env xs in-tys exp-out-ty body)
   ;; in-ents* : [Listof EnvEntry]
   ;; entry:unknown for parameters that weren't annotated
   (def in-ents*
@@ -624,7 +634,7 @@
          in-tys))
   ;; body-env : Env
   (def body-env (symdict-put/list env (map cons xs in-ents*)))
-  (def body-ts (tc-body/check body-env body exp-out-ty))
+  (def body-ts (tc-body/check part body-env body exp-out-ty))
   (def body-menv (typing-scheme-menv body-ts))
   (def body-ty (typing-scheme-type body-ts))
   ;; in-tys* : [Listof NType]
@@ -638,15 +648,15 @@
                     (else (symdict-remove acc x)))))
   (typing-scheme menv (type:arrow in-tys* body-ty)))
 
-;; tc-expr : Env ExprStx -> TypingScheme
-(def (tc-expr env stx)
+;; tc-expr : MPart Env ExprStx -> TypingScheme
+(def (tc-expr part env stx)
   ;; tce : ExprStx -> TypingScheme
-  (def (tce e) (tc-expr env e))
+  (def (tce e) (tc-expr part env e))
   (syntax-case stx (@ : ann @tuple @record @list if block switch require! assert! deposit! withdraw!)
     ((@ _ _) (error 'tc-expr "TODO: deal with @"))
     ((ann expr type)
-     (tc-expr/check env #'expr (parse-type env empty-symdict #'type)))
-    (x (identifier? #'x) (tc-expr-id env stx))
+     (tc-expr/check part env #'expr (parse-type env empty-symdict #'type)))
+    (x (identifier? #'x) (tc-expr-id part env stx))
     (lit (stx-atomic-literal? #'lit) (typing-scheme empty-symdict (tc-literal #'lit)))
     ((@tuple e ...)
      (let ((ts (stx-map tce #'(e ...))))
@@ -667,18 +677,18 @@
         (menvs-meet (map typing-scheme-menv ts))
         (type:listof (types-join (map typing-scheme-type ts))))))
     ((block b ...)
-     (tc-body env #'(b ...)))
+     (tc-body part env #'(b ...)))
     ((if c t e)
-     (let ((ct (tc-expr/check env #'c type:bool))
-           (tt (tc-expr env #'t))
-           (et (tc-expr env #'e)))
+     (let ((ct (tc-expr/check part env #'c type:bool))
+           (tt (tc-expr part env #'t))
+           (et (tc-expr part env #'e)))
        (typing-scheme (menvs-meet (map typing-scheme-menv [ct tt et]))
                       (type-join (typing-scheme-type tt) (typing-scheme-type et)))))
     ((switch e swcase ...)
-     (let ((ts (tc-expr env #'e)))
+     (let ((ts (tc-expr part env #'e)))
        (def vt (typing-scheme-type ts))
        ;; TODO: implement exhaustiveness checking
-       (def cts (stx-map (lambda (c) (tc-switch-case env vt c)) #'(swcase ...)))
+       (def cts (stx-map (lambda (c) (tc-switch-case part env vt c)) #'(swcase ...)))
        (def bt (typing-schemes-join cts))
        (typing-scheme (menv-meet (typing-scheme-menv ts) (typing-scheme-menv bt))
                       (typing-scheme-type bt))))
@@ -692,13 +702,13 @@
      (error 'tc-expr "TODO: deal with withdraw!"))
     ((f a ...) (identifier? #'f)
      (let ((s (syntax-e #'f))
-           (ft (tc-expr-id env #'f)))
+           (ft (tc-expr-id part env #'f)))
        (match (typing-scheme-type ft)
          ((type:arrow in-tys out-ty)
           (unless (= (stx-length #'(a ...)) (length in-tys))
             (error s "wrong number of arguments"))
           (def ats
-            (stx-map (lambda (a t) (tc-expr/check env a t))
+            (stx-map (lambda (a t) (tc-expr/check part env a t))
                      #'(a ...)
                      in-tys))
           (typing-scheme (menvs-meet (cons (typing-scheme-menv ft) (map typing-scheme-menv ats)))
@@ -713,7 +723,7 @@
           ;; unify against arrow
           ;; v <: (-> avs bv)
           (def fty (type:arrow (map make-type:var avs) (type:var bv)))
-          (def atss (stx-map (lambda (a) (tc-expr env a)) #'(a ...)))
+          (def atss (stx-map (lambda (a) (tc-expr part env a)) #'(a ...)))
           (def ats (map typing-scheme-type atss))
           (def bisub
             (biunify (cons (constraint:subtype (type:var v) fty)
@@ -728,8 +738,8 @@
                           (type:var bv)))))))))
 
 
-;; tc-expr-id : Env Identifier -> TypingScheme
-(def (tc-expr-id env x)
+;; tc-expr-id : MPart Env Identifier -> TypingScheme
+(def (tc-expr-id part env x)
   (def s (syntax-e x))
   (unless (symdict-has-key? env s)
     (error s "unbound identifier"))
@@ -741,12 +751,12 @@
     ((entry:known t) t)
     ((entry:ctor t) t)))
 
-;; tc-expr/check : Env ExprStx (U #f Type) -> TypingSchemeOrError
+;; tc-expr/check : MPart Env ExprStx (U #f Type) -> TypingSchemeOrError
 ;; returns expected-ty on success, actual-ty if no expected, otherwise error
-(def (tc-expr/check env stx expected-ty)
+(def (tc-expr/check part env stx expected-ty)
   (unless (or (not expected-ty) (type? expected-ty))
     (error 'tc-expr/check "expected (U #f Type) for 3rd argument"))
-  (def actual-ts (tc-expr env stx))
+  (def actual-ts (tc-expr part env stx))
   (cond
     ((not expected-ty) actual-ts)
     (else
@@ -765,21 +775,21 @@
         ((bytes? e) type:bytes)
         (else (error 'tc-literal "unrecognized literal"))))
 
-;; tc-switch-case : Env Type SwitchCaseStx -> TypingScheme
-(def (tc-switch-case env valty stx)
+;; tc-switch-case : MPart Env Type SwitchCaseStx -> TypingScheme
+(def (tc-switch-case part env valty stx)
   (syntax-case stx ()
     ((pat body ...)
-     (let ((pattys (tc-pat env valty #'pat)))
+     (let ((pattys (tc-pat part env valty #'pat)))
        (def env/pattys
          (symdict-put/list
           env
           (map (lambda (p) (cons (car p) (entry:known (typing-scheme empty-symdict (cdr p)))))
                pattys)))
-       (tc-body env/pattys #'(body ...))))))
+       (tc-body part env/pattys #'(body ...))))))
 
 
-;; tc-pat : Env PType PatStx -> Pattys
-(def (tc-pat env valty stx)
+;; tc-pat : MPart Env PType PatStx -> Pattys
+(def (tc-pat part env valty stx)
   (syntax-case stx (@ : ann @tuple @record @list @or-pat)
     ((@ _ _) (error 'tc-pat "TODO: deal with @"))
     ((ann pat type)
@@ -789,7 +799,7 @@
        ;; (switch (ann 5 nat) ((ann x int) x))
        (unless (subtype? valty t)
          (error 'tc-pat "type mismatch"))
-       (tc-pat env t #'pat)))
+       (tc-pat part env t #'pat)))
     (blank (and (identifier? #'blank) (free-identifier=? #'blank #'_))
      [])
     (x (and (identifier? #'x) (not-bound-as-ctor? env (syntax-e #'x)))
@@ -813,12 +823,12 @@
        (type-join valty t)
        []))
     ((@or-pat p ...)
-     (pattys-join (stx-map (lambda (p) (tc-pat env valty p)) #'(p ...))))
+     (pattys-join (stx-map (lambda (p) (tc-pat part env valty p)) #'(p ...))))
     ((@list p ...)
      (cond
        ((type:listof? valty)
         (let ((elem-ty (type:listof-elem valty)))
-          (def ptys (stx-map (lambda (p) (tc-pat env elem-ty p)) #'(p ...)))
+          (def ptys (stx-map (lambda (p) (tc-pat part env elem-ty p)) #'(p ...)))
           (pattys-append ptys)))
        (else
         (error 'tc-pat "TODO: handle list patterns better, unification?"))))
@@ -827,7 +837,7 @@
        ((type:tuple ts)
         (unless (= (stx-length #'(p ...)) (length ts))
           (error 'tuple "wrong number of elements in tuple pattern"))
-        (def ptys (stx-map (lambda (t p) (tc-pat env t p)) ts #'(p ...)))
+        (def ptys (stx-map (lambda (t p) (tc-pat part env t p)) ts #'(p ...)))
         (pattys-append ptys))
        (_ (error 'tc-pat "TODO: handle tuple patterns better, unification?"))))
     ((@record (x p) ...) (stx-andmap identifier? #'(x ...))
@@ -845,7 +855,7 @@
               (error f "missing key in record pattern")))
           (def ptys
             (stx-map (lambda (x p)
-                       (tc-pat env (symdict-ref fldtys x) p))
+                       (tc-pat part env (symdict-ref fldtys x) p))
                      s
                      #'(p ...)))
           (pattys-append ptys))
@@ -864,7 +874,7 @@
           (unless (= (stx-length #'(a ...)) (length in-tys))
             (error s "wrong number of arguments to data constructor"))
           (def ptys
-            (stx-map (lambda (t p) (tc-pat env t p))
+            (stx-map (lambda (t p) (tc-pat part env t p))
                      in-tys
                      #'(a ...)))
           (pattys-append ptys)))))))
