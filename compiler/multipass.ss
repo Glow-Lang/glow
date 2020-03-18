@@ -2,6 +2,12 @@
 
 (export #t)
 
+;; TODO:
+;; - In the near future, a strategy will not be a linear list of consecutive passes,
+;;   but an arbitrary DAG with meets and joins and multiple final outputs,
+;;   especially due to End-Point Projection. We ought to support that.
+;; - Save and restore ancillary data too???
+
 (import
   :std/format :std/iter :std/misc/ports :std/misc/string
   :std/srfi/1 :std/srfi/13 :std/sugar
@@ -9,8 +15,6 @@
   ;; :glow/compiler/parse/parse
   :glow/compiler/common
   )
-
-;; TODO: save and restore ancillary data too???
 
 ;; A language has a name, a reader and a writer.
 ;; - The name, a string, is the file extension of corresponding source files (e.g. ".glow").
@@ -99,11 +103,12 @@
      (def new-prog (first new-state))
      (def expected-output-file (string-append basename output))
      (when (file-exists? expected-output-file)
-       (unless (stx-sexpr=? (first new-state) (read-file/lang output expected-output-file))
-         (eprintf "output for pass ~a doesn't match expectation from ~a:\n"
-                  pass expected-output-file)
-         (write/lang output (current-error-port))
-         (error 'pass-output-mismatch pass basename)))
+       (let ((new-prog (first new-state)))
+         (unless (stx-sexpr=? new-prog (read-file/lang output expected-output-file))
+           (eprintf "output for pass ~a doesn't match expectation from ~a:\n"
+                    pass expected-output-file)
+           (write/lang output new-prog (current-error-port))
+           (error 'pass-output-mismatch pass basename))))
      new-state)))
 
 ;; Path lang:  String Representation+AncillaryDataIn -> Representation+AncillaryDataOut

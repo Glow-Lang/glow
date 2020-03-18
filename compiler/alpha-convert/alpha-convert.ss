@@ -3,7 +3,8 @@
 (import :std/iter
         :clan/pure/dict/symdict
         <expander-runtime>
-        (for-template :gerbil/core)
+        (for-template :glow/compiler/syntax-context)
+        :glow/compiler/syntax-context
         ../common
         ./fresh)
 

@@ -1,2 +1,3 @@
 #!/bin/sh
+# This script starts a Glow compiler that was previously built into your Gerbil object cache.
 exec $HOME/.gerbil/bin/glow "$@"
