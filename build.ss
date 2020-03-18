@@ -7,7 +7,7 @@
 (import
   :std/build-script :std/srfi/1
   :std/misc/ports :std/misc/process :std/misc/repr :std/misc/string
-  :clan/utils/base :clan/utils/filesystem)
+  :clan/utils/base :clan/utils/filesystem :clan/utils/version)
 
 (def glow-src (path-normalize (getenv "GLOW_SRC" (path-directory (this-source-file)))))
 (setenv "GLOW_SRC" glow-src)
@@ -21,33 +21,10 @@
                         ))
    ["config" "compiler" "runtime" "eth"]))
 
-;; Update the version in config/version.ss:
-;; If we have access to git (i.e. not from a tarball),
-;; then overwrite config/version.ss based on the output of `git describe --tags`
-;; unless it's unchanged.
-;; If we don't have access to git, then whoever made the tarball better have
-;; generated that file and included it in the tarball.
-(define (update-version)
-  (let* ((version-path "config/version.ss")
-         (git-version
-          (and (file-exists? ".git")
-               (string-trim-eol (run-process '("git" "describe" "--tags")))))
-         (version-text
-          (and git-version
-               (string-append "(import :clan/utils/version)\n"
-                              "(register-software \"Glow\" \"" git-version "\")\n")))
-         (previous-version-text
-          (and version-text ;; no need to compute it if no current version to replace it with
-               (file-exists? version-path)
-               (read-file-string version-path))))
-    (if (and version-text (not (equal? version-text previous-version-text)))
-      (call-with-output-file [path: version-path create: 'maybe append: #f truncate: #t]
-        (cut display version-text <>)))))
-
 (def (main . args)
   (when (or (null? args)
             (member (first args) '("deps" "compile")))
-    (update-version))
+    (update-version-from-git name: "Glow"))
   (defbuild-script
     (append
      (files)
