@@ -506,6 +506,9 @@
   (when part
     (error 'interaction "not allowed within a specific participant"))
   (syntax-case stx (@ interaction @list def λ)
+    ;; TODO: when we design a separate way of calling interactions, create a separate
+    ;;       type for interaction functions that forces them to be called specially
+    ;;       as interactions, not just functions with extra participant arguments
     ((@ (interaction (@list p ...)) (def f (λ params . body))) (stx-andmap identifier? #'(p ...))
      (tc-stmt-def part env #'(def f (λ ((p : Participant) ... . params) . body))))))
 
