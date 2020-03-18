@@ -450,7 +450,7 @@
 
 ;; tc-prog : [Listof StmtStx] -> Env
 (def (tc-prog stmts)
-  (defvalues (_unused-table acrenom stmts2) (alpha-convert-prog stmts))
+  (defvalues (stmts2 _unused-table acrenom) (alpha-convert stmts))
   (parameterize ((current-symbol-ntype-table (make-symbol-ntype-table)))
     (for/fold (env init-env) (stmt stmts2)
       (let-values (((penv nenv) (tc-stmt #f env stmt)))
