@@ -50,15 +50,15 @@
 ;; init-syms : [Listof Sym]
 (def init-syms '(int bool bytes not < + sqr sqrt member Digest Assets sign))
 
-;; alpha-convert-prog : [Listof StmtStx] -> (values UnusedTable Env [Listof StmtStx])
-(def (alpha-convert-prog stmts)
+;; alpha-convert : [Listof StmtStx] -> (values [Listof StmtStx] UnusedTable Env)
+(def (alpha-convert stmts)
   (parameterize ((current-unused-table (make-unused-table)))
     (def init-env
       (for/fold (acc empty-symdict) ((x init-syms))
         (symdict-put acc x (entry (symbol-fresh x) #f))))
     (let loop ((env init-env) (stmts stmts) (acc []))
       (match stmts
-        ([] (values (current-unused-table) env (reverse acc)))
+        ([] (values (reverse acc) (current-unused-table) env))
         ([stmt . rst]
          (let-values (((env2 stmt2) (alpha-convert-stmt env stmt)))
            (loop (env-put/env env env2) rst (cons stmt2 acc))))))))
