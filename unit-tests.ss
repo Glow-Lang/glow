@@ -4,6 +4,7 @@
   :gerbil/expander
   :std/test :std/srfi/1 :std/misc/repr
   :clan/utils/base :clan/utils/filesystem
+  :glow/compiler/alpha-convert/t/alpha-convert-test
   :glow/config/path :glow/compiler/passes :glow/compiler/multipass)
 
 (current-directory (glow-src))
@@ -34,6 +35,7 @@
    (match args
      ([] (main "all"))
      (["all"] (run-tests (find-test-files ".")))
+     (["alpha-convert-test"] (try-alpha-convert-all))
      (["test" . files] (run-tests files))
      (["process" . files] (for-each run-passes files))
      (["pass" pass . files]
