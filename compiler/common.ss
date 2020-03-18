@@ -1,7 +1,11 @@
 (export #t)
 
 (import :gerbil/gambit/bytes
-        <expander-runtime>)
+        <expander-runtime>
+        (for-template :gerbil/core)
+        :std/format
+        :std/iter
+        :clan/utils/files)
 
 ;; stx-atomic-literal? : Any -> Bool
 (def (stx-atomic-literal? v)
@@ -58,3 +62,15 @@
          ((or (stx-leaf? a) (stx-leaf? b))
           (and (stx-leaf? a) (stx-leaf? b)))
          (else (error 'stx-deep-source=? "unknown syntax structure:" a b)))))
+
+;; TODO: do we need to properly parameterize the context (?)
+(def (read-sexp-file file)
+  (read-syntax-from-file file))
+
+;; NB: this is lossy of source location and identifier resolution
+(def (write-sexps statements (port (current-output-port)))
+  (for ((stmt statements))
+    (fprintf port "~y" (syntax->datum stmt))))
+
+(def (write-sexp-file statements file)
+  (clobber-file file (cut write-sexps statements <>)))

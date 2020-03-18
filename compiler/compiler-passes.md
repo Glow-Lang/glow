@@ -1,6 +1,9 @@
 # Compiler Passes
 
-This is the internal plan for how the compiler passes are laid out.
+This is the internal plan for how the compiler passes should be laid out.
+
+The actual implementation is described in [passes.ss](passes.ss).
+
 
 ## Lexer and Parser
 
@@ -50,4 +53,3 @@ consensus.
 
 There will be more passes and intermediate-representations on each of
 those projected programs.
-

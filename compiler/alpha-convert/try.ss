@@ -29,9 +29,9 @@
     (error 'sexp-alpha-version "expected a `.sexp` path"))
   (string-append (substring p 0 (- n 5)) ".alpha.sexp"))
 
-;; alpha-convert-prog-display : [Listof Stmt] (U #f [Listof Stmt]) -> Void
-(def (alpha-convert-prog-display prog maybe-alpha)
-  (defvalues (_unused-table env prog2) (alpha-convert-prog prog))
+;; alpha-convert-display : [Listof Stmt] -> Void
+(def (alpha-convert-display prog maybe-alpha)
+  (defvalues (prog2 _unused-table env) (alpha-convert prog))
   (print-representation env) (newline)
   (for ((stmt prog2))
     (printf "~y" (syntax->datum stmt)))
@@ -40,7 +40,7 @@
      (printf ";; ✓ source locations preserved exactly\n"))
     (else
      (printf ";; ✗ source locations not preserved\n")))
-  (defvalues (_unused-table3 env3 prog3) (alpha-convert-prog prog2))
+  (defvalues (prog3 _unused-table3 env3) (alpha-convert prog2))
   (cond
     ((and (stx-deep-source=? prog2 prog3) (stx-sexpr=? prog2 prog3))
      (printf ";; ✓ idempotent, alpha-twice = alpha-once\n"))
@@ -67,7 +67,7 @@
      (def prog (read-syntax-from-file file))
      (def prog-alpha (and (file-exists? file-alpha) (read-syntax-from-file file-alpha)))
      (displayln file)
-     (alpha-convert-prog-display prog prog-alpha))
+     (alpha-convert-display prog prog-alpha))
     (files
      (def files-alpha (map sexp-alpha-version files))
      (def progs (map read-syntax-from-file files))
@@ -77,6 +77,5 @@
        (displayln f)
        (with-catch
         (lambda (e) (display-exception e))
-        (lambda () (alpha-convert-prog-display p pa)))
+        (lambda () (alpha-convert-display p pa)))
        (newline)))))
-

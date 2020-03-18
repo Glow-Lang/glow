@@ -11,6 +11,7 @@
 
   ;; Gerbil
   (only-in :gerbil/gambit/os time)
+  :gerbil/expander <expander-runtime> :std/interactive
   :gerbil/gambit/exact :gerbil/gambit/threads :gerbil/gambit/ports
   :scheme/base-impl :scheme/char
   :std/actor :std/coroutine
@@ -46,7 +47,7 @@
 
   ;; Glow
   :glow/config/path :glow/config/version
-  :glow/compiler/common
+  :glow/compiler/passes :glow/compiler/multipass :glow/compiler/common
   :glow/compiler/alpha-convert/symbolnat :glow/compiler/alpha-convert/fresh
   :glow/compiler/alpha-convert/alpha-convert
   :glow/compiler/anf/anf
