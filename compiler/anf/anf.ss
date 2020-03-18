@@ -2,8 +2,9 @@
 
 (import :std/iter :std/srfi/1
         <expander-runtime>
-        (for-template :gerbil/core)
-        ../common.ss
+        (for-template :glow/compiler/syntax-context)
+        :glow/compiler/syntax-context
+        ../common
         ../alpha-convert/fresh)
 
 ;; Conversion to A-Normal Form https://en.wikipedia.org/wiki/A-normal_form
@@ -46,7 +47,7 @@
     ((d x : type expr) (identifier? #'x)
      (let-values (((reduced-expr acc) (anf-expr #'expr acc)))
        (cons (restx stx [#'d #'x ': #'type reduced-expr]) acc)))
-    ((d x) (identifier? #'x)
+    ((d x expr) (identifier? #'x)
      (let-values (((reduced-expr acc) (anf-expr #'expr acc)))
        (cons (restx stx [#'d #'x reduced-expr]) acc)))))
 

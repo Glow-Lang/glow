@@ -3,7 +3,7 @@
 (import
   :std/srfi/13 :std/test
   :clan/utils/assert
-  :glow/compiler/multipass)
+  :glow/compiler/multipass :glow/compiler/passes)
 
 (def multipass-test
   (test-suite "multipass-test"

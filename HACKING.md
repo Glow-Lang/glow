@@ -41,3 +41,15 @@ replacing the path in it by the place where you checked out the glow source code
                             :init gerbil-scheme-start-swank)
             slime-lisp-implementations))
 ```
+
+### Writing tests
+
+Tests are in subdirectories named `t/` of the directories with the files they test.
+Inside those test directories, files named ending in `-test.ss` are tests,
+and in a file `foo-test.ss` the main test entry point shall be exported as symbol `foo-test`.
+E.g. `compiler/t/multipass-test.ss` exports a test suite called `multipass-test`.
+
+The top-level script `./unit-tests.ss` will automatically find and run those tests,
+and will skip tests that do not follow this convention.
+It prints a test summary that shall let you see that your test did (or didn't) pass;
+if not you failed to follow the convention and your test didn't run.
