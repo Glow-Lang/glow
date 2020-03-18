@@ -7,7 +7,9 @@
         :std/format
         :std/misc/repr
         :clan/pure/dict
-        "../alpha-convert/alpha-convert.ss"
+        :glow/compiler/syntax-context
+        (for-template :glow/compiler/syntax-context)
+        (except-in "../alpha-convert/alpha-convert.ss" not-bound-as-ctor? bound-as-ctor?)
         "typecheck.ss")
 
 ;; tc-prog/list : [Listof StmtStx] -> [Assqof Symbol EnvEntry]

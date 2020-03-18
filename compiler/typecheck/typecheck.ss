@@ -11,11 +11,12 @@
         :gerbil/gambit/exact
         :gerbil/gambit/bytes
         <expander-runtime>
-        (for-template :gerbil/core)
+        :glow/compiler/syntax-context
+        (for-template :glow/compiler/syntax-context)
         :clan/pure/dict/assq
         :clan/pure/dict/symdict
         "../common.ss"
-        "../alpha-convert/alpha-convert.ss"
+        (except-in "../alpha-convert/alpha-convert.ss" not-bound-as-ctor? bound-as-ctor?)
         "variance.ss"
         "type.ss")
 
