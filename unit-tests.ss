@@ -2,16 +2,20 @@
 
 (import
   :gerbil/expander
-  :std/test :std/srfi/1 :std/misc/repr
-  :clan/utils/base :clan/utils/filesystem
+  :std/iter :std/misc/repr :std/srfi/1 :std/sugar :std/test
+  :glow/compiler/syntax-context ;; important for the parsing to work (!)
+  :clan/utils/filesystem
   :glow/compiler/alpha-convert/t/alpha-convert-test
   :glow/config/path :glow/compiler/passes :glow/compiler/multipass)
 
 (current-directory (glow-src))
 
+(def (shorten-path x) (path-normalize x 'shortest))
+
+(def (test-dir? x) (equal? "t" (path-strip-directory x)))
+
 (def (find-test-directories top)
-  (map (λ (x) (path-normalize x 'shortest))
-       (find-files top (λ (x) (equal? "t" (path-strip-directory x))))))
+  (map shorten-path (find-files top test-dir?)))
 
 (def (find-test-files top)
   (find-regexp-files "-test.ss" (find-test-directories top)))
@@ -47,5 +51,5 @@
       ;; unless the pre-recorded results exist and match, print the pass results.
       ;; Either way, print test results.
       (def pass-sym (string->symbol pass))
-      (for-each (λ (file) (run-passes file pass: pass-sym)) files)
+      (for (file files) (run-passes file pass: pass-sym))
       #t))))

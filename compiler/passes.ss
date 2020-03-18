@@ -16,20 +16,20 @@
 
 ;; SEXP notation for Glow programs
 ;; TODO: also represent source location?
-(define-language ".sexp" read-sexp-file write-sexp-file)
+(define-language ".sexp" read-sexp-file write-sexps)
 
 ;; Alpha-converted Glow programs
 ;; TODO: also represent source location and unused-table?
-(define-language ".alpha.sexp" read-sexp-file write-sexp-file)
+(define-language ".alpha.sexp" read-sexp-file write-sexps)
 
 ;; Typed Glow programs
 ;; TODO: also represent source location, unused-table and type annotations?
-;(define-language ".typed.sexp" read-sexp-file write-sexp-file)
+;(define-language ".typed.sexp" read-sexp-file write-sexps)
 
 ;; (Typed) Glow programs in A-Normal form
 ;; where all function call arguments are trivial (reference to constant or variable).
 ;; TODO: also represent source location, unused-table and type annotations?
-(define-language ".anf.sexp" read-sexp-file write-sexp-file)
+(define-language ".anf.sexp" read-sexp-file write-sexps)
 
 
 ;;; Passes

@@ -25,7 +25,7 @@
 ;; alpha-convert-display : [Listof Stmt] (Or [Listof Stmt] '#f) -> Void
 (def (alpha-convert-display prog maybe-alpha)
   (defvalues (prog2 _unused-table env) (alpha-convert prog))
-  (print-representation env) (newline)
+  (prn env)
   (for ((stmt prog2))
     (printf "~y" (syntax->datum stmt)))
   (cond
@@ -50,15 +50,20 @@
   (def progs (map read-sexp-file files))
   (def progs-alpha
     (map (lambda (f) (and (file-exists? f) (read-sexp-file f))) files-alpha))
-  (def failed '())
-  (for ((f files) (p progs) (pa progs-alpha))
-    (displayln f)
-    (with-catch
-     (lambda (e) (display-exception e) (push! f failed))
-     (lambda () (alpha-convert-display p pa)))
-    (newline))
-  (unless (null? failed)
-    (error 'alpha-convert-failed failed)))
+  (if (length=n? files 1)
+    (let ((f (car files)) (p (car progs)) (pa (car progs-alpha)))
+      (displayln f)
+      (alpha-convert-display p pa)
+      (newline))
+    (let ((failed '()))
+      (for ((f files) (p progs) (pa progs-alpha))
+        (displayln f)
+        (with-catch
+         (lambda (e) (display-exception e) (push! f failed))
+         (lambda () (alpha-convert-display p pa)))
+        (newline))
+      (unless (null? failed)
+        (error 'alpha-convert-failed failed)))))
 
 (def (try-alpha-convert-all)
   (try-alpha-convert-files (examples.sexp)))
