@@ -8,12 +8,14 @@
   :std/test
   :glow/compiler/t/common
   :gerbil/gambit/exceptions
+  :gerbil/gambit/continuations
   :std/format
   :std/iter
   :std/misc/list
   :std/misc/repr
   :std/misc/string
   :clan/pure/dict
+  :clan/utils/exception
   <expander-runtime>
   :glow/compiler/common
   :glow/compiler/alpha-convert/alpha-convert)
@@ -58,8 +60,8 @@
     (let ((failed '()))
       (for ((f files) (p progs) (pa progs-alpha))
         (displayln f)
-        (with-catch
-         (lambda (e) (display-exception e) (push! f failed))
+        (with-catch/cont
+         (lambda (e k) (display-exception-in-context e k) (push! f failed))
          (lambda () (alpha-convert-display p pa)))
         (newline))
       (unless (null? failed)

@@ -3,10 +3,12 @@
 (import
   <expander-runtime>
   :gerbil/gambit/exceptions
+  :gerbil/gambit/continuations
   :std/format
   :std/iter
   :std/misc/repr
   :std/test
+  :clan/utils/exception
   ../../common
   ../../t/common
   ../../alpha-convert/alpha-convert
@@ -24,8 +26,8 @@
   (def progs (map read-sexp-file files))
   (for ((f files) (p progs))
     (displayln f)
-    (with-catch
-     (lambda (e) (display-exception e))
+    (with-catch/cont
+     (lambda (e k) (display-exception-in-context e k))
      (lambda () (anf-display p)))
     (newline)))
 
