@@ -8,12 +8,14 @@
   :std/test
   :glow/compiler/t/common
   :gerbil/gambit/exceptions
+  :gerbil/gambit/continuations
   :std/format
   :std/iter
   :std/misc/list
   :std/misc/repr
   :std/misc/string
   :clan/pure/dict
+  :clan/utils/exception
   <expander-runtime>
   :glow/compiler/common
   :glow/compiler/alpha-convert/alpha-convert)
@@ -50,20 +52,15 @@
   (def progs (map read-sexp-file files))
   (def progs-alpha
     (map (lambda (f) (and (file-exists? f) (read-sexp-file f))) files-alpha))
-  (if (length=n? files 1)
-    (let ((f (car files)) (p (car progs)) (pa (car progs-alpha)))
+  (let ((failed '()))
+    (for ((f files) (p progs) (pa progs-alpha))
       (displayln f)
-      (alpha-convert-display p pa)
+      (with-catch/cont
+       (lambda (e k) (display-exception-in-context e k) (push! f failed))
+       (lambda () (alpha-convert-display p pa)))
       (newline))
-    (let ((failed '()))
-      (for ((f files) (p progs) (pa progs-alpha))
-        (displayln f)
-        (with-catch
-         (lambda (e) (display-exception e) (push! f failed))
-         (lambda () (alpha-convert-display p pa)))
-        (newline))
-      (unless (null? failed)
-        (error 'alpha-convert-failed failed)))))
+    (unless (null? failed)
+      (error 'alpha-convert-failed failed))))
 
 (def (try-alpha-convert-all)
   (try-alpha-convert-files (examples.sexp)))
