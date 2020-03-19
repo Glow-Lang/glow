@@ -52,20 +52,15 @@
   (def progs (map read-sexp-file files))
   (def progs-alpha
     (map (lambda (f) (and (file-exists? f) (read-sexp-file f))) files-alpha))
-  (if (length=n? files 1)
-    (let ((f (car files)) (p (car progs)) (pa (car progs-alpha)))
+  (let ((failed '()))
+    (for ((f files) (p progs) (pa progs-alpha))
       (displayln f)
-      (alpha-convert-display p pa)
+      (with-catch/cont
+       (lambda (e k) (display-exception-in-context e k) (push! f failed))
+       (lambda () (alpha-convert-display p pa)))
       (newline))
-    (let ((failed '()))
-      (for ((f files) (p progs) (pa progs-alpha))
-        (displayln f)
-        (with-catch/cont
-         (lambda (e k) (display-exception-in-context e k) (push! f failed))
-         (lambda () (alpha-convert-display p pa)))
-        (newline))
-      (unless (null? failed)
-        (error 'alpha-convert-failed failed)))))
+    (unless (null? failed)
+      (error 'alpha-convert-failed failed))))
 
 (def (try-alpha-convert-all)
   (try-alpha-convert-files (examples.sexp)))
