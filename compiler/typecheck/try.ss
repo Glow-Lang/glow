@@ -3,10 +3,12 @@
 ;; Runs the typchecker on the `.sexp` files in `../../examples`.
 
 (import :gerbil/gambit/exceptions
+        :gerbil/gambit/continuations
         :std/iter
         :std/format
         :std/misc/repr
         :clan/pure/dict
+        :clan/utils/exception
         :glow/compiler/syntax-context
         (for-template :glow/compiler/syntax-context)
         (except-in "../alpha-convert/alpha-convert.ss" not-bound-as-ctor? bound-as-ctor?)
@@ -25,18 +27,18 @@
   (for ((x (symdict-keys env)))
     (def e (symdict-ref env x))
     (match e
-      ((entry:type [] b)
+      ((entry:type #f [] b)
        (printf "type ~s = ~y" x (type->sexpr b)))
-      ((entry:type as b)
+      ((entry:type #f as b)
        (printf "type ~s~s = ~y" x as (type->sexpr b)))
-      ((entry:unknown)
+      ((entry:unknown #f)
        (printf "unknown ~s\n" x))
-      ((entry:known (typing-scheme me t))
+      ((entry:known #f (typing-scheme me t))
        (unless (symdict-empty? me)
          (printf "constraints ")
          (print-representation me))
        (printf "val ~s : ~y" x (type->sexpr t)))
-      ((entry:ctor (typing-scheme me t))
+      ((entry:ctor #f (typing-scheme me t))
        (unless (symdict-empty? me)
          (printf "constraints ")
          (print-representation me))
@@ -61,8 +63,8 @@
      (def progs (map read-syntax-from-file files))
      (for ((f files) (p progs))
        (displayln f)
-       (with-catch
-        (lambda (e) (display-exception e))
+       (with-catch/cont
+        (lambda (e k) (display-exception-in-context e k))
         (lambda ()
           (print-env (tc-prog p))
           (newline)))
