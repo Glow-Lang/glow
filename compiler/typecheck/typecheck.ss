@@ -162,16 +162,35 @@
   (with (((typing-scheme menv2 t) ts))
     (typing-scheme (menv-meet menv1 menv2) t)))
 
+;; An MPart is one of:
+;;  - #f      ; consensus, or no participant
+;;  - Symbol  ; within the named participant
+
+;; mpart-can-use? : MPart MPart -> Bool
+;; can code with `a` participant priviledges access `b`?
+;; any participant can access `#f` consensus identifiers
+;; participants can access their own private identifiers
+;; the `#f` consensus cannot access participant-specific ids
+(def (mpart-can-use? a b) (or (not b) (eq? a b)))
+
 ;; An EnvEntry is one of:
-;;  - (entry:unknown)             ; lambda-bound with no type annotation
-;;  - (entry:known TypingScheme)  ; let-bound, or lambda-bound with annotation
-;;  - (entry:ctor TypingScheme)   ; note ctor does not have N or P, just Type
-;;  - (entry:type [Listof Symbol] Type)
-(defstruct entry:unknown () transparent: #t)
-(defstruct entry:known (ts) transparent: #t)
-(defstruct entry:ctor (ts) transparent: #t)
-(defstruct entry:type (params type) transparent: #t)
+;;  - (entry:unknown MPart)             ; lambda-bound with no type annotation
+;;  - (entry:known MPart TypingScheme)  ; let-bound, or lambda-bound with annotation
+;;  - (entry:ctor MPart TypingScheme)   ; note ctor does not have N or P, just Type
+;;  - (entry:type MPart [Listof Symbol] Type)
+(defstruct entry:unknown (part) transparent: #t)
+(defstruct entry:known (part ts) transparent: #t)
+(defstruct entry:ctor (part ts) transparent: #t)
+(defstruct entry:type (part params type) transparent: #t)
 (def (env-entry? v) (or (entry:unknown? v) (entry:known? v) (entry:ctor? v) (entry:type? v)))
+
+;; entry-part : EnvEntry -> MPart
+(def (entry-part e)
+  (cond ((entry:unknown? e) (entry:unknown-part e))
+        ((entry:known? e)   (entry:known-part e))
+        ((entry:ctor? e)    (entry:ctor-part e))
+        ((entry:type? e)    (entry:type-part e))
+        (else               (error 'entry-part "expected an EnvEntry"))))
 
 ;; An Env is a [Symdictof EnvEntry]
 ;; Instead of type environments Γ, the reformulated rules use typing
@@ -383,10 +402,10 @@
 ;   type:
 ;     quote \@tuple \@record
 
-;; parse-type : Env TyvarEnv TypeStx -> Type
-(def (parse-type env tyvars stx)
+;; parse-type : MPart Env TyvarEnv TypeStx -> Type
+(def (parse-type part env tyvars stx)
   ;; party : TypeStx -> Type
-  (def (party s) (parse-type env tyvars s))
+  (def (party s) (parse-type part env tyvars s))
   (syntax-case stx (@ quote @tuple @record)
     ((@ _ _) (error 'parse-type "TODO: deal with @"))
     ((@tuple t ...) (type:tuple (stx-map party #'(t ...))))
@@ -404,12 +423,21 @@
      (let ((s (syntax-e #'x)))
        (unless (symdict-has-key? env s)
          (error s "unknown type"))
-       (match (symdict-ref env s)
-         ((entry:type [] t) t))))
+       (def ent (symdict-ref env s))
+       (unless (mpart-can-use? part (entry-part ent))
+         (error s "access allowed only for" (entry-part ent)))
+       (match ent
+         ((entry:type part* [] t)
+          t))))
     ((f a ...) (identifier? #'f)
      (let ((s (syntax-e #'f)))
-       (match (symdict-ref env s)
-         ((entry:type xs b)
+       (unless (symdict-has-key? env s)
+         (error s "unknown type"))
+       (def ent (symdict-ref env s))
+       (unless (mpart-can-use? part (entry-part ent))
+         (error s "access allowed only for" (entry-part ent)))
+       (match ent
+         ((entry:type _ xs b)
           (def as (stx-map party #'(a ...)))
           (unless (= (length xs) (length as))
             (error 'parse-type "wrong number of type arguments"))
@@ -420,11 +448,11 @@
 (def (parse-param-name p)
   (syntax-e (if (identifier? p) p (stx-car p))))
 
-;; parse-param-type : Env ParamStx -> (U #f Type)
-(def (parse-param-type env p)
+;; parse-param-type : MPart Env ParamStx -> (U #f Type)
+(def (parse-param-type part env p)
   (syntax-case p (:)
     (x (identifier? #'x) #f)
-    ((x : type) (parse-type env empty-symdict #'type))))
+    ((x : type) (parse-type part env empty-symdict #'type))))
 
 ;; The reformulated rules produce judgements of the form
 ;; Π ⊩ e : [∆]τ
@@ -433,21 +461,21 @@
 ;; init-env : Env
 (def init-env
   (symdict
-   ('int (entry:type [] type:int))
-   ('bool (entry:type [] type:bool))
-   ('bytes (entry:type [] type:bytes))
-   ('not (entry:known (typing-scheme empty-symdict (type:arrow [type:bool] type:bool))))
-   ('< (entry:known (typing-scheme empty-symdict (type:arrow [type:int type:int] type:bool))))
-   ('+ (entry:known (typing-scheme empty-symdict (type:arrow [type:int type:int] type:int))))
-   ('sqr (entry:known (typing-scheme empty-symdict (type:arrow [type:int] type:int))))
-   ('sqrt (entry:known (typing-scheme empty-symdict (type:arrow [type:int] type:int))))
+   ('int (entry:type #f [] type:int))
+   ('bool (entry:type #f [] type:bool))
+   ('bytes (entry:type #f [] type:bytes))
+   ('not (entry:known #f (typing-scheme empty-symdict (type:arrow [type:bool] type:bool))))
+   ('< (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int type:int] type:bool))))
+   ('+ (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int type:int] type:int))))
+   ('sqr (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int] type:int))))
+   ('sqrt (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int] type:int))))
    ;; TODO: make polymorphic
-   ('member (entry:known (typing-scheme empty-symdict (type:arrow [type:int (type:listof type:int)] type:bool))))
-   ('Participant (entry:type [] type:Participant))
-   ('Digest (entry:type [] type:Digest))
-   ('Assets (entry:type [] type:Assets))
-   ('Signature (entry:type [] type:Signature))
-   ('sign (entry:known (typing-scheme empty-symdict (type:arrow [type:Digest] type:Signature))))))
+   ('member (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int (type:listof type:int)] type:bool))))
+   ('Participant (entry:type #f [] type:Participant))
+   ('Digest (entry:type #f [] type:Digest))
+   ('Assets (entry:type #f [] type:Assets))
+   ('Signature (entry:type #f [] type:Signature))
+   ('sign (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Digest] type:Signature))))))
 
 ;; tc-prog : [Listof StmtStx] -> Env
 (def (tc-prog stmts)
@@ -458,10 +486,6 @@
         (unless (symdict-empty? nenv)
           (error 'tc-prog "non-empty D⁻ for free lambda-bound vars at top level"))
         penv))))
-
-;; A MPart is one of:
-;;  - #f      ; no participant, or consensus
-;;  - Symbol  ; within the named participant
 
 ;; tc-body : MPart Env BodyStx -> TypingScheme
 (def (tc-body part env stx)
@@ -540,7 +564,7 @@
      (values
       (symdict-put env
                    (syntax-e #'x)
-                   (entry:type [] (parse-type env empty-symdict #'t)))
+                   (entry:type part [] (parse-type part env empty-symdict #'t)))
       empty-symdict))
     ((deftype (f 'x ...) b) (identifier? #'f)
      (let ((s (syntax-e #'f))
@@ -549,7 +573,7 @@
        (values
         (symdict-put env
                      s
-                     (entry:type xs (parse-type env tyvars #'b)))
+                     (entry:type part xs (parse-type part env tyvars #'b)))
         empty-symdict)))))
 
 ;; tc-stmt-defdata : MPart Env StmtStx -> (values Env MonoEnv)
@@ -559,7 +583,7 @@
      (let ((s (syntax-e #'x)))
        (def b (type:name (gensym s) []))
        (tc-defdata-variants part
-                            (symdict-put env s (entry:type [] b))
+                            (symdict-put env s (entry:type part [] b))
                             []
                             b
                             #'(variant ...))))
@@ -570,7 +594,7 @@
        (def vances (map (lambda (x) invariant) xs))
        (def b (type:app (type:name (gensym s) vances) (map make-type:var xs)))
        (tc-defdata-variants part
-                            (symdict-put env s (entry:type xs b))
+                            (symdict-put env s (entry:type part xs b))
                             xs
                             b
                             #'(variant ...))))))
@@ -581,15 +605,15 @@
   ;; tyvars : TyvarEnv
   (def tyvars (list->symdict (map cons xs (map make-type:var xs))))
   ;; party : TypeStx -> Type
-  (def (party s) (parse-type env tyvars s))
+  (def (party s) (parse-type part env tyvars s))
   (syntax-case stx ()
     (x (identifier? #'x)
      (let ((s (syntax-e #'x)))
-       (cons s (entry:ctor (typing-scheme empty-symdict b)))))
+       (cons s (entry:ctor part (typing-scheme empty-symdict b)))))
     ((f a ...) (identifier? #'f)
      (let ((s (syntax-e #'f))
            (t (type:arrow (stx-map party #'(a ...)) b)))
-       (cons s (entry:ctor (typing-scheme empty-symdict t)))))))
+       (cons s (entry:ctor part (typing-scheme empty-symdict t)))))))
 
 ;; tc-defdata-variants : MPart Env [Listof Symbol] Type [StxListof VariantStx] -> (values Env MonoEnv)
 (def (tc-defdata-variants part env xs b stx)
@@ -605,17 +629,17 @@
     ((def f (λ params : out-type body ...)) (identifier? #'f)
      (let ((s (syntax-e #'f))
            (xs (stx-map parse-param-name #'params))
-           (in-ts (stx-map (lambda (p) (parse-param-type env p)) #'params))
-           (out-t (parse-type env empty-symdict #'out-type)))
+           (in-ts (stx-map (lambda (p) (parse-param-type part env p)) #'params))
+           (out-t (parse-type part env empty-symdict #'out-type)))
        (tc-stmt-def/typing-scheme part env s (tc-function part env xs in-ts out-t #'(body ...)))))
     ((def f (λ params body ...)) (identifier? #'f)
      (let ((s (syntax-e #'f))
            (xs (stx-map parse-param-name #'params))
-           (in-ts (stx-map (lambda (p) (parse-param-type env p)) #'params)))
+           (in-ts (stx-map (lambda (p) (parse-param-type part env p)) #'params)))
        (tc-stmt-def/typing-scheme part env s (tc-function part env xs in-ts #f #'(body ...)))))
     ((def x : type expr) (identifier? #'x)
      (let ((s (syntax-e #'x))
-           (t (parse-type env empty-symdict #'type)))
+           (t (parse-type part env empty-symdict #'type)))
        (tc-stmt-def/typing-scheme part env s (tc-expr/check part env #'expr t))))
     ((def x expr) (identifier? #'x)
      (let ((s (syntax-e #'x)))
@@ -624,7 +648,7 @@
 ;; tc-stmt-def/typing-scheme : MPart Env Symbol TypingScheme -> (values Env MonoEnv)
 (def (tc-stmt-def/typing-scheme part env s ts)
   (values
-   (symdict-put env s (entry:known ts))
+   (symdict-put env s (entry:known part ts))
    (typing-scheme-menv ts)))
 
 ;; tc-function : MPart Env [Listof Symbol] [Listof (U #f Type)] (U #f Type) BodyStx -> TypingScheme
@@ -633,8 +657,8 @@
   ;; entry:unknown for parameters that weren't annotated
   (def in-ents*
     (map (lambda (in-ty)
-           (cond (in-ty (entry:known (typing-scheme empty-symdict in-ty)))
-                 (else  (entry:unknown))))
+           (cond (in-ty (entry:known part (typing-scheme empty-symdict in-ty)))
+                 (else  (entry:unknown part))))
          in-tys))
   ;; body-env : Env
   (def body-env (symdict-put/list env (map cons xs in-ents*)))
@@ -659,7 +683,7 @@
   (syntax-case stx (@ : ann @tuple @record @list if block switch require! assert! deposit! withdraw!)
     ((@ _ _) (error 'tc-expr "TODO: deal with @"))
     ((ann expr type)
-     (tc-expr/check part env #'expr (parse-type env empty-symdict #'type)))
+     (tc-expr/check part env #'expr (parse-type part env empty-symdict #'type)))
     (x (identifier? #'x) (tc-expr-id part env stx))
     (lit (stx-atomic-literal? #'lit) (typing-scheme empty-symdict (tc-literal #'lit)))
     ((@tuple e ...)
@@ -747,13 +771,16 @@
   (def s (syntax-e x))
   (unless (symdict-has-key? env s)
     (error s "unbound identifier"))
-  (match (symdict-ref env s)
-    ((entry:unknown)
+  (def ent (symdict-ref env s))
+  (unless (mpart-can-use? part (entry-part ent))
+    (error s "access allowed only for" (entry-part ent)))
+  (match ent
+    ((entry:unknown _)
      (let ((a (gensym s)))
        (typing-scheme (list->symdict [(cons s (type:var a))])
                       (type:var a))))
-    ((entry:known t) t)
-    ((entry:ctor t) t)))
+    ((entry:known _ t) t)
+    ((entry:ctor _ t) t)))
 
 ;; tc-expr/check : MPart Env ExprStx (U #f Type) -> TypingSchemeOrError
 ;; returns expected-ty on success, actual-ty if no expected, otherwise error
@@ -787,7 +814,7 @@
        (def env/pattys
          (symdict-put/list
           env
-          (map (lambda (p) (cons (car p) (entry:known (typing-scheme empty-symdict (cdr p)))))
+          (map (lambda (p) (cons (car p) (entry:known part (typing-scheme empty-symdict (cdr p)))))
                pattys)))
        (tc-body part env/pattys #'(body ...))))))
 
@@ -797,7 +824,7 @@
   (syntax-case stx (@ : ann @tuple @record @list @or-pat)
     ((@ _ _) (error 'tc-pat "TODO: deal with @"))
     ((ann pat type)
-     (let ((t (parse-type env empty-symdict #'type)))
+     (let ((t (parse-type part env empty-symdict #'type)))
        ;; valty <: t
        ;; because passing valty into a context expecting t
        ;; (switch (ann 5 nat) ((ann x int) x))
@@ -811,8 +838,11 @@
        [(cons s valty)]))
     (x (and (identifier? #'x) (bound-as-ctor? env (syntax-e #'x)))
      (let ((s (syntax-e #'x)))
-       (match (symdict-ref env s)
-         ((entry:ctor (typing-scheme menv t))
+       (def ent (symdict-ref env s))
+       (unless (mpart-can-use? part (entry-part ent))
+         (error s "access allowed only for" (entry-part ent)))
+       (match ent
+         ((entry:ctor _ (typing-scheme menv t))
           (unless (symdict-empty? menv) (error 'tc-pat "handle constructors constraining inputs"))
           ;; t doesn't necessarily have to be a supertype,
           ;; but does need to be join-compatible so that
@@ -868,8 +898,11 @@
      (let ((s (syntax-e #'f)))
        (unless (symdict-has-key? env s)
          (error s "unbound pattern constructor"))
-       (match (symdict-ref env s)
-         ((entry:ctor (typing-scheme menv (type:arrow in-tys out-ty)))
+       (def ent (symdict-ref env s))
+       (unless (mpart-can-use? part (entry-part ent))
+         (error s "access allowed only for" (entry-part ent)))
+       (match ent
+         ((entry:ctor _ (typing-scheme menv (type:arrow in-tys out-ty)))
           (unless (symdict-empty? menv) (error 'tc-pat "handle constructors constraining inputs"))
           ;; valty <: out-ty
           ;; because passing valty into a context expecting out-ty
