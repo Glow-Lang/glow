@@ -49,7 +49,7 @@
   (restx id (symbol-refer env (stx-e id))))
 
 ;; init-syms : [Listof Sym]
-(def init-syms '(int bool bytes not < + sqr sqrt member Digest Assets sign))
+(def init-syms '(int bool bytes not == = < <= + - * % sqr sqrt member Digest Assets sign digest))
 
 ;; alpha-convert : [Listof StmtStx] -> (values [Listof StmtStx] UnusedTable Env)
 (def (alpha-convert stmts)
@@ -87,7 +87,7 @@
 (def (alpha-convert-expr env stx)
   ;; ace : ExprStx -> ExprStx
   (def (ace e) (alpha-convert-expr env e))
-  (syntax-case stx (@ ann @dot @tuple @record @list if block switch λ require! assert! deposit! withdraw!)
+  (syntax-case stx (@ ann @dot @tuple @record @list and or if block switch λ require! assert! deposit! withdraw!)
     ((@ _ _) (error 'alpha-convert-expr "TODO: deal with @"))
     ((ann expr type)
      (restx stx [(stx-car stx) (ace #'expr) (alpha-convert-type env #'type)]))
@@ -107,6 +107,10 @@
                   (stx-map (lambda (x e) [x (ace e)]) #'(x ...) #'(e ...)))))
     ((block b ...)
      (restx stx (cons (stx-car stx) (alpha-convert-body env (syntax->list #'(b ...))))))
+    ((and e ...)
+     (restx stx (cons (stx-car stx) (stx-map ace #'(e ...)))))
+    ((or e ...)
+     (restx stx (cons (stx-car stx) (stx-map ace #'(e ...)))))
     ((if c t e)
      (restx stx [(stx-car stx) (ace #'c) (ace #'t) (ace #'e)]))
     ((switch e swcase ...)
