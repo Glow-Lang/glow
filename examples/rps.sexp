@@ -16,7 +16,7 @@
       (def salt (randomUInt256))
       (@ verifiably (def commitment (digest salt handA)))
       (publish! commitment)
-      (deposit! (+ wagerAmount escrowAmount))))
+      (deposit! wagerAmount)))
 
     (@ B
      (block

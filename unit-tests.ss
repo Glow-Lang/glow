@@ -43,7 +43,7 @@
      (["test" . files] (run-tests files))
      (["process" . files] (for-each run-passes files))
      (["pass" pass . files]
-      ;; TODO: given a pass by name, and for each specified files,
+      ;; Given a pass by name, and for each specified files,
       ;; identify the language in which the file is written, by file extension,
       ;; and run all compiler passes on the file until the named pass.
       ;; Run safety checks on the results of the specified pass,

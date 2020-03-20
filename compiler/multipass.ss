@@ -6,7 +6,12 @@
 ;; - In the near future, a strategy will not be a linear list of consecutive passes,
 ;;   but an arbitrary DAG with meets and joins and multiple final outputs,
 ;;   especially due to End-Point Projection. We ought to support that.
-;; - Save and restore ancillary data too???
+;; - In a further future, the "languages" below will be themselves types of the pass functions,
+;;   and a "strategy" is a well-typed diagram written by composing these functions,
+;;   all in a typed combinator language that still allows enough introspection for debugging,
+;;   selection and inspection of the output, plus, hopefully, proof of correctness.
+;; - Current "ancillary data" should be made of such "languages" too, using dependent types
+;;   to describe how it relates to the "main" data.
 
 (import
   :std/format :std/iter :std/misc/ports :std/misc/string
