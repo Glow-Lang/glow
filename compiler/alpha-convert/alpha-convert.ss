@@ -49,7 +49,7 @@
   (restx id (symbol-refer env (stx-e id))))
 
 ;; init-syms : [Listof Sym]
-(def init-syms '(int bool bytes not < + sqr sqrt member Digest Assets sign))
+(def init-syms '(int bool bytes not and or = <= < > >= + - * / mod sqr sqrt member Digest Assets sign input))
 
 ;; alpha-convert : [Listof StmtStx] -> (values [Listof StmtStx] UnusedTable Env)
 (def (alpha-convert stmts)

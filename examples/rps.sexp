@@ -12,7 +12,7 @@
 
 (def winner
   (λ ((handA : Hand) (handB : Hand)) : Outcome
-    (NatToOutcome (+ (HandToNat handA) (% (- 4 (HandToNat handB)) 3)))))
+    (NatToOutcome (+ (HandToNat handA) (mod (- 4 (HandToNat handB)) 3)))))
 
 (@ (interaction (@list A B))
  (def rockPaperScissors
