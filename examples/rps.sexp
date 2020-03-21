@@ -18,13 +18,13 @@
  (def rockPaperScissors
   (λ (wagerAmount)
     (@ A (def handA (inputHand "First player, pick your hand")))
-    (@ A (assert! (canReach end (== (@dot end outcome) A_Wins))))
+    ;;(@ A (assert! (canReach end (== (@dot end outcome) A_Wins))))
     (@ A (def salt (randomUInt256)))
     (@ A (@ verifiably (def commitment (digest salt handA))))
     (@ A (publish! commitment))
     (@ A (deposit! wagerAmount))
 
-    (@ B (assert! (canReach end (== (@dot end outcome) B_Wins))))
+    ;;(@ B (assert! (canReach end (== (@dot end outcome) B_Wins))))
     (@ B (def handB (inputHand "Second player, pick your hand")))
     (@ B (publish! handB))
     (@ B (deposit! wagerAmount))
@@ -33,10 +33,11 @@
     (verify! commitment)
     (def outcome (winner handA handB))
 
+    ;; (label end)
     (switch outcome
-      (A_Wins (withdraw! Alice (* 2 wagerAmount)))
-      (B_Wins (withdraw! Bob (* 2 wagerAmount)))
-      (Draw (withdraw! Alice wagerAmount)
-            (withdraw! Bob wagerAmount)))
+      (A_Wins (withdraw! A (* 2 wagerAmount)))
+      (B_Wins (withdraw! B (* 2 wagerAmount)))
+      (Draw (withdraw! A wagerAmount)
+            (withdraw! B wagerAmount)))
 
     outcome)))

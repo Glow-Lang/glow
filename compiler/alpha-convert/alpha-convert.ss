@@ -48,8 +48,14 @@
 (def (identifier-refer env id)
   (restx id (symbol-refer env (stx-e id))))
 
+;; TODO: inherit this list from a map of bindings in our runtime system
 ;; init-syms : [Listof Sym]
-(def init-syms '(int bool bytes not and or = <= < > >= + - * / mod sqr sqrt member Digest Assets sign input))
+(def init-syms
+  '(int bool bytes Digest Assets
+    not and or = <= < > >= + - * / mod sqr sqrt
+    member input
+    randomUInt256 digest sign
+    canReach mustReach))
 
 ;; alpha-convert : [Listof StmtStx] -> (values [Listof StmtStx] UnusedTable Env)
 (def (alpha-convert stmts)

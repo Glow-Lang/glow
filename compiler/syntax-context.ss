@@ -4,8 +4,9 @@
 
 (import
   (rename-in :gerbil/core (lambda λ))
-  :gerbil/core)
+  :gerbil/core
+  :std/sugar)
 
 (export
-  λ
+  λ assert!
   (import: :gerbil/core))
