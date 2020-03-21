@@ -93,7 +93,7 @@
 (def (alpha-convert-expr env stx)
   ;; ace : ExprStx -> ExprStx
   (def (ace e) (alpha-convert-expr env e))
-  (syntax-case stx (@ ann @dot @tuple @record @list if block switch λ require! assert! deposit! withdraw!)
+  (syntax-case stx (@ ann @dot @tuple @record @list if block switch λ require! assert! deposit! withdraw! input)
     ((@ _ _) (error 'alpha-convert-expr "TODO: deal with @"))
     ((ann expr type)
      (restx stx [(stx-car stx) (ace #'expr) (alpha-convert-type env #'type)]))
@@ -123,7 +123,7 @@
     ((λ . _)
      (ac-expr-function env stx))
     ((input type tag)
-     (restx stx [(stx-car stx) (ace #'type) (ace #'tag)])) ;; TODO: acty for type instead of ace
+     (restx stx [(stx-car stx) (alpha-convert-type env #'type) (ace #'tag)]))
     ((require! e)
      (restx stx [(stx-car stx) (ace #'e)]))
     ((assert! e)
