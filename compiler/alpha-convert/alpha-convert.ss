@@ -53,7 +53,7 @@
 (def init-syms
   '(int bool bytes Digest Assets
     not and or = <= < > >= + - * / mod sqr sqrt
-    member input
+    member
     randomUInt256 digest sign
     canReach mustReach))
 
@@ -122,6 +122,8 @@
                      (stx-map (lambda (c) (ac-switch-case env c)) #'(swcase ...))))))
     ((λ . _)
      (ac-expr-function env stx))
+    ((input type tag)
+     (restx stx [(stx-car stx) (ace #'type) (ace #'tag)])) ;; TODO: acty for type instead of ace
     ((require! e)
      (restx stx [(stx-car stx) (ace #'e)]))
     ((assert! e)
