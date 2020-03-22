@@ -1,0 +1,16 @@
+image: fahree/gerbil-utils:latest
+
+build:
+  stage: build
+  script:
+    - ./build.ss
+    - P=$PWD ; cd $HOME/.gerbil/lib/ && tar Jcf $P/gerbil-lib-glow.tar.xz glow
+  artifacts:
+    paths:
+      - gerbil-lib-glow.tar.xz
+
+test:
+  stage: test
+  script:
+    - P=$PWD ; cd $HOME/.gerbil/lib && tar Jxf $P/gerbil-lib-glow.tar.xz && cd $P
+    - ./unit-tests.ss
