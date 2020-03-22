@@ -53,3 +53,6 @@ The top-level script `./unit-tests.ss` will automatically find and run those tes
 and will skip tests that do not follow this convention.
 It prints a test summary that shall let you see that your test did (or didn't) pass;
 if not you failed to follow the convention and your test didn't run.
+
+Please ensure that regression tests always pass and never push or merge into master
+any code that breaks them. When Gitlab, the CI system shall help you with it.
