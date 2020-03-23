@@ -52,7 +52,7 @@
 ;; init-syms : [Listof Sym]
 (def init-syms
   '(int bool bytes Digest Assets
-    not and or = <= < > >= + - * / mod sqr sqrt
+    not == = <= < > >= + - * / mod sqr sqrt
     member
     randomUInt256 digest sign
     canReach mustReach))
@@ -93,7 +93,7 @@
 (def (alpha-convert-expr env stx)
   ;; ace : ExprStx -> ExprStx
   (def (ace e) (alpha-convert-expr env e))
-  (syntax-case stx (@ ann @dot @tuple @record @list if block switch λ require! assert! deposit! withdraw! input)
+  (syntax-case stx (@ ann @dot @tuple @record @list if and or block switch λ require! assert! deposit! withdraw! input)
     ((@ _ _) (error 'alpha-convert-expr "TODO: deal with @"))
     ((ann expr type)
      (restx stx [(stx-car stx) (ace #'expr) (alpha-convert-type env #'type)]))
@@ -102,9 +102,9 @@
     ((@dot e x) (identifier? #'x)
      (restx stx [(stx-car stx) (ace #'e) #'x]))
     ((@tuple e ...)
-     (restx stx (cons (stx-car stx) (stx-map ace #'(e ...)))))
+     (alpha-convert-keyword/sub-exprs env stx))
     ((@list e ...)
-     (restx stx (cons (stx-car stx) (stx-map ace #'(e ...)))))
+     (alpha-convert-keyword/sub-exprs env stx))
     ((@record (x e) ...)
      (and (stx-andmap identifier? #'(x ...))
           (check-duplicate-identifiers #'(x ...)))
@@ -115,6 +115,10 @@
      (restx stx (cons (stx-car stx) (alpha-convert-body env (syntax->list #'(b ...))))))
     ((if c t e)
      (restx stx [(stx-car stx) (ace #'c) (ace #'t) (ace #'e)]))
+    ((and e ...)
+     (alpha-convert-keyword/sub-exprs env stx))
+    ((or e ...)
+     (alpha-convert-keyword/sub-exprs env stx))
     ((switch e swcase ...)
      (let ((e2 (ace #'e)))
        (restx stx
@@ -134,6 +138,13 @@
      (restx stx [(stx-car stx) (identifier-refer env #'x) (ace #'e)]))
     ((f a ...) (identifier? #'f)
      (restx stx (cons (ace #'f) (stx-map ace #'(a ...)))))))
+
+;; Used by special forms with a variable number of arguments that are regular expressions,
+;; like @list, @tuple, and, or.
+;; It could even be used by other keywords that have a constant number of arguments, but isn't.
+;; alpha-convert-body : Env StmtStx] -> StmtStx
+(def (alpha-convert-keyword/sub-exprs env stx)
+  (restx stx (cons (stx-car stx) (stx-map (cut alpha-convert-expr env <>) (stx-cdr stx)))))
 
 ;; alpha-convert-body : Env [Listof StmtStx] -> [Listof StmtStx]
 (def (alpha-convert-body env body)
