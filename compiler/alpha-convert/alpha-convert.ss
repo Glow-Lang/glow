@@ -1,6 +1,7 @@
 (export #t)
 
 (import :std/iter
+        :std/format
         :clan/pure/dict/symdict
         <expander-runtime>
         (for-template :glow/compiler/syntax-context)
@@ -211,10 +212,13 @@
 ;; alpha-convert-stmt : Env StmtStx -> (values Env StmtStx)
 ;; the env result contains only the new symbols introduced by the statement
 (def (alpha-convert-stmt env stx)
-  (syntax-case stx (@ interaction verifiably publicly : quote def λ deftype defdata publish! verify!)
-    ((@ (interaction . _) _) (ac-stmt-interaction env stx))
+  (syntax-case stx (@ interaction verifiably publicly @interaction @verifiably @publicly : quote def λ deftype defdata publish! verify!)
+    ((@ (interaction . _) _) (ac-stmt-at-interaction env stx))
     ((@ verifiably _) (ac-stmt-at-simple-keyword env stx))
     ((@ publicly _) (ac-stmt-at-simple-keyword env stx))
+    ((@interaction _ _) (ac-stmt-atinteraction env stx))
+    ((@verifiably _) (ac-stmt-wrap-simple-keyword env stx))
+    ((@publicly _) (ac-stmt-wrap-simple-keyword env stx))
     ((@ p _) (identifier? #'p) (ac-stmt-at-participant env stx))
     ((deftype . _) (ac-stmt-deftype env stx))
     ((defdata . _) (ac-stmt-defdata env stx))
@@ -224,10 +228,17 @@
     (expr
      (values empty-symdict (alpha-convert-expr env #'expr)))))
 
-;; ac-stmt-interaction : Env StmtStx -> (values Env StmtStx)
-(def (ac-stmt-interaction env stx)
+;; ac-stmt-at-interaction : Env StmtStx -> (values Env StmtStx)
+(def (ac-stmt-at-interaction env stx)
   (syntax-case stx (@ interaction @list)
-    ((a (i (@list p ...)) s) (stx-andmap identifier? #'(p ...))
+    ((a (i . args) s)
+     (let ((aint (restx1 #'i '@interaction)))
+       (ac-stmt-atinteraction env (restx1 stx [aint #'args #'s]))))))
+
+;; ac-stmt-atinteraction : Env StmtStx -> (values Env StmtStx)
+(def (ac-stmt-atinteraction env stx)
+  (syntax-case stx (@ interaction @list)
+    ((aint ((@list p ...)) s) (stx-andmap identifier? #'(p ...))
      (let ((ps2 (stx-map identifier-fresh #'(p ...))))
        (def env2
          (symdict-put/list env
@@ -235,14 +246,21 @@
                                 (syntax->datum #'(p ...))
                                 ps2)))
        (defvalues (env3 stmt3) (alpha-convert-stmt env2 #'s))
-       (values env3 (restx stx [#'a [#'i (cons '@list ps2)] stmt3]))))))
+       (values env3 (restx stx [#'aint [(cons '@list ps2)] stmt3]))))))
 
 ;; ac-stmt-at-simple-keyword : Env StmtStx -> (values Env StmtStx)
 (def (ac-stmt-at-simple-keyword env stx)
+  (syntax-case stx (@)
+    ((@ k s)
+     (let ((ak (restx1 #'k (string->symbol (format "@~a" (stx-e #'k))))))
+       (ac-stmt-wrap-simple-keyword env (restx1 stx [ak #'s]))))))
+
+;; ac-stmt-wrap-simple-keyword : Env StmtStx -> (values Env StmtStx)
+(def (ac-stmt-wrap-simple-keyword env stx)
   (syntax-case stx ()
-    ((a v s)
+    ((k s)
      (let-values (((env2 s2) (alpha-convert-stmt env #'s)))
-       (values env2 (restx stx [#'a #'v s2]))))))
+       (values env2 (restx stx [#'k s2]))))))
 
 ;; at-stmt-at-participant : Env StmtStx -> (values Env StmtStx)
 (def (ac-stmt-at-participant env stx)

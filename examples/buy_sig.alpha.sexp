@@ -1,8 +1,9 @@
-(@ (interaction (@list Buyer Seller))
+(@interaction
+   ((@list Buyer Seller))
    (def payForSignature
-     (λ ((digest : Digest) (price : Assets))
+     (λ ((digest0 : Digest) (price : Assets))
        (@ Buyer (deposit! price))
-       (@ Seller (@ verifiably (def signature (sign digest))))
+       (@ Seller (@verifiably (def signature (sign digest0))))
        (@ Seller (publish! signature))
        (verify! signature)
        (withdraw! Seller price))))
