@@ -18,7 +18,8 @@
   :clan/utils/exception
   <expander-runtime>
   :glow/compiler/common
-  :glow/compiler/alpha-convert/alpha-convert)
+  :glow/compiler/alpha-convert/alpha-convert
+  :glow/compiler/alpha-convert/t/stx-equal)
 
 ;; Path -> Path
 (def (sexp-alpha-version file)
@@ -31,7 +32,7 @@
   (for ((stmt prog2))
     (printf "~y" (syntax->datum stmt)))
   (cond
-    ((stx-deep-source=? prog prog2)
+    ((stx-deep-source=?/at-normalize prog prog2)
      (printf ";; ✓ source locations preserved exactly\n"))
     (else
      (printf ";; ✗ source locations not preserved\n")))
