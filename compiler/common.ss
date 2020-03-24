@@ -43,6 +43,26 @@
 ;; stx-sexpr=? : Stx Stx -> Bool
 (def (stx-sexpr=? a b) (equal? (syntax->datum a) (syntax->datum b)))
 
+;; stx-sexpr=?/recur : Stx Stx [Stx Stx -> Bool] -> Bool
+;; The rec=? function is only called on sub-pieces of the syntax,
+;; so it can be used for recursion based on decreasing size
+(def (stx-sexpr=?/recur a b rec=?)
+  (cond
+    ((or (stx-list? a) (stx-list? b))
+     (and (stx-list? a) (stx-list? b) (= (stx-length a) (stx-length b))
+          (andmap rec=? (syntax->list a) (syntax->list b))))
+    ((or (stx-pair? a) (stx-pair? b))
+     (and (stx-pair? a) (stx-pair? b)
+          (rec=? (stx-car a) (stx-car b))
+          (let ((a2 (stx-cdr a)) (b2 (stx-cdr b)))
+            (cond ((and (stx-pair? a2) (stx-pair? b2))
+                   (stx-sexpr=?/recur a2 b2 rec=?))
+                  (else
+                   (rec=? a2 b2))))))
+    ((or (stx-leaf? a) (stx-leaf? b))
+     (stx-sexpr=? a b))
+    (else (error 'stx-sexpr=?/recur "unknown syntax structure:" a b))))
+
 ;; stx-shallow-source=? : Stx Stx -> Bool
 ;; only cares about source locations at the very top
 (def (stx-shallow-source=? a b) (equal? (stx-source a) (stx-source b)))
@@ -53,16 +73,10 @@
 (def (stx-deep-source=? a b)
   (and (stx-shallow-source=? a b)
        (cond
-         ((or (stx-list? a) (stx-list? b))
-          (and (stx-list? a) (stx-list? b) (= (stx-length a) (stx-length b))
-               (andmap stx-deep-source=? (syntax->list a) (syntax->list b))))
-         ((or (stx-pair? a) (stx-pair? b))
-          (and (stx-pair? a) (stx-pair? b)
-               (stx-deep-source=? (stx-car a) (stx-car b))
-               (stx-deep-source=? (stx-cdr a) (stx-cdr b))))
          ((or (stx-leaf? a) (stx-leaf? b))
           (and (stx-leaf? a) (stx-leaf? b)))
-         (else (error 'stx-deep-source=? "unknown syntax structure:" a b)))))
+         (else
+          (stx-sexpr=?/recur a b stx-deep-source=?)))))
 
 
 ;; TODO: do we need to properly parameterize the context (?)
