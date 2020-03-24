@@ -6,6 +6,7 @@
         <expander-runtime>
         (for-template :glow/compiler/syntax-context)
         :glow/compiler/syntax-context
+        :glow/compiler/alpha-convert/at-prefix-normalize
         ../common
         ./fresh)
 
@@ -213,9 +214,9 @@
 ;; the env result contains only the new symbols introduced by the statement
 (def (alpha-convert-stmt env stx)
   (syntax-case stx (@ interaction verifiably publicly @interaction @verifiably @publicly : quote def λ deftype defdata publish! verify!)
-    ((@ (interaction . _) _) (ac-stmt-at-interaction env stx))
-    ((@ verifiably _) (ac-stmt-at-simple-keyword env stx))
-    ((@ publicly _) (ac-stmt-at-simple-keyword env stx))
+    ((@ (interaction . _) _) (ac-stmt-atinteraction env (at-prefix-normalize stx)))
+    ((@ verifiably _) (ac-stmt-wrap-simple-keyword env (at-prefix-normalize stx)))
+    ((@ publicly _) (ac-stmt-wrap-simple-keyword env (at-prefix-normalize stx)))
     ((@interaction _ _) (ac-stmt-atinteraction env stx))
     ((@verifiably _) (ac-stmt-wrap-simple-keyword env stx))
     ((@publicly _) (ac-stmt-wrap-simple-keyword env stx))
@@ -227,13 +228,6 @@
     ((verify! . _) (ac-stmt-verify env stx))
     (expr
      (values empty-symdict (alpha-convert-expr env #'expr)))))
-
-;; ac-stmt-at-interaction : Env StmtStx -> (values Env StmtStx)
-(def (ac-stmt-at-interaction env stx)
-  (syntax-case stx (@)
-    ((@ (i . args) s)
-     (let ((aint (restx1 #'i '@interaction)))
-       (ac-stmt-atinteraction env (restx1 stx [aint #'args #'s]))))))
 
 ;; ac-stmt-atinteraction : Env StmtStx -> (values Env StmtStx)
 (def (ac-stmt-atinteraction env stx)
@@ -247,13 +241,6 @@
                                 ps2)))
        (defvalues (env3 stmt3) (alpha-convert-stmt env2 #'s))
        (values env3 (restx stx [#'aint [(cons '@list ps2)] stmt3]))))))
-
-;; ac-stmt-at-simple-keyword : Env StmtStx -> (values Env StmtStx)
-(def (ac-stmt-at-simple-keyword env stx)
-  (syntax-case stx (@)
-    ((@ k s)
-     (let ((ak (restx1 #'k (string->symbol (format "@~a" (stx-e #'k))))))
-       (ac-stmt-wrap-simple-keyword env (restx1 stx [ak #'s]))))))
 
 ;; ac-stmt-wrap-simple-keyword : Env StmtStx -> (values Env StmtStx)
 (def (ac-stmt-wrap-simple-keyword env stx)
