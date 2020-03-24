@@ -230,14 +230,14 @@
 
 ;; ac-stmt-at-interaction : Env StmtStx -> (values Env StmtStx)
 (def (ac-stmt-at-interaction env stx)
-  (syntax-case stx (@ interaction @list)
-    ((a (i . args) s)
+  (syntax-case stx (@)
+    ((@ (i . args) s)
      (let ((aint (restx1 #'i '@interaction)))
        (ac-stmt-atinteraction env (restx1 stx [aint #'args #'s]))))))
 
 ;; ac-stmt-atinteraction : Env StmtStx -> (values Env StmtStx)
 (def (ac-stmt-atinteraction env stx)
-  (syntax-case stx (@ interaction @list)
+  (syntax-case stx (@list)
     ((aint ((@list p ...)) s) (stx-andmap identifier? #'(p ...))
      (let ((ps2 (stx-map identifier-fresh #'(p ...))))
        (def env2
