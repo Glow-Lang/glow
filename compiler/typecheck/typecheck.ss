@@ -464,17 +464,28 @@
    ('int (entry:type #f [] type:int))
    ('bool (entry:type #f [] type:bool))
    ('bytes (entry:type #f [] type:bytes))
-   ('not (entry:known #f (typing-scheme empty-symdict (type:arrow [type:bool] type:bool))))
-   ('< (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int type:int] type:bool))))
-   ('+ (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int type:int] type:int))))
-   ('sqr (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int] type:int))))
-   ('sqrt (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int] type:int))))
-   ;; TODO: make polymorphic
-   ('member (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int (type:listof type:int)] type:bool))))
    ('Participant (entry:type #f [] type:Participant))
    ('Digest (entry:type #f [] type:Digest))
    ('Assets (entry:type #f [] type:Assets))
    ('Signature (entry:type #f [] type:Signature))
+   ('not (entry:known #f (typing-scheme empty-symdict (type:arrow [type:bool] type:bool))))
+   ('== (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int type:int] type:bool))))
+   ('= (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int type:int] type:bool))))
+   ('<= (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int type:int] type:bool))))
+   ('< (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int type:int] type:bool))))
+   ('> (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int type:int] type:bool))))
+   ('>= (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int type:int] type:bool))))
+   ('+ (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int type:int] type:int))))
+   ('- (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int type:int] type:int))))
+   ('* (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int type:int] type:int))))
+   ('/ (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int type:int] type:int))))
+   ('mod (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int type:int] type:int))))
+   ('sqr (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int] type:int))))
+   ('sqrt (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int] type:int))))
+   ;; TODO: make polymorphic
+   ('member (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int (type:listof type:int)] type:bool))))
+   ('randomUInt256 (entry:known #f (typing-scheme empty-symdict (type:arrow [] type:int))))
+   ('digest (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int type:int] type:Digest))))
    ('sign (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Digest] type:Signature))))))
 
 ;; tc-prog : [Listof StmtStx] -> Env
@@ -510,10 +521,10 @@
 ;; TODO: reorganize into one case for each keyword, possibly delegating to a function with
 ;; the multiple cases within a single keyword
 (def (tc-stmt part env stx)
-  (syntax-case stx (@ interaction verifiably publicly : quote def λ deftype defdata publish! verify!)
-    ((@ (interaction . _) _) (tc-stmt-interaction part env stx))
-    ((@ verifiably _) (tc-stmt-at-verifiably part env stx))
-    ((@ publicly _) (tc-stmt-at-publicly part env stx))
+  (syntax-case stx (@ @interaction @verifiably @publicly : quote def λ deftype defdata publish! verify!)
+    ((@interaction _ _) (tc-stmt-interaction part env stx))
+    ((@verifiably _) (tc-stmt-at-verifiably part env stx))
+    ((@publicly _) (tc-stmt-at-publicly part env stx))
     ((@ p _) (identifier? #'p) (tc-stmt-at-participant part env stx))
     ((deftype . _) (tc-stmt-deftype part env stx))
     ((defdata . _) (tc-stmt-defdata part env stx))
@@ -530,23 +541,23 @@
 (def (tc-stmt-interaction part env stx)
   (when part
     (error 'interaction "not allowed within a specific participant"))
-  (syntax-case stx (@ interaction @list def λ)
+  (syntax-case stx (@interaction @list def λ)
     ;; TODO: when we design a separate way of calling interactions, create a separate
     ;;       type for interaction functions that forces them to be called specially
     ;;       as interactions, not just functions with extra participant arguments
-    ((@ (interaction (@list p ...)) (def f (λ params . body))) (stx-andmap identifier? #'(p ...))
+    ((@interaction ((@list p ...)) (def f (λ params . body))) (stx-andmap identifier? #'(p ...))
      (tc-stmt-def part env #'(def f (λ ((p : Participant) ... . params) . body))))))
 
 ;; tc-stmt-at-verifiably : MPart Env StmtStx -> (values Env MonoEnv)
 (def (tc-stmt-at-verifiably part env stx)
-  (syntax-case stx (@ verifiably)
-    ((@ verifiably s)
+  (syntax-case stx (@verifiably)
+    ((@verifiably s)
      (error 'tc-stmt-at-verifiably "TODO"))))
 
 ;; tc-stmt-at-publicly : MPart Env StmtStx -> (values Env MonoEnv)
 (def (tc-stmt-at-publicly part env stx)
-  (syntax-case stx (@ publicly)
-    ((@ publicly s)
+  (syntax-case stx (@publicly)
+    ((@publicly s)
      (error 'tc-stmt-at-publicly "TODO"))))
 
 ;; tc-stmt-at-participant : MPart Env StmtStx -> (values Env MonoEnv)
@@ -683,7 +694,9 @@
 (def (tc-expr part env stx)
   ;; tce : ExprStx -> TypingScheme
   (def (tce e) (tc-expr part env e))
-  (syntax-case stx (@ : ann @tuple @record @list if block switch require! assert! deposit! withdraw!)
+  ;; tce/bool : ExprStx -> TypingScheme
+  (def (tce/bool e) (tc-expr/check part env e type:bool))
+  (syntax-case stx (@ : ann @tuple @record @list and or if block switch input require! assert! deposit! withdraw!)
     ((@ _ _) (error 'tc-expr "TODO: deal with @"))
     ((ann expr type)
      (tc-expr/check part env #'expr (parse-type part env empty-symdict #'type)))
@@ -709,10 +722,20 @@
         (type:listof (types-join (map typing-scheme-type ts))))))
     ((block b ...)
      (tc-body part env #'(b ...)))
+    ((and e ...)
+     (let ((ts (stx-map tce/bool #'(e ...))))
+       (typing-scheme
+        (menvs-meet (map typing-scheme-menv ts))
+        type:bool)))
+    ((or e ...)
+     (let ((ts (stx-map tce/bool #'(e ...))))
+       (typing-scheme
+        (menvs-meet (map typing-scheme-menv ts))
+        type:bool)))
     ((if c t e)
-     (let ((ct (tc-expr/check part env #'c type:bool))
-           (tt (tc-expr part env #'t))
-           (et (tc-expr part env #'e)))
+     (let ((ct (tce/bool #'c))
+           (tt (tce #'t))
+           (et (tce #'e)))
        (typing-scheme (menvs-meet (map typing-scheme-menv [ct tt et]))
                       (type-join (typing-scheme-type tt) (typing-scheme-type et)))))
     ((switch e swcase ...)
@@ -723,11 +746,15 @@
        (def bt (typing-schemes-join cts))
        (typing-scheme (menv-meet (typing-scheme-menv ts) (typing-scheme-menv bt))
                       (typing-scheme-type bt))))
+    ((input type tag)
+     (let ((t (parse-type part env empty-symdict #'type))
+           (ts (tc-expr/check part env #'tag type:bytes)))
+       (typing-scheme (typing-scheme-menv ts) t)))
     ((require! e)
-     (let ((et (tc-expr/check part env #'e type:bool)))
+     (let ((et (tce/bool #'e)))
        (typing-scheme (typing-scheme-menv et) type:unit)))
     ((assert! e)
-     (let ((et (tc-expr/check part env #'e type:bool)))
+     (let ((et (tce/bool #'e)))
        (typing-scheme (typing-scheme-menv et) type:unit)))
     ((deposit! e)
      (let ((et (tc-expr/check part env #'e type:int)))
@@ -793,11 +820,11 @@
     ((entry:known _ t) t)
     ((entry:ctor _ t) t)))
 
-;; tc-expr/check : MPart Env ExprStx (U #f Type) -> TypingSchemeOrError
+;; tc-expr/check : MPart Env ExprStx (U #f NType) -> TypingSchemeOrError
 ;; returns expected-ty on success, actual-ty if no expected, otherwise error
 (def (tc-expr/check part env stx expected-ty)
-  (unless (or (not expected-ty) (type? expected-ty))
-    (error 'tc-expr/check "expected (U #f Type) for 3rd argument"))
+  (unless (or (not expected-ty) (ntype? expected-ty))
+    (error 'tc-expr/check "expected (U #f Type) for 4th argument" expected-ty))
   (def actual-ts (tc-expr part env stx))
   (cond
     ((not expected-ty) actual-ts)

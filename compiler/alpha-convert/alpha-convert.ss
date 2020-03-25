@@ -63,8 +63,8 @@
 ;; TODO: inherit this list from a map of bindings in our runtime system
 ;; init-syms : [Listof Sym]
 (def init-syms
-  '(int bool bytes Digest Assets
-    not = <= < > >= + - * / mod sqr sqrt
+  '(int bool bytes Digest Assets Signature
+    not == = <= < > >= + - * / mod sqr sqrt
     member
     randomUInt256 isValidSignature
     canReach mustReach))
