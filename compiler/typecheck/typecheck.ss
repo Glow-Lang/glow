@@ -549,16 +549,32 @@
      (tc-stmt-def part env #'(def f (λ ((p : Participant) ... . params) . body))))))
 
 ;; tc-stmt-at-verifiably : MPart Env StmtStx -> (values Env MonoEnv)
+;; NOTE: This may become irrelevant depending on what desugaring
+;;       happens before typechecking
 (def (tc-stmt-at-verifiably part env stx)
   (syntax-case stx (@verifiably)
     ((@verifiably s)
-     (error 'tc-stmt-at-verifiably "TODO"))))
+     (let ()
+       (defvalues (penv2 nenv2) (tc-stmt part env #'s))
+       ;; TODO: Attach something to the new bindings in `penv2`
+       ;;       so that the `verify!` form knows they can
+       ;;       be verified.
+       ;;       This might also involve dependencies, recording
+       ;;       references to non-published identifiers that
+       ;;       must be published before `verify!` can be called.
+       (values penv2 nenv2)))))
 
 ;; tc-stmt-at-publicly : MPart Env StmtStx -> (values Env MonoEnv)
+;; NOTE: This may become irrelevant depending on what desugaring
+;;       happens before typechecking
 (def (tc-stmt-at-publicly part env stx)
   (syntax-case stx (@publicly)
     ((@publicly s)
-     (error 'tc-stmt-at-publicly "TODO"))))
+     (let ()
+       (defvalues (penv2 nenv2) (tc-stmt part env #'s))
+       ;; TODO: Modify the new bindings in `penv2` to be
+       ;;       public to the consensus.
+       (values penv2 nenv2)))))
 
 ;; tc-stmt-at-participant : MPart Env StmtStx -> (values Env MonoEnv)
 (def (tc-stmt-at-participant part env stx)
