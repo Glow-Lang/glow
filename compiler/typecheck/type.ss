@@ -38,6 +38,9 @@
 (defstruct ptype:union (types) transparent: #t)
 (defstruct ntype:intersection (types) transparent: #t)
 
+(def (ptype? v) (or (type? v) (ptype:union? v)))
+(def (ntype? v) (or (type? v) (ntype:intersection? v)))
+
 (def type:unit (type:tuple []))
 (def type:int (type:name 'int []))
 (def type:bool (type:name 'bool []))
