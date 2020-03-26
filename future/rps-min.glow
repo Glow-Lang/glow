@@ -17,6 +17,6 @@ let rockPaperScissors = (wagerAmount) => {
     verify! commitment;
     let outcome = winner(handA, handB);
   end: switch(outcome) {
-      | A_Wins => withdraw! Alice <- 2*wagerAmount
-      | B_Wins => withdraw! Bob <- 2*wagerAmount
-      | Draw => withdraw! Alice <- wagerAmount; withdraw! Bob <- wagerAmount }}
+      | A_Wins => withdraw! A <- 2*wagerAmount
+      | B_Wins => withdraw! B <- 2*wagerAmount
+      | Draw => withdraw! A <- wagerAmount; withdraw! B <- wagerAmount }}
