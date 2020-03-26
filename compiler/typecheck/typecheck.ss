@@ -16,7 +16,7 @@
         :clan/pure/dict/assq
         :clan/pure/dict/symdict
         "../common.ss"
-        (except-in "../alpha-convert/alpha-convert.ss" not-bound-as-ctor? bound-as-ctor?)
+        (except-in "../alpha-convert/alpha-convert.ss" env-put/env not-bound-as-ctor? bound-as-ctor?)
         "variance.ss"
         "type.ss")
 
@@ -669,7 +669,7 @@
            (t (type:arrow (stx-map party #'(a ...)) b)))
        (symdict (s (entry:ctor part (typing-scheme empty-symdict t))))))))
 
-;; tc-defdata-variants : MPart Env [Listof Symbol] Type [StxListof VariantStx] -> (values Env MonoEnv)
+;; tc-defdata-variants : MPart Env Env [Listof Symbol] Type [StxListof VariantStx] -> (values Env MonoEnv)
 ;; the env result contains only the new symbols introduced by the variants
 (def (tc-defdata-variants part env1 env2 xs b stx)
   (def env12 (env-put/env env1 env2))

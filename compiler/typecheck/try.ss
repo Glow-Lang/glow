@@ -11,7 +11,7 @@
         :clan/utils/exception
         :glow/compiler/syntax-context
         (for-template :glow/compiler/syntax-context)
-        (except-in "../alpha-convert/alpha-convert.ss" not-bound-as-ctor? bound-as-ctor?)
+        (except-in "../alpha-convert/alpha-convert.ss" env-put/env not-bound-as-ctor? bound-as-ctor?)
         "typecheck.ss")
 
 ;; tc-prog/list : [Listof StmtStx] -> [Assqof Symbol EnvEntry]
