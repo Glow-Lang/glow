@@ -197,6 +197,14 @@
 ;; environments Π to assign typing schemes (not type schemes) to
 ;; known-type/let-bound variables.
 
+;; env-put/env : Env Env -> Env
+;; entries in the 2nd env override ones in the 1st
+(def (env-put/env e1 e2) (symdict-put/list e1 (symdict->list e2)))
+
+;; env-put/envs : Env [Listof Env] -> Env
+;; entries later in the list override earlier ones
+(def (env-put/envs e1 es2) (for/fold (e e1) (e2 es2) (env-put/env e e2)))
+
 ;; A TyvarBisubst is a [Symdictof TypeInterval]
 ;; A TypeInterval is a (type-interval NType PType)
 ;; maps negative occurrences of type variables to the NType,
@@ -496,7 +504,7 @@
       (let-values (((penv nenv) (tc-stmt #f env stmt)))
         (unless (symdict-empty? nenv)
           (error 'tc-prog "non-empty D⁻ for free lambda-bound vars at top level"))
-        penv))))
+        (env-put/env env penv)))))
 
 ;; tc-body : MPart Env BodyStx -> TypingScheme
 (def (tc-body part env stx)
@@ -504,7 +512,7 @@
         ((stx-null? (stx-cdr stx)) (tc-expr part env (stx-car stx)))
         (else
          (let-values (((penv nenv) (tc-stmt part env (stx-car stx))))
-           (typing-scheme/menv nenv (tc-body part penv (stx-cdr stx)))))))
+           (typing-scheme/menv nenv (tc-body part (env-put/env env penv) (stx-cdr stx)))))))
 
 ;; tc-body/check : MPart Env BodyStx (U #f Type) -> TypingScheme
 (def (tc-body/check part env stx expected-ty)
@@ -515,11 +523,10 @@
         ((stx-null? (stx-cdr stx)) (tc-expr/check part env (stx-car stx) expected-ty))
         (else
          (let-values (((penv nenv) (tc-stmt part env (stx-car stx))))
-           (typing-scheme/menv nenv (tc-body/check part penv (stx-cdr stx) expected-ty))))))
+           (typing-scheme/menv nenv (tc-body/check part (env-put/env env penv) (stx-cdr stx) expected-ty))))))
 
 ;; tc-stmt : MPart Env StmtStx -> (values Env MonoEnv)
-;; TODO: reorganize into one case for each keyword, possibly delegating to a function with
-;; the multiple cases within a single keyword
+;; the env result contains only the new entries introduced by the statement
 (def (tc-stmt part env stx)
   (syntax-case stx (@ @interaction @verifiably @publicly : quote def λ deftype defdata publish! verify!)
     ((@interaction _ _) (tc-stmt-interaction part env stx))
@@ -538,6 +545,7 @@
        (values env menv)))))
 
 ;; tc-stmt-interaction : MPart Env StmtStx -> (values Env MonoEnv)
+;; the env result contains only the new entries introduced by the statement
 (def (tc-stmt-interaction part env stx)
   (when part
     (error 'interaction "not allowed within a specific participant"))
@@ -588,49 +596,50 @@
        (values penv2 (menv-meet (typing-scheme-menv ts) nenv2))))))
 
 ;; tc-stmt-deftype : MPart Env StmtStx -> (values Env MonoEnv)
+;; the env result contains only the new entries introduced by the statement
 (def (tc-stmt-deftype part env stx)
   (syntax-case stx (@ : quote deftype defdata)
     ((deftype x t) (identifier? #'x)
      (values
-      (symdict-put env
-                   (syntax-e #'x)
-                   (entry:type part [] (parse-type part env empty-symdict #'t)))
+      (symdict
+       ((syntax-e #'x)
+        (entry:type part [] (parse-type part env empty-symdict #'t))))
       empty-symdict))
     ((deftype (f 'x ...) b) (identifier? #'f)
      (let ((s (syntax-e #'f))
            (xs (stx-map syntax-e #'(x ...))))
        (def tyvars (list->symdict (map cons xs (map make-type:var xs))))
        (values
-        (symdict-put env
-                     s
-                     (entry:type part xs (parse-type part env tyvars #'b)))
+        (symdict
+         (s
+          (entry:type part xs (parse-type part env tyvars #'b))))
         empty-symdict)))))
 
 ;; tc-stmt-defdata : MPart Env StmtStx -> (values Env MonoEnv)
+;; the env result contains only the new entries introduced by the statement
 (def (tc-stmt-defdata part env stx)
   (syntax-case stx (@ : quote deftype defdata)
     ((defdata x variant ...) (identifier? #'x)
      (let ((s (syntax-e #'x)))
        (def b (type:name (gensym s) []))
-       (tc-defdata-variants part
-                            (symdict-put env s (entry:type part [] b))
-                            []
-                            b
-                            #'(variant ...))))
+       (def env2 (symdict (s (entry:type part [] b))))
+       (defvalues (penv nenv)
+         (tc-defdata-variants part env env2 [] b #'(variant ...)))
+       (values (env-put/env env2 penv) nenv)))
     ((defdata (f 'x ...) variant ...) (identifier? #'f)
      (let ((s (syntax-e #'f))
            (xs (stx-map syntax-e #'(x ...))))
        ;; TODO: allow variances to be either annotated or inferred
        (def vances (map (lambda (x) invariant) xs))
        (def b (type:app (type:name (gensym s) vances) (map make-type:var xs)))
-       (tc-defdata-variants part
-                            (symdict-put env s (entry:type part xs b))
-                            xs
-                            b
-                            #'(variant ...))))))
+       (def env2 (symdict (s (entry:type part xs b))))
+       (defvalues (penv nenv)
+         (tc-defdata-variants part env env2 xs b #'(variant ...)))
+       (values (env-put/env env2 penv) nenv)))))
 
 
-;; tc-defdata-variant : MPart Env [Listof Symbol] Type VariantStx -> [Cons Symbol EnvEntry]
+;; tc-defdata-variant : MPart Env [Listof Symbol] Type VariantStx -> Env
+;; the env result contains only the new symbols introduced by the variant
 (def (tc-defdata-variant part env xs b stx)
   ;; tyvars : TyvarEnv
   (def tyvars (list->symdict (map cons xs (map make-type:var xs))))
@@ -639,21 +648,24 @@
   (syntax-case stx ()
     (x (identifier? #'x)
      (let ((s (syntax-e #'x)))
-       (cons s (entry:ctor part (typing-scheme empty-symdict b)))))
+       (symdict (s (entry:ctor part (typing-scheme empty-symdict b))))))
     ((f a ...) (identifier? #'f)
      (let ((s (syntax-e #'f))
            (t (type:arrow (stx-map party #'(a ...)) b)))
-       (cons s (entry:ctor part (typing-scheme empty-symdict t)))))))
+       (symdict (s (entry:ctor part (typing-scheme empty-symdict t))))))))
 
 ;; tc-defdata-variants : MPart Env [Listof Symbol] Type [StxListof VariantStx] -> (values Env MonoEnv)
-(def (tc-defdata-variants part env xs b stx)
-  ;; tcvariant : VariantStx -> [Cons Symbol EnvEntry]
-  (def (tcvariant v) (tc-defdata-variant part env xs b v))
+;; the env result contains only the new symbols introduced by the variants
+(def (tc-defdata-variants part env1 env2 xs b stx)
+  (def env12 (env-put/env env1 env2))
+  ;; tcvariant : VariantStx -> Env
+  (def (tcvariant v) (tc-defdata-variant part env12 xs b v))
   (values
-   (symdict-put/list env (stx-map tcvariant stx))
+   (env-put/envs empty-symdict (stx-map tcvariant stx))
    empty-symdict))
 
 ;; tc-stmt-def : MPart Env StmtStx -> (values Env MonoEnv)
+;; the env result contains only the new entries introduced by the statement
 (def (tc-stmt-def part env stx)
   (syntax-case stx (@ : quote def λ)
     ((def f (λ params : out-type body ...)) (identifier? #'f)
@@ -676,9 +688,10 @@
        (tc-stmt-def/typing-scheme part env s (tc-expr part env #'expr))))))
 
 ;; tc-stmt-def/typing-scheme : MPart Env Symbol TypingScheme -> (values Env MonoEnv)
+;; the env result contains only the new entries introduced by the statement
 (def (tc-stmt-def/typing-scheme part env s ts)
   (values
-   (symdict-put env s (entry:known part ts))
+   (symdict (s (entry:known part ts)))
    (typing-scheme-menv ts)))
 
 ;; tc-function : MPart Env [Listof Symbol] [Listof (U #f Type)] (U #f Type) BodyStx -> TypingScheme
