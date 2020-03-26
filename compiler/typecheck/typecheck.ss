@@ -192,6 +192,23 @@
         ((entry:type? e)    (entry:type-part e))
         (else               (error 'entry-part "expected an EnvEntry"))))
 
+;; entry-publish : EnvEntry -> EnvEntry
+;; Produces a copy of the entry with the MPart to #f, as public
+(def (entry-publish e)
+  (match e
+    ((entry:unknown _)   (entry:unknown #f))
+    ((entry:known _ ts)  (entry:known #f ts))
+    ((entry:ctor _ ts)   (entry:ctor #f ts))
+    ((entry:type _ xs t) (entry:type #f xs t))))
+
+;; env-publish : Env [Listof Symbol] -> Env
+;; Produces a new env containing only the published versions of the xs
+(def (env-publish env xs)
+  (list->symdict
+   (for/collect ((x xs))
+     (unless (symdict-has-key? env x) (error x "unbound identifier"))
+     (cons x (entry-publish (symdict-ref env x))))))
+
 ;; An Env is a [Symdictof EnvEntry]
 ;; Instead of type environments Γ, the reformulated rules use typing
 ;; environments Π to assign typing schemes (not type schemes) to
@@ -536,13 +553,11 @@
     ((deftype . _) (tc-stmt-deftype part env stx))
     ((defdata . _) (tc-stmt-defdata part env stx))
     ((def . _) (tc-stmt-def part env stx))
-    ((publish! x ...) (stx-andmap identifier? #'(x ...))
-     (error 'tc-stmt "TODO: deal with publish!"))
-    ((verify! x ...) (stx-andmap identifier? #'(x ...))
-     (error 'tc-stmt "TODO: deal with verify!"))
+    ((publish! x ...) (stx-andmap identifier? #'(x ...)) (tc-stmt-publish part env stx))
+    ((verify! x ...) (stx-andmap identifier? #'(x ...)) (tc-stmt-verify part env stx))
     (expr
      (with (((typing-scheme menv _) (tc-expr part env #'expr)))
-       (values env menv)))))
+       (values empty-symdict menv)))))
 
 ;; tc-stmt-interaction : MPart Env StmtStx -> (values Env MonoEnv)
 ;; the env result contains only the new entries introduced by the statement
@@ -718,6 +733,23 @@
               (cond (in-ty acc)
                     (else (symdict-remove acc x)))))
   (typing-scheme menv (type:arrow in-tys* body-ty)))
+
+;; tc-stmt-verify : MPart Env StmtStx -> (values Env MonoEnv)
+;; NOTE: the actual checking for verify! will be handled in the desugaring pass
+;;       once that's implemented, this function should be deleted and typechecking
+;;       shouldn't see verify! statements at all
+(def (tc-stmt-verify part env stx)
+  (syntax-case stx (verify!)
+    ((verify! x ...) (stx-andmap identifier? #'(x ...))
+     (let ((ts (stx-map (cut tc-expr-id part env <>) #'(x ...))))
+       (values empty-symdict (menvs-meet (map typing-scheme-menv ts)))))))
+
+;; tc-stmt-publish : MPart Env StmtStx -> (values Env MonoEnv)
+(def (tc-stmt-publish part env stx)
+  (syntax-case stx (publish!)
+    ((publish! x ...) (stx-andmap identifier? #'(x ...))
+     (let ((xs (stx-map stx-e #'(x ...))))
+       (values (env-publish env xs) empty-symdict)))))
 
 ;; tc-expr : MPart Env ExprStx -> TypingScheme
 (def (tc-expr part env stx)
