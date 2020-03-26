@@ -78,3 +78,7 @@ We never released those:
 * [Hazel](https://hazel.org), a live functional language programming environment with typed holes
 * [Dark](https://darklang.com), a holistic programming language, editor, and infrastructure for building backends without accidental complexity.
 * [Unison](https://unisonweb.org), an open source functional programming language based on a simple idea with big implications: code is content-addressed and immutable.
+
+### Complexity
+
+* [How Complex Systems Fail](https://web.mit.edu/2.75/resources/random/How%20Complex%20Systems%20Fail.pdf)
