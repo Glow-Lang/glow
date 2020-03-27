@@ -64,6 +64,12 @@
      (andmap (lambda (b) (subtype? a b)) bs))
     (((type:name x vxs) (type:name y vys))
      (and (eq? x y) (equal? vxs vys)))
+    ;; cases for name-subtype must be before any possible case for _ <: (union _)
+    (((type:name-subtype x a2) (type:name-subtype y b2))
+     (cond ((eq? x y) (subtype? a2 b2))
+           (else      (subtype? a2 b))))
+    (((type:name-subtype _ a2) b)
+     (subtype? a2 b))
     (((type:var x) (type:var y)) (eq? x y))
     (((type:tuple as) (type:tuple bs))
      (and (= (length as) (length bs))
@@ -265,6 +271,8 @@
   (match t
     ((type:bottom) t)
     ((type:name _ _) t)
+    ((type:name-subtype x sup)
+     (type:name-subtype x (sub sup)))
     ((type:var s)
      (cond ((symdict-has-key? tybi s)
             (tyvar-bisubst (symdict-ref tybi s) v s))
@@ -347,6 +355,14 @@
      (unless (eq? x y) (error 'subtype (format "type mismatch, expected ~s, given ~s" y x)))
      (unless (equal? vxs vys) (error 'subtype "inconsistant variances"))
      [])
+    ;; cases for name-subtype must be before any possible case for _ <: (union _)
+    ((constraint:subtype (type:name-subtype x a2) (and b (type:name-subtype y b2)))
+     (cond ((eq? x y) [(constraint:subtype a2 b2)])
+           (else      [(constraint:subtype a2 b)])))
+    ((constraint:subtype (type:name-subtype _ a2) b)
+     [(constraint:subtype a2 b)])
+    ((constraint:subtype (type:name x vxs) (type:name-subtype y _))
+     (error 'subtype (format "type mismatch, expected ~s, given ~s" y x)))
     ((constraint:subtype (type:tuple as) (type:tuple bs))
      (unless (= (length as) (length bs))
        (error 'subtype "tuple length mismatch"))
@@ -487,6 +503,7 @@
 (def init-env
   (symdict
    ('int (entry:type #f [] type:int))
+   ('nat (entry:type #f [] type:nat))
    ('bool (entry:type #f [] type:bool))
    ('bytes (entry:type #f [] type:bytes))
    ('Participant (entry:type #f [] type:Participant))
@@ -509,7 +526,7 @@
    ('sqrt (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int] type:int))))
    ;; TODO: make polymorphic
    ('member (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int (type:listof type:int)] type:bool))))
-   ('randomUInt256 (entry:known #f (typing-scheme empty-symdict (type:arrow [] type:int))))
+   ('randomUInt256 (entry:known #f (typing-scheme empty-symdict (type:arrow [] type:nat))))
    ('sign (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Digest] type:Signature))))))
 
 ;; tc-prog : [Listof StmtStx] -> Env
@@ -902,7 +919,9 @@
 ;; tc-literal : LiteralStx -> Type
 (def (tc-literal stx)
   (def e (stx-e stx))
-  (cond ((exact-integer? e) type:int)
+  (cond ((exact-integer? e)
+         (cond ((negative? e) type:int)
+               (else type:nat)))
         ((boolean? e) type:bool)
         ((string? e) type:bytes) ; represent as bytess using UTF-8
         ((bytes? e) type:bytes)
