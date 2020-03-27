@@ -21,6 +21,17 @@
 ;; copy-current-unused-table : -> UnusedTable
 (define (copy-current-unused-table) (hash-copy (current-unused-table)))
 
+;; use/check-unused : Symbol -> Void
+(def (use/check-unused sym)
+  (unless (symbol? sym)
+    (error 'use/check-unused "expected symbol"))
+  (let-values (((s n) (symbol-split sym)))
+    (def ut (current-unused-table))
+    (def ul (hash-ref ut s []))
+    (unless (unusedlist-unused? ul n)
+      (error 'use/check-unused "already used" sym))
+    (hash-put! ut s (unusedlist-remove ul n))))
+
 ;; symbol-fresh : Symbol -> Symbol
 ;; finds an symbol not used so far, marks it used, and returns it
 (def (symbol-fresh sym)
