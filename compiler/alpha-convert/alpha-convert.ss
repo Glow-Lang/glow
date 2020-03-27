@@ -50,18 +50,29 @@
 (def (identifier-refer env id)
   (restx id (symbol-refer env (stx-e id))))
 
+;; keyword-syms : [Listof Sym]
+(def keyword-syms
+  '(@ : quote ann @dot @tuple @record @list
+    def deftype defdata
+    if and or
+    block switch λ
+    input digest
+    interaction verifiably publicly @interaction @verifiably @publicly
+    publish! verify! require! assert! deposit! withdraw!))
+
 ;; TODO: inherit this list from a map of bindings in our runtime system
 ;; init-syms : [Listof Sym]
 (def init-syms
   '(int bool bytes Digest Assets
     not == = <= < > >= + - * / mod sqr sqrt
     member
-    randomUInt256 digest sign
+    randomUInt256 sign
     canReach mustReach))
 
 ;; alpha-convert : [Listof StmtStx] -> (values [Listof StmtStx] UnusedTable Env)
 (def (alpha-convert stmts)
   (parameterize ((current-unused-table (make-unused-table)))
+    (for ((k keyword-syms)) (use/check-unused k))
     (def init-env
       (for/fold (acc empty-symdict) ((x init-syms))
         (symdict-put acc x (entry (symbol-fresh x) #f))))
@@ -95,7 +106,7 @@
 (def (alpha-convert-expr env stx)
   ;; ace : ExprStx -> ExprStx
   (def (ace e) (alpha-convert-expr env e))
-  (syntax-case stx (@ ann @dot @tuple @record @list if and or block switch λ require! assert! deposit! withdraw! input)
+  (syntax-case stx (@ ann @dot @tuple @record @list if and or block switch λ input digest require! assert! deposit! withdraw!)
     ((@ _ _) (error 'alpha-convert-expr "TODO: deal with @"))
     ((ann expr type)
      (restx stx [(stx-car stx) (ace #'expr) (alpha-convert-type env #'type)]))
@@ -130,6 +141,8 @@
      (ac-expr-function env stx))
     ((input type tag)
      (restx stx [(stx-car stx) (alpha-convert-type env #'type) (ace #'tag)]))
+    ((digest e ...)
+     (alpha-convert-keyword/sub-exprs env stx))
     ((require! e)
      (restx stx [(stx-car stx) (ace #'e)]))
     ((assert! e)
