@@ -9,6 +9,7 @@
 ;; A Type is one of:
 ;;  - (type:bottom)
 ;;  - (type:name Symbol [Listof Variance])  ;; TODO: add srcloc
+;;  - (type:name-subtype Symbol Type)
 ;;  - (type:var Symbol)
 ;;  - (type:app Type [Listof Type])
 ;;  - (type:tuple [Listof Type])
@@ -16,12 +17,21 @@
 ;;  - (type:arrow [Listof Type] Type)
 (defstruct type:bottom () transparent: #t)
 (defstruct type:name (sym vances) transparent: #t)  ;; TODO: add srcloc
+(defstruct type:name-subtype (sym super) transparent: #t)
 (defstruct type:var (sym) transparent: #t)
 (defstruct type:app (fun args) transparent: #t)
 (defstruct type:tuple (args) transparent: #t)
 (defstruct type:record (field-args))
 (defstruct type:arrow (in-tys out-ty) transparent: #t)
-(def (type? v) (or (type:bottom? v) (type:name? v) (type:var? v) (type:app? v) (type:tuple? v) (type:record? v) (type:arrow? v)))
+(def (type? v)
+  (or (type:bottom? v)
+      (type:name? v)
+      (type:name-subtype? v)
+      (type:var? v)
+      (type:app? v)
+      (type:tuple? v)
+      (type:record? v)
+      (type:arrow? v)))
 
 ;; PTypes are types used for outputs, while NTypes are types used for inputs.
 ;; PTypes are extended to allow unions, while NTypes allow intersections.
@@ -43,6 +53,7 @@
 
 (def type:unit (type:tuple []))
 (def type:int (type:name 'int []))
+(def type:nat (type:name-subtype 'nat type:int))
 (def type:bool (type:name 'bool []))
 (def type:bytes (type:name 'bytes []))
 
@@ -130,6 +141,7 @@
   (match t
     ((type:bottom) [])
     ((type:name _ _) [])
+    ((type:name-subtype _ sup) (type-vars sup))
     ((type:var s) [s])
     ((type:app f as)
      (append (type-vars f) (flatten1 (map type-vars as))))
@@ -151,6 +163,7 @@
   (match t
     ((type:bottom) #f)
     ((type:name s _) #f)
+    ((type:name-subtype _ sup) (hv? sup))
     ((type:var s) (eq? x s))
     ((type:app f as)
      (or (hv? f) (ormap hv? as)))
@@ -173,6 +186,8 @@
   (match t
     ((type:bottom) t)
     ((type:name _ _) t)
+    ((type:name-subtype nm sup)
+     (type:name-subtype nm (sub sup)))
     ((type:var s)
      (cond ((symdict-has-key? tyvars s) (symdict-ref tyvars s))
            (else t)))
@@ -199,6 +214,7 @@
   (match t
     ((type:bottom) '⊥)
     ((type:name s _) s)
+    ((type:name-subtype s _) s)
     ((type:var s) `',s)
     ((type:app f as) (cons (type->sexpr f) (map type->sexpr as)))
     ((type:tuple as) (cons '@tuple (map type->sexpr as)))
