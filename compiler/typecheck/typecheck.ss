@@ -594,9 +594,7 @@
     ((@publicly s)
      (let ()
        (defvalues (penv2 nenv2) (tc-stmt part env #'s))
-       ;; TODO: Modify the new bindings in `penv2` to be
-       ;;       public to the consensus.
-       (values penv2 nenv2)))))
+       (values (env-publish penv2 (symdict-keys penv2)) nenv2)))))
 
 ;; tc-stmt-at-participant : MPart Env StmtStx -> (values Env MonoEnv)
 (def (tc-stmt-at-participant part env stx)
