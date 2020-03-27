@@ -510,7 +510,6 @@
    ;; TODO: make polymorphic
    ('member (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int (type:listof type:int)] type:bool))))
    ('randomUInt256 (entry:known #f (typing-scheme empty-symdict (type:arrow [] type:int))))
-   ('digest (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int type:int] type:Digest))))
    ('sign (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Digest] type:Signature))))))
 
 ;; tc-prog : [Listof StmtStx] -> Env
@@ -757,7 +756,7 @@
   (def (tce e) (tc-expr part env e))
   ;; tce/bool : ExprStx -> TypingScheme
   (def (tce/bool e) (tc-expr/check part env e type:bool))
-  (syntax-case stx (@ : ann @tuple @record @list and or if block switch input require! assert! deposit! withdraw!)
+  (syntax-case stx (@ : ann @tuple @record @list and or if block switch input digest require! assert! deposit! withdraw!)
     ((@ _ _) (error 'tc-expr "TODO: deal with @"))
     ((ann expr type)
      (tc-expr/check part env #'expr (parse-type part env empty-symdict #'type)))
@@ -811,6 +810,12 @@
      (let ((t (parse-type part env empty-symdict #'type))
            (ts (tc-expr/check part env #'tag type:bytes)))
        (typing-scheme (typing-scheme-menv ts) t)))
+    ((digest e ...)
+     (let ((ts (stx-map tce #'(e ...))))
+       ;; TODO: constrain the types in `ts` to types that digests
+       ;;       can be computed for
+       (typing-scheme (menvs-meet (map typing-scheme-menv ts))
+                      type:Digest)))
     ((require! e)
      (let ((et (tce/bool #'e)))
        (typing-scheme (typing-scheme-menv et) type:unit)))
