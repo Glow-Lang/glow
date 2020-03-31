@@ -184,6 +184,7 @@ ReasonML.
    (BNF-seq |@| @nonterm{attr} @nonterm{type})
    (BNF-seq |(| @nonterm{type} |)|)
    @nonterm{id}
+   @nonterm{tyvar}
    (BNF-seq |(| @nonterm{arg-types} |)| )
    (BNF-seq |{| @nonterm{record-type-entries} |}| )
    (BNF-seq @nonterm{id} |(| @nonterm{arg-types} |)| ))
