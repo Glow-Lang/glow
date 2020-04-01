@@ -46,6 +46,7 @@
   :clan/poo/poo :clan/poo/mop :clan/poo/type :clan/poo/io
 
   ;; Glow
+  (for-template :glow/compiler/syntax-context)
   :glow/config/path :glow/config/version
   :glow/compiler/passes :glow/compiler/multipass :glow/compiler/common
   :glow/compiler/alpha-convert/symbolnat :glow/compiler/alpha-convert/fresh
