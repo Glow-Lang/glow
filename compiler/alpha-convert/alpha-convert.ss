@@ -244,14 +244,14 @@
 
 ;; ac-stmt-atinteraction : Env StmtStx -> (values Env StmtStx)
 (def (ac-stmt-atinteraction env stx)
+    ;; env/participants : Env [StxListof Identifier] [StxListof Identifier] -> Env
+  (def (env/participants env ps ps2)
+    (for/fold (env env) ((p (syntax->datum ps)) (p2 (syntax->datum ps2)))
+      (symdict-put env p (entry p2 #f))))
   (syntax-case stx (@list)
     ((aint ((@list p ...)) s) (stx-andmap identifier? #'(p ...))
      (let ((ps2 (stx-map identifier-fresh #'(p ...))))
-       (def env2
-         (symdict-put/list env
-                           (map (lambda (s p2) (cons s (entry (stx-e p2) #f)))
-                                (syntax->datum #'(p ...))
-                                ps2)))
+       (def env2 (env/participants env #'(p ...) ps2))
        (defvalues (env3 stmt3) (alpha-convert-stmt env2 #'s))
        (values env3 (restx stx [#'aint [(cons '@list ps2)] stmt3]))))))
 
