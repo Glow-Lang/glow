@@ -1,6 +1,7 @@
 (export #t)
 
 (import :std/iter :std/srfi/1
+        :std/misc/repr :clan/utils/debug ;; DEBUG
         <expander-runtime>
         (for-template :glow/compiler/syntax-context)
         :glow/compiler/syntax-context
@@ -39,12 +40,15 @@
 ;; in reversed order at the beginning of the accumulator acc
 (def (anf-stmt stx participant acc)
   (syntax-case stx (@ @interaction verifiably publicly : quote def deftype defdata publish! deposit!)
-    ((@interaction x s) (restx stx [(stx-car stx) #'x (anf-stmt #'s participant acc)]))
+    ((@interaction x s) (match (anf-stmt #'s participant acc)
+                          ([stmt . more]
+                           [(restx stx [(stx-car stx) #'x stmt]) . more])))
     ((@ p s) (identifier? #'p) (anf-stmt #'s #'p acc))
     ((defdata . _) (cons stx acc))
     ((deftype . _) (cons stx acc))
-    ((publish! . _) (with-syntax ((p participant)) (cons #'(@ p stx) acc)))
-    ((deposit! e) (anf-at (anf-onearg-expr stx participant acc) participant))
+    ((publish! . _) (cons (anf-at stx participant) acc))
+    ((deposit! e) (let-values (((reduced-expr acc) (anf-onearg-expr stx participant acc)))
+                    (cons (anf-at reduced-expr participant) acc)))
     ((def . _) (anf-def stx participant acc))
     (expr (let-values (((reduced-expr acc) (anf-expr stx participant acc)))
             (cons (anf-at reduced-expr participant) acc)))))
@@ -101,8 +105,9 @@
 
 ;; anf-onearg-expr : ExprStx MaybeParticipant [Listof StmtStx] -> (values ExprStx [Listof StmtStx])
 (def (anf-onearg-expr stx participant acc)
-  (let-values (((re acc) (anf-expr #'e participant acc)))
-    (values (restx stx [(stx-car stx) re]) acc)))
+  (syntax-case stx ()
+    ((_ e) (let-values (((re acc) (anf-expr #'e participant acc)))
+             (values (restx stx [(stx-car stx) re]) acc)))))
 
 ;; anf-expr : ExprStx MaybeParticipant [Listof StmtStx] -> (values ExprStx [Listof StmtStx])
 (def (anf-expr stx participant acc)
@@ -112,7 +117,7 @@
     (lit (stx-atomic-literal? #'lit) (values stx acc))
     ((ann expr type)
      (let-values (((reduced-expr acc) (anf-expr #'expr participant acc)))
-       (cons (restx stx [(stx-car stx) reduced-expr #'type]) acc)))
+       (values (restx stx [(stx-car stx) reduced-expr #'type]) acc)))
     ((@tuple e ...) (anf-multiarg-expr stx participant acc))
     ((@list e ...) (anf-multiarg-expr stx participant acc))
     ((@record (x e) ...)
@@ -139,7 +144,7 @@
     ((deposit! e) (anf-onearg-expr stx participant acc))
     ((withdraw! x e) (identifier? #'x)
      (let-values (((re acc) (anf-expr #'e participant acc)))
-       (restx stx [(stx-car stx) #'x re]) acc))
+       (values (restx stx [(stx-car stx) #'x re]) acc)))
     ((f a ...) (identifier? #'f)
      (let-values (((ras acc) (anf-exprs (syntax->list #'(a ...)) participant acc)))
        (values (restx stx (cons (stx-car stx) ras)) acc)))))
@@ -150,10 +155,10 @@
     ((b ... e)
      (anf-expr #'e participant (anf-stmts (syntax->list #'(b ...)) participant acc)))))
 
-;; anf-standalone-body : StmtsStx -> [Listof StmtStx]
+;; anf-standalone-body : StmtsStx MaybeParticipant -> [Listof StmtStx]
 (def (anf-standalone-body stx participant)
   (let-values (((e acc) (anf-body stx participant [])))
-    (append-reverse acc (list e))))
+    (reverse (anf-stmt e participant acc))))
 
 ;; anf-switch-case : SwitchCaseStx MaybeParticipant -> SwitchCaseStx
 (def (anf-switch-case stx participant)
@@ -165,12 +170,13 @@
 (def (anf-lambda stx participant)
   (syntax-case stx (: λ)
     ((l params : out-type body ...)
-     (restx stx `(,#'l params : ,#'out-type ,@(anf-standalone-body #'(body ...) participant))))
+     (restx stx `(,#'l ,#'params : ,#'out-type ,@(anf-standalone-body #'(body ...) participant))))
     ((l params body ...)
-     (restx stx `(,#'l params ,@(anf-standalone-body #'(body ...) participant))))))
+     (restx stx `(,#'l ,#'params ,@(anf-standalone-body #'(body ...) participant))))))
 
 ;; Conform to pass convention.
 ;; anf : [Listof StmtStx] UnusedTable Env -> (values [Listof StmtStx] UnusedTable Env)
 (def (anf stmts unused-table env)
   (parameterize ((current-unused-table unused-table))
     (values (reverse (anf-stmts stmts #f [])) unused-table env)))
+
