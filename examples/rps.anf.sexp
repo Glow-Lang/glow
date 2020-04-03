@@ -1,0 +1,53 @@
+(defdata Hand Rock Paper Scissors)
+(def inputHand (λ (tag) (def x : Hand (input tag Hand)) x))
+(def NatToHand
+     (λ ((x0 : int))
+        (def tmp (<= 0 x0))
+        (def tmp0 (< x0 3))
+        (def tmp1 (and tmp tmp0))
+        (require! tmp1)
+        (if (= x0 0) Rock (if (= x0 1) Paper Scissors))))
+(def HandToNat (λ ((x1 : Hand)) (switch x1 (Rock 0) (Paper 1) (Scissors 2))))
+(defdata Outcome B_Wins Draw A_Wins)
+(def inputOutcome (λ (tag0) (def x2 : Outcome (input tag0 Outcome)) x2))
+(def NatToOutcome
+     (λ ((x3 : int))
+        (def tmp2 (<= 0 x3))
+        (def tmp3 (< x3 3))
+        (def tmp4 (and tmp2 tmp3))
+        (require! tmp4)
+        (if (= x3 0) B_Wins (if (= x3 1) Draw A_Wins))))
+(def OutcomeToNat
+     (λ ((x4 : Outcome)) (switch x4 (B_Wins 0) (Draw 1) (A_Wins 2))))
+(def winner
+     (λ ((handA : Hand) (handB : Hand))
+        :
+        Outcome
+        (def tmp5 (HandToNat handA))
+        (def tmp6 (HandToNat handB))
+        (def tmp7 (- 4 tmp6))
+        (def tmp8 (mod tmp7 3))
+        (def tmp9 (+ tmp5 tmp8))
+        (NatToOutcome tmp9)))
+(@interaction
+ ((@list A B))
+ (def rockPaperScissors
+      (λ (wagerAmount)
+         (@ A (def handA0 (inputHand "First player, pick your hand")))
+         (@ A (def salt (randomUInt256)))
+         (@ A (def tmp10 (digest salt handA0)))
+         (@ A (def tmp11 (def commitment tmp10)))
+         (@ A (@verifiably tmp11))
+         (@ A (publish! commitment))
+         (@ A (deposit! wagerAmount))
+         (@ B (def handB0 (inputHand "Second player, pick your hand")))
+         (@ B (publish! handB0))
+         (@ B (deposit! wagerAmount))
+         (@ A (publish! salt handA0))
+         (verify! commitment)
+         (def outcome (winner handB0 handA0))
+         (switch outcome
+                 (A_Wins (withdraw! A (* 2 wagerAmount)))
+                 (B_Wins (withdraw! B (* 2 wagerAmount)))
+                 (Draw (withdraw! A wagerAmount) (withdraw! B wagerAmount)))
+         outcome)))

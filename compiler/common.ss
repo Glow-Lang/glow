@@ -2,7 +2,8 @@
 
 (import :gerbil/gambit/bytes
         <expander-runtime>
-        (for-template :glow/compiler/syntax-context)
+        :std/misc/repr :gerbil/gambit/hash :gerbil/expander/common
+        :glow/compiler/syntax-context
         :std/format
         :std/iter
         :clan/utils/base
@@ -87,3 +88,10 @@
 (def (write-sexps statements (port (current-output-port)))
   (for ((stmt statements))
     (fprintf port "~y" (syntax->datum stmt))))
+
+;; TODO: move this to std/misc/repr ?
+(defmethod {:pr AST}
+  (λ (object (port (current-output-port)) (options (current-representation-options)))
+    (def (d x) (display x port))
+    (def (w x) (write x port))
+    (d "(begin0 #") (d (object->serial-number object)) (d " #'") (w (syntax->datum object)) (d ")")))
