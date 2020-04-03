@@ -16,7 +16,7 @@
 (def tuple_pair
   (λ ((t : (@tuple 'a 'b))) : (pair 'a 'b)
     (switch t
-      ((@tuple a0 b0) (Pair a0 b0)))))
+      ((@tuple a0 b0) (@app Pair a0 b0)))))
 
 (defdata (option 'a) (Some 'a) None)
 
@@ -25,8 +25,8 @@
 (def option_result
   (λ ((o : (option 'a))) : (result 'a (@tuple))
     (switch o
-      ((Some a1) (Ok a1))
-      (None (Error (@tuple))))))
+      ((Some a1) (@app Ok a1))
+      (None (@app Error (@tuple))))))
 
 (defdata natural
   Zero

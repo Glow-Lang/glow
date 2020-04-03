@@ -96,7 +96,7 @@
      (let-values (((re acc) (anf-expr #'e acc)))
        (values (restx stx [(stx-car stx) re]) acc)))
 
-  (syntax-case stx (@ ann @tuple @record @list if block switch λ require! assert! deposit! withdraw!)
+  (syntax-case stx (@ ann @tuple @record @list @app if block switch λ require! assert! deposit! withdraw!)
     ((@ _ _) (error 'anf-expr "TODO: deal with @"))
     (x (identifier? #'x) (values stx acc))
     (lit (stx-atomic-literal? #'lit) (values stx acc))
@@ -128,7 +128,7 @@
     ((withdraw! x e) (identifier? #'x)
      (let-values (((re acc) (anf-expr #'e acc)))
        (restx stx [(stx-car stx) #'x re]) acc))
-    ((f a ...) (identifier? #'f)
+    ((@app f a ...) (identifier? #'f)
      (let-values (((ras acc) (anf-exprs (syntax->list #'(a ...)) acc)))
        (values (restx stx (cons (stx-car stx) ras)) acc)))))
 
