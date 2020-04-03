@@ -31,11 +31,6 @@
   (for/fold (acc acc) ((stmt stmts))
     (anf-stmt stmt participant acc)))
 
-;; anf-at : StmtStx MaybeParticipant -> StmtStx
-(def (anf-at stx participant)
-  (with-syntax ((s stx) (p participant))
-    (if participant #'(@ p s) stx)))
-
 ;; anf-stmt : StmtStx MaybeParticipant [Listof StmtStx] -> [Listof StmtStx]
 ;; accumulate new reduced statements for the current unreduced statement,
 ;; in reversed order at the beginning of the accumulator acc
@@ -48,20 +43,20 @@
     ((@ p s) (identifier? #'p) (anf-stmt #'s #'p acc))
     ((defdata . _) (cons stx acc))
     ((deftype . _) (cons stx acc))
-    ((publish! . _) (cons (anf-at stx participant) acc))
+    ((publish! . _) (cons (at-stx participant stx) acc))
     ((def . _) (anf-def stx participant acc))
     (expr (let-values (((reduced-expr acc) (anf-expr stx participant acc)))
-            (cons (anf-at reduced-expr participant) acc)))))
+            (cons (at-stx participant reduced-expr) acc)))))
 
 ;; anf-def : StmtStx MaybeParticipant [Listof StmtStx] -> [Listof StmtStx]
 (def (anf-def stx participant acc)
   (syntax-case stx (def :)
     ((d x : type expr) (identifier? #'x)
      (let-values (((reduced-expr acc) (anf-expr #'expr participant acc)))
-       (cons (anf-at (restx stx [#'d #'x ': #'type reduced-expr]) participant) acc)))
+       (cons (at-stx participant (restx stx [#'d #'x ': #'type reduced-expr])) acc)))
     ((d x expr) (identifier? #'x)
      (let-values (((reduced-expr acc) (anf-expr #'expr participant acc)))
-       (cons (anf-at (restx stx [#'d #'x reduced-expr]) participant) acc)))))
+       (cons (at-stx participant (restx stx [#'d #'x reduced-expr])) acc)))))
 
 ;; trivial-expr? : ExprStx -> bool
 ;; is this expression trivial enough to be used in a call?
@@ -99,7 +94,7 @@
 
 ;; anf-expr : ExprStx MaybeParticipant [Listof StmtStx] -> (values ExprStx [Listof StmtStx])
 (def (anf-expr stx participant acc)
-  (syntax-case stx (@ ann @tuple @record @list if block switch λ require! assert! deposit! withdraw!)
+  (syntax-case stx (@ ann @tuple @record @list if block splice switch λ require! assert! deposit! withdraw!)
     ((@ _ _) (error 'anf-expr "TODO: deal with @"))
     (x (identifier? #'x) (values stx acc))
     (lit (stx-atomic-literal? #'lit) (values stx acc))
@@ -112,9 +107,9 @@
      (and (stx-andmap identifier? #'(x ...))
           (check-duplicate-identifiers #'(x ...)))
      (let-values (((rs acc) (anf-exprs (syntax->list #'(e ...)) participant acc)))
-       (values (restx stx (cons (stx-car stx) (map list #'(x ...) rs))) acc)))
-    ((block b ...)
-     (anf-body #'(b ...) participant acc))
+       (values (restx stx (cons (stx-car stx) (map list (syntax->list #'(x ...)) rs))) acc)))
+    ((block b ...) (anf-body #'(b ...) participant acc))
+    ((splice b ...) (anf-body #'(b ...) participant acc))
     ((if c t e)
      (let-values (((rc acc) (anf-expr #'c participant acc)))
        (values (restx stx [(stx-car stx) rc (anf-standalone-expr #'t participant)
@@ -125,17 +120,12 @@
        (values (restx stx (cons* (stx-car stx) re
                                  (stx-map (cut anf-switch-case <> participant) #'(swcase ...))))
                acc)))
-    ((λ . _)
-     (values (anf-lambda stx participant) acc))
+    ((λ . _) (values (anf-lambda stx participant) acc))
     ((require! e) (anf-multiarg-expr stx participant acc))
     ((assert! e) (anf-multiarg-expr stx participant acc))
     ((deposit! e) (anf-multiarg-expr stx participant acc))
-    ((withdraw! x e) (identifier? #'x)
-     (let-values (((re acc) (anf-expr #'e participant acc)))
-       (values (restx stx [(stx-car stx) #'x re]) acc)))
-    ((f a ...) (identifier? #'f)
-     (let-values (((ras acc) (anf-exprs (syntax->list #'(a ...)) participant acc)))
-       (values (restx stx (cons #'f ras)) acc)))))
+    ((@app e ...) (anf-multiarg-expr stx participant acc))
+    ((withdraw! x e) (identifier? #'x) (anf-multiarg-expr stx participant acc))))
 
 ;; anf-body : StmtsStx [Listof StmtStx] -> (values ExprStx [Listof StmtStx])
 (def (anf-body stx participant acc)
@@ -158,7 +148,7 @@
 (def (anf-lambda stx participant)
   (syntax-case stx (: λ)
     ((l params : out-type body ...)
-     (restx stx (cons* #'l #'params #': #'out-type (anf-standalone-body #'(body ...) participant))))
+     (restx stx (cons* #'l #'params ': #'out-type (anf-standalone-body #'(body ...) participant))))
     ((l params body ...)
      (restx stx (cons* #'l #'params (anf-standalone-body #'(body ...) participant))))))
 

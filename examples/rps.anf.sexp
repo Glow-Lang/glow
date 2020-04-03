@@ -47,7 +47,7 @@
          (verify! commitment)
          (def outcome (winner handB0 handA0))
          (switch outcome
-                 (A_Wins (withdraw! A (* 2 wagerAmount)))
-                 (B_Wins (withdraw! B (* 2 wagerAmount)))
-                 (Draw (withdraw! A wagerAmount) (withdraw! B wagerAmount)))
+                 (A_Wins (def tmp12 (* 2 wagerAmount)) (withdraw! A tmp12))
+                 (B_Wins (def tmp13 (* 2 wagerAmount)) (withdraw! B tmp13))
+                 (Draw (withdraw! wagerAmount A) (withdraw! B wagerAmount)))
          outcome)))

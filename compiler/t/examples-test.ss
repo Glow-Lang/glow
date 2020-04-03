@@ -1,11 +1,14 @@
 (export #t)
 
 (import
-  :std/test
+  :std/format :std/iter :std/test
   :glow/compiler/multipass :glow/compiler/passes
   :glow/compiler/t/common)
 
 (def examples-test
   (test-suite "examples-test"
     (test-case "all passes on all examples"
-      (for-each run-passes (examples.sexp)))))
+      (for ((e (examples.sexp)))
+        (format "Running all passes on ~a~%" e)
+        (run-passes e)
+        (newline)))))
