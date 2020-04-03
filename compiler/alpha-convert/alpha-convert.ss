@@ -52,7 +52,7 @@
 
 ;; keyword-syms : [Listof Sym]
 (def keyword-syms
-  '(@ : quote ann @dot @tuple @record @list
+  '(@ : quote ann @dot @tuple @record @list @app
     def deftype defdata
     if and or
     block switch λ
@@ -106,7 +106,7 @@
 (def (alpha-convert-expr env stx)
   ;; ace : ExprStx -> ExprStx
   (def (ace e) (alpha-convert-expr env e))
-  (syntax-case stx (@ ann @dot @tuple @record @list if and or block switch λ input digest require! assert! deposit! withdraw!)
+  (syntax-case stx (@ ann @dot @tuple @record @list @app if and or block switch λ input digest require! assert! deposit! withdraw!)
     ((@ _ _) (error 'alpha-convert-expr "TODO: deal with @"))
     ((ann expr type)
      (restx stx [(stx-car stx) (ace #'expr) (alpha-convert-type env #'type)]))
@@ -151,8 +151,16 @@
      (restx stx [(stx-car stx) (ace #'e)]))
     ((withdraw! x e) (identifier? #'x)
      (restx stx [(stx-car stx) (identifier-refer env #'x) (ace #'e)]))
+    ((@app f a ...)
+     (alpha-convert-keyword/sub-exprs env stx))
     ((f a ...) (identifier? #'f)
-     (restx stx (cons (ace #'f) (stx-map ace #'(a ...)))))))
+     (alpha-convert-keyword/sub-exprs env (intro-app stx)))))
+
+;; intro-app : Stx -> Stx
+(def (intro-app stx)
+  (unless (stx-pair? stx) (error 'intro-app "expected a function call"))
+  (def f (stx-car stx))
+  (restx1 stx (cons* (restx1 f '@app) f (stx-cdr stx))))
 
 ;; Used by special forms with a variable number of arguments that are regular expressions,
 ;; like @list, @tuple, and, or.
