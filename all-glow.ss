@@ -33,7 +33,7 @@
   :clan/utils/assert :clan/utils/base :clan/utils/basic-parsers :clan/utils/basic-printers
   :clan/utils/call-limiter :clan/utils/concurrency :clan/utils/config
   :clan/utils/date :clan/utils/debug :clan/utils/diceware
-  :clan/utils/error :clan/utils/ffi :clan/utils/files :clan/utils/filesystem
+  :clan/utils/error :clan/utils/exit :clan/utils/ffi :clan/utils/files :clan/utils/filesystem
   :clan/utils/generator :clan/utils/hash
   :clan/utils/json :clan/utils/list :clan/utils/logger
   :clan/utils/memo :clan/utils/multicall :clan/utils/number

@@ -5,6 +5,7 @@
         <expander-runtime>
         (for-template :glow/compiler/syntax-context)
         :glow/compiler/syntax-context
+        :clan/utils/base
         ../common
         ../alpha-convert/fresh)
 
@@ -68,34 +69,26 @@
 (def (trivial-expr? expr)
   (or (identifier? expr) (stx-atomic-literal? expr)))
 
-;; generate-trivial-handle : ExprStx -> ExprStx
-;; generates a trivial expression handle for expressions that aren't already trivial,
-;; leaves already trivial expressions identical
-(def (generate-trivial-handle expr)
-  (if (trivial-expr? expr)
-    expr
-    (identifier-fresh #'tmp)))
-
-;; anf-exprs : [Listof ExprStx] -> [Listof ExprStx]
-;; maps each of a list of ExprStx to a trivial handle
-(def (generate-trivial-handles exprs)
-  (map generate-trivial-handle exprs))
-
 ;; anf-exprs : [Listof ExprStx] MaybeParticipant [Listof StmtStx] -> [Listof ExprStx] [Listof StmtStx]
 ;; reduces a list of ExprStx and accumulate statements to the (reversed) list of StmtStx
-(def (anf-exprs exprs participant acc)
-  (define xs (generate-trivial-handles exprs))
-  (values xs
-          (for/fold (acc acc) ((x xs) (expr exprs))
-            (if (eq? x expr) acc
-                (with-syntax ((x x) (expr expr))
-                  (anf-stmt #'(def x expr) participant acc))))))
+(def (anf-exprs exprs participant stmts)
+  (cons->values
+   (for/fold (acc [[] . stmts]) ((expr exprs))
+     (let-values (((ts stmts) (cons->values acc)))
+       (if (trivial-expr? expr)
+         (cons (cons expr ts) stmts)
+         (let-values (((expr stmts) (anf-expr expr participant stmts)))
+           (let ((t (identifier-fresh #'tmp)))
+             (cons (cons t ts)
+                   (with-syntax ((t t) (expr expr))
+                     (anf-stmt #'(def t expr) participant stmts))))))))))
 
 ;; anf-standalone-expr : ExprStx MaybeParticipant -> ExprStx
 ;; reduces an ExprStx to a reduced block ExprStx
 (def (anf-standalone-expr expr participant)
   (let-values (((reduced acc) (anf-expr expr participant [])))
-    (restx expr `(,#'block ,@(reverse acc) ,reduced))))
+    (if (null? acc) reduced
+        (restx expr `(,#'block ,@(reverse acc) ,reduced)))))
 
 ;; anf-multiarg-expr : ExprStx MaybeParticipant [Listof StmtStx] -> (values ExprStx [Listof StmtStx])
 (def (anf-multiarg-expr stx participant acc)
