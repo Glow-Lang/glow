@@ -3,7 +3,7 @@
   (0 "zero")
   (1 "one")
   (2 "two")
-  (_ (if (< 0 i) "many" "negative")))
+  (_ (if (@app < 0 i) "many" "negative")))
 
 (def b #f)
 (switch b
@@ -24,18 +24,20 @@
   (_ "other"))
 
 (def p (@tuple 1 2))
-(switch p ((@tuple a b0) (+ a b0)))
+(switch p ((@tuple a b0) (@app + a b0)))
 
 (def v (@record (x 3) (y 4)))
 (switch v
-  ((@record (x x) (y y)) (sqrt (+ (sqr x) (sqr y)))))
+  ((@record (x x) (y y))
+   (@app sqrt (@app + (@app sqr x) (@app sqr y)))))
 
 (defdata lcexpr
   (Var int)
   (Lam lcexpr)
   (App lcexpr lcexpr))
-(def omega (App (Lam (App (Var 0) (Var 0)))
-                (Lam (App (Var 0) (Var 0)))))
+(def omega
+  (@app App (@app Lam (@app App (@app Var 0) (@app Var 0)))
+            (@app Lam (@app App (@app Var 0) (@app Var 0)))))
 (def freevars
   (λ ((e : lcexpr))
     (switch e
@@ -44,7 +46,7 @@
 (switch omega
   ((App (Lam b1) a0) "beta")
   ((Lam (App f (Var 0)))
-   (if (not (member 0 (freevars f)))
+   (if (@app not (@app member 0 (@app freevars f)))
        "eta"
        "not immediate"))
   (_ "not immediate"))
@@ -61,7 +63,7 @@
     (switch a2
       (Yes #t)
       ((@or-pat No Maybe) #f))))
-(switch (@tuple (possible ans) (definite ans))
+(switch (@tuple (@app possible ans) (@app definite ans))
   ((@tuple #t #t) "yes")
   ((@tuple #t #f) "maybe")
   ((@tuple #f #f) "no")
