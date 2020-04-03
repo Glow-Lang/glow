@@ -3,7 +3,7 @@
 (import :gerbil/gambit/bytes
         <expander-runtime>
         :std/misc/repr :gerbil/gambit/hash :gerbil/expander/common
-        (for-template :glow/compiler/syntax-context)
+        :glow/compiler/syntax-context
         :std/format
         :std/iter
         :clan/utils/base

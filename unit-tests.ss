@@ -1,7 +1,7 @@
 #!/usr/bin/env gxi
 
 (import
-  :std/test
+  :std/iter :std/test
   :clan/utils/exit
   :glow/compiler/syntax-context ;; important for the parsing to work (!)
   :glow/config/path :glow/compiler/passes :glow/compiler/multipass
@@ -14,10 +14,10 @@
   (eval-print-exit
    (match args
      ([] (main "all"))
-     (["all"] (run-tests (find-test-files ".")))
-     (["alpha-convert-test"] (try-alpha-convert-all))
-     (["test" . files] (run-tests files))
-     (["process" . files] (for-each run-passes files))
+     (["all"] (silent-exit (run-tests (find-test-files "."))))
+     (["alpha-convert-test"] (silent-exit (try-alpha-convert-all)))
+     (["test" . files] (silent-exit (run-tests files)))
+     (["process" . files] (for-each run-passes files) (silent-exit))
      (["pass" pass . files]
       ;; Given a pass by name, and for each specified files,
       ;; identify the language in which the file is written, by file extension,
