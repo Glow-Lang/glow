@@ -20,7 +20,7 @@
     (@ A (def handA (inputHand "First player, pick your hand")))
     ;;(@ A (assert! (canReach end (== (@dot end outcome) A_Wins))))
     (@ A (def salt (randomUInt256)))
-    (@ A (@ verifiably (def commitment (digest salt handA))))
+    (@ A (@ verifiably (def commitment (digest (@tuple salt handA)))))
     (@ A (publish! commitment))
     (@ A (deposit! wagerAmount))
 

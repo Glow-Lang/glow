@@ -53,6 +53,7 @@
   :glow/compiler/passes :glow/compiler/multipass :glow/compiler/common
   :glow/compiler/alpha-convert/symbolnat :glow/compiler/alpha-convert/fresh
   :glow/compiler/alpha-convert/alpha-convert
+  :glow/compiler/desugar/desugar
   :glow/compiler/anf/anf
 
   ;; Testing Glow
