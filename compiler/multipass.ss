@@ -17,9 +17,7 @@
   :std/format :std/iter :std/misc/ports :std/misc/string
   :std/srfi/1 :std/srfi/13 :std/sugar
   :clan/utils/base :clan/utils/files
-  ;; :glow/compiler/parse/parse
-  :glow/compiler/common
-  )
+  :glow/compiler/common)
 
 ;; A language has a name, a reader and a writer.
 ;; - The name, a string, is the file extension of corresponding source files (e.g. ".glow").
