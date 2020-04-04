@@ -55,7 +55,7 @@
   '(@ : quote ann @dot @tuple @record @list @app
     def deftype defdata
     if and or
-    block switch λ
+    block splice switch λ
     input digest
     interaction verifiably publicly @interaction @verifiably @publicly
     publish! verify! require! assert! deposit! withdraw!))
@@ -76,12 +76,8 @@
     (def init-env
       (for/fold (acc empty-symdict) ((x init-syms))
         (symdict-put acc x (entry (symbol-fresh x) #f))))
-    (let loop ((env init-env) (stmts stmts) (acc []))
-      (match stmts
-        ([] (values (reverse acc) (current-unused-table) env))
-        ([stmt . rst]
-         (let-values (((env2 stmt2) (alpha-convert-stmt env stmt)))
-           (loop (env-put/env env env2) rst (cons stmt2 acc))))))))
+    (defvalues (env2 stmts2) (alpha-convert-stmts init-env stmts))
+    (values stmts2 (current-unused-table) env2)))
 
 ;; alpha-convert-type : Env TypeStx -> TypeStx
 (def (alpha-convert-type env stx)
@@ -106,7 +102,7 @@
 (def (alpha-convert-expr env stx)
   ;; ace : ExprStx -> ExprStx
   (def (ace e) (alpha-convert-expr env e))
-  (syntax-case stx (@ ann @dot @tuple @record @list @app if and or block switch λ input digest require! assert! deposit! withdraw!)
+  (syntax-case stx (@ ann @dot @tuple @record @list @app if and or block splice switch λ input digest require! assert! deposit! withdraw!)
     ((@ _ _) (error 'alpha-convert-expr "TODO: deal with @"))
     ((ann expr type)
      (restx stx [(stx-car stx) (ace #'expr) (alpha-convert-type env #'type)]))
@@ -125,6 +121,8 @@
             (cons (stx-car stx)
                   (stx-map (lambda (x e) [x (ace e)]) #'(x ...) #'(e ...)))))
     ((block b ...)
+     (restx stx (cons (stx-car stx) (alpha-convert-body env (syntax->list #'(b ...))))))
+    ((splice b ...)
      (restx stx (cons (stx-car stx) (alpha-convert-body env (syntax->list #'(b ...))))))
     ((if c t e)
      (restx stx [(stx-car stx) (ace #'c) (ace #'t) (ace #'e)]))
@@ -231,10 +229,20 @@
                    (alpha-convert-body (env-put/env env env2)
                                        (syntax->list #'(body ...)))))))))
 
+;; alpha-convert-stmts : Env [Listof StmtStx] -> (values Env [Listof StmtStx])
+;; the env result contains only the new symbols introduced by the statements
+(def (alpha-convert-stmts env stmts)
+  (let loop ((env env) (stmts stmts) (accenv empty-symdict) (accstmts []))
+    (match stmts
+      ([] (values accenv (reverse accstmts)))
+      ([stmt . rst]
+       (let-values (((env2 stmt2) (alpha-convert-stmt env stmt)))
+         (loop (env-put/env env env2) rst (env-put/env accenv env2) (cons stmt2 accstmts)))))))
+
 ;; alpha-convert-stmt : Env StmtStx -> (values Env StmtStx)
 ;; the env result contains only the new symbols introduced by the statement
 (def (alpha-convert-stmt env stx)
-  (syntax-case stx (@ interaction verifiably publicly @interaction @verifiably @publicly : quote def λ deftype defdata publish! verify!)
+  (syntax-case stx (@ interaction verifiably publicly @interaction @verifiably @publicly splice : quote def λ deftype defdata publish! verify!)
     ((@ (interaction . _) _) (ac-stmt-atinteraction env (at-prefix-normalize stx)))
     ((@ verifiably _) (ac-stmt-wrap-simple-keyword env (at-prefix-normalize stx)))
     ((@ publicly _) (ac-stmt-wrap-simple-keyword env (at-prefix-normalize stx)))
@@ -242,6 +250,7 @@
     ((@verifiably _) (ac-stmt-wrap-simple-keyword env stx))
     ((@publicly _) (ac-stmt-wrap-simple-keyword env stx))
     ((@ p _) (identifier? #'p) (ac-stmt-at-participant env stx))
+    ((splice s ...) (ac-stmt-splice env stx))
     ((deftype . _) (ac-stmt-deftype env stx))
     ((defdata . _) (ac-stmt-defdata env stx))
     ((def . _) (ac-stmt-def env stx))
@@ -277,6 +286,13 @@
      (with-syntax ((p2 (identifier-refer env #'p)))
        (let-values (((env2 s2) (alpha-convert-stmt env #'s)))
          (values env2 (restx stx [#'a #'p2 s2])))))))
+
+;; ac-stmt-splice : Env StmtStx -> (values Env StmtStx)
+(def (ac-stmt-splice env stx)
+  (syntax-case stx ()
+    ((spl s ...)
+     (let-values (((env2 s2) (alpha-convert-stmts env (syntax->list #'(s ...)))))
+       (values env2 (restx stx (cons #'spl s2)))))))
 
 ;; ac-stmt-deftype : Env StmtStx -> (values Env StmtStx)
 ;; the env result contains only the new symbols introduced by the statement
