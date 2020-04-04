@@ -82,20 +82,26 @@
 (def (trivial-expr? expr)
   (or (identifier? expr) (stx-atomic-literal? expr)))
 
-;; anf-exprs : [Listof ExprStx] [Listof StmtStx] -> [Listof ExprStx] [Listof StmtStx]
+;; anf-arg-expr : ExprStx [Listof StmtStx] -> (values ExprStx [ListofStmtStx])
+;; Produces an output expr that's trivial, as an argument in a function application
+(def (anf-arg-expr expr stmts)
+  (let-values (((expr stmts) (anf-expr expr stmts)))
+    (if (trivial-expr? expr)
+      (values expr stmts)
+      (let ((t (identifier-fresh #'tmp)))
+        (values t
+                (with-syntax ((t t) (expr expr))
+                  (anf-stmt #'(def t expr) stmts)))))))
+
+;; anf-arg-exprs : [Listof ExprStx] [Listof StmtStx] -> [Listof ExprStx] [Listof StmtStx]
 ;; reduces a list of ExprStx and accumulate statements to the (reversed) list of StmtStx
-(def (anf-exprs exprs stmts)
+(def (anf-arg-exprs exprs stmts)
   (let loop ((exprs exprs) (ts []) (stmts stmts))
     (match exprs
       ([] (values (reverse ts) stmts))
       ([expr . rst]
-       (if (trivial-expr? expr)
-         (loop rst (cons expr ts) stmts)
-         (let-values (((expr stmts) (anf-expr expr stmts)))
-           (let ((t (identifier-fresh #'tmp)))
-             (loop rst (cons t ts)
-                   (with-syntax ((t t) (expr expr))
-                     (anf-stmt #'(def t expr) stmts))))))))))
+       (let-values (((t stmts) (anf-arg-expr expr stmts)))
+         (loop rst (cons t ts) stmts))))))
 
 ;; anf-standalone-expr : ExprStx -> ExprStx
 ;; reduces an ExprStx to a reduced block ExprStx
@@ -108,7 +114,7 @@
 (def (anf-multiarg-expr stx acc)
   (syntax-case stx ()
     ((hd args ...)
-     (let-values (((xs acc) (anf-exprs (syntax->list #'(args ...)) acc)))
+     (let-values (((xs acc) (anf-arg-exprs (syntax->list #'(args ...)) acc)))
        (values (restx stx [#'hd . xs]) acc)))))
 
 ;; anf-expr : ExprStx [Listof StmtStx] -> (values ExprStx [Listof StmtStx])
@@ -118,32 +124,32 @@
     (x (identifier? #'x) (values stx acc))
     (lit (stx-atomic-literal? #'lit) (values stx acc))
     ((ann expr type)
-     (let-values (((reduced-expr acc) (anf-expr #'expr acc)))
+     (let-values (((reduced-expr acc) (anf-arg-expr #'expr acc)))
        (values (restx stx [(stx-car stx) reduced-expr #'type]) acc)))
     ((@tuple e ...) (anf-multiarg-expr stx acc))
     ((@list e ...) (anf-multiarg-expr stx acc))
     ((@record (x e) ...)
      (and (stx-andmap identifier? #'(x ...))
           (check-duplicate-identifiers #'(x ...)))
-     (let-values (((rs acc) (anf-exprs (syntax->list #'(e ...)) acc)))
+     (let-values (((rs acc) (anf-arg-exprs (syntax->list #'(e ...)) acc)))
        (values (restx stx (cons (stx-car stx) (map list (syntax->list #'(x ...)) rs))) acc)))
     ((block b ...) (anf-body #'(b ...) acc))
     ((splice b ...) (anf-body #'(b ...) acc))
     ((and . _) (anf-and-or stx acc))
     ((or . _) (anf-and-or stx acc))
     ((if c t e)
-     (let-values (((rc acc) (anf-expr #'c acc)))
+     (let-values (((rc acc) (anf-arg-expr #'c acc)))
        (values (restx stx [(stx-car stx) rc (anf-standalone-expr #'t)
                            (anf-standalone-expr #'e)])
                acc)))
     ((switch e swcase ...)
-     (let-values (((re acc) (anf-expr #'e acc)))
+     (let-values (((re acc) (anf-arg-expr #'e acc)))
        (values (restx stx (cons* (stx-car stx) re
                                  (stx-map anf-switch-case #'(swcase ...))))
                acc)))
     ((λ . _) (values (anf-lambda stx) acc))
     ((input type tag)
-     (let-values (((rtag acc) (anf-expr #'tag acc)))
+     (let-values (((rtag acc) (anf-arg-expr #'tag acc)))
        (values (restx stx [(stx-car stx) #'type rtag]) acc)))
     ((require! e) (anf-multiarg-expr stx acc))
     ((assert! e) (anf-multiarg-expr stx acc))
@@ -168,8 +174,12 @@
   (syntax-case stx ()
     ((ao) (values stx acc))
     ((ao e) (anf-multiarg-expr stx acc))
+    ((ao e e2)
+     (let-values (((re acc) (anf-arg-expr #'e acc)))
+       (values (restx1 stx [#'ao re (anf-standalone-expr #'e2)])
+               acc)))
     ((ao e . rst)
-     (let-values (((re acc) (anf-expr #'e acc)))
+     (let-values (((re acc) (anf-arg-expr #'e acc)))
        (values (restx1 stx [#'ao re (anf-standalone-expr #'(ao . rst))])
                acc)))))
 
