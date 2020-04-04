@@ -35,12 +35,13 @@
 ;; in reversed order at the beginning of the accumulator acc
 ;; INVARIANT: (anf-stmt stx acc) = (append (anf-stmt stx []) acc)
 (def (anf-stmt stx acc)
-  (syntax-case stx (@ @interaction @verifiably @publicly : quote def deftype defdata publish! verify! deposit!)
+  (syntax-case stx (@ @interaction @verifiably @publicly splice : quote def deftype defdata publish! verify! deposit!)
     ((@interaction x s) (append (anf-at-interaction stx) acc))
     ;; TODO: delete cases for @verifiably and @publicly once they are desugared away in a previous pass
     ((@verifiably . _) (cons stx acc))
     ((@publicly . _) (cons stx acc))
     ((@ p s) (identifier? #'p) (append (anf-at-participant stx) acc))
+    ((splice s ...) (anf-stmts (syntax->list #'(s ...)) acc))
     ((defdata . _) (cons stx acc))
     ((deftype . _) (cons stx acc))
     ((publish! . _) (cons stx acc))
