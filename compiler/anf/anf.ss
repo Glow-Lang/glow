@@ -35,12 +35,17 @@
 ;; in reversed order at the beginning of the accumulator acc
 ;; INVARIANT: (anf-stmt stx acc) = (append (anf-stmt stx []) acc)
 (def (anf-stmt stx acc)
-  (syntax-case stx (@ @interaction verifiably publicly : quote def deftype defdata publish! deposit!)
+  (syntax-case stx (@ @interaction @verifiably @publicly : quote def deftype defdata publish! verify! deposit!)
     ((@interaction x s) (append (anf-at-interaction stx) acc))
+    ;; TODO: delete cases for @verifiably and @publicly once they are desugared away in a previous pass
+    ((@verifiably . _) (cons stx acc))
+    ((@publicly . _) (cons stx acc))
     ((@ p s) (identifier? #'p) (append (anf-at-participant stx) acc))
     ((defdata . _) (cons stx acc))
     ((deftype . _) (cons stx acc))
     ((publish! . _) (cons stx acc))
+    ;; TODO: delete case for verify! once it's desugared away in a previous pass
+    ((verify! . _) (cons stx acc))
     ((def . _) (anf-def stx acc))
     (expr (let-values (((reduced-expr acc) (anf-expr stx acc)))
             (cons reduced-expr acc)))))
@@ -80,14 +85,15 @@
 ;; anf-exprs : [Listof ExprStx] [Listof StmtStx] -> [Listof ExprStx] [Listof StmtStx]
 ;; reduces a list of ExprStx and accumulate statements to the (reversed) list of StmtStx
 (def (anf-exprs exprs stmts)
-  (cons->values
-   (for/fold (acc [[] . stmts]) ((expr exprs))
-     (let-values (((ts stmts) (cons->values acc)))
+  (let loop ((exprs exprs) (ts []) (stmts stmts))
+    (match exprs
+      ([] (values (reverse ts) stmts))
+      ([expr . rst]
        (if (trivial-expr? expr)
-         (cons (cons expr ts) stmts)
+         (loop rst (cons expr ts) stmts)
          (let-values (((expr stmts) (anf-expr expr stmts)))
            (let ((t (identifier-fresh #'tmp)))
-             (cons (cons t ts)
+             (loop rst (cons t ts)
                    (with-syntax ((t t) (expr expr))
                      (anf-stmt #'(def t expr) stmts))))))))))
 
@@ -107,7 +113,7 @@
 
 ;; anf-expr : ExprStx [Listof StmtStx] -> (values ExprStx [Listof StmtStx])
 (def (anf-expr stx acc)
-  (syntax-case stx (@ ann @tuple @record @list @app if block splice switch λ require! assert! deposit! withdraw!)
+  (syntax-case stx (@ ann @tuple @record @list @app and or if block splice switch λ input require! assert! deposit! withdraw!)
     ((@ _ _) (error 'anf-expr "TODO: deal with @"))
     (x (identifier? #'x) (values stx acc))
     (lit (stx-atomic-literal? #'lit) (values stx acc))
@@ -123,6 +129,8 @@
        (values (restx stx (cons (stx-car stx) (map list (syntax->list #'(x ...)) rs))) acc)))
     ((block b ...) (anf-body #'(b ...) acc))
     ((splice b ...) (anf-body #'(b ...) acc))
+    ((and . _) (anf-and-or stx acc))
+    ((or . _) (anf-and-or stx acc))
     ((if c t e)
      (let-values (((rc acc) (anf-expr #'c acc)))
        (values (restx stx [(stx-car stx) rc (anf-standalone-expr #'t)
@@ -134,6 +142,9 @@
                                  (stx-map anf-switch-case #'(swcase ...))))
                acc)))
     ((λ . _) (values (anf-lambda stx) acc))
+    ((input type tag)
+     (let-values (((rtag acc) (anf-expr #'tag acc)))
+       (values (restx stx [(stx-car stx) #'type rtag]) acc)))
     ((require! e) (anf-multiarg-expr stx acc))
     ((assert! e) (anf-multiarg-expr stx acc))
     ((deposit! e) (anf-multiarg-expr stx acc))
@@ -150,6 +161,17 @@
 (def (anf-standalone-body stx)
   (let-values (((e acc) (anf-body stx [])))
     (reverse (anf-stmt e acc))))
+
+;; anf-and-or : ExprStx [Listof StmtStx] -> (values ExprStx [Listof StmtStx])
+;; Assume associativity, handle short-circuiting
+(def (anf-and-or stx acc)
+  (syntax-case stx ()
+    ((ao) (values stx acc))
+    ((ao e) (anf-multiarg-expr stx acc))
+    ((ao e . rst)
+     (let-values (((re acc) (anf-expr #'e acc)))
+       (values (restx1 stx [#'ao re (anf-standalone-expr #'(ao . rst))])
+               acc)))))
 
 ;; anf-switch-case : SwitchCaseStx -> SwitchCaseStx
 (def (anf-switch-case stx)

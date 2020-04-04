@@ -9,6 +9,6 @@
         (def y
           (if b
               (block (def tmp (@app f x)) (@app g tmp))
-              (block (def tmp0 (@app g x)) (@app f tmp)))))
+              (block (def tmp0 (@app g x)) (@app f tmp0)))))
       (@tuple))))
 
