@@ -1,10 +1,13 @@
 (export #t)
 
 (import :gerbil/gambit/bytes
-        <expander-runtime>
+        <expander-runtime> :gerbil/expander/common
         (for-template :glow/compiler/syntax-context)
+        :std/misc/repr :gerbil/gambit/hash
+        :glow/compiler/syntax-context
         :std/format
         :std/iter
+        :std/misc/list
         :clan/utils/base
         :clan/utils/files)
 
@@ -78,7 +81,6 @@
          (else
           (stx-sexpr=?/recur a b stx-deep-source=?)))))
 
-
 ;; TODO: do we need to properly parameterize the context (?)
 (def (read-sexp-file file)
   (read-syntax-from-file file))
@@ -87,3 +89,33 @@
 (def (write-sexps statements (port (current-output-port)))
   (for ((stmt statements))
     (fprintf port "~y" (syntax->datum stmt))))
+
+;; Splice multiple statements if needed, otherwise just include a single one
+;; spice-stmts : Stx [listof StmtStx] -> StmtStx
+(def (splice-stmts stx stmts)
+  (if (length=n? stmts 1) (car stmts) (restx stx (cons #'splice stmts))))
+
+;; Recursively splice out any splice statement into the list of statements
+;; spice-stmts : [listof StmtStx] [listof StmtStx] -> [listof StmtStx]
+(def (unsplice-stmts stmts (acc []))
+  (for/fold (acc acc) ((stmt stmts))
+    (syntax-case stmt (splice)
+      ((splice . body) (unsplice-stmts (syntax->list #'body) acc))
+      (_ (cons stmt acc)))))
+
+;; at-stx : MaybeParticipant StmtStx -> StmtStx
+(def (at-stx participant stx)
+  (if participant
+    (restx stx [#'@ participant stx])
+    stx))
+
+;; retail-stx : Stx [listof Stx] -> Stx
+(def (retail-stx stx tail)
+  (restx stx [(stx-car stx) . tail]))
+
+;; TODO: move this to std/misc/repr ?
+(defmethod {:pr AST}
+  (λ (object (port (current-output-port)) (options (current-representation-options)))
+    (def (d x) (display x port))
+    (def (w x) (write x port))
+    (d "(begin0 #") (d (object->serial-number object)) (d " #'") (w (syntax->datum object)) (d ")")))

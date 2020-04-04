@@ -1,9 +1,11 @@
 (export #t)
 
 (import :std/iter :std/srfi/1
+        :std/misc/repr :clan/utils/debug ;; DEBUG
         <expander-runtime>
         (for-template :glow/compiler/syntax-context)
         :glow/compiler/syntax-context
+        :clan/utils/base
         ../common
         ../alpha-convert/fresh)
 
@@ -23,6 +25,7 @@
 ;; anf-stmts : [Listof StmtStx] [Listof StmtStx] -> [Listof StmtStx]
 ;; the first argument is list of statements *to reduce*
 ;; the second argument is a reversed list of accumulated *reduced* statements
+;; INVARIANT: (anf-stmts stmts acc) = (append (anf-stmts stmts []) acc)
 (def (anf-stmts stmts acc)
   (for/fold (acc acc) ((stmt stmts))
     (anf-stmt stmt acc)))
@@ -30,16 +33,39 @@
 ;; anf-stmt : StmtStx [Listof StmtStx] -> [Listof StmtStx]
 ;; accumulate new reduced statements for the current unreduced statement,
 ;; in reversed order at the beginning of the accumulator acc
+;; INVARIANT: (anf-stmt stx acc) = (append (anf-stmt stx []) acc)
 (def (anf-stmt stx acc)
-  (syntax-case stx (@ : quote def deftype defdata publish! verify!)
-    ((@ _ _) (error 'anf-stmt "TODO: deal with @"))
+  (syntax-case stx (@ @interaction @verifiably @publicly splice : quote def deftype defdata publish! verify! deposit!)
+    ((@interaction x s) (append (anf-at-interaction stx) acc))
+    ;; TODO: delete cases for @verifiably and @publicly once they are desugared away in a previous pass
+    ((@verifiably . _) (cons stx acc))
+    ((@publicly . _) (cons stx acc))
+    ((@ p s) (identifier? #'p) (append (anf-at-participant stx) acc))
+    ((splice s ...) (anf-stmts (syntax->list #'(s ...)) acc))
     ((defdata . _) (cons stx acc))
     ((deftype . _) (cons stx acc))
     ((publish! . _) (cons stx acc))
+    ;; TODO: delete case for verify! once it's desugared away in a previous pass
     ((verify! . _) (cons stx acc))
     ((def . _) (anf-def stx acc))
     (expr (let-values (((reduced-expr acc) (anf-expr stx acc)))
             (cons reduced-expr acc)))))
+
+;; anf-at-interaction : StmtStx -> [Listof StmtStx]
+(def (anf-at-interaction stx)
+  (syntax-case stx ()
+    ((a x s)
+     (match (anf-stmt #'s [])
+       ([s2 . more]
+        (assert! (null? more))
+        [(restx stx [#'a #'x s2])])))))
+
+;; anf-at-participant : StmtStx -> [Listof StmtStx]
+;; Returns the result statements in reverse order
+(def (anf-at-participant stx)
+  (syntax-case stx ()
+    ((at p s) (identifier? #'p)
+     (map (lambda (s2) (restx1 stx [#'at #'p s2])) (anf-stmt #'s [])))))
 
 ;; anf-def : StmtStx [Listof StmtStx] -> [Listof StmtStx]
 (def (anf-def stx acc)
@@ -57,80 +83,80 @@
 (def (trivial-expr? expr)
   (or (identifier? expr) (stx-atomic-literal? expr)))
 
-;; generate-trivial-handle : ExprStx -> ExprStx
-;; generates a trivial expression handle for expressions that aren't already trivial,
-;; leaves already trivial expressions identical
-(def (generate-trivial-handle expr)
-  (if (trivial-expr? expr)
-    expr
-    (identifier-fresh #'tmp)))
+;; anf-arg-expr : ExprStx [Listof StmtStx] -> (values ExprStx [ListofStmtStx])
+;; Produces an output expr that's trivial, as an argument in a function application
+(def (anf-arg-expr expr stmts)
+  (let-values (((expr stmts) (anf-expr expr stmts)))
+    (if (trivial-expr? expr)
+      (values expr stmts)
+      (let ((t (identifier-fresh #'tmp)))
+        (values t
+                (with-syntax ((t t) (expr expr))
+                  (anf-stmt #'(def t expr) stmts)))))))
 
-;; anf-exprs : [Listof ExprStx] -> [Listof ExprStx]
-;; maps each of a list of ExprStx to a trivial handle
-(def (generate-trivial-handles exprs)
-  (map generate-trivial-handle exprs))
-
-;; anf-exprs : [Listof ExprStx] [Listof StmtStx] -> [Listof ExprStx] [Listof StmtStx]
+;; anf-arg-exprs : [Listof ExprStx] [Listof StmtStx] -> [Listof ExprStx] [Listof StmtStx]
 ;; reduces a list of ExprStx and accumulate statements to the (reversed) list of StmtStx
-(def (anf-exprs exprs acc)
-  (define xs (generate-trivial-handles exprs))
-  (values xs
-          (for/fold (acc acc) ((x xs) (expr exprs))
-            (if (eq? x expr) acc
-                (with-syntax ((x x) (expr expr))
-                  (anf-stmt #'(def x expr) acc))))))
+(def (anf-arg-exprs exprs stmts)
+  (let loop ((exprs exprs) (ts []) (stmts stmts))
+    (match exprs
+      ([] (values (reverse ts) stmts))
+      ([expr . rst]
+       (let-values (((t stmts) (anf-arg-expr expr stmts)))
+         (loop rst (cons t ts) stmts))))))
 
 ;; anf-standalone-expr : ExprStx -> ExprStx
 ;; reduces an ExprStx to a reduced block ExprStx
 (def (anf-standalone-expr expr)
   (let-values (((reduced acc) (anf-expr expr [])))
-    (restx expr `(,#'block ,@(reverse acc) ,reduced))))
+    (if (null? acc) reduced
+        (restx expr `(,#'block ,@(reverse acc) ,reduced)))))
+
+;; anf-multiarg-expr : ExprStx [Listof StmtStx] -> (values ExprStx [Listof StmtStx])
+(def (anf-multiarg-expr stx acc)
+  (syntax-case stx ()
+    ((hd args ...)
+     (let-values (((xs acc) (anf-arg-exprs (syntax->list #'(args ...)) acc)))
+       (values (restx stx [#'hd . xs]) acc)))))
 
 ;; anf-expr : ExprStx [Listof StmtStx] -> (values ExprStx [Listof StmtStx])
 (def (anf-expr stx acc)
-  (def (anf-multiarg-expr stx acc)
-    (let-values (((xs acc) (anf-exprs (syntax->list (stx-cdr stx)) acc)))
-      (values (restx stx [(stx-car stx) . xs]) acc)))
-
-  (def (anf-onearg-expr stx acc)
-     (let-values (((re acc) (anf-expr #'e acc)))
-       (values (restx stx [(stx-car stx) re]) acc)))
-
-  (syntax-case stx (@ ann @tuple @record @list @app if block switch λ require! assert! deposit! withdraw!)
+  (syntax-case stx (@ ann @tuple @record @list @app and or if block splice switch λ input require! assert! deposit! withdraw!)
     ((@ _ _) (error 'anf-expr "TODO: deal with @"))
     (x (identifier? #'x) (values stx acc))
     (lit (stx-atomic-literal? #'lit) (values stx acc))
     ((ann expr type)
-     (let-values (((reduced-expr acc) (anf-expr #'expr acc)))
-       (cons (restx stx [(stx-car stx) reduced-expr #'type]) acc)))
+     (let-values (((reduced-expr acc) (anf-arg-expr #'expr acc)))
+       (values (restx stx [(stx-car stx) reduced-expr #'type]) acc)))
     ((@tuple e ...) (anf-multiarg-expr stx acc))
     ((@list e ...) (anf-multiarg-expr stx acc))
     ((@record (x e) ...)
      (and (stx-andmap identifier? #'(x ...))
           (check-duplicate-identifiers #'(x ...)))
-     (let-values (((rs acc) (anf-exprs (syntax->list #'(e ...)) acc)))
-       (values (restx stx (cons (stx-car stx) (map list #'(x ...) rs))) acc)))
-    ((block b ...)
-     (anf-body #'(b ...) acc))
+     (let-values (((rs acc) (anf-arg-exprs (syntax->list #'(e ...)) acc)))
+       (values (restx stx (cons (stx-car stx) (map list (syntax->list #'(x ...)) rs))) acc)))
+    ((block b ...) (anf-body #'(b ...) acc))
+    ((splice b ...) (anf-body #'(b ...) acc))
+    ((and . _) (anf-and-or stx acc))
+    ((or . _) (anf-and-or stx acc))
     ((if c t e)
-     (let-values (((rc acc) (anf-expr #'c acc)))
-       (values (restx stx [(stx-car stx) rc (anf-standalone-expr #'t) (anf-standalone-expr #'e)])
+     (let-values (((rc acc) (anf-arg-expr #'c acc)))
+       (values (restx stx [(stx-car stx) rc (anf-standalone-expr #'t)
+                           (anf-standalone-expr #'e)])
                acc)))
     ((switch e swcase ...)
-     (let-values (((re acc) (anf-expr #'e acc)))
-       (values (restx stx (cons* (stx-car stx) re (stx-map anf-switch-case #'(swcase ...))))
+     (let-values (((re acc) (anf-arg-expr #'e acc)))
+       (values (restx stx (cons* (stx-car stx) re
+                                 (stx-map anf-switch-case #'(swcase ...))))
                acc)))
-    ((λ . _)
-     (values (anf-lambda stx) acc))
-    ((require! e) (anf-onearg-expr stx acc))
-    ((assert! e) (anf-onearg-expr stx acc))
-    ((deposit! e) (anf-onearg-expr stx acc))
-    ((withdraw! x e) (identifier? #'x)
-     (let-values (((re acc) (anf-expr #'e acc)))
-       (restx stx [(stx-car stx) #'x re]) acc))
-    ((@app f a ...) (identifier? #'f)
-     (let-values (((ras acc) (anf-exprs (syntax->list #'(a ...)) acc)))
-       (values (restx stx (cons (stx-car stx) ras)) acc)))))
+    ((λ . _) (values (anf-lambda stx) acc))
+    ((input type tag)
+     (let-values (((rtag acc) (anf-arg-expr #'tag acc)))
+       (values (restx stx [(stx-car stx) #'type rtag]) acc)))
+    ((require! e) (anf-multiarg-expr stx acc))
+    ((assert! e) (anf-multiarg-expr stx acc))
+    ((deposit! e) (anf-multiarg-expr stx acc))
+    ((@app e ...) (anf-multiarg-expr stx acc))
+    ((withdraw! x e) (identifier? #'x) (anf-multiarg-expr stx acc))))
 
 ;; anf-body : StmtsStx [Listof StmtStx] -> (values ExprStx [Listof StmtStx])
 (def (anf-body stx acc)
@@ -141,7 +167,22 @@
 ;; anf-standalone-body : StmtsStx -> [Listof StmtStx]
 (def (anf-standalone-body stx)
   (let-values (((e acc) (anf-body stx [])))
-    (append-reverse acc (list e))))
+    (reverse (anf-stmt e acc))))
+
+;; anf-and-or : ExprStx [Listof StmtStx] -> (values ExprStx [Listof StmtStx])
+;; Assume associativity, handle short-circuiting
+(def (anf-and-or stx acc)
+  (syntax-case stx ()
+    ((ao) (values stx acc))
+    ((ao e) (anf-multiarg-expr stx acc))
+    ((ao e e2)
+     (let-values (((re acc) (anf-arg-expr #'e acc)))
+       (values (restx1 stx [#'ao re (anf-standalone-expr #'e2)])
+               acc)))
+    ((ao e . rst)
+     (let-values (((re acc) (anf-arg-expr #'e acc)))
+       (values (restx1 stx [#'ao re (anf-standalone-expr #'(ao . rst))])
+               acc)))))
 
 ;; anf-switch-case : SwitchCaseStx -> SwitchCaseStx
 (def (anf-switch-case stx)
@@ -153,9 +194,9 @@
 (def (anf-lambda stx)
   (syntax-case stx (: λ)
     ((l params : out-type body ...)
-     (restx stx `(,#'l params : ,#'out-type ,@(anf-standalone-body #'(body ...)))))
+     (restx stx (cons* #'l #'params ': #'out-type (anf-standalone-body #'(body ...)))))
     ((l params body ...)
-     (restx stx `(,#'l params ,@(anf-standalone-body #'(body ...)))))))
+     (restx stx (cons* #'l #'params (anf-standalone-body #'(body ...)))))))
 
 ;; Conform to pass convention.
 ;; anf : [Listof StmtStx] UnusedTable Env -> (values [Listof StmtStx] UnusedTable Env)
