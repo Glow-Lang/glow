@@ -16,6 +16,7 @@
         :clan/pure/dict/assq
         :clan/pure/dict/symdict
         "../common.ss"
+        "../alpha-convert/fresh.ss"
         (except-in "../alpha-convert/alpha-convert.ss" env-put/env not-bound-as-ctor? bound-as-ctor?)
         "variance.ss"
         "type.ss")
@@ -531,12 +532,21 @@
 
 ;; tc-prog : [Listof StmtStx] -> Env
 (def (tc-prog stmts)
-  (defvalues (stmts2 _unused-table acrenom) (alpha-convert stmts))
-  (parameterize ((current-symbol-ntype-table (make-symbol-ntype-table)))
-    (defvalues (penv nenv) (tc-stmts #f init-env stmts2))
+  (defvalues (stmts2 unused-table alpha-env) (alpha-convert stmts))
+  (defvalues (_stmts2 _unused-table _alpha-env penv) (typecheck stmts2 unused-table alpha-env))
+  penv)
+
+;; typecheck : [Listof Stmt] UnusedTable AlphaEnv → (values [Listof Stmt] UnusedTable AlphaEnv Env)
+;; Input stmts is after alpha-conversion, output stmts and alpha-env are the exact same.
+;; Output unused-table is the same value as input, but this value is mutated.
+;; Output env has types of top-level identifiers.
+(def (typecheck stmts unused-table alpha-env)
+  (parameterize ((current-unused-table unused-table)
+                 (current-symbol-ntype-table (make-symbol-ntype-table)))
+    (defvalues (penv nenv) (tc-stmts #f init-env stmts))
     (unless (symdict-empty? nenv)
-      (error 'tc-prog "non-empty D⁻ for free lambda-bound vars at top level"))
-    penv))
+      (error 'typecheck "non-empty D⁻ for free lambda-bound vars at top level"))
+    (values stmts unused-table alpha-env penv)))
 
 ;; tc-stmts : MPart Env [Listof StmtStx] -> (values Env MonoEnv)
 ;; the env result contains only the new entries introduced by the statements
