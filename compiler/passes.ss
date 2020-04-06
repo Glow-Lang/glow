@@ -5,6 +5,7 @@
 (import
   :glow/compiler/multipass :glow/compiler/common
   :glow/compiler/alpha-convert/alpha-convert
+  (only-in :glow/compiler/typecheck/typecheck typecheck)
   :glow/compiler/anf/anf)
 
 ;;; Languages, passes and strategies
@@ -24,7 +25,7 @@
 
 ;; Typed Glow programs
 ;; TODO: also represent source location, unused-table and type annotations?
-;(define-language ".typed.sexp" read-sexp-file write-sexps)
+(define-language ".typed.sexp" read-sexp-file write-sexps)
 
 ;; (Typed) Glow programs in A-Normal form
 ;; where all function call arguments are trivial (reference to constant or variable).
@@ -50,12 +51,12 @@
 ;; with an inferred (or explicitly specified) type
 ;; NB: the Unused table is unused in this pass, but passed along for further passes
 ;; (Listof Stmt) Unused AlphaEnv → (values (Listof Stmt) Unused AlphaEnv TypeEnv)
-;;(define-pass typecheck ".alpha.sexp" ".typed.sexp")
+(define-pass typecheck ".alpha.sexp" ".typed.sexp")
 
 ;; *A-normalization*: ensure all call arguments are trivial,
 ;; hence a well-defined sequence for all side-effects.
-;; (Listof Stmt) Unused AlphaEnv → (values (Listof Stmt) Unused AlphaEnv)
-(define-pass anf ".alpha.sexp" ".anf.sexp")
+;; (Listof Stmt) Unused AlphaEnv TypeEnv → (values (Listof Stmt) Unused AlphaEnv)
+(define-pass anf ".typed.sexp" ".anf.sexp")
 
 ;; *Transaction-grouping*: in an interaction, group all actions into transactions.
 ;;(define-pass txgroup ".anf.sexp" ".txgroup.sexp")
@@ -94,7 +95,7 @@
 ;;(define-pass javascript-extraction ".client.sexp" ".js")
 
 (define-strategy ethereum-direct-style
-  alpha-convert anf) ;; ...
+  alpha-convert typecheck anf) ;; ...
 
 
 ;; Different languages and passes for State-Channel style:
@@ -104,6 +105,6 @@
 ;; and fall back to using the contract in case of timeout,
 ;; at which point convergence to exit state happens the hard way.
 
-;;(define-strategy ethereum-state-channel-style alpha-convert anf) ;; ...
+;;(define-strategy ethereum-state-channel-style alpha-convert typecheck anf) ;; ...
 
 (set! default-strategy 'ethereum-direct-style)

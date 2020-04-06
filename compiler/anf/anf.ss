@@ -210,7 +210,7 @@
      (restx stx (cons* #'l #'params (anf-standalone-body #'(body ...)))))))
 
 ;; Conform to pass convention.
-;; anf : [Listof StmtStx] UnusedTable Env -> (values [Listof StmtStx] UnusedTable Env)
-(def (anf stmts unused-table env)
+;; anf : [Listof StmtStx] UnusedTable AlphaEnv TypeEnv -> (values [Listof StmtStx] UnusedTable AlphaEnv TypeEnv)
+(def (anf stmts unused-table alpha-env type-env)
   (parameterize ((current-unused-table unused-table))
-    (values (reverse (anf-stmts stmts [])) unused-table env)))
+    (values (reverse (anf-stmts stmts [])) unused-table alpha-env type-env)))

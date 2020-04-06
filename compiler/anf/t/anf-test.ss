@@ -12,14 +12,16 @@
   ../../common
   ../../t/common
   ../../alpha-convert/alpha-convert
+  (only-in ../../typecheck/typecheck typecheck)
   ../anf)
 
 ;; anf-display : [Listof Stmt] -> Void
 (def (anf-display prog)
-  (defvalues (prog2 unused-table env) (alpha-convert prog))
-  (defvalues (prog3 _ _) (anf prog2 unused-table env))
-  (print-representation env) (newline)
-  (write-sexps prog3))
+  (defvalues (prog2 unused-table alenv) (alpha-convert prog))
+  (defvalues (prog3 unused-table3 alenv3 tyenv) (typecheck prog2 unused-table alenv))
+  (defvalues (prog4 _ _ _) (anf prog3 unused-table3 alenv3 tyenv))
+  (print-representation alenv) (newline)
+  (write-sexps prog4))
 
 ;; test-files : (Listof Path) -> Void
 (def (test-files files)
