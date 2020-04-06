@@ -198,7 +198,8 @@
     ((l params body ...)
      (restx stx (cons* #'l #'params (anf-standalone-body #'(body ...)))))))
 
-;; anf : [Listof StmtStx] -> [Listof StmtStx]
+;; Conform to pass convention.
+;; anf : [Listof StmtStx] UnusedTable -> [Listof StmtStx]
 (def (anf stmts unused-table)
   (parameterize ((current-unused-table unused-table))
     (reverse (anf-stmts stmts []))))

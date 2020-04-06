@@ -6,6 +6,7 @@
   :glow/compiler/multipass :glow/compiler/common
   :glow/compiler/alpha-convert/alpha-convert
   :glow/compiler/desugar/desugar
+  (only-in :glow/compiler/typecheck/typecheck typecheck)
   :glow/compiler/anf/anf)
 
 ;;; Layers, passes and strategies
@@ -60,11 +61,11 @@
 ;; with an inferred (or explicitly specified) type
 ;; NB: the Unused table is unused in this pass, but passed along for further passes
 ;; (Listof Stmt) Unused AlphaEnv → (values (Listof Stmt) Unused AlphaEnv TypeEnv)
-;;(define-pass typecheck alpha.sexp typed.sexp)
+(define-pass typecheck (alpha.sexp Unused) (typed.sexp))
 
 ;; *A-normalization*: ensure all call arguments are trivial,
 ;; hence a well-defined sequence for all side-effects.
-;; (Listof Stmt) Unused AlphaEnv → (values (Listof Stmt) Unused AlphaEnv)
+;; (Listof Stmt) Unused → (Listof Stmt)
 (define-pass anf (desugar.sexp Unused) (anf.sexp))
 
 ;; *Transaction-grouping*: in an interaction, group all actions into transactions.
@@ -104,7 +105,7 @@
 ;;(define-pass javascript-extraction ".client.sexp" ".js")
 
 (define-strategy ethereum-direct-style
-  alpha-convert desugar anf) ;; ...
+  alpha-convert desugar typecheck anf) ;; ...
 
 ;; Different layers and passes for State-Channel style:
 ;; the previous contract is virtualized, so that
@@ -113,6 +114,6 @@
 ;; and fall back to using the contract in case of timeout,
 ;; at which point convergence to exit state happens the hard way.
 
-;;(define-strategy ethereum-state-channel-style alpha-convert anf) ;; ...
+;;(define-strategy ethereum-state-channel-style alpha-convert typecheck anf) ;; ...
 
 (set! default-strategy 'ethereum-direct-style)
