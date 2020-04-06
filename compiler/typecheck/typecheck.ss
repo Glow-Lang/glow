@@ -533,11 +533,20 @@
 (def (tc-prog stmts)
   (defvalues (stmts2 _unused-table acrenom) (alpha-convert stmts))
   (parameterize ((current-symbol-ntype-table (make-symbol-ntype-table)))
-    (for/fold (env init-env) (stmt stmts2)
-      (let-values (((penv nenv) (tc-stmt #f env stmt)))
-        (unless (symdict-empty? nenv)
-          (error 'tc-prog "non-empty D⁻ for free lambda-bound vars at top level"))
-        (env-put/env env penv)))))
+    (defvalues (penv nenv) (tc-stmts #f init-env stmts2))
+    (unless (symdict-empty? nenv)
+      (error 'tc-prog "non-empty D⁻ for free lambda-bound vars at top level"))
+    penv))
+
+;; tc-stmts : MPart Env [Listof StmtStx] -> (values Env MonoEnv)
+;; the env result contains only the new entries introduced by the statements
+(def (tc-stmts part env stmts)
+  (let loop ((env env) (stmts stmts) (accpenv empty-symdict) (accnenv empty-symdict))
+    (match stmts
+      ([] (values accpenv accnenv))
+      ([stmt . rst]
+       (let-values (((penv nenv) (tc-stmt part env stmt)))
+         (loop (env-put/env env penv) rst (env-put/env accpenv penv) (menv-meet accnenv nenv)))))))
 
 ;; tc-body : MPart Env BodyStx -> TypingScheme
 (def (tc-body part env stx)
@@ -561,11 +570,12 @@
 ;; tc-stmt : MPart Env StmtStx -> (values Env MonoEnv)
 ;; the env result contains only the new entries introduced by the statement
 (def (tc-stmt part env stx)
-  (syntax-case stx (@ @interaction @verifiably @publicly : quote def λ deftype defdata publish! verify!)
+  (syntax-case stx (@ @interaction @verifiably @publicly : quote splice def λ deftype defdata publish! verify!)
     ((@interaction _ _) (tc-stmt-interaction part env stx))
     ((@verifiably _) (tc-stmt-at-verifiably part env stx))
     ((@publicly _) (tc-stmt-at-publicly part env stx))
     ((@ p _) (identifier? #'p) (tc-stmt-at-participant part env stx))
+    ((splice s ...) (tc-stmts part env (syntax->list #'(s ...))))
     ((deftype . _) (tc-stmt-deftype part env stx))
     ((defdata . _) (tc-stmt-defdata part env stx))
     ((def . _) (tc-stmt-def part env stx))
@@ -771,7 +781,7 @@
   (def (tce e) (tc-expr part env e))
   ;; tce/bool : ExprStx -> TypingScheme
   (def (tce/bool e) (tc-expr/check part env e type:bool))
-  (syntax-case stx (@ : ann @tuple @record @list and or if block switch input digest require! assert! deposit! withdraw!)
+  (syntax-case stx (@ : ann @tuple @record @list @app and or if block splice switch input digest require! assert! deposit! withdraw!)
     ((@ _ _) (error 'tc-expr "TODO: deal with @"))
     ((ann expr type)
      (tc-expr/check part env #'expr (parse-type part env empty-symdict #'type)))
@@ -796,6 +806,8 @@
         (menvs-meet (map typing-scheme-menv ts))
         (type:listof (types-join (map typing-scheme-type ts))))))
     ((block b ...)
+     (tc-body part env #'(b ...)))
+    ((splice b ...)
      (tc-body part env #'(b ...)))
     ((and e ...)
      (let ((ts (stx-map tce/bool #'(e ...))))
@@ -847,7 +859,7 @@
        (def et (tc-expr/check part env #'e type:int))
        (typing-scheme (menvs-meet (map typing-scheme-menv [xt et]))
                       type:unit)))
-    ((f a ...) (identifier? #'f)
+    ((@app f a ...) (identifier? #'f)
      (let ((s (syntax-e #'f))
            (ft (tc-expr-id part env #'f)))
        (match (typing-scheme-type ft)
