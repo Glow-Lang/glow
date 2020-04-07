@@ -297,27 +297,28 @@
 ;; ac-stmt-defdata : Env StmtStx -> (values Env StmtStx)
 ;; the env result contains only the new symbols introduced by the statement
 (def (ac-stmt-defdata env stx)
-  (defvalues (formals variants rtvalue)
+  (defvalues (lhs variants rtvalue)
     (syntax-case stx (@ : quote def λ deftype defdata publish! verify!)
-      ((_ formals variant ... with: rtval)
-       (values #'formals #'(variant ...) #'rtval))
-      ((_ formals variant ...)
-       (values #'formals #'(variant ...) #f))))
-  (def id (formals->id formals))
+      ((_ lhs variant ... with: rtval)
+       (values #'lhs #'(variant ...) #'rtval))
+      ((_ lhs variant ...)
+       (values #'lhs #'(variant ...) #f))))
+  (def id (definition-lhs->id lhs))
   (def alpha-id (identifier-fresh id))
   (def name (syntax-e id))
   (def alpha-name (syntax-e alpha-id))
-  (def alpha-formals
-    (syntax-case formals ()
+  (def alpha-lhs
+    (syntax-case lhs ()
       ;; TODO: also a-c the type parameters? In the same/another namespace?
-      ((id . args) (identifier? #'id) (restx formals (cons alpha-id #'args)))
+      ((id . args) (identifier? #'id) (restx lhs (cons alpha-id #'args)))
       (id (identifier? #'id) alpha-id)))
   (def env2 (symdict (name (entry alpha-name #f))))
   (defvalues (env3 variants3) (ac-defdata-variants env env2 variants))
   (def env4 (env-put/env env2 env3))
   (if rtvalue
-    (values env4 (retail-stx stx `(,alpha-formals ,@variants3 with: ,(alpha-convert-expr env4 rtvalue))))
-    (values env4 (retail-stx stx `(,alpha-formals ,@variants3)))))
+    (values env4 (retail-stx stx `(,alpha-lhs ,@variants3
+                                   with: ,(alpha-convert-expr (env-put/env env env4) rtvalue))))
+    (values env4 (retail-stx stx `(,alpha-lhs ,@variants3)))))
 
 ;; ac-defdata-variants : Env Env [StxListof VariantStx] -> (values Env [Listof VariantStx])
 ;; the env result contains only the new symbols introduced by the variants

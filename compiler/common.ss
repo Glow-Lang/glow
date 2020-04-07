@@ -119,8 +119,10 @@
 (def (retail-stx stx tail)
   (restx stx [(stx-car stx) . tail]))
 
-;; formals->id : Stx -> Identifier
-(def (formals->id stx)
+;; Given the left-hand-side of a definition (def foo expr) or (def (foo args ...) expr),
+;; extract the identifier foo.
+;; definition-lhs->id : Stx -> Identifier
+(def (definition-lhs->id stx)
   (syntax-case stx ()
     ((id . _) (identifier? #'id) #'id)
     (id (identifier? #'id) #'id)))
