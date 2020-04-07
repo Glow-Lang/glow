@@ -3,10 +3,10 @@
 (import
   :std/iter :std/test
   :clan/utils/exit
+  (for-template :glow/compiler/syntax-context)
   :glow/compiler/syntax-context ;; important for the parsing to work (!)
   :glow/config/path :glow/compiler/passes :glow/compiler/multipass
-  :glow/compiler/t/common
-  :glow/compiler/alpha-convert/t/alpha-convert-test)
+  :glow/compiler/t/common)
 
 (current-directory (glow-src))
 
@@ -15,7 +15,6 @@
    (match args
      ([] (main "all"))
      (["all"] (silent-exit (run-tests (find-test-files "."))))
-     (["alpha-convert-test"] (silent-exit (try-alpha-convert-all)))
      (["test" . files] (silent-exit (run-tests files)))
      (["process" . files] (for-each run-passes files) (silent-exit))
      (["pass" pass . files]
