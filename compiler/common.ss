@@ -118,4 +118,5 @@
   (λ (object (port (current-output-port)) (options (current-representation-options)))
     (def (d x) (display x port))
     (def (w x) (write x port))
-    (d "(begin0 #") (d (object->serial-number object)) (d " #'") (w (syntax->datum object)) (d ")")))
+    (d "(begin0 #") (d (object->serial-number object)) (d " #'") (w (syntax->datum object)) (d ")"))
+  rebind: #t) ;; make this idempotent
