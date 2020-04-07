@@ -56,7 +56,7 @@
     def deftype defdata
     if and or
     block splice switch λ
-    input digest
+    input digest sign
     interaction verifiably publicly @interaction @verifiably @publicly
     publish! verify! require! assert! deposit! withdraw!))
 
@@ -64,9 +64,9 @@
 ;; init-syms : [Listof Sym]
 (def init-syms
   '(int bool bytes Digest Assets
-    not == = <= < > >= + - * / mod sqr sqrt
+    not = <= < > >= + - * / mod sqr sqrt
     member
-    randomUInt256 sign
+    randomUInt256 isValidSignature
     canReach mustReach))
 
 ;; alpha-convert : [Listof StmtStx] -> (values [Listof StmtStx] UnusedTable Env)
@@ -85,14 +85,9 @@
   (def (acty t) (alpha-convert-type env t))
   (syntax-case stx (@ quote @tuple @record)
     ((@ _ _) (error 'parse-type "@ annotation not allowed in type"))
-    ((@tuple t ...)
-     (restx stx (cons (stx-car stx) (stx-map acty #'(t ...)))))
+    ((@tuple t ...) (retail-stx stx (stx-map acty #'(t ...))))
     ((@record (fld t) ...)
-     (restx stx
-            (cons (stx-car stx)
-                  (stx-map (lambda (fld t) (list fld (acty t)))
-                           #'(fld ...)
-                           #'(t ...)))))
+     (retail-stx stx (stx-map (lambda (fld t) (list fld (acty t))) #'(fld ...) #'(t ...))))
     ('x (identifier? #'x) stx)
     (x (identifier? #'x) (identifier-refer env #'x))
     ((f a ...) (restx stx (cons (acty #'f) (stx-map acty #'(a ...)))))))
@@ -102,14 +97,14 @@
 (def (alpha-convert-expr env stx)
   ;; ace : ExprStx -> ExprStx
   (def (ace e) (alpha-convert-expr env e))
-  (syntax-case stx (@ ann @dot @tuple @record @list @app if and or block splice switch λ input digest require! assert! deposit! withdraw!)
+  (syntax-case stx (@ ann @dot @tuple @list @record if and or block splice sign switch λ input digest require! assert! deposit! withdraw! @app)
     ((@ _ _) (error 'alpha-convert-expr "TODO: deal with @"))
     ((ann expr type)
-     (restx stx [(stx-car stx) (ace #'expr) (alpha-convert-type env #'type)]))
+     (retail-stx stx [(ace #'expr) (alpha-convert-type env #'type)]))
     (x (identifier? #'x) (identifier-refer env #'x))
     (lit (stx-atomic-literal? #'lit) #'lit)
     ((@dot e x) (identifier? #'x)
-     (restx stx [(stx-car stx) (ace #'e) #'x]))
+     (retail-stx stx [(ace #'e) #'x]))
     ((@tuple e ...)
      (alpha-convert-keyword/sub-exprs env stx))
     ((@list e ...)
@@ -117,40 +112,30 @@
     ((@record (x e) ...)
      (and (stx-andmap identifier? #'(x ...))
           (check-duplicate-identifiers #'(x ...)))
-     (restx stx
-            (cons (stx-car stx)
-                  (stx-map (lambda (x e) [x (ace e)]) #'(x ...) #'(e ...)))))
+     (retail-stx stx (stx-map (lambda (x e) [x (ace e)]) #'(x ...) #'(e ...))))
     ((block b ...)
-     (restx stx (cons (stx-car stx) (alpha-convert-body env (syntax->list #'(b ...))))))
+     (retail-stx stx (alpha-convert-body env (syntax->list #'(b ...)))))
     ((splice b ...)
-     (restx stx (cons (stx-car stx) (alpha-convert-body env (syntax->list #'(b ...))))))
+     (retail-stx stx (alpha-convert-body env (syntax->list #'(b ...)))))
     ((if c t e)
-     (restx stx [(stx-car stx) (ace #'c) (ace #'t) (ace #'e)]))
+     (retail-stx stx [(ace #'c) (ace #'t) (ace #'e)]))
     ((and e ...)
      (alpha-convert-keyword/sub-exprs env stx))
     ((or e ...)
      (alpha-convert-keyword/sub-exprs env stx))
+    ((sign e)
+     (alpha-convert-keyword/sub-exprs env stx))
     ((switch e swcase ...)
-     (let ((e2 (ace #'e)))
-       (restx stx
-              (cons* (stx-car stx) (ace #'e)
-                     (stx-map (lambda (c) (ac-switch-case env c)) #'(swcase ...))))))
-    ((λ . _)
-     (ac-expr-function env stx))
-    ((input type tag)
-     (restx stx [(stx-car stx) (alpha-convert-type env #'type) (ace #'tag)]))
-    ((digest e ...)
-     (alpha-convert-keyword/sub-exprs env stx))
-    ((require! e)
-     (restx stx [(stx-car stx) (ace #'e)]))
-    ((assert! e)
-     (restx stx [(stx-car stx) (ace #'e)]))
-    ((deposit! e)
-     (restx stx [(stx-car stx) (ace #'e)]))
+     (retail-stx stx (cons (ace #'e) (stx-map (lambda (c) (ac-switch-case env c)) #'(swcase ...)))))
+    ((λ . _) (ac-expr-function env stx))
+    ((input type tag) (retail-stx stx [(alpha-convert-type env #'type) (ace #'tag)]))
+    ((digest e ...) (alpha-convert-keyword/sub-exprs env stx))
+    ((require! e) (retail-stx stx [(ace #'e)]))
+    ((assert! e) (retail-stx stx [(ace #'e)]))
+    ((deposit! e) (retail-stx stx [(ace #'e)]))
     ((withdraw! x e) (identifier? #'x)
-     (restx stx [(stx-car stx) (identifier-refer env #'x) (ace #'e)]))
-    ((@app f a ...)
-     (alpha-convert-keyword/sub-exprs env stx))
+     (retail-stx stx [(identifier-refer env #'x) (ace #'e)]))
+    ((@app f a ...) (alpha-convert-keyword/sub-exprs env stx))
     ((f a ...) (identifier? #'f)
      (alpha-convert-keyword/sub-exprs env (intro-app stx)))))
 
@@ -165,7 +150,7 @@
 ;; It could even be used by other keywords that have a constant number of arguments, but isn't.
 ;; alpha-convert-body : Env StmtStx] -> StmtStx
 (def (alpha-convert-keyword/sub-exprs env stx)
-  (restx stx (cons (stx-car stx) (stx-map (cut alpha-convert-expr env <>) (stx-cdr stx)))))
+  (retail-stx stx (stx-map (cut alpha-convert-expr env <>) (stx-cdr stx))))
 
 ;; alpha-convert-body : Env [Listof StmtStx] -> [Listof StmtStx]
 (def (alpha-convert-body env body)
@@ -178,7 +163,7 @@
 
 ;; ac-expr-function : Env ExprStx -> ExprStx
 (def (ac-expr-function env stx)
-  (syntax-case stx (@ : ann @tuple @record @list if block switch λ require! assert! deposit! withdraw!)
+  (syntax-case stx (:)
     ((l params : out-type body ...)
      (let-values (((env2 params2) (ac-function-params env #'params)))
        (restx stx
@@ -242,7 +227,7 @@
 ;; alpha-convert-stmt : Env StmtStx -> (values Env StmtStx)
 ;; the env result contains only the new symbols introduced by the statement
 (def (alpha-convert-stmt env stx)
-  (syntax-case stx (@ interaction verifiably publicly @interaction @verifiably @publicly splice : quote def λ deftype defdata publish! verify!)
+  (syntax-case stx (@ interaction verifiably publicly @interaction @verifiably @publicly splice def deftype defdata publish! verify!)
     ((@ (interaction . _) _) (ac-stmt-atinteraction env (at-prefix-normalize stx)))
     ((@ verifiably _) (ac-stmt-wrap-simple-keyword env (at-prefix-normalize stx)))
     ((@ publicly _) (ac-stmt-wrap-simple-keyword env (at-prefix-normalize stx)))
@@ -312,21 +297,28 @@
 ;; ac-stmt-defdata : Env StmtStx -> (values Env StmtStx)
 ;; the env result contains only the new symbols introduced by the statement
 (def (ac-stmt-defdata env stx)
-  (syntax-case stx (@ : quote def λ deftype defdata publish! verify!)
-    ((dd x variant ...) (identifier? #'x)
-     (with-syntax ((x2 (identifier-fresh #'x)))
-       (let ((s (syntax-e #'x)) (s2 (syntax-e #'x2)))
-         (def env2 (symdict (s (entry s2 #f))))
-         (defvalues (env3 variants3) (ac-defdata-variants env env2 #'(variant ...)))
-         (values (env-put/env env2 env3)
-                 (restx stx [#'dd #'x2 . variants3])))))
-    ((dd (f . xs) variant ...) (identifier? #'f)
-     (with-syntax ((f2 (identifier-fresh #'f)))
-       (let ((s (syntax-e #'f)) (s2 (syntax-e #'f2)))
-         (def env2 (symdict (s (entry s2 #f))))
-         (defvalues (env3 variants3) (ac-defdata-variants env env2 #'(variant ...)))
-         (values (env-put/env env2 env3)
-                 (restx stx [#'dd (cons #'f2 #'xs) . variants3])))))))
+  (defvalues (lhs variants rtvalue)
+    (syntax-case stx (@ : quote def λ deftype defdata publish! verify!)
+      ((_ lhs variant ... with: rtval)
+       (values #'lhs #'(variant ...) #'rtval))
+      ((_ lhs variant ...)
+       (values #'lhs #'(variant ...) #f))))
+  (def id (definition-lhs->id lhs))
+  (def alpha-id (identifier-fresh id))
+  (def name (syntax-e id))
+  (def alpha-name (syntax-e alpha-id))
+  (def alpha-lhs
+    (syntax-case lhs ()
+      ;; TODO: also a-c the type parameters? In the same/another namespace?
+      ((id . args) (identifier? #'id) (restx lhs (cons alpha-id #'args)))
+      (id (identifier? #'id) alpha-id)))
+  (def env2 (symdict (name (entry alpha-name #f))))
+  (defvalues (env3 variants3) (ac-defdata-variants env env2 variants))
+  (def env4 (env-put/env env2 env3))
+  (if rtvalue
+    (values env4 (retail-stx stx `(,alpha-lhs ,@variants3
+                                   with: ,(alpha-convert-expr (env-put/env env env4) rtvalue))))
+    (values env4 (retail-stx stx `(,alpha-lhs ,@variants3)))))
 
 ;; ac-defdata-variants : Env Env [StxListof VariantStx] -> (values Env [Listof VariantStx])
 ;; the env result contains only the new symbols introduced by the variants
@@ -399,7 +391,7 @@
     ((ann pat type)
      (let-values (((env2 pat2) (alpha-convert-pat env #'pat)))
        (values env2
-               (restx stx [(stx-car stx) pat2 (alpha-convert-type env #'type)]))))
+               (retail-stx stx [pat2 (alpha-convert-type env #'type)]))))
     (blank (and (identifier? #'blank) (free-identifier=? #'blank #'_))
      (values empty-symdict stx))
     (lit (stx-atomic-literal? #'lit)
@@ -413,21 +405,18 @@
                  #'x2))))
     ((@or-pat p ...)
      (let-values (((env2 ps2) (ac-pats-join env (syntax->list #'(p ...)))))
-       (values env2
-               (restx stx (cons (stx-car stx) ps2)))))
+       (values env2 (retail-stx stx ps2))))
     ((@list . _)
      (ac-pat-simple-seq env stx))
     ((@tuple . _)
      (ac-pat-simple-seq env stx))
     ((@record (x p) ...) (stx-andmap identifier? #'(x ...))
      (let-values (((env2 ps2) (ac-pats-meet env (syntax->list #'(p ...)))))
-       (values env2
-               (restx stx (cons (stx-car stx) (stx-map list #'(x ...) ps2))))))
+       (values env2 (retail-stx stx (stx-map list #'(x ...) ps2)))))
     ((f a ...) (and (identifier? #'f) (bound-as-ctor? env (syntax-e #'f)))
      (with-syntax ((f2 (identifier-refer env #'f)))
        (let-values (((env2 ps2) (ac-pats-meet env (syntax->list #'(a ...)))))
-         (values env2
-                 (restx stx (cons #'f ps2))))))))
+         (values env2 (retail-stx stx ps2)))))))
 
 ;; ac-pat-simple-seq : Env PatStx -> (values Env PatStx)
 ;; the env result contains only the new symbols introduced by the pattern
@@ -436,7 +425,7 @@
   (syntax-case stx ()
     ((hd p ...)
      (let-values (((env2 ps2) (ac-pats-meet env (syntax->list #'(p ...)))))
-       (values env2 (restx stx (cons #'hd ps2)))))))
+       (values env2 (retail-stx stx ps2))))))
 
 ;; ac-pats-meet : Env [Listof PatStx] -> (values Env [Listof PatStx])
 ;; the env result contains only the new symbols introduced by the patterns

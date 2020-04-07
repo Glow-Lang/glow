@@ -1,14 +1,15 @@
 (export #t)
 
 (import
+  :gerbil/gambit/misc
   :gerbil/expander
   :std/iter :std/misc/repr :std/srfi/1 :std/srfi/13 :std/sugar :std/test
-  :clan/utils/base :clan/utils/filesystem
+  :clan/utils/base :clan/utils/filesystem :clan/utils/path
   :glow/config/path :glow/compiler/multipass :glow/compiler/passes)
 
 ;; examples-dir
 (def (examples-dir)
-  (path-normalize (path-expand "examples" (glow-src)) 'shortest))
+  (shorten-path (path-expand "examples" (glow-src))))
 
 ;; examples.sexp : -> [Listof Path]
 (def (examples.sexp)
@@ -22,13 +23,18 @@
 (def (find-test-files top)
   (find-regexp-files "-test.ss" (find-test-directories top)))
 
+(def (test-name test)
+  (def module-name (path-enough (path-strip-extension (path-simplify test)) (glow-src)))
+  (string-append "glow/" module-name "#" (path-strip-directory module-name)))
+
 (def (find-file-test test)
   (import-module test #t #t)
-  (def module-name (string-append "glow/" (path-strip-extension test)))
-  (def test-name (string-append module-name "#" (path-strip-directory module-name)))
-  (eval (string->symbol test-name)))
+  (eval (string->symbol (test-name test))))
 
 (def (run-tests tests)
   (apply run-tests! (map find-file-test tests))
   (test-report-summary!)
   (eqv? 'OK (test-result)))
+
+(def (ppd x) (pretty-print (syntax->datum x)))
+(def (ppdc x) (ppd (car x)))

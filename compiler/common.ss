@@ -95,13 +95,19 @@
 (def (splice-stmts stx stmts)
   (if (length=n? stmts 1) (car stmts) (restx stx (cons #'splice stmts))))
 
-;; Recursively splice out any splice statement into the list of statements
+;; Recursively splice out any splice statement into the list of statements, in reverse
 ;; spice-stmts : [listof StmtStx] [listof StmtStx] -> [listof StmtStx]
-(def (unsplice-stmts stmts (acc []))
+(def (reverse-unsplice-stmts stmts (acc []))
   (for/fold (acc acc) ((stmt stmts))
     (syntax-case stmt (splice)
-      ((splice . body) (unsplice-stmts (syntax->list #'body) acc))
+      ((splice . body) (reverse-unsplice-stmts (syntax->list #'body) acc))
       (_ (cons stmt acc)))))
+
+;; Recursively splice out any splice statement into the list of statements, in reverse
+;; spice-stmts : [listof StmtStx] -> [listof StmtStx]
+(def (unsplice-stmts stmts)
+  (reverse (reverse-unsplice-stmts stmts [])))
+
 
 ;; at-stx : MaybeParticipant StmtStx -> StmtStx
 (def (at-stx participant stx)
@@ -113,9 +119,18 @@
 (def (retail-stx stx tail)
   (restx stx [(stx-car stx) . tail]))
 
+;; Given the left-hand-side of a definition (def foo expr) or (def (foo args ...) expr),
+;; extract the identifier foo.
+;; definition-lhs->id : Stx -> Identifier
+(def (definition-lhs->id stx)
+  (syntax-case stx ()
+    ((id . _) (identifier? #'id) #'id)
+    (id (identifier? #'id) #'id)))
+
 ;; TODO: move this to std/misc/repr ?
 (defmethod {:pr AST}
   (λ (object (port (current-output-port)) (options (current-representation-options)))
     (def (d x) (display x port))
     (def (w x) (write x port))
-    (d "(begin0 #") (d (object->serial-number object)) (d " #'") (w (syntax->datum object)) (d ")")))
+    (d "(begin0 #") (d (object->serial-number object)) (d " #'") (w (syntax->datum object)) (d ")"))
+  rebind: #t) ;; make this idempotent

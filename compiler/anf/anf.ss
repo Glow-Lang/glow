@@ -42,7 +42,7 @@
     ((@publicly . _) (cons stx acc))
     ((@ p s) (identifier? #'p) (append (anf-at-participant stx) acc))
     ((splice s ...) (anf-stmts (syntax->list #'(s ...)) acc))
-    ((defdata . _) (cons stx acc))
+    ((defdata . _) (anf-defdata stx acc))
     ((deftype . _) (cons stx acc))
     ((publish! . _) (cons stx acc))
     ;; TODO: delete case for verify! once it's desugared away in a previous pass
@@ -66,6 +66,16 @@
   (syntax-case stx ()
     ((at p s) (identifier? #'p)
      (map (lambda (s2) (restx1 stx [#'at #'p s2])) (anf-stmt #'s [])))))
+
+;; anf-defdata : StmtStx [Listof StmtStx] -> [Listof StmtStx]
+(def (anf-defdata stx acc)
+  (cons
+   (syntax-case stx ()
+     ((_ spec variant ... with: rtvalue)
+      (retail-stx stx `(,#'spec ,@(syntax->list #'(variant ...))
+                                with: ,(anf-standalone-expr #'rtvalue))))
+     ((_ spec variant ...) stx))
+   acc))
 
 ;; anf-def : StmtStx [Listof StmtStx] -> [Listof StmtStx]
 (def (anf-def stx acc)
@@ -133,15 +143,14 @@
      (and (stx-andmap identifier? #'(x ...))
           (check-duplicate-identifiers #'(x ...)))
      (let-values (((rs acc) (anf-arg-exprs (syntax->list #'(e ...)) acc)))
-       (values (restx stx (cons (stx-car stx) (map list (syntax->list #'(x ...)) rs))) acc)))
+       (values (retail-stx stx (map list (syntax->list #'(x ...)) rs)) acc)))
     ((block b ...) (anf-body #'(b ...) acc))
     ((splice b ...) (anf-body #'(b ...) acc))
     ((and . _) (anf-and-or stx acc))
     ((or . _) (anf-and-or stx acc))
     ((if c t e)
      (let-values (((rc acc) (anf-arg-expr #'c acc)))
-       (values (restx stx [(stx-car stx) rc (anf-standalone-expr #'t)
-                           (anf-standalone-expr #'e)])
+       (values (retail-stx stx [rc (anf-standalone-expr #'t) (anf-standalone-expr #'e)])
                acc)))
     ((switch e swcase ...)
      (let-values (((re acc) (anf-arg-expr #'e acc)))
@@ -155,8 +164,10 @@
     ((require! e) (anf-multiarg-expr stx acc))
     ((assert! e) (anf-multiarg-expr stx acc))
     ((deposit! e) (anf-multiarg-expr stx acc))
-    ((@app e ...) (anf-multiarg-expr stx acc))
-    ((withdraw! x e) (identifier? #'x) (anf-multiarg-expr stx acc))))
+    ((withdraw! x e) (identifier? #'x) (anf-multiarg-expr stx acc))
+    ((digest e) (anf-multiarg-expr stx acc))
+    ((sign e) (anf-multiarg-expr stx acc))
+    ((@app e ...) (anf-multiarg-expr stx acc))))
 
 ;; anf-body : StmtsStx [Listof StmtStx] -> (values ExprStx [Listof StmtStx])
 (def (anf-body stx acc)
@@ -167,7 +178,7 @@
 ;; anf-standalone-body : StmtsStx -> [Listof StmtStx]
 (def (anf-standalone-body stx)
   (let-values (((e acc) (anf-body stx [])))
-    (reverse (anf-stmt e acc))))
+    (reverse (cons e acc))))
 
 ;; anf-and-or : ExprStx [Listof StmtStx] -> (values ExprStx [Listof StmtStx])
 ;; Assume associativity, handle short-circuiting
