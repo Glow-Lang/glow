@@ -95,13 +95,19 @@
 (def (splice-stmts stx stmts)
   (if (length=n? stmts 1) (car stmts) (restx stx (cons #'splice stmts))))
 
-;; Recursively splice out any splice statement into the list of statements
+;; Recursively splice out any splice statement into the list of statements, in reverse
 ;; spice-stmts : [listof StmtStx] [listof StmtStx] -> [listof StmtStx]
-(def (unsplice-stmts stmts (acc []))
+(def (reverse-unsplice-stmts stmts (acc []))
   (for/fold (acc acc) ((stmt stmts))
     (syntax-case stmt (splice)
-      ((splice . body) (unsplice-stmts (syntax->list #'body) acc))
+      ((splice . body) (reverse-unsplice-stmts (syntax->list #'body) acc))
       (_ (cons stmt acc)))))
+
+;; Recursively splice out any splice statement into the list of statements, in reverse
+;; spice-stmts : [listof StmtStx] -> [listof StmtStx]
+(def (unsplice-stmts stmts)
+  (reverse (reverse-unsplice-stmts stmts [])))
+
 
 ;; at-stx : MaybeParticipant StmtStx -> StmtStx
 (def (at-stx participant stx)
@@ -112,6 +118,12 @@
 ;; retail-stx : Stx [listof Stx] -> Stx
 (def (retail-stx stx tail)
   (restx stx [(stx-car stx) . tail]))
+
+;; formals->id : Stx -> Identifier
+(def (formals->id stx)
+  (syntax-case stx ()
+    ((id . _) (identifier? #'id) #'id)
+    (id (identifier? #'id) #'id)))
 
 ;; TODO: move this to std/misc/repr ?
 (defmethod {:pr AST}
