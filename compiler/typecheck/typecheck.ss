@@ -669,7 +669,7 @@
   (syntax-case stx (@ : quote deftype defdata)
     ((defdata x variant ...) (identifier? #'x)
      (let ((s (syntax-e #'x)))
-       (def b (type:name (gensym s) []))
+       (def b (type:name (symbol-fresh s) []))
        (def env2 (symdict (s (entry:type part [] b))))
        (defvalues (penv nenv)
          (tc-defdata-variants part env env2 [] b #'(variant ...)))
@@ -679,7 +679,7 @@
            (xs (stx-map syntax-e #'(x ...))))
        ;; TODO: allow variances to be either annotated or inferred
        (def vances (map (lambda (x) invariant) xs))
-       (def b (type:app (type:name (gensym s) vances) (map make-type:var xs)))
+       (def b (type:app (type:name (symbol-fresh s) vances) (map make-type:var xs)))
        (def env2 (symdict (s (entry:type part xs b))))
        (defvalues (penv nenv)
          (tc-defdata-variants part env env2 xs b #'(variant ...)))
@@ -884,10 +884,10 @@
          ((type:var v)
           ;; fresh type variables
           (def avs (stx-map (lambda (a)
-                              (cond ((identifier? a) (gensym (syntax-e a)))
-                                    (else (gensym s))))
+                              (cond ((identifier? a) (symbol-fresh (syntax-e a)))
+                                    (else (symbol-fresh s))))
                             #'(a ...)))
-          (def bv (gensym s))
+          (def bv (symbol-fresh s))
           ;; unify against arrow
           ;; v <: (-> avs bv)
           (def fty (type:arrow (map make-type:var avs) (type:var bv)))
@@ -916,7 +916,7 @@
     (error s "access allowed only for" (entry-part ent)))
   (match ent
     ((entry:unknown _)
-     (let ((a (gensym s)))
+     (let ((a (symbol-fresh s)))
        (typing-scheme (list->symdict [(cons s (type:var a))])
                       (type:var a))))
     ((entry:known _ t) t)
