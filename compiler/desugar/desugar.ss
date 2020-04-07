@@ -12,10 +12,6 @@
 ;; Desugaring away these: @verifiably verify! @publicly defdata deftype and or
 ;; In the future, let users control desuraging of defdata and deftype with @deriving annotations (?)
 
-;; desugar statements, accumulating desugared statements in reverse order
-;; desugar-stmts : [Listof StmtStx] [Listof StmtStx] -> [Listof StmtStx]
-;;(def (desugar-stmts stmts acc) (for/fold (acc acc) ((stmt stmts)) (desugar-stmt stmt acc)))
-
 ;; desugar-stmts : [Listof StmtStx] -> [Listof StmtStx]
 (def (desugar-stmts stmts) (unsplice-stmts (map desugar-stmt stmts)))
 
@@ -26,7 +22,7 @@
   (syntax-case stx (@ @interaction @verifiably @publicly deftype defdata publish! def)
     ((@interaction x s) (retail-stx stx [#'x (desugar-stmt #'s)]))
     ((@ p (@verifiably definition)) (retail-stx stx [#'p (desugar-verifiably stx #'p #'definition)]))
-    ((@ p (@publicly definition)) (retail-stx stx [#'p (desugar-publicly stx #'p #'definition)]))
+    ((@ p (@publicly definition)) (desugar-publicly stx #'p #'definition))
     ((@ p s) (identifier? #'p)
      (syntax-case #'s (splice)
        ((splice . body) (retail-stx #'s (map-in-order (λ (x) (desugar-stmt (restx x [#'@ #'p x])))
@@ -124,8 +120,8 @@
 (def (desugar-publicly stx p definition)
   (syntax-case definition (def)
     ((def name expr)
-     (restx stx [#'splice (desugar-verifiably stx p definition)
-                          #'(publish! name)
+     (restx stx [#'splice [#'@ p (desugar-verifiably stx p definition)]
+                          [#'@ p #'(publish! name)]
                           (desugar-verify [#'name])]))))
 
 ;; desugar-def : Stx -> Stx
