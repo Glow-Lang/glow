@@ -119,7 +119,7 @@
                  lang: (lang (identify-language filename))
                  strategy: (strategy default-strategy)
                  pass: (last-pass #f)
-                 show?: (show? #f)
+                 show?: (show? #t)
                  save?: (save? #f))
   (def passes (relevant-passes lang strategy last-pass))
   (def in [(read-file/lang lang filename)])

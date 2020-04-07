@@ -37,7 +37,8 @@
   :clan/utils/generator :clan/utils/hash
   :clan/utils/json :clan/utils/list :clan/utils/logger
   :clan/utils/memo :clan/utils/multicall :clan/utils/number
-  :clan/utils/path-config :clan/utils/peekable-iterator :clan/utils/random :clan/utils/source
+  :clan/utils/path :clan/utils/path-config :clan/utils/peekable-iterator
+  :clan/utils/random :clan/utils/source
   :clan/utils/simple-rpc-client :clan/utils/stateful-avl-map :clan/utils/string
   :clan/utils/subprocess :clan/utils/temporary-files
   :clan/utils/vector :clan/utils/version :clan/utils/watch
@@ -48,6 +49,7 @@
   ;; Glow
   (for-template :glow/compiler/syntax-context)
   :glow/config/path :glow/config/version
+  :glow/compiler/syntax-context
   :glow/compiler/passes :glow/compiler/multipass :glow/compiler/common
   :glow/compiler/alpha-convert/symbolnat :glow/compiler/alpha-convert/fresh
   :glow/compiler/alpha-convert/alpha-convert
