@@ -528,7 +528,7 @@
    ;; TODO: make polymorphic
    ('member (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int (type:listof type:int)] type:bool))))
    ('randomUInt256 (entry:known #f (typing-scheme empty-symdict (type:arrow [] type:nat))))
-   ('sign (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Digest] type:Signature))))))
+   ('isValidSignature (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Participant type:Digest type:Signature] type:bool))))))
 
 ;; tc-prog : [Listof StmtStx] -> Env
 (def (tc-prog stmts)
@@ -791,7 +791,7 @@
   (def (tce e) (tc-expr part env e))
   ;; tce/bool : ExprStx -> TypingScheme
   (def (tce/bool e) (tc-expr/check part env e type:bool))
-  (syntax-case stx (@ : ann @tuple @record @list @app and or if block splice switch input digest require! assert! deposit! withdraw!)
+  (syntax-case stx (@ : ann @tuple @record @list @app and or if block splice sign switch input digest require! assert! deposit! withdraw!)
     ((@ _ _) (error 'tc-expr "TODO: deal with @"))
     ((ann expr type)
      (tc-expr/check part env #'expr (parse-type part env empty-symdict #'type)))
@@ -835,6 +835,9 @@
            (et (tce #'e)))
        (typing-scheme (menvs-meet (map typing-scheme-menv [ct tt et]))
                       (type-join (typing-scheme-type tt) (typing-scheme-type et)))))
+    ((sign e)
+     (let ((ts (tc-expr/check part env #'e type:Digest)))
+       (typing-scheme (typing-scheme-menv ts) type:Signature)))
     ((switch e swcase ...)
      (let ((ts (tc-expr part env #'e)))
        (def vt (typing-scheme-type ts))
