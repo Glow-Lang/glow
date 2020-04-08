@@ -92,7 +92,7 @@
 (def (make-verification p var expr)
   (restx expr
     (syntax-case expr (sign)
-      ((sign msg) [#'@app #'valid_signature var (computation-verification #'msg) p])
+      ((sign msg) [#'@app #'isValidSignature p (computation-verification #'msg) var])
       (_ [#'@app #'= var (computation-verification expr)]))))
 
 ;; desugar-verifiably : Identifier Stx -> Stx
