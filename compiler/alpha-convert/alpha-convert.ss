@@ -136,7 +136,7 @@
     ((withdraw! x e) (identifier? #'x)
      (retail-stx stx [(identifier-refer env #'x) (ace #'e)]))
     ((@app f a ...) (alpha-convert-keyword/sub-exprs env stx))
-    ((f a ...) (identifier? #'f)
+    ((f a ...)
      (alpha-convert-keyword/sub-exprs env (intro-app stx)))))
 
 ;; intro-app : Stx -> Stx

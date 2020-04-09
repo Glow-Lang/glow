@@ -82,6 +82,15 @@ Required Features:
 - Multiple assets
 - Calling another contract.
 
+### Repeated Atomic Swap between Same-Chain Fungible Tokens
+
+Demonstrate how to swap tokens in Glow, in multiple parts.
+
+Required Features:
+- Multiple assets
+- Calling another contract.
+- Loop with user-defined bound. Division?
+
 ### Interoperate with Standard Fungible Tokens
 
 Support legacy standards within Glow applications, first to use them, second to implement them:

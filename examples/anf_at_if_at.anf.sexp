@@ -1,5 +1,5 @@
-(def f (λ (a1) a1))
-(def g (λ (a2) a2))
+(def f (λ (a1) (@app + a1 1)))
+(def g (λ (a2) (@app * a2 2)))
 
 (@interaction
   ([A B])

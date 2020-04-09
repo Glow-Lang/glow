@@ -5,6 +5,7 @@
 (import
   :glow/compiler/multipass :glow/compiler/common
   :glow/compiler/alpha-convert/alpha-convert
+  :glow/compiler/desugar/desugar
   :glow/compiler/anf/anf)
 
 ;;; Languages, passes and strategies
@@ -21,6 +22,10 @@
 ;; Alpha-converted Glow programs
 ;; TODO: also represent source location and unused-table?
 (define-language ".alpha.sexp" read-sexp-file write-sexps)
+
+;; Desugared Glow programs
+;; TODO: also represent source location and unused-table?
+(define-language ".desugar.sexp" read-sexp-file write-sexps)
 
 ;; Typed Glow programs
 ;; TODO: also represent source location, unused-table and type annotations?
@@ -46,7 +51,11 @@
 ;; (Listof Stmt) → (values (Listof Stmt) Unused AlphaEnv)
 (define-pass alpha-convert ".sexp" ".alpha.sexp")
 
-;; TODO: *Typecheck*: annotate every binding and every sub-expression
+;; *Desugaring*: expand away some more complex syntax into simpler one.
+;; (Listof Stmt) Unused AlphaEnv → (values (Listof Stmt) Unused AlphaEnv)
+(define-pass desugar ".alpha.sexp" ".desugar.sexp")
+
+;; TODO: *Typechecking*: annotate every binding and every sub-expression
 ;; with an inferred (or explicitly specified) type
 ;; NB: the Unused table is unused in this pass, but passed along for further passes
 ;; (Listof Stmt) Unused AlphaEnv → (values (Listof Stmt) Unused AlphaEnv TypeEnv)
@@ -55,7 +64,7 @@
 ;; *A-normalization*: ensure all call arguments are trivial,
 ;; hence a well-defined sequence for all side-effects.
 ;; (Listof Stmt) Unused AlphaEnv → (values (Listof Stmt) Unused AlphaEnv)
-(define-pass anf ".alpha.sexp" ".anf.sexp")
+(define-pass anf ".desugar.sexp" ".anf.sexp")
 
 ;; *Transaction-grouping*: in an interaction, group all actions into transactions.
 ;;(define-pass txgroup ".anf.sexp" ".txgroup.sexp")
@@ -94,7 +103,7 @@
 ;;(define-pass javascript-extraction ".client.sexp" ".js")
 
 (define-strategy ethereum-direct-style
-  alpha-convert anf) ;; ...
+  alpha-convert desugar anf) ;; ...
 
 
 ;; Different languages and passes for State-Channel style:
