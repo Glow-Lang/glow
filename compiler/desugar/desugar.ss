@@ -85,8 +85,14 @@
 
 (def current-verifications (make-parameter (make-hash-table)))
 
+(def (expression-verifiable? expr)
+  ;; TODO: check that expr is a computation all made of verifiable elements,
+  ;; and does not require change of participants within the computation,
+  ;; and can fit in one transaction(?)
+  #t)
+
 (def (computation-verification expr)
-  ;; TODO: check that expr is a computation all made of verifiable elements
+  (unless (expression-verifiable? expr) (error 'expression-not-verifiable expr))
   expr)
 
 (def (make-verification p var expr)
@@ -120,9 +126,9 @@
 (def (desugar-publicly stx p definition)
   (syntax-case definition (def)
     ((def name expr)
-     (restx stx [#'splice [#'@ p (desugar-verifiably stx p definition)]
-                          [#'@ p #'(publish! name)]
-                          (desugar-verify [#'name])]))))
+     (restx1 stx [#'splice [#'@ p (desugar-verifiably stx p definition)]
+                           [#'@ p #'(publish! name)]
+                           (desugar-verify [#'name])]))))
 
 ;; desugar-def : Stx -> Stx
 (def (desugar-def stx)
@@ -181,9 +187,9 @@
      (retail-stx stx (cons* #'params (desugar-body (syntax->list #'(body ...))))))))
 
 ;; Conform to pass convention.
-;; desugar : [Listof StmtStx] UnusedTable Env -> (values [Listof StmtStx] UnusedTable Env)
-(def (desugar stmts unused-table env)
+;; desugar : [Listof StmtStx] UnusedTable AlphaEnv -> (values [Listof StmtStx] UnusedTable AlphaEnv)
+(def (desugar stmts unused-table alpha-env)
   (parameterize ((current-unused-table unused-table)
                  (current-verifications (make-hash-table)))
     (def desugared (desugar-stmts stmts))
-    (values desugared unused-table env)))
+    (values desugared unused-table alpha-env)))
