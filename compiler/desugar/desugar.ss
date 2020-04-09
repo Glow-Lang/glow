@@ -34,15 +34,6 @@
     ((def . _) (desugar-def stx))
     (expr (desugar-expr stx))))
 
-(def (variant->pattern variant)
-  (syntax-case variant ()
-    (constructor (identifier? #'constructor) #'constructor)
-    ((constructor . args) (retail-stx variant (stx-map (λ (_) #'_) #'args)))))
-
-(def (variants-to-nat variants)
-  (for/collect ((i (in-naturals)) (variant (syntax->list variants)))
-    [(variant->pattern variant) i]))
-
 (def (nat-to-variants variants)
   (let loop ((i 0) (acc []) (variants variants))
     (def (continue x r) (loop (+ i 1) (cons [i x] acc) r))
@@ -64,18 +55,16 @@
          (let ((x (mk-var 'x))
                (tag (mk-var 'tag)))
            (restx stx [#'λ [tag] [#'def x ': #'name [#'input #'name tag]] x])))
-       (def toNat
-         (let ((x (mk-var 'x))
-               (cases (variants-to-nat #'(variant ...))))
-           (restx stx [#'λ [[x ': #'name]] [#'switch x . cases]])))
-       (def ofNat
-         (let ((x (mk-var 'x))
-               (cases (nat-to-variants #'(variant ...))))
-           (and cases
-                (restx stx [#'λ [[x ': #'name]] [#'switch x . cases]]))))
-       (def rtvalue `(@record (input ,input)
-                              (toNat ,toNat)
-                              ,@(if ofNat `((ofNat ,ofNat)) '())))
+       (def toofNat
+         (let ((ofNat-cases (nat-to-variants #'(variant ...))))
+           (if ofNat-cases
+             (let ((of-x (mk-var 'x))
+                   (x-to (mk-var 'x))
+                   (toNat-cases (map reverse ofNat-cases)))
+               [['toNat [#'λ [[x-to ': #'name]] [#'switch x-to . toNat-cases]]]
+                ['ofNat [#'λ [[of-x ': #'name]] [#'switch of-x . ofNat-cases]]]])
+             '())))
+       (def rtvalue `(@record (input ,input) ,@toofNat))
        (retail-stx stx `(,#'spec ,@(syntax->list #'(variant ...)) with: ,rtvalue))))))
 
 ;; TODO: input, isA, JSON converters, EthBytes converters, etc.
