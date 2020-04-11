@@ -34,21 +34,36 @@ Required Features: same as RPS above.
 
 ### Dead-man Switch
 
-Allow an alternate key, but only if the first key doesn't react for some time.
+[deadmanswitch.glow](deadmanswitch.glow):
+Allow an alternate key to control the assets,
+but only if the first key doesn't react for some time,
+and optionally only after some challenge to deny the alternate key.
+Such a contract was famously invented
+[on BCH by Karol Trzeszczkowski](https://github.com/KarolTrzeszczkowski/Electron-Cash-Last-Will-Plugin).
 
 Required Features:
 - Explicit timeouts
 - Support for safety with explicit timeouts
 - Choice restricted to timeouts.
+- Recursion
 
 ### Auction
 
-Allow an alternate key, but only if the first key doesn't react for some time.
+[auction.glow](auction.glow):
+Sell an asset (or a signature or procedure call ?)
+in a simple English (open ascending price) forward candle auction.
+
+The candle effect doesn't require any special care in the contract itself:
+just the uncertainty of whether your transaction will make it on the official block,
+or whether someone else's overbidding transaction will,
+is assumed to provide enough uncertainty for the "candle" effect
+that discourages overly last-minute sniping.
 
 Required Features:
 - Explicit timeouts
 - Open set of participants though a finite number at once
 - Choice restricted to timeouts and open participation.
+- Recursion
 
 ### Crowdfunding
 
