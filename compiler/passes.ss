@@ -26,6 +26,7 @@
 ;; Typed Glow programs
 ;; TODO: also represent source location, unused-table and type annotations?
 (define-language ".typed.sexp" read-sexp-file write-sexps)
+(define-language ".typedecl.sexp" read-sexp-file write-sexps)
 
 ;; (Typed) Glow programs in A-Normal form
 ;; where all function call arguments are trivial (reference to constant or variable).

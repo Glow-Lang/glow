@@ -11,6 +11,7 @@
         :std/format
         :std/misc/list
         :std/misc/repr
+        :std/misc/string
         :clan/pure/dict
         :clan/utils/exception
         :glow/compiler/t/common
@@ -19,60 +20,71 @@
         (except-in :glow/compiler/alpha-convert/alpha-convert env-put/env not-bound-as-ctor? bound-as-ctor?)
         :glow/compiler/typecheck/typecheck)
 
-;; tc-prog/list : [Listof StmtStx] -> [Assqof Symbol EnvEntry]
-(def (tc-prog/list path)
-  (symdict->list (tc-prog path)))
+;; Path -> Path
+(def (sexp-typedecl-version file)
+  (string-append (string-trim-suffix ".sexp" file) ".typedecl.sexp"))
 
-;; only-sexp-files : [Listof Path] -> [Listof Path]
-(def (only-sexp-files ps)
-  (filter (lambda (p) (string=? ".sexp" (path-extension p))) ps))
-
-;; print-env : Env -> Void
-(def (print-env env)
-  (for ((x (symdict-keys env)))
+;; env->sexpr : Env -> Sexpr
+(def (env->sexpr env)
+  (for/collect ((x (symdict-keys env)))
     (def e (symdict-ref env x))
     (match e
       ((entry:type #f [] b)
-       (printf "type ~s = ~y" x (type->sexpr b)))
+       `(type ,x = ,(type->sexpr b)))
       ((entry:type #f as b)
-       (printf "type ~s~s = ~y" x as (type->sexpr b)))
+       `(type (,x ,@(map (lambda (a) `',a) as)) = ,(type->sexpr b)))
       ((entry:unknown #f)
-       (printf "unknown ~s\n" x))
+       `(unknown ,x))
       ((entry:known #f (typing-scheme me t))
        (unless (symdict-empty? me)
          (printf "constraints ")
          (print-representation me))
-       (printf "val ~s : ~y" x (type->sexpr t)))
+       `(val ,x : ,(type->sexpr t)))
       ((entry:ctor #f (typing-scheme me t))
        (unless (symdict-empty? me)
          (printf "constraints ")
          (print-representation me))
-       (printf "constructor ~s : ~y" x (type->sexpr t))))))
+       `(constructor ,x : ,(type->sexpr t))))))
 
-;; typecheck-display : [Listof Stmt] -> Bool
+;; print-env-sexpr : Sexpr -> Void
+(def (print-env-sexpr s)
+  (for ((e s)) (printf "~y" e)))
+
+;; typecheck-display : [Listof Stmt] (Or Sexpr '#f) -> Bool
 ;; Produces #t on success, can return #f or raise an exception on failure
 ;; TODO: check against expected types of top-level defined identifiers
-(def (typecheck-display prog)
+(def (typecheck-display prog expected-env)
   (defvalues (prog2 unused-table alenv) (alpha-convert prog))
   (defvalues (prog3 unused-table3 alenv3 tyenv) (typecheck prog2 unused-table alenv))
-  (print-env tyenv)
-  #t)
+  (def env-sexpr (env->sexpr tyenv))
+  (def expected-env-sexpr (and expected-env (syntax->datum expected-env)))
+  (print-env-sexpr env-sexpr)
+  (cond
+    ((not expected-env) #t)
+    ((equal? env-sexpr expected-env-sexpr)
+     (printf ";; ✓ matches expected types\n")
+     #t)
+    (else
+     (printf ";; ✗ different from expected types\n")
+     (printf "expected: ~y" expected-env-sexpr)
+     #f)))
 
 ;; try-typecheck-files : [Listof PathString] -> Void
 (def (try-typecheck-files files)
+  (def decl-files (map sexp-typedecl-version files))
   (def progs (map read-sexp-file files))
-  ;; TODO: read expected types of type-level defined identifiers from a file,
-  ;;       and check that the actual types match
+  (def decls
+    (map (lambda (f) (and (file-exists? f) (read-sexp-file f))) decl-files))
   ;; MUTABLE var failed
   (let ((failed '()))
-    (for ((f files) (p progs))
+    (for ((f files) (p progs) (d decls))
       (displayln f)
       (with-catch/cont
        (lambda (e k) (display-exception-in-context e k) (push! f failed))
-       (lambda () (unless (typecheck-display p) (push! f failed))))
+       (lambda () (unless (typecheck-display p d) (push! f failed))))
       (newline))
     (unless (null? failed)
-      (error 'alpha-convert-failed failed))))
+      (error 'typecheck-failed failed))))
 
 ;; try-typecheck-all : -> Void
 (def (try-typecheck-all)
