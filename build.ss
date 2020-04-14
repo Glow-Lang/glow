@@ -5,7 +5,8 @@
 ;; where [cmd] is typically left empty (same as "deps" if needed then "compile")
 
 (import
-  :std/build-script :std/srfi/1
+  :std/build-script
+  :std/srfi/1
   :std/misc/ports :std/misc/process :std/misc/repr :std/misc/string
   :clan/utils/base :clan/utils/filesystem :clan/utils/version)
 

@@ -10,6 +10,6 @@
     (test-case "member/take"
       (assert-equal! (member/take 4 [1 2 3 4 5 6 7 8 9]) [1 2 3 4])
       (assert-equal! (member/take 4 [1 3 5 7 9]) #f))
-    (test-case "identify-language"
-      (assert-equal! (identify-language "foo.alpha.sexp") ".alpha.sexp")
-      (assert-equal! (identify-language "foo.beta.sexp") ".sexp"))))
+    (test-case "identify-layer"
+      (assert-equal! (identify-layer "foo.alpha.sexp") 'alpha.sexp)
+      (assert-equal! (identify-layer "foo.beta.sexp") 'sexp))))

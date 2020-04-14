@@ -7,31 +7,34 @@
   :std/format
   :std/iter
   :std/misc/repr
+  :std/misc/string
+  :std/sugar
   :std/test
   :clan/utils/exception
-  ../../common
-  ../../t/common
-  ../../alpha-convert/alpha-convert
-  ../anf)
+  :glow/compiler/common
+  :glow/compiler/t/common
+  :glow/compiler/alpha-convert/alpha-convert
+  :glow/compiler/desugar/desugar
+  :glow/compiler/anf/anf)
 
-;; anf-display : [Listof Stmt] -> Void
-(def (anf-display prog)
-  (defvalues (prog2 unused-table env) (alpha-convert prog))
-  (defvalues (prog3 _ _) (anf prog2 unused-table env))
-  (print-representation env) (newline)
-  (write-sexps prog3))
-
-;; test-files : (Listof Path) -> Void
-(def (test-files files)
-  (def progs (map read-sexp-file files))
-  (for ((f files) (p progs))
-    (displayln f)
-    (with-catch/cont
-     (lambda (e k) (display-exception-in-context e k))
-     (lambda () (anf-display p)))
-    (newline)))
+;; test-file : Path -> Void
+(def (test-file file)
+  (with-catch/cont
+   (lambda (e k)
+     (display-exception-in-context e k)
+     (raise e))
+   (lambda ()
+     (def prog (read-sexp-file file))
+     (defvalues (acprog unused-table alpha-env) (alpha-convert prog))
+     (defvalues (desugprog) (desugar acprog unused-table))
+     (defvalues (anfprog) (anf desugprog unused-table))
+     (def expected-file (format "~a.anf.sexp" (string-trim-suffix ".sexp" file)))
+     (ppd anfprog) (newline)
+     (when (file-exists? expected-file)
+       (let ((expected (read-sexp-file expected-file)))
+         (assert! (stx-sexpr=? anfprog expected)))))))
 
 (def anf-test
   (test-suite "anf-test"
     (test-case "testing example sexp files"
-      (test-files (examples.sexp)))))
+      (for-each test-file (examples.sexp)))))

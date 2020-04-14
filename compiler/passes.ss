@@ -8,40 +8,40 @@
   :glow/compiler/desugar/desugar
   :glow/compiler/anf/anf)
 
-;;; Languages, passes and strategies
+;;; Layers, passes and strategies
 
-;;; Languages
+;;; Layers
 
-;; TODO: Our source language, with its JavaScript-like, ReasonML-like syntax
-;;(define-language ".glow" parse-glow pretty-print-glow)
+;; TODO: Our source layer, with its JavaScript-like, ReasonML-like syntax
+;;(define-layer ".glow" parse-glow pretty-print-glow)
 
 ;; SEXP notation for Glow programs
 ;; TODO: also represent source location?
-(define-language ".sexp" read-sexp-file write-sexps)
+(define-layer sexp read-sexp-file write-sexps stx-sexpr=?)
 
 ;; Alpha-converted Glow programs
 ;; TODO: also represent source location and unused-table?
-(define-language ".alpha.sexp" read-sexp-file write-sexps)
+(define-layer alpha.sexp read-sexp-file write-sexps stx-sexpr=?)
 
 ;; Desugared Glow programs
 ;; TODO: also represent source location and unused-table?
-(define-language ".desugar.sexp" read-sexp-file write-sexps)
+(define-layer desugar.sexp read-sexp-file write-sexps stx-sexpr=?)
 
 ;; Typed Glow programs
 ;; TODO: also represent source location, unused-table and type annotations?
-;(define-language ".typed.sexp" read-sexp-file write-sexps)
+;(define-layer typed.sexp read-sexp-file write-sexps stx-sexpr=?)
 
 ;; (Typed) Glow programs in A-Normal form
 ;; where all function call arguments are trivial (reference to constant or variable).
 ;; TODO: also represent source location, unused-table and type annotations?
-(define-language ".anf.sexp" read-sexp-file write-sexps)
+(define-layer anf.sexp read-sexp-file write-sexps stx-sexpr=?)
 
 
 ;;; Passes
 
 ;; TODO: *Parsing*: transform the original source code into syntax objects.
 ;; Port → (Listof Stmt)
-;;(define-pass identity ".glow" ".glow.sexp")
+;;(define-pass identity (glow) (sexp))
 
 ;; TODO: *Deriving-expansion*: macro-expand the deriving forms
 
@@ -49,22 +49,23 @@
 ;; TODO: the user-visible identifiers should stay the same (i.e. (export #f) by default?)
 ;; TODO: in some future, intersperse alpha-conversion, macro-expansion and type-inference passes?
 ;; (Listof Stmt) → (values (Listof Stmt) Unused AlphaEnv)
-(define-pass alpha-convert ".sexp" ".alpha.sexp")
+(define-pass alpha-convert (sexp) (alpha.sexp Unused AlphaEnv))
 
 ;; *Desugaring*: expand away some more complex syntax into simpler one.
-;; (Listof Stmt) Unused AlphaEnv → (values (Listof Stmt) Unused AlphaEnv)
-(define-pass desugar ".alpha.sexp" ".desugar.sexp")
+;; NB: Unused is used as a side-effect instead of passed in a pure monadic style
+;; (Listof Stmt) Unused AlphaEnv → (Listof Stmt)
+(define-pass desugar (alpha.sexp Unused) (desugar.sexp))
 
 ;; TODO: *Typechecking*: annotate every binding and every sub-expression
 ;; with an inferred (or explicitly specified) type
 ;; NB: the Unused table is unused in this pass, but passed along for further passes
 ;; (Listof Stmt) Unused AlphaEnv → (values (Listof Stmt) Unused AlphaEnv TypeEnv)
-;;(define-pass typecheck ".alpha.sexp" ".typed.sexp")
+;;(define-pass typecheck alpha.sexp typed.sexp)
 
 ;; *A-normalization*: ensure all call arguments are trivial,
 ;; hence a well-defined sequence for all side-effects.
 ;; (Listof Stmt) Unused AlphaEnv → (values (Listof Stmt) Unused AlphaEnv)
-(define-pass anf ".desugar.sexp" ".anf.sexp")
+(define-pass anf (desugar.sexp Unused) (anf.sexp))
 
 ;; *Transaction-grouping*: in an interaction, group all actions into transactions.
 ;;(define-pass txgroup ".anf.sexp" ".txgroup.sexp")
@@ -105,8 +106,7 @@
 (define-strategy ethereum-direct-style
   alpha-convert desugar anf) ;; ...
 
-
-;; Different languages and passes for State-Channel style:
+;; Different layers and passes for State-Channel style:
 ;; the previous contract is virtualized, so that
 ;; (?before timeout and) immediately after end-point projection,
 ;; sending/receiving/receiving-as-contract are instrumented, to attempt consensual signing first,

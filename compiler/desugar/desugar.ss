@@ -140,9 +140,17 @@
     ((@record (x e) ...) (retail-stx stx (stx-map (lambda (x e) [x (desugar-expr e)]) #'(x ...) #'(e ...))))
     ((block b ...) (retail-stx stx (desugar-body (syntax->list #'(b ...)))))
     ((splice b ...) (retail-stx stx (desugar-body (syntax->list #'(b ...)))))
-    ((if c t e) (desugar-keyword/sub-exprs stx))
-    ((and e ...) (desugar-keyword/sub-exprs stx))
-    ((or e ...) (desugar-keyword/sub-exprs stx))
+    ((if c t e) (desugar-keyword/sub-exprs stx)) ;; TODO: should we desugar to switch?
+    ((and) (restx stx #t))
+    ((and e) #'e)
+    ((and e1 e2 ...)
+     (with-syntax ((more (desugar-expr (restx1 stx #'(and e2 ...)))))
+       #'(if e1 more #f)))
+    ((or) (restx stx #f))
+    ((or e) #'e)
+    ((or e1 e2 ...)
+     (with-syntax ((more (desugar-expr (restx1 stx #'(or e2 ...)))))
+       #'(if e1 #t more)))
     ((switch e swcase ...)
      (retail-stx stx (cons (desugar-expr #'e) (stx-map desugar-switch-case #'(swcase ...)))))
     ((λ . _) (desugar-lambda stx))
@@ -166,7 +174,7 @@
 (def (desugar-switch-case stx)
   (syntax-case stx ()
     ((pat body ...)
-     (restx stx (cons #'pat (desugar-body (syntax->list #'(body ...))))))))
+     (retail-stx stx (desugar-body (syntax->list #'(body ...)))))))
 
 (def (desugar-lambda stx)
   (syntax-case stx (:)
@@ -176,9 +184,9 @@
      (retail-stx stx (cons* #'params (desugar-body (syntax->list #'(body ...))))))))
 
 ;; Conform to pass convention.
-;; desugar : [Listof StmtStx] UnusedTable AlphaEnv -> (values [Listof StmtStx] UnusedTable AlphaEnv)
-(def (desugar stmts unused-table alpha-env)
+;; NB: side-effecting the unused-table
+;; desugar : [Listof StmtStx] UnusedTable AlphaEnv -> [Listof StmtStx]
+(def (desugar stmts unused-table)
   (parameterize ((current-unused-table unused-table)
                  (current-verifications (make-hash-table)))
-    (def desugared (desugar-stmts stmts))
-    (values desugared unused-table alpha-env)))
+    (desugar-stmts stmts)))

@@ -119,6 +119,10 @@
 (def (retail-stx stx tail)
   (restx stx [(stx-car stx) . tail]))
 
+;; retail-stx1 : Stx [listof Stx] -> Stx
+(def (retail-stx1 stx tail)
+  (restx1 stx [(stx-car stx) . tail]))
+
 ;; Given the left-hand-side of a definition (def foo expr) or (def (foo args ...) expr),
 ;; extract the identifier foo.
 ;; definition-lhs->id : Stx -> Identifier
