@@ -30,7 +30,7 @@
 
 ;; Typed Glow programs
 ;; TODO: also represent source location, unused-table and type annotations?
-;(define-layer typed.sexp read-sexp-file write-sexps stx-sexpr=?)
+;(define-layer typedecl.sexp read-sexp-file write-sexps stx-sexpr=?)
 
 ;; (Typed) Glow programs in A-Normal form
 ;; where all function call arguments are trivial (reference to constant or variable).
@@ -61,7 +61,7 @@
 ;; with an inferred (or explicitly specified) type
 ;; NB: the Unused table is unused in this pass, but passed along for further passes
 ;; (Listof Stmt) Unused AlphaEnv → (values (Listof Stmt) Unused AlphaEnv TypeEnv)
-(define-pass typecheck (alpha.sexp Unused) (typed.sexp))
+(define-pass typecheck (alpha.sexp Unused) (typedecl.sexp))
 
 ;; *A-normalization*: ensure all call arguments are trivial,
 ;; hence a well-defined sequence for all side-effects.
