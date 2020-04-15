@@ -17,7 +17,8 @@
         :glow/compiler/t/common
         :glow/compiler/syntax-context
         (for-template :glow/compiler/syntax-context)
-        (except-in :glow/compiler/alpha-convert/alpha-convert env-put/env not-bound-as-ctor? bound-as-ctor?)
+        :glow/compiler/alpha-convert/alpha-convert
+        :glow/compiler/desugar/desugar
         :glow/compiler/typecheck/typecheck)
 
 ;; Path -> Path
@@ -55,7 +56,8 @@
 ;; TODO: check against expected types of top-level defined identifiers
 (def (typecheck-display prog expected-env)
   (defvalues (prog2 unused-table alenv) (alpha-convert prog))
-  (defvalues (prog3 unused-table3 alenv3 tyenv) (typecheck prog2 unused-table alenv))
+  (def prog3 (desugar prog2 unused-table))
+  (def tyenv (typecheck prog3 unused-table))
   (def env-sexpr (env->sexpr tyenv))
   (def expected-env-sexpr (and expected-env (syntax->datum expected-env)))
   (print-env-sexpr env-sexpr)

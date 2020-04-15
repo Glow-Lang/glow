@@ -1,25 +1,26 @@
 (export #t
         (import:
-         "../common.ss"
-         "variance.ss"
-         "type.ss"))
+         :glow/compiler/common
+         :glow/compiler/typecheck/variance
+         :glow/compiler/typecheck/type))
 
-(import :std/format
+(import :gerbil/gambit/exact
+        :gerbil/gambit/bytes
+        <expander-runtime>
+        :std/format
         :std/iter
         :std/misc/list
         :std/misc/repr
-        :gerbil/gambit/exact
-        :gerbil/gambit/bytes
-        <expander-runtime>
-        :glow/compiler/syntax-context
-        (for-template :glow/compiler/syntax-context)
         :clan/pure/dict/assq
         :clan/pure/dict/symdict
-        "../common.ss"
-        "../alpha-convert/fresh.ss"
-        (except-in "../alpha-convert/alpha-convert.ss" env-put/env not-bound-as-ctor? bound-as-ctor?)
-        "variance.ss"
-        "type.ss")
+        :glow/compiler/syntax-context
+        (for-template :glow/compiler/syntax-context)
+        :glow/compiler/common
+        :glow/compiler/env
+        :glow/compiler/alpha-convert/fresh
+        :glow/compiler/alpha-convert/alpha-convert
+        :glow/compiler/typecheck/variance
+        :glow/compiler/typecheck/type)
 
 ;; Typechecking glow-sexpr
 
@@ -530,12 +531,6 @@
    ('randomUInt256 (entry:known #f (typing-scheme empty-symdict (type:arrow [] type:nat))))
    ('isValidSignature (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Participant type:Digest type:Signature] type:bool))))))
 
-;; tc-prog : [Listof StmtStx] -> Env
-(def (tc-prog stmts)
-  (defvalues (stmts2 unused-table alpha-env) (alpha-convert stmts))
-  (defvalues (penv) (typecheck stmts2 unused-table))
-  penv)
-
 ;; typecheck : [Listof Stmt] UnusedTable → (values Env)
 ;; Input unused-table is mutated.
 ;; Output env has types of top-level identifiers.
@@ -667,14 +662,15 @@
 ;; the env result contains only the new entries introduced by the statement
 (def (tc-stmt-defdata part env stx)
   (syntax-case stx (@ : quote deftype defdata)
-    ((defdata x variant ...) (identifier? #'x)
+    ((defdata x variant ... with: rtvalue) (identifier? #'x)
      (let ((s (syntax-e #'x)))
        (def b (type:name (symbol-fresh s) []))
        (def env2 (symdict (s (entry:type part [] b))))
        (defvalues (penv nenv)
          (tc-defdata-variants part env env2 [] b #'(variant ...)))
+       ;; TODO: handle the rtvalue
        (values (env-put/env env2 penv) nenv)))
-    ((defdata (f 'x ...) variant ...) (identifier? #'f)
+    ((defdata (f 'x ...) variant ... with: rtvalue) (identifier? #'f)
      (let ((s (syntax-e #'f))
            (xs (stx-map syntax-e #'(x ...))))
        ;; TODO: allow variances to be either annotated or inferred
@@ -683,6 +679,7 @@
        (def env2 (symdict (s (entry:type part xs b))))
        (defvalues (penv nenv)
          (tc-defdata-variants part env env2 xs b #'(variant ...)))
+       ;; TODO: handle the rtvalue
        (values (env-put/env env2 penv) nenv)))))
 
 
@@ -872,6 +869,7 @@
        (typing-scheme (menvs-meet (map typing-scheme-menv [xt et]))
                       type:unit)))
     ((@app f a ...) (identifier? #'f)
+     ;; TODO: handle the case where f is NOT an identifier
      (let ((s (syntax-e #'f))
            (ft (tc-expr-id part env #'f)))
        (match (typing-scheme-type ft)

@@ -11,8 +11,15 @@
         :clan/utils/exception
         :glow/compiler/syntax-context
         (for-template :glow/compiler/syntax-context)
-        (except-in "../alpha-convert/alpha-convert.ss" env-put/env not-bound-as-ctor? bound-as-ctor?)
-        "typecheck.ss")
+        :glow/compiler/alpha-convert/alpha-convert
+        :glow/compiler/desugar/desugar
+        :glow/compiler/typecheck/typecheck)
+
+;; tc-prog : [Listof StmtStx] -> Env
+(def (tc-prog stmts)
+  (defvalues (stmts2 unused-table alpha-env) (alpha-convert stmts))
+  (def stmts3 (desugar stmts unused-table))
+  (typecheck stmts3 unused-table))
 
 ;; tc-prog/list : [Listof StmtStx] -> [Assqof Symbol EnvEntry]
 (def (tc-prog/list path)
