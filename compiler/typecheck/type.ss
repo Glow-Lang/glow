@@ -4,7 +4,7 @@
         :std/format
         :std/misc/list
         :clan/pure/dict/symdict
-        "variance.ss")
+        ./variance)
 
 ;; A Type is one of:
 ;;  - (type:bottom)

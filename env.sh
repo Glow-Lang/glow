@@ -17,12 +17,14 @@ export GLOW_HOME
 bindir=${GLOW_SRC}/.build_outputs
 GERBIL_PACKAGE=gerbil-unstable
 
-. "${HOME}/.gerbil/pkg/github.com/fare/gerbil-utils/gerbil-nix-env.sh"
-
 #srcdir="$(realpath "$GLOW_SRC/..")"
 ### export GERBIL_LOADPATH=$GLOW_SRC:$srcdir/gerbil-utils
 # Don't change the GERBIL_LOADPATH, instead configure your gxpkg with:
 #   gxpkg link github.com/fare/gerbil-utils $srcdir/gerbil-utils
+#
+# Then you can use this, which assumes the clan utilities were installed via gxpkg:
+. "${HOME}/.gerbil/pkg/github.com/fare/gerbil-utils/gerbil-nix-env.sh"
+
 
 # Manage the git submodule
 subm_reset () {(cd $GLOW_SRC ; git submodule update --init )} # Reset to version pinned in git
