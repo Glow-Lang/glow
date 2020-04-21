@@ -27,3 +27,25 @@
   (with (((variance ap an) a) ((variance bp bn) b))
     (variance (and (or ap bn) (or an bp))
               (and (or ap bp) (or an bn)))))
+
+;; --------------------------------------------------------
+
+;; variance->repr-sexpr : Variance -> Sexpr
+(def (variance->repr-sexpr v)
+  (cond
+    ((variance-irrelevant? v) 'irrelevant)
+    ((variance-covariant? v) 'covariant)
+    ((variance-contravariant? v) 'contravariant)
+    ((variance-invariant? v) 'invariant)
+    (else (error 'variance->repr-sexpr "expected variance"))))
+
+;; repr-sexpr->variance : Sexpr -> Variance
+;; The left-inverse for variance->repr-sexpr
+(def (repr-sexpr->variance s)
+  (match s
+    ('irrelevant irrelevant)
+    ('covariant covariant)
+    ('contravariant contravariant)
+    ('invariant invariant)
+    (['variance (? boolean? co?) (? boolean? contra?)]
+     (variance co? contra?))))

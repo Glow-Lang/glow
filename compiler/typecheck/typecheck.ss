@@ -6,6 +6,7 @@
 
 (import :gerbil/gambit/exact
         :gerbil/gambit/bytes
+        :gerbil/gambit/exceptions
         <expander-runtime>
         :std/format
         :std/iter
@@ -89,6 +90,12 @@
           (andmap variance-type~? v1s a1s a2s)))
     ((_ _) #f)))
 
+;; typing-scheme=? : TypingScheme TypingScheme -> Bool
+(def (typing-scheme=? a b)
+  (match* (a b)
+    (((typing-scheme am at) (typing-scheme bm bt))
+     (and (symdict=? am bm type=?) (type=? at bt)))))
+
 ;; A Pattys is an [Assqof Symbol Type]
 ;; for the types of the pattern variables within a pattern
 
@@ -122,54 +129,6 @@
          (error a "duplicate identifier")
          (check-duplicate-symbols bs)))))
 
-;; A MonoEnv is a [Symdictof NType]
-;; monotype environments ∆ bind λ-bound variables only,
-;; no known-type/let-bound variables, don't have ∀-quantifiers
-
-;; menv-meet : MonoEnv MonoEnv -> MonoEnv
-;; union of keys, type-meet of values
-(def (menv-meet as bs)
-  (for/fold (acc as) ((k (symdict-keys bs)))
-    (def b (symdict-ref bs k))
-    (cond
-      ((symdict-has-key? acc k) (symdict-update acc k (lambda (a) (type-meet a b)) b))
-      (else                     (symdict-put acc k b)))))
-
-;; menvs-meet : [Listof MonoEnv] -> MonoEnv
-;; union of keys, type-meet of values
-(def (menvs-meet menvs)
-  (for/fold (acc empty-symdict) ((me menvs)) (menv-meet acc me)))
-
-;; A TypingScheme is a (typing-scheme MonoEnv PType)
-;; Representing both the type of an expression and the types of its
-;; free λ-bound variables. A polar typing scheme [D⁻]t⁺ is a typing
-;; scheme where the types D⁻(x) of λ-bound variables are given by
-;; negative type terms, and the type of the result t⁺ is given by a
-;; positive type term.
-(defstruct typing-scheme (menv type) transparent: #t)
-
-(def (print-typing-scheme ts)
-  (with (((typing-scheme menv t) ts))
-    (display-separated
-     (symdict-keys menv)
-     prefix: "["
-     suffix: "]"
-     separator: ", "
-     display-element: (lambda (k out)
-                        (fprintf out "~a: ~s" k (type->sexpr (symdict-ref menv k)))))
-    (write (type->sexpr t))))
-
-;; typing-schemes-join : [Listof TypingScheme] -> TypingScheme
-;; meet on menvs, join on types
-(def (typing-schemes-join ts)
-  (typing-scheme (menvs-meet (map typing-scheme-menv ts))
-                 (types-join (map typing-scheme-type ts))))
-
-;; typing-scheme/menv : MonoEnv TypingScheme -> TypingScheme
-(def (typing-scheme/menv menv1 ts)
-  (with (((typing-scheme menv2 t) ts))
-    (typing-scheme (menv-meet menv1 menv2) t)))
-
 ;; An MPart is one of:
 ;;  - #f      ; consensus, or no participant
 ;;  - Symbol  ; within the named participant
@@ -180,6 +139,12 @@
 ;; participants can access their own private identifiers
 ;; the `#f` consensus cannot access participant-specific ids
 (def (mpart-can-use? a b) (or (not b) (eq? a b)))
+
+;; mpart->repr-sexpr : MPart -> Sexpr
+(def (mpart->repr-sexpr p) (and p `',p))
+
+;; repr-sexpr->mpart : Sexpr -> MPart
+(def (repr-sexpr->mpart p) (match p (#f #f) (['quote s] s)))
 
 ;; An EnvEntry is one of:
 ;;  - (entry:unknown MPart)             ; lambda-bound with no type annotation
@@ -221,6 +186,7 @@
 ;; Instead of type environments Γ, the reformulated rules use typing
 ;; environments Π to assign typing schemes (not type schemes) to
 ;; known-type/let-bound variables.
+;; Outside this file, Env should be called TypeEnv.
 
 ;; env-put/env : Env Env -> Env
 ;; entries in the 2nd env override ones in the 1st
@@ -229,6 +195,70 @@
 ;; env-put/envs : Env [Listof Env] -> Env
 ;; entries later in the list override earlier ones
 (def (env-put/envs e1 es2) (for/fold (e e1) (e2 es2) (env-put/env e e2)))
+
+;; env-entry->repr-sexpr : EnvEntry -> Sexpr
+(def (env-entry->repr-sexpr e)
+  (match e
+    ((entry:unknown p)   `(entry:unknown ,(mpart->repr-sexpr p)))
+    ((entry:known p ts)  `(entry:known ,(mpart->repr-sexpr p) ,(typing-scheme->repr-sexpr ts)))
+    ((entry:ctor p ts)   `(entry:ctor ,(mpart->repr-sexpr p) ,(typing-scheme->repr-sexpr ts)))
+    ((entry:type p xs t)
+     `(entry:type ,(mpart->repr-sexpr p)
+                  ,(list->repr-sexpr xs symbol->repr-sexpr)
+                  ,(type->repr-sexpr t)))))
+
+;; repr-sexpr->env-entry : Sexpr -> EnvEntry
+(def (repr-sexpr->env-entry s)
+  (match s
+    (['entry:unknown p]  (entry:unknown (repr-sexpr->mpart p)))
+    (['entry:known p ts] (entry:known (repr-sexpr->mpart p) (repr-sexpr->typing-scheme ts)))
+    (['entry:ctor p ts]  (entry:ctor (repr-sexpr->mpart p) (repr-sexpr->typing-scheme ts)))
+    (['entry:type p xs t]
+     (entry:type (repr-sexpr->mpart p)
+                 (repr-sexpr->list xs repr-sexpr->symbol)
+                 (repr-sexpr->type t)))))
+
+;; type-env->repr-sexpr : Env -> Sexpr
+(def (type-env->repr-sexpr env) (symdict->repr-sexpr env env-entry->repr-sexpr))
+
+;; repr-sexpr->type-env : Sexpr -> Env
+(def (repr-sexpr->type-env s) (repr-sexpr->symdict s repr-sexpr->env-entry))
+
+(def (read-type-env-file file)
+  (with-catch
+   (lambda (e) (display-exception e) #f)
+   (lambda ()
+     (match (read-sexp-file file)
+       ([s] (repr-sexpr->type-env (syntax->datum s)))
+       (_ (printf "read-type-env-file: expected a single symdict sexpr\n") #f)))))
+
+(def (write-type-env env (port (current-output-port)))
+  (when env
+    (fprintf port "~y" (type-env->repr-sexpr env))))
+
+;; env-entry=? : EnvEntry EnvEntry -> Bool
+(def (env-entry=? a b)
+  (match* (a b)
+    (((entry:unknown ap) (entry:unknown bp))
+     (equal? ap bp))
+    (((entry:known ap ats) (entry:known bp bts))
+     (and (equal? ap bp) (typing-scheme=? ats bts)))
+    (((entry:ctor ap ats) (entry:ctor bp bts))
+     (and (equal? ap bp) (typing-scheme=? ats bts)))
+    (((entry:type ap axs at) (entry:type bp bxs bt))
+     (and (equal? ap bp) (equal? axs bxs) (type=? at bt)))
+    ((_ _)
+     #f)))
+
+;; type-env=? : Env Env -> Bool
+(def (type-env=? a b)
+  (def ans1 (and a b (symdict=? a b env-entry=?)))
+  (def ans2 (and a b (equal? (type-env->repr-sexpr a) (type-env->repr-sexpr b))))
+  (unless (equal? ans1 ans2)
+    (printf "type-env=?: ans1 = ~r, ans2 = ~r\n" ans1 ans2))
+  ans2)
+
+;; --------------------------------------------------------
 
 ;; A TyvarBisubst is a [Symdictof TypeInterval]
 ;; A TypeInterval is a (type-interval NType PType)

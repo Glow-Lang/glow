@@ -6,7 +6,8 @@
   :glow/compiler/multipass :glow/compiler/common
   :glow/compiler/alpha-convert/alpha-convert
   :glow/compiler/desugar/desugar
-  (only-in :glow/compiler/typecheck/typecheck typecheck)
+  (only-in :glow/compiler/typecheck/typecheck
+    typecheck read-type-env-file write-type-env type-env=?)
   :glow/compiler/anf/anf)
 
 ;;; Layers, passes and strategies
@@ -30,7 +31,7 @@
 
 ;; Typed Glow programs
 ;; TODO: also represent source location, unused-table and type annotations?
-(define-layer typedecl.sexp read-sexp-file write-sexps stx-sexpr=?)
+(define-layer typedecl.sexp read-type-env-file write-type-env type-env=?)
 
 ;; (Typed) Glow programs in A-Normal form
 ;; where all function call arguments are trivial (reference to constant or variable).

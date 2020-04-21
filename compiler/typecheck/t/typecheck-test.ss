@@ -51,24 +51,23 @@
 (def (print-env-sexpr s)
   (for ((e s)) (printf "~y" e)))
 
-;; typecheck-display : [Listof Stmt] (Or Sexpr '#f) -> Bool
+;; typecheck-display : [Listof Stmt] (Or TypeEnv '#f) -> Bool
 ;; Produces #t on success, can return #f or raise an exception on failure
 ;; TODO: check against expected types of top-level defined identifiers
 (def (typecheck-display prog expected-env)
   (defvalues (prog2 unused-table alenv) (alpha-convert prog))
   (def prog3 (desugar prog2 unused-table))
   (def tyenv (typecheck prog3 unused-table))
-  (def env-sexpr (env->sexpr tyenv))
-  (def expected-env-sexpr (and expected-env (syntax->datum expected-env)))
-  (print-env-sexpr env-sexpr)
+  (write-type-env tyenv)
   (cond
     ((not expected-env) #t)
-    ((equal? env-sexpr expected-env-sexpr)
+    ((type-env=? tyenv expected-env)
      (printf ";; ✓ matches expected types\n")
      #t)
     (else
      (printf ";; ✗ different from expected types\n")
-     (printf "expected: ~y" expected-env-sexpr)
+     (printf "expected:\n")
+     (write-type-env expected-env)
      #f)))
 
 ;; try-typecheck-files : [Listof PathString] -> Void
@@ -76,7 +75,7 @@
   (def decl-files (map sexp-typedecl-version files))
   (def progs (map read-sexp-file files))
   (def decls
-    (map (lambda (f) (and (file-exists? f) (read-sexp-file f))) decl-files))
+    (map (lambda (f) (and (file-exists? f) (read-type-env-file f))) decl-files))
   ;; MUTABLE var failed
   (let ((failed '()))
     (for ((f files) (p progs) (d decls))

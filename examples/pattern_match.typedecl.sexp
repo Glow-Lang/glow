@@ -1,19 +1,83 @@
-(constructor No : ymn0)
-(constructor App : (-> lcexpr0 lcexpr0 lcexpr0))
-(val ans : ymn0)
-(type lcexpr = lcexpr0)
-(val b : bool)
-(val l : (listof nat))
-(val omega : lcexpr0)
-(type ymn = ymn0)
-(val i : nat)
-(constructor Var : (-> int lcexpr0))
-(val bs : bytes)
-(val v : (@record (y nat) (x nat)))
-(constructor Maybe : ymn0)
-(constructor Yes : ymn0)
-(val possible : (-> ymn0 bool))
-(val p : (@tuple nat nat))
-(val definite : (-> ymn0 bool))
-(constructor Lam : (-> lcexpr0 lcexpr0))
-(val freevars : (-> lcexpr0 (∪ (listof int) (listof nat))))
+(symdict ('No (entry:ctor #f (typing-scheme (symdict) (type:name 'ymn0 (@list)))))
+         ('App
+          (entry:ctor
+           #f
+           (typing-scheme
+            (symdict)
+            (type:arrow
+             (@list (type:name 'lcexpr0 (@list)) (type:name 'lcexpr0 (@list)))
+             (type:name 'lcexpr0 (@list))))))
+         ('ans (entry:known #f (typing-scheme (symdict) (type:name 'ymn0 (@list)))))
+         ('lcexpr (entry:type #f (@list) (type:name 'lcexpr0 (@list))))
+         ('b (entry:known #f (typing-scheme (symdict) (type:name 'bool (@list)))))
+         ('l
+          (entry:known
+           #f
+           (typing-scheme
+            (symdict)
+            (type:app
+             (type:name 'listof (@list covariant))
+             (@list (type:name-subtype 'nat (type:name 'int (@list))))))))
+         ('omega (entry:known #f (typing-scheme (symdict) (type:name 'lcexpr0 (@list)))))
+         ('ymn (entry:type #f (@list) (type:name 'ymn0 (@list))))
+         ('i
+          (entry:known
+           #f
+           (typing-scheme (symdict) (type:name-subtype 'nat (type:name 'int (@list))))))
+         ('Var
+          (entry:ctor
+           #f
+           (typing-scheme
+            (symdict)
+            (type:arrow (@list (type:name 'int (@list))) (type:name 'lcexpr0 (@list))))))
+         ('bs (entry:known #f (typing-scheme (symdict) (type:name 'bytes (@list)))))
+         ('v
+          (entry:known
+           #f
+           (typing-scheme
+            (symdict)
+            (type:record
+             (symdict ('y (type:name-subtype 'nat (type:name 'int (@list))))
+                      ('x (type:name-subtype 'nat (type:name 'int (@list)))))))))
+         ('Maybe (entry:ctor #f (typing-scheme (symdict) (type:name 'ymn0 (@list)))))
+         ('Yes (entry:ctor #f (typing-scheme (symdict) (type:name 'ymn0 (@list)))))
+         ('possible
+          (entry:known
+           #f
+           (typing-scheme
+            (symdict)
+            (type:arrow (@list (type:name 'ymn0 (@list))) (type:name 'bool (@list))))))
+         ('p
+          (entry:known
+           #f
+           (typing-scheme
+            (symdict)
+            (type:tuple
+             (@list (type:name-subtype 'nat (type:name 'int (@list)))
+                    (type:name-subtype 'nat (type:name 'int (@list))))))))
+         ('definite
+          (entry:known
+           #f
+           (typing-scheme
+            (symdict)
+            (type:arrow (@list (type:name 'ymn0 (@list))) (type:name 'bool (@list))))))
+         ('Lam
+          (entry:ctor
+           #f
+           (typing-scheme
+            (symdict)
+            (type:arrow (@list (type:name 'lcexpr0 (@list))) (type:name 'lcexpr0 (@list))))))
+         ('freevars
+          (entry:known
+           #f
+           (typing-scheme
+            (symdict)
+            (type:arrow
+             (@list (type:name 'lcexpr0 (@list)))
+             (ptype:union
+              (@list (type:app
+                      (type:name 'listof (@list covariant))
+                      (@list (type:name 'int (@list))))
+                     (type:app
+                      (type:name 'listof (@list covariant))
+                      (@list (type:name-subtype 'nat (type:name 'int (@list))))))))))))

@@ -3,6 +3,7 @@
 (import :std/iter
         :std/format
         :std/misc/list
+        :std/misc/repr
         :clan/pure/dict/symdict
         ./variance)
 
@@ -209,7 +210,58 @@
 
 ;; --------------------------------------------------------
 
+;; A MonoEnv is a [Symdictof NType]
+;; monotype environments ∆ bind λ-bound variables only,
+;; no known-type/let-bound variables, don't have ∀-quantifiers
+
+;; menv-meet : MonoEnv MonoEnv -> MonoEnv
+;; union of keys, type-meet of values
+(def (menv-meet as bs)
+  (for/fold (acc as) ((k (symdict-keys bs)))
+    (def b (symdict-ref bs k))
+    (cond
+      ((symdict-has-key? acc k) (symdict-update acc k (lambda (a) (type-meet a b)) b))
+      (else                     (symdict-put acc k b)))))
+
+;; menvs-meet : [Listof MonoEnv] -> MonoEnv
+;; union of keys, type-meet of values
+(def (menvs-meet menvs)
+  (for/fold (acc empty-symdict) ((me menvs)) (menv-meet acc me)))
+
+;; A TypingScheme is a (typing-scheme MonoEnv PType)
+;; Representing both the type of an expression and the types of its
+;; free λ-bound variables. A polar typing scheme [D⁻]t⁺ is a typing
+;; scheme where the types D⁻(x) of λ-bound variables are given by
+;; negative type terms, and the type of the result t⁺ is given by a
+;; positive type term.
+(defstruct typing-scheme (menv type) transparent: #t)
+
+(def (print-typing-scheme ts)
+  (with (((typing-scheme menv t) ts))
+    (display-separated
+     (symdict-keys menv)
+     prefix: "["
+     suffix: "]"
+     separator: ", "
+     display-element: (lambda (k out)
+                        (fprintf out "~a: ~s" k (type->sexpr (symdict-ref menv k)))))
+    (write (type->sexpr t))))
+
+;; typing-schemes-join : [Listof TypingScheme] -> TypingScheme
+;; meet on menvs, join on types
+(def (typing-schemes-join ts)
+  (typing-scheme (menvs-meet (map typing-scheme-menv ts))
+                 (types-join (map typing-scheme-type ts))))
+
+;; typing-scheme/menv : MonoEnv TypingScheme -> TypingScheme
+(def (typing-scheme/menv menv1 ts)
+  (with (((typing-scheme menv2 t) ts))
+    (typing-scheme (menv-meet menv1 menv2) t)))
+
+;; --------------------------------------------------------
+
 ;; type->sexpr : Type -> Sexpr
+;; A human-readable form for displaying types to the user
 (def (type->sexpr t)
   (match t
     ((type:bottom) '⊥)
@@ -227,3 +279,81 @@
 
 ;; type->string : Type -> String
 (def (type->string t) (format "~y" (type->sexpr t)))
+
+;; symbol->repr-sexpr : Symbol -> Sexpr
+(def (symbol->repr-sexpr s) `',s)
+
+;; repr-sexpr->symbol : Sexpr -> Symbol
+(def (repr-sexpr->symbol s) (match s (['quote x] x)))
+
+;; list->repr-sexpr : [Listof V] [V -> Sexpr] -> Sexpr
+(def (list->repr-sexpr l v->s)
+  `(@list ,@(map v->s l)))
+
+;; repr-sexpr->list : Sexpr [Sexpr -> V] -> [Listof V]
+(def (repr-sexpr->list s s->v)
+  (match s
+    ((cons '@list l) (map s->v l))
+    (_ (error 'repr-sexpr->list "expected `@list`"))))
+
+;; symdict->repr-sexpr : [Symdictof V] [V -> Sexpr] -> Sexpr
+(def (symdict->repr-sexpr d v->s)
+  `(symdict
+    ,@(for/collect (k (symdict-keys d))
+        `(',k ,(v->s (symdict-ref d k))))))
+
+;; repr-sexpr->symdict : Sexpr [Sexpr -> V] -> [Symdictof V]
+(def (repr-sexpr->symdict s s->v)
+  (match s
+    ((cons 'symdict l)
+     (list->symdict
+      (for/collect (e l)
+        (match e
+          ([['quote k] sv] (cons k (s->v sv)))
+          (_ (error 'repr-sexpr->symdict "bad entry shape"))))))
+    (_ (error 'repr-sexpr->symdict "expected `symdict`"))))
+
+;; type->repr-sexpr : Type -> Sexpr
+;; A lossless s-expression representation in "repr" style
+(def (type->repr-sexpr t)
+  (match t
+    ((type:bottom) '(type:bottom))
+    ((type:name s vs) `(type:name ',s ,(list->repr-sexpr vs variance->repr-sexpr)))
+    ((type:name-subtype s t) `(type:name-subtype ',s ,(type->repr-sexpr t)))
+    ((type:var s) `(type:var ',s))
+    ((type:app f as) `(type:app ,(type->repr-sexpr f) ,(list->repr-sexpr as type->repr-sexpr)))
+    ((type:tuple as) `(type:tuple ,(list->repr-sexpr as type->repr-sexpr)))
+    ((type:record flds) `(type:record ,(symdict->repr-sexpr flds type->repr-sexpr)))
+    ((type:arrow as b) `(type:arrow ,(list->repr-sexpr as type->repr-sexpr) ,(type->repr-sexpr b)))
+    ((ptype:union ts) `(ptype:union ,(list->repr-sexpr ts type->repr-sexpr)))
+    ((ntype:intersection ts) `(ntype:intersection ,(list->repr-sexpr ts type->repr-sexpr)))))
+
+;; repr-sexpr->type : Sexpr -> Type
+;; The left-inverse for type->repr-sexpr
+(def (repr-sexpr->type s)
+  (match s
+    ('(type:bottom) (type:bottom))
+    (['type:name ['quote s] vs] (type:name s (repr-sexpr->list vs repr-sexpr->variance)))
+    (['type:name-subtype ['quote s] t] (type:name-subtype s (repr-sexpr->type t)))
+    (['type:var ['quote s]] (type:var s))
+    (['type:app f as] (type:app (repr-sexpr->type f) (repr-sexpr->list as repr-sexpr->type)))
+    (['type:tuple as] (type:tuple (repr-sexpr->list as repr-sexpr->type)))
+    (['type:record flds] (type:record (repr-sexpr->symdict flds repr-sexpr->type)))
+    (['type:arrow as b] (type:arrow (repr-sexpr->list as repr-sexpr->type) (repr-sexpr->type b)))
+    (['ptype:union ts] (ptype:union (repr-sexpr->list ts repr-sexpr->type)))
+    (['ntype:intersection ts] (ntype:intersection (repr-sexpr->list ts repr-sexpr->type)))))
+
+;; typing-scheme->repr-sexpr : TypingScheme -> Sexpr
+(def (typing-scheme->repr-sexpr ts)
+  (match ts
+    ((typing-scheme menv t)
+     `(typing-scheme ,(symdict->repr-sexpr menv type->repr-sexpr)
+                     ,(type->repr-sexpr t)))))
+
+;; repr-sexpr->typing-scheme : Sexpr -> TypingScheme
+;; The left-inverse for typing-scheme->repr-sexpr
+(def (repr-sexpr->typing-scheme s)
+  (match s
+    (['typing-scheme menv t]
+     (typing-scheme (repr-sexpr->symdict menv repr-sexpr->type)
+                    (repr-sexpr->type t)))))
