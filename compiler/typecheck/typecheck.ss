@@ -282,6 +282,11 @@
   (and (symdict-has-key? env s)
        (entry:ctor? (symdict-ref env s))))
 
+;; bound-as-type? : Env Symbol -> Bool
+(def (bound-as-type? env s)
+  (and (symdict-has-key? env s)
+       (entry:type? (symdict-ref env s))))
+
 ;; tyvar-bisubst : TypeInterval Variance Symbol -> PNType
 (def (tyvar-bisubst tvl v s)
   (cond ((variance-covariant? v) (type-interval-ptype tvl))
@@ -817,12 +822,23 @@
   (def (tce e) (tc-expr part env e))
   ;; tce/bool : ExprStx -> TypingScheme
   (def (tce/bool e) (tc-expr/check part env e type:bool))
-  (syntax-case stx (@ : ann @tuple @record @list @app and or if block splice sign switch input digest require! assert! deposit! withdraw!)
+  (syntax-case stx (@ : ann @dot @tuple @record @list @app and or if block splice sign switch input digest require! assert! deposit! withdraw!)
     ((@ _ _) (error 'tc-expr "TODO: deal with @"))
     ((ann expr type)
      (tc-expr/check part env #'expr (parse-type part env empty-symdict #'type)))
     (x (identifier? #'x) (tc-expr-id part env stx))
     (lit (stx-atomic-literal? #'lit) (typing-scheme empty-symdict (tc-literal #'lit)))
+    ((@dot et x) (identifier? #'x)
+     (let ((s (syntax-e #'x))
+           (ts (tc-expr/type-record part env #'et)))
+       (match (typing-scheme-type ts)
+         ((type:record fldtys)
+          (unless (symdict-has-key? fldtys s)
+            (error '@dot "expected record with field" s))
+          (typing-scheme (typing-scheme-menv ts)
+                         (symdict-ref fldtys s)))
+         (_
+          (error 'tc-expr "TODO: @dot, unify with a record type")))))
     ((@tuple e ...)
      (let ((ts (stx-map tce #'(e ...))))
        (typing-scheme (menvs-meet (map typing-scheme-menv ts))
@@ -898,10 +914,9 @@
        (def et (tc-expr/check part env #'e type:int))
        (typing-scheme (menvs-meet (map typing-scheme-menv [xt et]))
                       type:unit)))
-    ((@app f a ...) (identifier? #'f)
-     ;; TODO: handle the case where f is NOT an identifier
-     (let ((s (syntax-e #'f))
-           (ft (tc-expr-id part env #'f)))
+    ((@app f a ...)
+     (let ((s (syntax-e (head-id #'f)))
+           (ft (tc-expr part env #'f)))
        (match (typing-scheme-type ft)
          ((type:arrow in-tys out-ty)
           (unless (= (stx-length #'(a ...)) (length in-tys))
@@ -952,6 +967,18 @@
                       (type:var a))))
     ((entry:known _ t) t)
     ((entry:ctor _ t) t)))
+
+;; tc-expr/type-record : MPart Env ExprStx -> TypingScheme
+;; Typechecks stx as either an expression, or as a type with
+;; methods in a record that can be accessed with `@dot`
+(def (tc-expr/type-record part env stx)
+  (syntax-case stx ()
+    (x (identifier? #'x)
+     (let ((s (syntax-e #'x)))
+       (cond ((bound-as-type? env (syntax-e #'x))
+              (error 'tc-expr/type-record "TODO: handle types used as records for @dot"))
+             (else (tc-expr-id part env stx)))))
+    (_ (error 'tc-expr/type-record "TODO"))))
 
 ;; tc-expr/check : MPart Env ExprStx (U #f NType) -> TypingSchemeOrError
 ;; returns expected-ty on success, actual-ty if no expected, otherwise error
