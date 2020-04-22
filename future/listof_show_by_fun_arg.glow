@@ -1,0 +1,12 @@
+
+// This is the simpler version without a need for traits.
+// The more advanced version with traits is in listof_show_by_trait.glow.
+
+data listof('a) = Empty | Cons('a, listof('a))
+with {
+  show: (a_show : 'a -> string, l : listof('a)) =>
+    switch (l) {
+    | Empty          => "Empty"
+    | Cons(fst, rst) => string-append("Cons(", a_show(fst), ", ", listof.show(a_show, rst), ")")
+    }
+};
