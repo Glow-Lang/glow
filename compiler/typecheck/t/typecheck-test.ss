@@ -57,18 +57,19 @@
 (def (typecheck-display prog expected-env)
   (defvalues (prog2 unused-table alenv) (alpha-convert prog))
   (def prog3 (desugar prog2 unused-table))
-  (def tyenv (typecheck prog3 unused-table))
-  (write-type-env tyenv)
-  (cond
-    ((not expected-env) #t)
-    ((type-env=? tyenv expected-env)
-     (printf ";; ✓ matches expected types\n")
-     #t)
-    (else
-     (printf ";; ✗ different from expected types\n")
-     (printf "expected:\n")
-     (write-type-env expected-env)
-     #f)))
+  (defvalues (tyenv tyinfotbl) (typecheck prog3 unused-table))
+  (parameterize ((current-type-info-table tyinfotbl))
+    (write-type-env tyenv)
+    (cond
+      ((not expected-env) #t)
+      ((type-env=? tyenv expected-env)
+       (printf ";; ✓ matches expected types\n")
+       #t)
+      (else
+       (printf ";; ✗ different from expected types\n")
+       (printf "expected:\n")
+       (write-type-env expected-env)
+       #f))))
 
 ;; try-typecheck-files : [Listof PathString] -> Void
 (def (try-typecheck-files files)

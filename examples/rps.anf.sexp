@@ -3,12 +3,12 @@
          Paper
          Scissors
          with:
-         (block (def tmp (λ (tag) (def x : name (input name tag)) x))
+         (block (def tmp (λ (tag) (def x : Hand (input Hand tag)) x))
                 (def tmp0
-                     (λ ((x0 : name))
+                     (λ ((x0 : Hand))
                         (switch x0 (Rock 0) (Paper 1) (Scissors 2))))
                 (def tmp1
-                     (λ ((x1 : name))
+                     (λ ((x1 : nat))
                         (switch x1 (0 Rock) (1 Paper) (2 Scissors))))
                 (@record (input tmp) (toNat tmp0) (ofNat tmp1))))
 (defdata Outcome
@@ -16,12 +16,12 @@
          Draw
          A_Wins
          with:
-         (block (def tmp2 (λ (tag0) (def x2 : name (input name tag0)) x2))
+         (block (def tmp2 (λ (tag0) (def x2 : Outcome (input Outcome tag0)) x2))
                 (def tmp3
-                     (λ ((x3 : name))
+                     (λ ((x3 : Outcome))
                         (switch x3 (B_Wins 0) (Draw 1) (A_Wins 2))))
                 (def tmp4
-                     (λ ((x4 : name))
+                     (λ ((x4 : nat))
                         (switch x4 (0 B_Wins) (1 Draw) (2 A_Wins))))
                 (@record (input tmp2) (toNat tmp3) (ofNat tmp4))))
 (def winner
@@ -34,8 +34,8 @@
         (def tmp8 (@dot Hand toNat))
         (def tmp9 (@app tmp8 handB))
         (def tmp10 (@app - 4 tmp9))
-        (def tmp11 (@app mod tmp10 3))
-        (def tmp12 (@app + tmp7 tmp11))
+        (def tmp11 (@app + tmp7 tmp10))
+        (def tmp12 (@app mod tmp11 3))
         (@app tmp5 tmp12)))
 (@interaction
  ((@list A B))
@@ -55,7 +55,7 @@
          (@ A (publish! salt handA0))
          (def tmp16 (@tuple salt handA0))
          (def tmp17 (digest tmp16))
-         (def tmp18 (@app = commitment tmp17))
+         (def tmp18 (== commitment tmp17))
          (require! tmp18)
          (def outcome (@app winner handA0 handB0))
          (switch outcome

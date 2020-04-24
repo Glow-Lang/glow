@@ -133,7 +133,7 @@
 
 ;; anf-expr : ExprStx [Listof StmtStx] -> (values ExprStx [Listof StmtStx])
 (def (anf-expr stx acc)
-  (syntax-case stx (@ ann @tuple @record @list @dot @app and or if block splice switch λ input require! assert! deposit! withdraw!)
+  (syntax-case stx (@ ann @tuple @record @list @dot @app and or if block splice switch λ == input require! assert! deposit! withdraw!)
     ((@ _ _) (error 'anf-expr "TODO: deal with @"))
     (x (identifier? #'x) (values stx acc))
     (lit (stx-atomic-literal? #'lit) (values stx acc))
@@ -162,6 +162,7 @@
                                  (stx-map anf-switch-case #'(swcase ...))))
                acc)))
     ((λ . _) (values (anf-lambda stx) acc))
+    ((== a b) (anf-multiarg-expr stx acc))
     ((input type tag)
      (let-values (((rtag acc) (anf-arg-expr #'tag acc)))
        (values (restx stx [(stx-car stx) #'type rtag]) acc)))

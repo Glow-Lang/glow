@@ -2,7 +2,7 @@
 data Hand = | Rock | Paper | Scissors;
 data Outcome = | B_Wins | Draw | A_Wins;
 let winner = (handA : Hand, handB : Hand) : Outcome => {
-    NatToOutcome(HandToNat(handA) + (4 - HandToNat(handB)) % 3) }
+    Outcome.ofNat((HandToNat(handA) + (4 - HandToNat(handB))) % 3) }
 
 @interaction([A, B])
 let rockPaperScissors = (wagerAmount) => {

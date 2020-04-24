@@ -5,11 +5,12 @@
         :std/misc/list
         :std/misc/repr
         :clan/pure/dict/symdict
+        :clan/utils/debug
         ./variance)
 
 ;; A Type is one of:
 ;;  - (type:bottom)
-;;  - (type:name Symbol [Listof Variance])  ;; TODO: add srcloc
+;;  - (type:name Symbol)  ;; TODO: add srcloc
 ;;  - (type:name-subtype Symbol Type)
 ;;  - (type:var Symbol)
 ;;  - (type:app Type [Listof Type])
@@ -17,7 +18,7 @@
 ;;  - (type:record [Symdictof Type])
 ;;  - (type:arrow [Listof Type] Type)
 (defstruct type:bottom () transparent: #t)
-(defstruct type:name (sym vances) transparent: #t)  ;; TODO: add srcloc
+(defstruct type:name (sym) transparent: #t)  ;; TODO: add srcloc
 (defstruct type:name-subtype (sym super) transparent: #t)
 (defstruct type:var (sym) transparent: #t)
 (defstruct type:app (fun args) transparent: #t)
@@ -52,19 +53,77 @@
 (def (ptype? v) (or (type? v) (ptype:union? v)))
 (def (ntype? v) (or (type? v) (ntype:intersection? v)))
 
-(def type:unit (type:tuple []))
-(def type:int (type:name 'int []))
-(def type:nat (type:name-subtype 'nat type:int))
-(def type:bool (type:name 'bool []))
-(def type:bytes (type:name 'bytes []))
+;; A MonoEnv is a [Symdictof NType]
+;; monotype environments ∆ bind λ-bound variables only,
+;; no known-type/let-bound variables, don't have ∀-quantifiers
 
-(def type:Participant (type:name 'Participant []))
-(def type:Digest (type:name 'Digest []))
-(def type:Assets (type:name 'Assets []))
-(def type:Signature (type:name 'Signature []))
+;; A TypingScheme is a (typing-scheme MonoEnv PType)
+;; Representing both the type of an expression and the types of its
+;; free λ-bound variables. A polar typing scheme [D⁻]t⁺ is a typing
+;; scheme where the types D⁻(x) of λ-bound variables are given by
+;; negative type terms, and the type of the result t⁺ is given by a
+;; positive type term.
+(defstruct typing-scheme (menv type) transparent: #t)
+
+;; --------------------------------------------------------
+
+;; An TypeInfoTable is a [Hashof Symbol TypeInfo]
+;; A TypeInfo is a (type-info [Listof Variance] TypingScheme)
+(defstruct type-info (variances methods) transparent: #t)
+
+;; make-type-info-table : -> TypeInfoTable
+(def (make-type-info-table) (make-hash-table-eq))
+
+;; current-type-info-table : [Parameterof TypeInfoTable]
+(def current-type-info-table (make-parameter (make-type-info-table)))
+
+;; copy-current-type-info-table : -> TypeInfoTable
+(def (copy-current-type-info-table) (hash-copy (current-type-info-table)))
+
+;; type-name-variances : Symbol -> [Listof Variance]
+(def (type-name-variances name)
+  (type-info-variances (hash-ref (current-type-info-table) name)))
+
+;; type-name-methods : Symbol -> TypingScheme
+(def (type-name-methods name)
+  (def ms (type-info-methods (hash-ref (current-type-info-table) name)))
+  (unless (typing-scheme? ms) (error 'type-name-methods "expected typing-scheme output" ms))
+  ms)
+
+;; add-type-info! : Symbol TypeInfo -> Void
+;; Adds the type info, checking that it's not overriding existing info
+(def (add-type-info! name info)
+  (unless (symbol? name) (error 'add-type-info! "expected symbol"))
+  (unless (type-info? info) (error 'add-type-info! "expected type-info"))
+  (unless (typing-scheme? (type-info-methods info)) (error 'add-type-info "expected typing-scheme within type-info"))
+  (def tbl (current-type-info-table))
+  (when (hash-key? tbl name) (error 'add-type-info! "entry already exists for" name))
+  (hash-put! tbl name info))
+
+;; --------------------------------------------------------
+
+(def type:unit (type:tuple []))
+(def type:empty-record (type:record empty-symdict))
+(def empty-methods (typing-scheme empty-symdict type:empty-record))
+(def empty-type-info (type-info [] empty-methods))
+(def (add-empty-type-info! name) (add-type-info! name empty-type-info))
+
+(def type:int (type:name 'int))
+(def type:nat (type:name-subtype 'nat type:int))
+(def type:bool (type:name 'bool))
+(def type:bytes (type:name 'bytes))
+
+(def type:Participant (type:name 'Participant))
+(def type:Digest (type:name 'Digest))
+(def type:Assets (type:name 'Assets))
+(def type:Signature (type:name 'Signature))
+
+(for-each add-empty-type-info! '(int nat bool bytes Participant Digest Assets Signature))
 
 ;; lists are covariant, so (listof a) <: (listof b) when a <: b
-(def typector:listof (type:name 'listof [covariant]))
+(def typector:listof (type:name 'listof))
+(add-type-info! 'listof (type-info [covariant] empty-methods))
+
 (def (type:listof t) (type:app typector:listof [t]))
 (def (type:listof? t)
   (match t
@@ -135,13 +194,27 @@
     ([a b] (type-meet a b))
     (_ (type-meet (car ts) (types-meet (cdr ts))))))
 
+;; menv-meet : MonoEnv MonoEnv -> MonoEnv
+;; union of keys, type-meet of values
+(def (menv-meet as bs)
+  (for/fold (acc as) ((k (symdict-keys bs)))
+    (def b (symdict-ref bs k))
+    (cond
+      ((symdict-has-key? acc k) (symdict-update acc k (lambda (a) (type-meet a b)) b))
+      (else                     (symdict-put acc k b)))))
+
+;; menvs-meet : [Listof MonoEnv] -> MonoEnv
+;; union of keys, type-meet of values
+(def (menvs-meet menvs)
+  (for/fold (acc empty-symdict) ((me menvs)) (menv-meet acc me)))
+
 ;; --------------------------------------------------------
 
 ;; type-vars : Type -> [Listof Symbol]
 (def (type-vars t)
   (match t
     ((type:bottom) [])
-    ((type:name _ _) [])
+    ((type:name _) [])
     ((type:name-subtype _ sup) (type-vars sup))
     ((type:var s) [s])
     ((type:app f as)
@@ -163,7 +236,7 @@
   (def (hv? t) (type-has-var? t x))
   (match t
     ((type:bottom) #f)
-    ((type:name s _) #f)
+    ((type:name s) #f)
     ((type:name-subtype _ sup) (hv? sup))
     ((type:var s) (eq? x s))
     ((type:app f as)
@@ -186,7 +259,7 @@
   (def (sub t) (type-subst tyvars t))
   (match t
     ((type:bottom) t)
-    ((type:name _ _) t)
+    ((type:name _) t)
     ((type:name-subtype nm sup)
      (type:name-subtype nm (sub sup)))
     ((type:var s)
@@ -209,32 +282,6 @@
      (types-meet (map sub ts)))))
 
 ;; --------------------------------------------------------
-
-;; A MonoEnv is a [Symdictof NType]
-;; monotype environments ∆ bind λ-bound variables only,
-;; no known-type/let-bound variables, don't have ∀-quantifiers
-
-;; menv-meet : MonoEnv MonoEnv -> MonoEnv
-;; union of keys, type-meet of values
-(def (menv-meet as bs)
-  (for/fold (acc as) ((k (symdict-keys bs)))
-    (def b (symdict-ref bs k))
-    (cond
-      ((symdict-has-key? acc k) (symdict-update acc k (lambda (a) (type-meet a b)) b))
-      (else                     (symdict-put acc k b)))))
-
-;; menvs-meet : [Listof MonoEnv] -> MonoEnv
-;; union of keys, type-meet of values
-(def (menvs-meet menvs)
-  (for/fold (acc empty-symdict) ((me menvs)) (menv-meet acc me)))
-
-;; A TypingScheme is a (typing-scheme MonoEnv PType)
-;; Representing both the type of an expression and the types of its
-;; free λ-bound variables. A polar typing scheme [D⁻]t⁺ is a typing
-;; scheme where the types D⁻(x) of λ-bound variables are given by
-;; negative type terms, and the type of the result t⁺ is given by a
-;; positive type term.
-(defstruct typing-scheme (menv type) transparent: #t)
 
 (def (print-typing-scheme ts)
   (with (((typing-scheme menv t) ts))
@@ -265,7 +312,7 @@
 (def (type->sexpr t)
   (match t
     ((type:bottom) '⊥)
-    ((type:name s _) s)
+    ((type:name s) s)
     ((type:name-subtype s _) s)
     ((type:var s) `',s)
     ((type:app f as) (cons (type->sexpr f) (map type->sexpr as)))
@@ -318,7 +365,7 @@
 (def (type->repr-sexpr t)
   (match t
     ((type:bottom) '(type:bottom))
-    ((type:name s vs) `(type:name ',s ,(list->repr-sexpr vs variance->repr-sexpr)))
+    ((type:name s) `(type:name ',s))
     ((type:name-subtype s t) `(type:name-subtype ',s ,(type->repr-sexpr t)))
     ((type:var s) `(type:var ',s))
     ((type:app f as) `(type:app ,(type->repr-sexpr f) ,(list->repr-sexpr as type->repr-sexpr)))
@@ -333,7 +380,7 @@
 (def (repr-sexpr->type s)
   (match s
     ('(type:bottom) (type:bottom))
-    (['type:name ['quote s] vs] (type:name s (repr-sexpr->list vs repr-sexpr->variance)))
+    (['type:name ['quote s]] (type:name s))
     (['type:name-subtype ['quote s] t] (type:name-subtype s (repr-sexpr->type t)))
     (['type:var ['quote s]] (type:var s))
     (['type:app f as] (type:app (repr-sexpr->type f) (repr-sexpr->list as repr-sexpr->type)))

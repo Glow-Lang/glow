@@ -4,8 +4,8 @@
            (typing-scheme
             (symdict)
             (type:arrow
-             (@list (type:name 'Participant (@list))
-                    (type:name 'Participant (@list))
-                    (type:name 'Digest (@list))
-                    (type:name-subtype 'nat (type:name 'int (@list))))
+             (@list (type:name 'Participant)
+                    (type:name 'Participant)
+                    (type:name 'Digest)
+                    (type:name-subtype 'nat (type:name 'int)))
              (type:tuple (@list)))))))

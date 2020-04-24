@@ -32,7 +32,7 @@
     def deftype defdata
     if and or
     block splice switch λ
-    input digest sign
+    == input digest sign
     interaction verifiably publicly @interaction @verifiably @publicly
     publish! verify! require! assert! deposit! withdraw!))
 
@@ -40,7 +40,7 @@
 ;; init-syms : [Listof Sym]
 (def init-syms
   '(int nat bool bytes Digest Assets Signature
-    not = <= < > >= + - * / mod sqr sqrt
+    not <= < > >= + - * / mod sqr sqrt
     member
     randomUInt256 isValidSignature
     canReach mustReach))
@@ -73,7 +73,7 @@
 (def (alpha-convert-expr env stx)
   ;; ace : ExprStx -> ExprStx
   (def (ace e) (alpha-convert-expr env e))
-  (syntax-case stx (@ ann @dot @tuple @list @record if and or block splice sign switch λ input digest require! assert! deposit! withdraw! @app)
+  (syntax-case stx (@ ann @dot @tuple @list @record if and or block splice == sign switch λ input digest require! assert! deposit! withdraw! @app)
     ((@ _ _) (error 'alpha-convert-expr "TODO: deal with @"))
     ((ann expr type)
      (retail-stx stx [(ace #'expr) (alpha-convert-type env #'type)]))
@@ -98,6 +98,8 @@
     ((and e ...)
      (alpha-convert-keyword/sub-exprs env stx))
     ((or e ...)
+     (alpha-convert-keyword/sub-exprs env stx))
+    ((== a b)
      (alpha-convert-keyword/sub-exprs env stx))
     ((sign e)
      (alpha-convert-keyword/sub-exprs env stx))

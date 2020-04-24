@@ -54,15 +54,15 @@
        (def input
          (let ((x (mk-var 'x))
                (tag (mk-var 'tag)))
-           (restx stx [#'λ [tag] [#'def x ': #'name [#'input #'name tag]] x])))
+           (restx stx [#'λ [tag] [#'def x ': #'spec [#'input #'spec tag]] x])))
        (def toofNat
          (let ((ofNat-cases (nat-to-variants #'(variant ...))))
            (if ofNat-cases
              (let ((of-x (mk-var 'x))
                    (x-to (mk-var 'x))
                    (toNat-cases (map reverse ofNat-cases)))
-               [['toNat [#'λ [[x-to ': #'name]] [#'switch x-to . toNat-cases]]]
-                ['ofNat [#'λ [[of-x ': #'name]] [#'switch of-x . ofNat-cases]]]])
+               [['toNat [#'λ [[x-to ': #'spec]] [#'switch x-to . toNat-cases]]]
+                ['ofNat [#'λ [[of-x ': #'nat]] [#'switch of-x . ofNat-cases]]]])
              '())))
        (def rtvalue `(@record (input ,input) ,@toofNat))
        (retail-stx stx `(,#'spec ,@(syntax->list #'(variant ...)) with: ,rtvalue))))))
@@ -88,7 +88,7 @@
   (restx expr
     (syntax-case expr (sign)
       ((sign msg) [#'@app #'isValidSignature p (computation-verification #'msg) var])
-      (_ [#'@app #'= var (computation-verification expr)]))))
+      (_ [#'== var (computation-verification expr)]))))
 
 ;; desugar-verifiably : Identifier Stx -> Stx
 (def (desugar-verifiably stx p definition)
@@ -129,7 +129,7 @@
 
 ;; desugar-expr : Stx -> Stx
 (def (desugar-expr stx)
-  (syntax-case stx (@ ann @dot @tuple @record @list if and or block splice switch λ input digest sign require! assert! deposit! withdraw! verify! @app)
+  (syntax-case stx (@ ann @dot @tuple @record @list if and or block splice switch λ == input digest sign require! assert! deposit! withdraw! verify! @app)
     ((@ _ _) (error 'desugar-expr "TODO: deal with @"))
     ((ann expr type) (retail-stx stx [(desugar-expr #'expr) #'type]))
     (x (identifier? #'x) stx)
@@ -154,6 +154,7 @@
     ((switch e swcase ...)
      (retail-stx stx (cons (desugar-expr #'e) (stx-map desugar-switch-case #'(swcase ...)))))
     ((λ . _) (desugar-lambda stx))
+    ((== a b) (desugar-keyword/sub-exprs stx))
     ((input type tag) (retail-stx stx [#'type (desugar-expr #'tag)]))
     ((digest e ...) (desugar-keyword/sub-exprs stx))
     ((sign e ...) (desugar-keyword/sub-exprs stx))

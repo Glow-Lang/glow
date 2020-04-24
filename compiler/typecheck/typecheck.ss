@@ -65,8 +65,8 @@
      (andmap (lambda (a) (subtype? a b)) as))
     ((a (ntype:intersection bs))
      (andmap (lambda (b) (subtype? a b)) bs))
-    (((type:name x vxs) (type:name y vys))
-     (and (eq? x y) (equal? vxs vys)))
+    (((type:name x) (type:name y))
+     (eq? x y))
     ;; cases for name-subtype must be before any possible case for _ <: (union _)
     (((type:name-subtype x a2) (type:name-subtype y b2))
      (cond ((eq? x y) (subtype? a2 b2))
@@ -83,9 +83,9 @@
      (and (equal? (length a1s) (length a2s))
           (andmap subtype? a2s a1s)
           (subtype? b1 b2)))
-    (((type:app (type:name f1 v1s) a1s) (type:app (type:name f2 v2s) a2s))
+    (((type:app (type:name f1) a1s) (type:app (type:name f2) a2s))
+     (def v1s (type-name-variances f1))
      (and (eq? f1 f2)
-          (equal? v1s v2s)
           (= (length v1s) (length a1s) (length a2s))
           (andmap variance-type~? v1s a1s a2s)))
     ((_ _) #f)))
@@ -252,10 +252,10 @@
 
 ;; type-env=? : Env Env -> Bool
 (def (type-env=? a b)
-  (def ans1 (and a b (symdict=? a b env-entry=?)))
+  ;(def ans1 (and a b (symdict=? a b env-entry=?)))
   (def ans2 (and a b (equal? (type-env->repr-sexpr a) (type-env->repr-sexpr b))))
-  (unless (equal? ans1 ans2)
-    (printf "type-env=?: ans1 = ~r, ans2 = ~r\n" ans1 ans2))
+  ;(unless (equal? ans1 ans2)
+  ;  (printf "type-env=?: ans1 = ~r, ans2 = ~r\n" ans1 ans2))
   ans2)
 
 ;; --------------------------------------------------------
@@ -307,17 +307,16 @@
   (def (nsub t) (vsub contravariant t))
   (match t
     ((type:bottom) t)
-    ((type:name _ _) t)
+    ((type:name _) t)
     ((type:name-subtype x sup)
      (type:name-subtype x (sub sup)))
     ((type:var s)
      (cond ((symdict-has-key? tybi s)
             (tyvar-bisubst (symdict-ref tybi s) v s))
            (else t)))
-    ((type:app (type:name f vs) as)
-     (unless (= (length vs) (length as))
-       (error f "wrong number of arguments to type constructor"))
-     (type:app (type:name f vs) (map vsub vs as)))
+    ((type:app (type:name f) as)
+     (def vs (type-name-variances f))
+     (type:app (type:name f) (map vsub vs as)))
     ((type:tuple as)
      (type:tuple (map sub as)))
     ((type:record fldtys)
@@ -388,9 +387,8 @@
      (map (lambda (a) (constraint:subtype a b)) as))
     ((constraint:subtype a (ntype:intersection bs))
      (map (lambda (b) (constraint:subtype a b)) bs))
-    ((constraint:subtype (type:name x vxs) (type:name y vys))
+    ((constraint:subtype (type:name x) (type:name y))
      (unless (eq? x y) (error 'subtype (format "type mismatch, expected ~s, given ~s" y x)))
-     (unless (equal? vxs vys) (error 'subtype "inconsistant variances"))
      [])
     ;; cases for name-subtype must be before any possible case for _ <: (union _)
     ((constraint:subtype (type:name-subtype x a2) (and b (type:name-subtype y b2)))
@@ -398,7 +396,7 @@
            (else      [(constraint:subtype a2 b)])))
     ((constraint:subtype (type:name-subtype _ a2) b)
      [(constraint:subtype a2 b)])
-    ((constraint:subtype (type:name x vxs) (type:name-subtype y _))
+    ((constraint:subtype (type:name x) (type:name-subtype y _))
      (error 'subtype (format "type mismatch, expected ~s, given ~s" y x)))
     ((constraint:subtype (type:tuple as) (type:tuple bs))
      (unless (= (length as) (length bs))
@@ -410,9 +408,9 @@
      (map (lambda (k)
             (constraint:subtype (symdict-ref as k) (symdict-ref bs k)))
           (symdict-keys as)))
-    ((constraint:subtype (type:app (type:name f1 v1s) a1s) (type:app (type:name f2 v2s) a2s))
+    ((constraint:subtype (type:app (type:name f1) a1s) (type:app (type:name f2) a2s))
      (unless (eq? f1 f2) (error 'subtype (format "type mismatch, expected ~s, given ~s" f2 f1)))
-     (unless (equal? v1s v2s) (error 'subtype "inconsistant variances"))
+     (def v1s (type-name-variances f1))
      (unless (= (length v1s) (length a1s) (length a2s))
        (error 'subtype "wrong number of arguments to type constructor"))
      (flatten1 (map constraints-from-variance v1s a1s a2s)))
@@ -536,6 +534,8 @@
 ;; Π ⊩ e : [∆]τ
 ;; Function signatures follow: Env ExprStx -> TypingScheme
 
+(def type:var_eq_a (type:var (gensym 'eq_a)))
+
 ;; init-env : Env
 (def init-env
   (symdict
@@ -548,8 +548,6 @@
    ('Assets (entry:type #f [] type:Assets))
    ('Signature (entry:type #f [] type:Signature))
    ('not (entry:known #f (typing-scheme empty-symdict (type:arrow [type:bool] type:bool))))
-   ('== (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int type:int] type:bool))))
-   ('= (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int type:int] type:bool))))
    ('<= (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int type:int] type:bool))))
    ('< (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int type:int] type:bool))))
    ('> (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int type:int] type:bool))))
@@ -558,7 +556,7 @@
    ('- (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int type:int] type:int))))
    ('* (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int type:int] type:int))))
    ('/ (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int type:int] type:int))))
-   ('mod (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int type:int] type:int))))
+   ('mod (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int type:nat] type:nat))))
    ('sqr (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int] type:int))))
    ('sqrt (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int] type:int))))
    ;; TODO: make polymorphic
@@ -566,16 +564,18 @@
    ('randomUInt256 (entry:known #f (typing-scheme empty-symdict (type:arrow [] type:nat))))
    ('isValidSignature (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Participant type:Digest type:Signature] type:bool))))))
 
-;; typecheck : [Listof Stmt] UnusedTable → (values Env)
+;; typecheck : [Listof Stmt] UnusedTable → (values Env TypeInfoTable)
 ;; Input unused-table is mutated.
 ;; Output env has types of top-level identifiers.
 (def (typecheck stmts unused-table)
+  (def type-info-tbl (copy-current-type-info-table))
   (parameterize ((current-unused-table unused-table)
+                 (current-type-info-table type-info-tbl)
                  (current-symbol-ntype-table (make-symbol-ntype-table)))
     (defvalues (penv nenv) (tc-stmts #f init-env stmts))
     (unless (symdict-empty? nenv)
       (error 'typecheck "non-empty D⁻ for free lambda-bound vars at top level"))
-    penv))
+    (values penv type-info-tbl)))
 
 ;; tc-stmts : MPart Env [Listof StmtStx] -> (values Env MonoEnv)
 ;; the env result contains only the new entries introduced by the statements
@@ -699,22 +699,38 @@
   (syntax-case stx (@ : quote deftype defdata)
     ((defdata x variant ... with: rtvalue) (identifier? #'x)
      (let ((s (syntax-e #'x)))
-       (def b (type:name (symbol-fresh s) []))
+       (def sym (symbol-fresh s))
+       (def b (type:name sym))
        (def env2 (symdict (s (entry:type part [] b))))
-       (defvalues (penv nenv)
-         (tc-defdata-variants part env env2 [] b #'(variant ...)))
-       ;; TODO: handle the rtvalue
+       ;; TODO: this pattern would be easier with splicing-parameterize
+       (defvalues (penv nenv methods)
+         (parameterize ((current-type-info-table (copy-current-type-info-table)))
+           (add-type-info! sym (type-info [] empty-methods))
+           (defvalues (penv nenv)
+            (tc-defdata-variants part env env2 [] b #'(variant ...)))
+           ;; handle the rtvalue
+           (def methods (tc-expr part (env-put/envs env [env2 penv]) #'rtvalue))
+          (values penv nenv methods)))
+       (add-type-info! sym (type-info [] methods))
        (values (env-put/env env2 penv) nenv)))
     ((defdata (f 'x ...) variant ... with: rtvalue) (identifier? #'f)
      (let ((s (syntax-e #'f))
            (xs (stx-map syntax-e #'(x ...))))
+       (def sym (symbol-fresh s))
        ;; TODO: allow variances to be either annotated or inferred
        (def vances (map (lambda (x) invariant) xs))
-       (def b (type:app (type:name (symbol-fresh s) vances) (map make-type:var xs)))
+       (def b (type:app (type:name sym) (map make-type:var xs)))
        (def env2 (symdict (s (entry:type part xs b))))
-       (defvalues (penv nenv)
-         (tc-defdata-variants part env env2 xs b #'(variant ...)))
-       ;; TODO: handle the rtvalue
+       ;; TODO: this pattern would be easier with spicing-parameterize
+       (defvalues (penv nenv methods)
+         (parameterize ((current-type-info-table (copy-current-type-info-table)))
+           (add-type-info! sym (type-info vances empty-methods))
+           (defvalues (penv nenv)
+             (tc-defdata-variants part env env2 xs b #'(variant ...)))
+           ;; handle the rtvalue
+           (def methods (tc-expr part (env-put/envs env [env2 penv]) #'rtvalue))
+           (values penv nenv methods)))
+       (add-type-info! sym (type-info vances methods))
        (values (env-put/env env2 penv) nenv)))))
 
 
@@ -774,6 +790,19 @@
    (symdict (s (entry:known part ts)))
    (typing-scheme-menv ts)))
 
+;; tc-expr-lambda : MPart Env ExprStx -> TypingScheme
+(def (tc-expr-lambda part env stx)
+  (syntax-case stx (λ :)
+    ((λ params : out-type body ...)
+     (let ((xs (stx-map parse-param-name #'params))
+           (in-ts (stx-map (lambda (p) (parse-param-type part env p)) #'params))
+           (out-t (parse-type part env empty-symdict #'out-type)))
+       (tc-function part env xs in-ts out-t #'(body ...))))
+    ((λ params body ...)
+     (let ((xs (stx-map parse-param-name #'params))
+           (in-ts (stx-map (lambda (p) (parse-param-type part env p)) #'params)))
+       (tc-function part env xs in-ts #f #'(body ...))))))
+
 ;; tc-function : MPart Env [Listof Symbol] [Listof (U #f Type)] (U #f Type) BodyStx -> TypingScheme
 (def (tc-function part env xs in-tys exp-out-ty body)
   ;; in-ents* : [Listof EnvEntry]
@@ -822,7 +851,7 @@
   (def (tce e) (tc-expr part env e))
   ;; tce/bool : ExprStx -> TypingScheme
   (def (tce/bool e) (tc-expr/check part env e type:bool))
-  (syntax-case stx (@ : ann @dot @tuple @record @list @app and or if block splice sign switch input digest require! assert! deposit! withdraw!)
+  (syntax-case stx (@ : ann @dot @tuple @record @list @app and or if block splice == sign λ switch input digest require! assert! deposit! withdraw!)
     ((@ _ _) (error 'tc-expr "TODO: deal with @"))
     ((ann expr type)
      (tc-expr/check part env #'expr (parse-type part env empty-symdict #'type)))
@@ -830,15 +859,15 @@
     (lit (stx-atomic-literal? #'lit) (typing-scheme empty-symdict (tc-literal #'lit)))
     ((@dot et x) (identifier? #'x)
      (let ((s (syntax-e #'x))
-           (ts (tc-expr/type-record part env #'et)))
+           (ts (tc-expr/type-methods part env #'et)))
        (match (typing-scheme-type ts)
          ((type:record fldtys)
           (unless (symdict-has-key? fldtys s)
             (error '@dot "expected record with field" s))
           (typing-scheme (typing-scheme-menv ts)
                          (symdict-ref fldtys s)))
-         (_
-          (error 'tc-expr "TODO: @dot, unify with a record type")))))
+         (t
+          (error 'tc-expr "TODO: @dot, unify with a record type" "et" (syntax->datum #'et) "ts" ts "(typing-scheme? ts)" (typing-scheme? ts) "t" t)))))
     ((@tuple e ...)
      (let ((ts (stx-map tce #'(e ...))))
        (typing-scheme (menvs-meet (map typing-scheme-menv ts))
@@ -877,9 +906,16 @@
            (et (tce #'e)))
        (typing-scheme (menvs-meet (map typing-scheme-menv [ct tt et]))
                       (type-join (typing-scheme-type tt) (typing-scheme-type et)))))
+    ((== a b)
+     (let ((at (tce #'a)) (bt (tce #'b)))
+       ;; TODO: constrain the types in `at` and `bt` to types that
+       ;;       can be compared for equality
+       (typing-scheme (menvs-meet (map typing-scheme-menv [at bt]))
+                      type:bool)))
     ((sign e)
      (let ((ts (tc-expr/check part env #'e type:Digest)))
        (typing-scheme (typing-scheme-menv ts) type:Signature)))
+    ((λ . _) (tc-expr-lambda part env stx))
     ((switch e swcase ...)
      (let ((ts (tc-expr part env #'e)))
        (def vt (typing-scheme-type ts))
@@ -968,17 +1004,35 @@
     ((entry:known _ t) t)
     ((entry:ctor _ t) t)))
 
-;; tc-expr/type-record : MPart Env ExprStx -> TypingScheme
+;; tc-expr/type-methods : MPart Env ExprStx -> TypingScheme
 ;; Typechecks stx as either an expression, or as a type with
 ;; methods in a record that can be accessed with `@dot`
-(def (tc-expr/type-record part env stx)
-  (syntax-case stx ()
-    (x (identifier? #'x)
+(def (tc-expr/type-methods part env stx)
+  (syntax-case stx (quote)
+    (x (and (identifier? #'x) (bound-as-type? env (syntax-e #'x)))
      (let ((s (syntax-e #'x)))
-       (cond ((bound-as-type? env (syntax-e #'x))
-              (error 'tc-expr/type-record "TODO: handle types used as records for @dot"))
-             (else (tc-expr-id part env stx)))))
-    (_ (error 'tc-expr/type-record "TODO"))))
+       (def ent (symdict-ref env s))
+       (unless (mpart-can-use? part (entry-part ent))
+         (error s "access allowed only for" (entry-part ent)))
+       (match ent
+         ((entry:type _ [] t) (type-methods t))
+         (_ (error 'tc-expr/type-methods "TODO: handle types with parameters as records for @dot")))))
+    ('x (identifier? #'x)
+     ;; TODO: when traits are added, look in the trait constraints
+     (error 'tc-expr/type-methods "type variable used out of context:" (syntax->datum stx)))
+    ((tf . _) (and (identifier? #'x) (bound-as-type? env (syntax-e #'tf)))
+     ;; TODO: when traits are added, handle trait constraints for arguments
+     (error 'tc-expr/type-methods "TODO: handle types with arguments used as records for @dot"))
+    (_
+     (tc-expr part env stx))))
+
+;; type-methods : Type -> TypingScheme
+(def (type-methods t)
+  (match t
+    ((type:name name)
+     (type-name-methods name))
+    ((type:name-subtype name _) (type-name-methods name))
+    (_ (error 'type-methods "only name types can have methods"))))
 
 ;; tc-expr/check : MPart Env ExprStx (U #f NType) -> TypingSchemeOrError
 ;; returns expected-ty on success, actual-ty if no expected, otherwise error

@@ -3,7 +3,7 @@
 
 (def winner
   (λ ((handA : Hand) (handB : Hand)) : Outcome
-    ((@dot Outcome ofNat) (+ ((@dot Hand toNat) handA) (mod (- 4 ((@dot Hand toNat) handB)) 3)))))
+    ((@dot Outcome ofNat) (mod (+ ((@dot Hand toNat) handA) (- 4 ((@dot Hand toNat) handB))) 3))))
 
 (@ (interaction (@list A B))
  (def rockPaperScissors

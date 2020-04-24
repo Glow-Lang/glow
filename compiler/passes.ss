@@ -62,7 +62,7 @@
 ;; with an inferred (or explicitly specified) type
 ;; NB: the Unused table is modified in this pass
 ;; (Listof Stmt) Unused → TypeEnv
-(define-pass typecheck (desugar.sexp Unused) (typedecl.sexp))
+(define-pass typecheck (desugar.sexp Unused) (typedecl.sexp TypeInfoTable))
 
 ;; *A-normalization*: ensure all call arguments are trivial,
 ;; hence a well-defined sequence for all side-effects.
