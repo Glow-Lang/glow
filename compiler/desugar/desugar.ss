@@ -54,15 +54,15 @@
        (def input
          (let ((x (mk-var 'x))
                (tag (mk-var 'tag)))
-           (restx stx [#'λ [tag] [#'def x ': #'name [#'input #'name tag]] x])))
+           (restx stx [#'λ [tag] [#'def x ': #'spec [#'input #'spec tag]] x])))
        (def toofNat
          (let ((ofNat-cases (nat-to-variants #'(variant ...))))
            (if ofNat-cases
              (let ((of-x (mk-var 'x))
                    (x-to (mk-var 'x))
                    (toNat-cases (map reverse ofNat-cases)))
-               [['toNat [#'λ [[x-to ': #'name]] [#'switch x-to . toNat-cases]]]
-                ['ofNat [#'λ [[of-x ': #'name]] [#'switch of-x . ofNat-cases]]]])
+               [['toNat [#'λ [[x-to ': #'spec]] [#'switch x-to . toNat-cases]]]
+                ['ofNat [#'λ [[of-x ': #'nat]] [#'switch of-x . ofNat-cases]]]])
              '())))
        (def rtvalue `(@record (input ,input) ,@toofNat))
        (retail-stx stx `(,#'spec ,@(syntax->list #'(variant ...)) with: ,rtvalue))))))
@@ -88,7 +88,7 @@
   (restx expr
     (syntax-case expr (sign)
       ((sign msg) [#'@app #'isValidSignature p (computation-verification #'msg) var])
-      (_ [#'@app #'= var (computation-verification expr)]))))
+      (_ [#'== var (computation-verification expr)]))))
 
 ;; desugar-verifiably : Identifier Stx -> Stx
 (def (desugar-verifiably stx p definition)
@@ -129,7 +129,7 @@
 
 ;; desugar-expr : Stx -> Stx
 (def (desugar-expr stx)
-  (syntax-case stx (@ ann @dot @tuple @record @list if and or block splice switch λ input digest sign require! assert! deposit! withdraw! verify! @app)
+  (syntax-case stx (@ ann @dot @tuple @record @list if and or block splice switch λ == input digest sign require! assert! deposit! withdraw! verify! @app)
     ((@ _ _) (error 'desugar-expr "TODO: deal with @"))
     ((ann expr type) (retail-stx stx [(desugar-expr #'expr) #'type]))
     (x (identifier? #'x) stx)
@@ -140,12 +140,21 @@
     ((@record (x e) ...) (retail-stx stx (stx-map (lambda (x e) [x (desugar-expr e)]) #'(x ...) #'(e ...))))
     ((block b ...) (retail-stx stx (desugar-body (syntax->list #'(b ...)))))
     ((splice b ...) (retail-stx stx (desugar-body (syntax->list #'(b ...)))))
-    ((if c t e) (desugar-keyword/sub-exprs stx))
-    ((and e ...) (desugar-keyword/sub-exprs stx))
-    ((or e ...) (desugar-keyword/sub-exprs stx))
+    ((if c t e) (desugar-keyword/sub-exprs stx)) ;; TODO: should we desugar to switch?
+    ((and) (restx stx #t))
+    ((and e) #'e)
+    ((and e1 e2 ...)
+     (with-syntax ((more (desugar-expr (restx1 stx #'(and e2 ...)))))
+       #'(if e1 more #f)))
+    ((or) (restx stx #f))
+    ((or e) #'e)
+    ((or e1 e2 ...)
+     (with-syntax ((more (desugar-expr (restx1 stx #'(or e2 ...)))))
+       #'(if e1 #t more)))
     ((switch e swcase ...)
      (retail-stx stx (cons (desugar-expr #'e) (stx-map desugar-switch-case #'(swcase ...)))))
     ((λ . _) (desugar-lambda stx))
+    ((== a b) (desugar-keyword/sub-exprs stx))
     ((input type tag) (retail-stx stx [#'type (desugar-expr #'tag)]))
     ((digest e ...) (desugar-keyword/sub-exprs stx))
     ((sign e ...) (desugar-keyword/sub-exprs stx))
@@ -166,7 +175,7 @@
 (def (desugar-switch-case stx)
   (syntax-case stx ()
     ((pat body ...)
-     (restx stx (cons #'pat (desugar-body (syntax->list #'(body ...))))))))
+     (retail-stx stx (desugar-body (syntax->list #'(body ...)))))))
 
 (def (desugar-lambda stx)
   (syntax-case stx (:)
@@ -176,9 +185,9 @@
      (retail-stx stx (cons* #'params (desugar-body (syntax->list #'(body ...))))))))
 
 ;; Conform to pass convention.
-;; desugar : [Listof StmtStx] UnusedTable AlphaEnv -> (values [Listof StmtStx] UnusedTable AlphaEnv)
-(def (desugar stmts unused-table alpha-env)
+;; NB: side-effecting the unused-table
+;; desugar : [Listof StmtStx] UnusedTable AlphaEnv -> [Listof StmtStx]
+(def (desugar stmts unused-table)
   (parameterize ((current-unused-table unused-table)
                  (current-verifications (make-hash-table)))
-    (def desugared (desugar-stmts stmts))
-    (values desugared unused-table alpha-env)))
+    (desugar-stmts stmts)))

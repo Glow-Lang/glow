@@ -12,10 +12,16 @@ here=$(dirname "$this")
 . "$here/env.sh"
 
 case "${1-}" in
-    --swank) swank="-e (spawn/name'swank\`,start-swank)" ; shift ;;
-    *) swank= ;;
+    --swank) swank=(-e "(spawn/name'swank\`,start-swank)") ; shift ;;
+    *) swank=() ;;
 esac
 if [ $# = 0 ] ; then
-    interaction="$GERBIL_HOME/lib/init.ss -"
+    interaction=("$GERBIL_HOME/lib/init.ss" -)
 fi
-exec gxi "${here}/all-glow.ss" $swank $interaction "$@"
+command=(
+    gxi
+    "${here}/all-glow.ss"
+    # -e "(add-load-path (glow-src))"
+    "${swank[@]}" "${interaction[@]}" "$@")
+
+exec "${command[@]}"

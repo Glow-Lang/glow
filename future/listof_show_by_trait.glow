@@ -1,0 +1,17 @@
+
+// See listof_show_by_fun_arg.glow for the simpler version without traits.
+// This more advanced version allows listof('a).show to be used directly without a function argument.
+
+trait Show('a) {
+  show: 'a -> string
+};
+
+data listof('a) = Empty | Cons('a, listof('a))
+with {
+  show: (l : listof('a)) where Show('a) =>
+    switch (l) {
+    | Empty          => "Empty"
+    | Cons(fst, rst) => string-append("Cons(", 'a.show(fst), ", ", listof('a).show(rst), ")")
+    }
+};
+

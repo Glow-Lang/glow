@@ -38,6 +38,11 @@ We never released those:
 * [Stuck Macros, by Samuel Gélineau](https://www.youtube.com/watch?v=nUvKoG_V_U0)
 * [Rosette](https://docs.racket-lang.org/rosette-guide/), solver-aided programming for Racket
 
+Other non-Lisp types of interest?
+* [Cedille](https://cedille.github.io/), with its "extrinsic" (Curry-style) types as annotations
+  to untyped terms (vs intrinsic / Church style as parts of the term).
+* LEAN, Idris, Coq, Agda, F*, ATS, NuPRL, Isabelle, HOL, Epigram, Cayenne.
+
 ### Compilers
 
 * [Jay McCarthy's course on compiler construction](https://jeapostrophe.github.io/courses/2019/spring/406/course/)

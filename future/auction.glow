@@ -22,7 +22,7 @@ let simpleAuction = (goods : Assets, expirationTime : Timestamp) => {
      assert! @deposited == goods + currentBid;
      choice {
        | forall (bidder : Bidder) {
-           @bidder bid = Bid(input(["Enter next bid"], okenAmout));
+           @bidder bid = Bid(input(["Enter next bid"], TokenAmout));
            @bidder publish! bid ; @bidder deposit! bid.
            @bidder assume! @value(goods) > @value(bid);
            require! currentTime() < expirationTime;
