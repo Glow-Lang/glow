@@ -1,5 +1,11 @@
 # To hack on Glow
 
+
+## Language
+
+Glow is implemented in [Gerbil Scheme](https://cons.io/),
+itself a layer on top of [Gambit Scheme](https://www.iro.umontreal.ca/~gambit/doc/gambit.html).
+
 ## Install dependencies
 If you know you won't hack on any of our dependencies, just install them with `gxpkg`:
 ```

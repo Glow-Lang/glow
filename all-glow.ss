@@ -3,9 +3,10 @@
 (eval `(include ,(path-expand "all-glow.ss" (getenv "GLOW_SRC"))))
 ;; Or if you prefer without eval, but computing the absolute path yourself, something like:
 (include "~/src/glow/all-glow.ss")
+;; Or just run ./ggxi
 |#
 
-;; TODO: have build.ss extract the list of files from this file (?)
+;; TODO: maybe have build.ss extract the list of files from this file (?)
 
 (import
 
@@ -58,9 +59,9 @@
 
   ;; Testing Glow
   :glow/compiler/t/common
-  :glow/compiler/t/multipass-test
-  :glow/compiler/alpha-convert/t/alpha-convert-test
-  :glow/compiler/anf/t/anf-test
+  ;:glow/compiler/t/multipass-test
+  ;:glow/compiler/alpha-convert/t/alpha-convert-test
+  ;:glow/compiler/anf/t/anf-test
 )
 
 (import :clan/poo/brace)
@@ -68,4 +69,6 @@
 ;; COPY THE LINE BELOW to files you try to debug
 (import :clan/utils/debug)
 
-(printf "Welcome, Glow hacker\n")
+;;(extern namespace: #f add-load-path) (add-load-path (glow-src))
+
+;;(printf "Welcome, Glow hacker\n")

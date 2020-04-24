@@ -12,6 +12,9 @@
 ;; Conversion to A-Normal Form https://en.wikipedia.org/wiki/A-normal_form
 ;; We assume that variables have already been alpha-converted, typed, etc.
 
+;; TODO: introduce explicit return's in ANF, so we can treat them specially wrt CPS and safe-pointing?
+;; Or do that in txify?
+
 ;; Put all the code into a form that is strongly sequential:
 ;; - Function calls and primitive calls must be "reduced" and only have constants and variables as arguments
 ;; - a definition must have a constant, variable or reduced call on the right-hand side
@@ -130,7 +133,7 @@
 
 ;; anf-expr : ExprStx [Listof StmtStx] -> (values ExprStx [Listof StmtStx])
 (def (anf-expr stx acc)
-  (syntax-case stx (@ ann @tuple @record @list @dot @app and or if block splice switch λ input require! assert! deposit! withdraw!)
+  (syntax-case stx (@ ann @tuple @record @list @dot @app and or if block splice switch λ == input require! assert! deposit! withdraw!)
     ((@ _ _) (error 'anf-expr "TODO: deal with @"))
     (x (identifier? #'x) (values stx acc))
     (lit (stx-atomic-literal? #'lit) (values stx acc))
@@ -149,8 +152,6 @@
        (values (restx #'stx ['@dot reduced-expr #'f]) acc)))
     ((block b ...) (anf-body #'(b ...) acc))
     ((splice b ...) (anf-body #'(b ...) acc))
-    ((and . _) (anf-and-or stx acc))
-    ((or . _) (anf-and-or stx acc))
     ((if c t e)
      (let-values (((rc acc) (anf-arg-expr #'c acc)))
        (values (retail-stx stx [rc (anf-standalone-expr #'t) (anf-standalone-expr #'e)])
@@ -161,6 +162,7 @@
                                  (stx-map anf-switch-case #'(swcase ...))))
                acc)))
     ((λ . _) (values (anf-lambda stx) acc))
+    ((== a b) (anf-multiarg-expr stx acc))
     ((input type tag)
      (let-values (((rtag acc) (anf-arg-expr #'tag acc)))
        (values (restx stx [(stx-car stx) #'type rtag]) acc)))
@@ -183,26 +185,11 @@
   (let-values (((e acc) (anf-body stx [])))
     (reverse (cons e acc))))
 
-;; anf-and-or : ExprStx [Listof StmtStx] -> (values ExprStx [Listof StmtStx])
-;; Assume associativity, handle short-circuiting
-(def (anf-and-or stx acc)
-  (syntax-case stx ()
-    ((ao) (values stx acc))
-    ((ao e) (anf-multiarg-expr stx acc))
-    ((ao e e2)
-     (let-values (((re acc) (anf-arg-expr #'e acc)))
-       (values (restx1 stx [#'ao re (anf-standalone-expr #'e2)])
-               acc)))
-    ((ao e . rst)
-     (let-values (((re acc) (anf-arg-expr #'e acc)))
-       (values (restx1 stx [#'ao re (anf-standalone-expr #'(ao . rst))])
-               acc)))))
-
 ;; anf-switch-case : SwitchCaseStx -> SwitchCaseStx
 (def (anf-switch-case stx)
   (syntax-case stx ()
     ((pat body ...)
-     (restx stx (cons #'pat (anf-standalone-body #'(body ...)))))))
+     (retail-stx stx (anf-standalone-body #'(body ...))))))
 
 ;; anf-lambda : LambdaStx -> LambdaStx
 (def (anf-lambda stx)
@@ -212,8 +199,7 @@
     ((l params body ...)
      (restx stx (cons* #'l #'params (anf-standalone-body #'(body ...)))))))
 
-;; Conform to pass convention.
-;; anf : [Listof StmtStx] UnusedTable Env -> (values [Listof StmtStx] UnusedTable Env)
-(def (anf stmts unused-table env)
+;; anf : [Listof StmtStx] UnusedTable -> [Listof StmtStx]
+(def (anf stmts unused-table)
   (parameterize ((current-unused-table unused-table))
-    (values (reverse (anf-stmts stmts [])) unused-table env)))
+    (reverse (anf-stmts stmts []))))

@@ -13,7 +13,7 @@
 
 ;; examples.sexp : -> [Listof Path]
 (def (examples.sexp)
-  (find-files (examples-dir) (λ (x) (equal? (identify-language x) ".sexp"))))
+  (find-files (examples-dir) (λ (x) (equal? (identify-layer x) 'sexp))))
 
 (def (test-dir? x) (equal? "t" (path-strip-directory x)))
 

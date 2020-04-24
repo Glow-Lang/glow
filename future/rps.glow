@@ -15,7 +15,17 @@ data Hand = | Rock | Paper | Scissors;
 data Outcome = | B_Wins | Draw | A_Wins;
 
 let winner = (handA : Hand, handB : Hand) : Outcome => {
-    NatToOutcome(HandToNat(handA) + (4 - HandToNat(handB)) % 3) }
+    Outcome.ofNat((HandToNat(handA) + (4 - HandToNat(handB))) % 3) }
+
+assert! winner(Rock, Rock) == Draw;
+assert! winner(Rock, Paper) == B_Wins;
+assert! winner(Rock, Scissors) == A_Wins;
+assert! winner(Paper, Rock) == A_Wins;
+assert! winner(Paper, Paper) == Draw;
+assert! winner(Paper, Scissors) == B_Wins;
+assert! winner(Scissors, Rock) == B_Wins;
+assert! winner(Scissors, Paper) == A_Wins;
+assert! winner(Scissors, Scissors) == Draw;
 
 @interaction([A, B])
 let rockPaperScissors = (wagerAmount) => {

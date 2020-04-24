@@ -1,0 +1,17 @@
+#lang glow
+data Command = Withdraw(x : nat) | Inherit(x : nat)
+
+@interaction([Owner, Heir])
+let deadManSwitch = (expirationDelay) => {
+   let rec loop = (expirationTimestamp) =>
+     choice {
+     | @_ deposit! x ;
+       loop (expirationTimestamp);
+     | @Owner publish! Withdraw(x);
+       withdraw! Owner, x ;
+       loop (now() + expirationDelay);
+     | @Heir publish! Inherit(x);
+       require! now() >= expirationTimestamp;
+       withdraw! Heir, x;
+       loop (expirationTimestamp); };
+   loop(now() + expirationDelay); }
