@@ -58,6 +58,7 @@ Other non-Lisp types of interest?
 ### Deployment
 
 * [Deploying container and application services with Disnix](https://sandervanderburg.blogspot.com/2020/04/deploying-container-and-application.html)
+* [Arion: Docker compose with NixOS images](https://github.com/hercules-ci/arion)
 
 ### Game Theory
 

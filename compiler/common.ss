@@ -13,9 +13,21 @@
         :clan/utils/files)
 
 ;; stx-atomic-literal? : Any -> Bool
-(def (stx-atomic-literal? v)
-  (def e (stx-e v))
-  (or (integer? e) (string? e) (bytes? e) (boolean? e)))
+(def (stx-atomic-literal? stx)
+  (def e (stx-e stx))
+  (or (integer? e) (string? e) (bytes? e) (boolean? e) (stx-unit? e)))
+
+(def (stx-unit? stx)
+  (syntax-case stx (@tuple)
+    ((@tuple) #t)
+    (_ #f)))
+
+;; type TrivialExprStx = IdentifierStx | AtomicLiteralStx
+;; trivial-expr? : ExprStx -> bool
+;; is this expression trivial enough to be used in a call?
+;; this implies evaluating it has no side-effect whatsoever and can commute with anything.
+(def (trivial-expr? expr)
+  (or (identifier? expr) (stx-atomic-literal? expr)))
 
 ;; stx-leaf? : Any -> Bool
 (def (stx-leaf? v) (or (identifier? v) (stx-atomic-literal? v)))

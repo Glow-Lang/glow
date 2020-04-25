@@ -16,6 +16,7 @@
         :clan/utils/exception
         :glow/compiler/t/common
         :glow/compiler/syntax-context
+        :glow/compiler/multipass
         (for-template :glow/compiler/syntax-context)
         :glow/compiler/alpha-convert/alpha-convert
         :glow/compiler/desugar/desugar
@@ -54,7 +55,7 @@
 ;; typecheck-display : [Listof Stmt] (Or TypeEnv '#f) -> Bool
 ;; Produces #t on success, can return #f or raise an exception on failure
 ;; TODO: check against expected types of top-level defined identifiers
-(def (typecheck-display prog expected-env)
+(def (typecheck-display prog expected-env expect-failure?)
   (defvalues (prog2 unused-table alenv) (alpha-convert prog))
   (def prog3 (desugar prog2 unused-table))
   (defvalues (tyenv tyinfotbl) (typecheck prog3 unused-table))
@@ -64,12 +65,21 @@
       ((not expected-env) #t)
       ((type-env=? tyenv expected-env)
        (printf ";; ✓ matches expected types\n")
-       #t)
+       (if expect-failure?
+         (begin
+           (printf ";; ... but expected failure!\n")
+           #f)
+         #t))
       (else
        (printf ";; ✗ different from expected types\n")
-       (printf "expected:\n")
-       (write-type-env expected-env)
-       #f))))
+       (if expect-failure?
+         (begin
+           (printf ";; ... but expected failure!\n")
+           #t)
+         (begin
+           (printf "expected:\n")
+           (write-type-env expected-env)
+           #f))))))
 
 ;; try-typecheck-files : [Listof PathString] -> Void
 (def (try-typecheck-files files)
@@ -77,13 +87,14 @@
   (def progs (map read-sexp-file files))
   (def decls
     (map (lambda (f) (and (file-exists? f) (read-type-env-file f))) decl-files))
+  (def known-fails (map known-failure? decl-files))
   ;; MUTABLE var failed
   (let ((failed '()))
-    (for ((f files) (p progs) (d decls))
+    (for ((f files) (p progs) (d decls) (kf known-fails))
       (displayln f)
       (with-catch/cont
        (lambda (e k) (display-exception-in-context e k) (push! f failed))
-       (lambda () (unless (typecheck-display p d) (push! f failed))))
+       (lambda () (unless (typecheck-display p d kf) (push! f failed))))
       (newline))
     (unless (null? failed)
       (error 'typecheck-failed failed))))

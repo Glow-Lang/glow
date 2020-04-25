@@ -45,7 +45,7 @@
   :clan/utils/vector :clan/utils/version :clan/utils/watch
 
   ;; POO
-  ;;:clan/poo/poo :clan/poo/mop :clan/poo/type :clan/poo/io
+  ;;:clan/poo/poo (only-in :clan/poo/mop new) :clan/poo/type :clan/poo/io
 
   ;; Glow
   (for-template :glow/compiler/syntax-context)
@@ -55,7 +55,9 @@
   :glow/compiler/alpha-convert/symbolnat :glow/compiler/alpha-convert/fresh
   :glow/compiler/alpha-convert/alpha-convert
   :glow/compiler/desugar/desugar
+  :glow/compiler/typecheck/typecheck
   :glow/compiler/anf/anf
+  :glow/compiler/participantify/participantify
   :glow/eth/hex :glow/eth/keccak
 
   ;; Testing Glow
@@ -65,7 +67,7 @@
   ;:glow/compiler/anf/t/anf-test
 )
 
-(import :clan/poo/brace)
+;;(import :clan/poo/brace)
 
 ;; COPY THE LINE BELOW to files you try to debug
 (import :clan/utils/debug)

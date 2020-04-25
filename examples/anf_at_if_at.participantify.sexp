@@ -7,6 +7,7 @@
       ()
       (def tmp (@app < 0 x))
       (require! tmp)
+      (participant-checkpoint pc #f A)
       (@ A
          (switch b
                  (#t (def tmp0 (@app f x)) (def y (@app g tmp0)))
