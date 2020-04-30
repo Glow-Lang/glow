@@ -60,7 +60,6 @@
 ;; subtype? : PType NType -> Bool
 (def (subtype? a b)
   (match* (a b)
-    (((type:bottom) _) #t)
     (((ptype:union as) b)
      (andmap (lambda (a) (subtype? a b)) as))
     ((a (ntype:intersection bs))
@@ -306,7 +305,6 @@
     (type-bisubst tybi (variance-compose v v2) t))
   (def (nsub t) (vsub contravariant t))
   (match t
-    ((type:bottom) t)
     ((type:name _) t)
     ((type:name-subtype x sup)
      (type:name-subtype x (sub sup)))
@@ -381,8 +379,6 @@
   (match c
     ((constraint:type-equal a b)
      [(constraint:subtype a b) (constraint:subtype b a)])
-    ((constraint:subtype (type:bottom) _)
-     [])
     ((constraint:subtype (ptype:union as) b)
      (map (lambda (a) (constraint:subtype a b)) as))
     ((constraint:subtype a (ntype:intersection bs))
@@ -820,7 +816,7 @@
   ;; in-tys* : [Listof NType]
   (def in-tys*
     (map (lambda (x in-ty)
-           (or in-ty (symdict-ref body-menv x)))
+           (or in-ty (symdict-get body-menv x ntype:top)))
          xs
          in-tys))
   (def menv (for/fold (acc body-menv) ((x xs) (in-ty in-tys))

@@ -9,7 +9,6 @@
         ./variance)
 
 ;; A Type is one of:
-;;  - (type:bottom)
 ;;  - (type:name Symbol)  ;; TODO: add srcloc
 ;;  - (type:name-subtype Symbol Type)
 ;;  - (type:var Symbol)
@@ -17,7 +16,6 @@
 ;;  - (type:tuple [Listof Type])
 ;;  - (type:record [Symdictof Type])
 ;;  - (type:arrow [Listof Type] Type)
-(defstruct type:bottom () transparent: #t)
 (defstruct type:name (sym) transparent: #t)  ;; TODO: add srcloc
 (defstruct type:name-subtype (sym super) transparent: #t)
 (defstruct type:var (sym) transparent: #t)
@@ -26,8 +24,7 @@
 (defstruct type:record (field-args))
 (defstruct type:arrow (in-tys out-ty) transparent: #t)
 (def (type? v)
-  (or (type:bottom? v)
-      (type:name? v)
+  (or (type:name? v)
       (type:name-subtype? v)
       (type:var? v)
       (type:app? v)
@@ -52,6 +49,11 @@
 
 (def (ptype? v) (or (type? v) (ptype:union? v)))
 (def (ntype? v) (or (type? v) (ntype:intersection? v)))
+
+(def ptype:bottom (ptype:union []))
+(def ntype:top (ntype:intersection []))
+(def (ptype:bottom? v) (and (ptype:union? v) (null? (ptype:union-types v))))
+(def (ntype:top? v) (and (ntype:intersection? v) (null? (ntype:intersection-types v))))
 
 ;; A MonoEnv is a [Symdictof NType]
 ;; monotype environments ∆ bind λ-bound variables only,
@@ -160,7 +162,7 @@
 ;; the type that is a supertype of all types in the list
 (def (types-join ts)
   (match ts
-    ([] (type:bottom))
+    ([] ptype:bottom)
     ([t] t)
     ([a b] (type-join a b))
     (_ (type-join (car ts) (types-join (cdr ts))))))
@@ -189,7 +191,7 @@
 ;; the type that is a subtype of all types in the list
 (def (types-meet ts)
   (match ts
-    ([] (ntype:intersection []))
+    ([] ntype:top)
     ([t] t)
     ([a b] (type-meet a b))
     (_ (type-meet (car ts) (types-meet (cdr ts))))))
@@ -213,7 +215,6 @@
 ;; type-vars : Type -> [Listof Symbol]
 (def (type-vars t)
   (match t
-    ((type:bottom) [])
     ((type:name _) [])
     ((type:name-subtype _ sup) (type-vars sup))
     ((type:var s) [s])
@@ -235,7 +236,6 @@
 (def (type-has-var? t x)
   (def (hv? t) (type-has-var? t x))
   (match t
-    ((type:bottom) #f)
     ((type:name s) #f)
     ((type:name-subtype _ sup) (hv? sup))
     ((type:var s) (eq? x s))
@@ -258,7 +258,6 @@
   ;; sub : Type -> Type
   (def (sub t) (type-subst tyvars t))
   (match t
-    ((type:bottom) t)
     ((type:name _) t)
     ((type:name-subtype nm sup)
      (type:name-subtype nm (sub sup)))
@@ -311,7 +310,8 @@
 ;; A human-readable form for displaying types to the user
 (def (type->sexpr t)
   (match t
-    ((type:bottom) '⊥)
+    ((ptype:union []) '⊥)
+    ((ntype:intersection []) '⊤)
     ((type:name s) s)
     ((type:name-subtype s _) s)
     ((type:var s) `',s)
@@ -364,7 +364,8 @@
 ;; A lossless s-expression representation in "repr" style
 (def (type->repr-sexpr t)
   (match t
-    ((type:bottom) '(type:bottom))
+    ((ptype:union []) 'ptype:bottom)
+    ((ntype:intersection []) 'ntype:top)
     ((type:name s) `(type:name ',s))
     ((type:name-subtype s t) `(type:name-subtype ',s ,(type->repr-sexpr t)))
     ((type:var s) `(type:var ',s))
@@ -379,7 +380,8 @@
 ;; The left-inverse for type->repr-sexpr
 (def (repr-sexpr->type s)
   (match s
-    ('(type:bottom) (type:bottom))
+    ('ptype:bottom ptype:bottom)
+    ('ntype:top ntype:top)
     (['type:name ['quote s]] (type:name s))
     (['type:name-subtype ['quote s] t] (type:name-subtype s (repr-sexpr->type t)))
     (['type:var ['quote s]] (type:var s))
