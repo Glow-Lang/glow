@@ -3,8 +3,9 @@ image: fahree/gerbil-utils:latest
 build:
   stage: build
   script:
+    - echo HOME=$HOME PWD=$PWD USER=$USER UID=$UID PATH=$PATH BASH_VERSION=$BASH_VERSION LC_CTYPE=$LC_CTYPE LC_ALL=$LC_ALL TERM=$TERM
     - ./build.ss
-    - P=$PWD ; cd $HOME/.gerbil/lib/ && tar Jcf $P/gerbil-lib-glow.tar.xz glow
+    - tar JcfC gerbil-lib-glow.tar.xz $HOME/.gerbil/lib/ glow
   artifacts:
     paths:
       - gerbil-lib-glow.tar.xz
@@ -12,5 +13,5 @@ build:
 test:
   stage: test
   script:
-    - P=$PWD ; cd $HOME/.gerbil/lib && tar Jxf $P/gerbil-lib-glow.tar.xz && cd $P
+    - tar JxfC gerbil-lib-glow.tar.xz $HOME/.gerbil/lib/
     - ./unit-tests.ss
