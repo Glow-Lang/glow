@@ -38,6 +38,16 @@
 ;; TODO: also represent source location, unused-table and type annotations?
 (define-layer anf.sexp read-sexp-file write-sexps stx-sexpr=?)
 
+;; (Typed) Glow programs in A-Normal form with safe-points between participant changes.
+;; where all function call arguments are trivial (reference to constant or variable).
+(define-layer participantify.sexp read-sexp-file write-sexps stx-sexpr=?)
+
+
+(define-layer safepointify.sexp read-sexp-file write-sexps stx-sexpr=?) ;; after safepoints added
+(define-layer bbepp.sexp read-sexp-file write-sexps stx-sexpr=?) ;; right Before BEPP
+(define-layer contract.sexp read-sexp-file write-sexps stx-sexpr=?) ;; BEPP for contracts
+(define-layer client.sexp read-sexp-file write-sexps stx-sexpr=?) ;; BEPP for clients
+
 
 ;;; Passes
 
