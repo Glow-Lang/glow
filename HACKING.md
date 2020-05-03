@@ -1,46 +1,31 @@
 # To hack on Glow
 
+## First, install Glow
 
-## Language
+Before you attempt to hack the Glow compiler,
+please make sure you have [installed it](INSTALL.md) properly and it passes all tests.
+
+## Programming Environment
+
+### Gerbil and Gambit
 
 Glow is implemented in [Gerbil Scheme](https://cons.io/),
-itself a layer on top of [Gambit Scheme](https://www.iro.umontreal.ca/~gambit/doc/gambit.html).
+itself a layer on top of [Gambit Scheme](http://gambitscheme.org/).
 
-## Install dependencies
-If you know you won't hack on any of our dependencies, just install them with `gxpkg`:
-```
-DEPS=(github.com/fare/gerbil-utils
-      github.com/drewc/js-syntax
-      github.com/drewc/drewc-r7rs-swank
-      github.com/drewc/gerbil-swank)
-for i in ${DEPS[@]} ; do gxpkg install $i ; done
-```
+While hacking on Glow, you'll find that the lower-level primitives you use are defined by
+[Gambit](https://www.iro.umontreal.ca/~gambit/doc/gambit.html),
+while the higher-level functions and macros are defined by
+[Gerbil](https://cons.io/reference/).
 
-Note that `github.com/drewc-r7rs-swank/r7rs-swank` is
-a fork of `github.com/ecraven/r7rs-swank` containing still-unmerged patches
-(see https://github.com/ecraven/r7rs-swank/pull/10
-for a similar patch from `github.com/fare-patches/r7rs-swank`).
+You can find the community for both these layers of language on Gitter:
+[Gerbil Scheme gitter](https://gitter.im/gerbil-scheme/community) and
+[Gambit Scheme gitter](https://gitter.im/gambit/gambit).
 
-If at some point you need to hack some or all of our dependencies, you can reinstall them this way:
-```
-DEPS=(github.com/fare/gerbil-utils
-      github.com/drewc/js-syntax
-      github.com/drewc/drewc-r7rs-swank
-      github.com/drewc/gerbil-swank)
-(cd .. &&
-for i in ${DEPS[@]} ; do
-  (git clone https://$i &&
-   gxpkg uninstall $i > /dev/null 2>&1 &&
-   cd $(basename $i) &&
-   gxpkg link $i $PWD &&
-   gxpkg build $i $PWD)
-done)
-```
-
-### Configuring SLIME
+## Configuring SLIME
 
 Make sure a recent SLIME is installed in Emacs, and use the following,
 replacing the path in it by the place where you checked out the glow source code:
+
 ```
 (defun gerbil-scheme-start-swank (file encoding)
   (format "%S\n%S\n%S\n%S\n"
@@ -55,7 +40,11 @@ replacing the path in it by the place where you checked out the glow source code
             slime-lisp-implementations))
 ```
 
+## Hacking the Glow compiler
+
 ### Writing tests
+
+After you have installed our dependencies,
 
 Tests are in subdirectories named `t/` of the directories with the files they test.
 Inside those test directories, files named ending in `-test.ss` are tests,
@@ -69,3 +58,8 @@ if not you failed to follow the convention and your test didn't run.
 
 Please ensure that regression tests always pass and never push or merge into master
 any code that breaks them. When Gitlab, the CI system shall help you with it.
+
+Note that regular code outside of a `t/` directory must not depend
+on test code in `t/` directories.
+As an exception, and as a practical tool for debugging,
+`t/common` is included in the interactive image.
