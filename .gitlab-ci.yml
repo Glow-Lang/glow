@@ -3,19 +3,15 @@ image: fahree/gerbil-utils:latest
 build:
   stage: build
   script:
+    #- echo HOME=$HOME PWD=$PWD USER=$USER UID=$UID PATH=$PATH BASH_VERSION=$BASH_VERSION LC_CTYPE=$LC_CTYPE LC_ALL=$LC_ALL TERM=$TERM GERBIL_LOADPATH=$GERBIL_LOADPATH GERBIL_PATH=$GERBIL_PATH ; ls -l /proc/$$/fd
     - export GERBIL_PATH=$PWD/.build
-    - echo HOME=$HOME PWD=$PWD USER=$USER UID=$UID PATH=$PATH BASH_VERSION=$BASH_VERSION LC_CTYPE=$LC_CTYPE LC_ALL=$LC_ALL TERM=$TERM GERBIL_LOADPATH=$GERBIL_LOADPATH GERBIL_PATH=$GERBIL_PATH ; ls -l /proc/$$/fd
     - ./build.ss
-#    - tar JcfC gerbil-lib-glow.tar.xz $HOME/.gerbil/lib/ glow
   artifacts:
     paths:
        - .build
-#      - gerbil-lib-glow.tar.xz
 
 test:
   stage: test
   script:
-    - echo HOME=$HOME PWD=$PWD USER=$USER UID=$UID PATH=$PATH BASH_VERSION=$BASH_VERSION LC_CTYPE=$LC_CTYPE LC_ALL=$LC_ALL TERM=$TERM GERBIL_LOADPATH=$GERBIL_LOADPATH GERBIL_PATH=$GERBIL_PATH
     - export GERBIL_PATH=$PWD/.build
-#    - tar JxfC gerbil-lib-glow.tar.xz $HOME/.gerbil/lib/
     - ./unit-tests.ss
