@@ -49,7 +49,7 @@
   (and (subtype? a b) (subtype? b a)))
 
 ;; variance-type~? : Variance Type Type -> Bool
-;; (~? irrelavent a b) = #t
+;; (~? irrelevant a b) = #t
 ;; (~? covariant a b) = (subtype? a b)
 ;; (~? contravariant a b) = (subtype? b a)
 ;; (~? invariant a b) = (type=? a b)

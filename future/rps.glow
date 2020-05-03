@@ -15,7 +15,7 @@ data Hand = | Rock | Paper | Scissors;
 data Outcome = | B_Wins | Draw | A_Wins;
 
 let winner = (handA : Hand, handB : Hand) : Outcome => {
-    Outcome.ofNat((HandToNat(handA) + (4 - HandToNat(handB))) % 3) }
+    Outcome.ofNat((Hand.toNat(handA) + (4 - Hand.toNat(handB))) % 3) }
 
 assert! winner(Rock, Rock) == Draw;
 assert! winner(Rock, Paper) == B_Wins;

@@ -4,7 +4,6 @@ This is the internal plan for how the compiler passes should be laid out.
 
 The actual implementation is described in [passes.ss](passes.ss).
 
-
 ## Lexer and Parser
 
 From Glow surface syntax text,
@@ -27,7 +26,7 @@ to Glow-sexpr where those niceties have been expanded into simpler blocks.
 or equivalent (for, e.g. signatures). `@publicly` becomes `@verifiably`.
 `data` type definitions automatically generate an `input` function,
 and `toNat` and `ofNat` functions if all constructors are simple.
-Maybe `if`, `and` and `or` should be also converted to `switch`?
+`and`, `or` and `if` are reduced to `switch`.
 
 ## Typecheck
 
@@ -43,19 +42,9 @@ From Glow-sexpr syntax objects with unique names,
 
 to Glow-ANF form, flattened without nested function calls, etc.
 
-## Transaction-grouping
-
-From Glow-ANF form,
-
-to Glow-ANF form, with extra safe-points before possible changes of active participant.
-
-Safe-points and transitions between safe-points are the objects and morphisms (nodes and arrows)
-of a category that embodies the game-theoretic and game-semantic properties of the interaction.
-Optionally, in a further pre-BEPP pass, these transitions can be subdivided into chunks
-that fit the current blockchain backend — which won't change these game-tastic properties.
-The list of paths from a safe-point to its consecutive safe-points,
-as annotated by the type of the arguments `publish!`ed along each path,
-constitute the *session types* of these safe-points.
+In this (or a latter?) pass, all expressions are converted to statements:
+values introduced are immediately bound to a variable or consumed in a return statement.
+There is no deferral of consumption of a value until a further time.
 
 ## Variable analysis
 
@@ -71,6 +60,30 @@ The analyses could be done in several passes, and/or grouped with a unique pass 
 such as lambda-lifting and/or closure conversion:
 recording a lambda-lifted function plus a partial list of parameters,
 for which it is imperative to preserve the order at least to separate the early and late bound variables.
+
+## Participant change analysis
+
+From Glow-participantify form,
+
+to Transaction-graph, with session types for each node in the graph.
+
+Safe-points (annotated by the state saved at those points)
+and transitions between safe-points (annotated by data `publish!`ed between those points)
+are the objects and morphisms (nodes and arrows)
+of a category that embodies the game-theoretic and game-semantic properties of the interaction.
+The types of points times states and arrows times messages constitute the *session types*
+of these safe-points.
+
+In this pass, we build a flow graph between safe-points recording:
+ - the type of the message posted from each safe point to the possible next ones
+   (which is isomorphic to the "session type" of the program)
+   (in the implementation, we could dynamically allow either being the correct blockchain sender OR
+   having an in-message signature to count as validating the sender of a message).
+ - additional predicate within this type based on computational axioms
+ - which variables are defined and live in the continuation
+ - which variables will be ignored in the next happy-path continuations
+   so they can be merklized together (only 1 is not enough: you would need to reveal them
+   to pass them to the next?)
 
 ## Data-encoding / Representation-selection
 
@@ -99,4 +112,7 @@ consensus.
 
 There will be more passes and intermediate-representations on each of
 those projected programs.
+
+In a further pre-BEPP pass, these transitions can be subdivided into chunks
+that fit the current blockchain backend — which won't change these game-tastic properties.
 
