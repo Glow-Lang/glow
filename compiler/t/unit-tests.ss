@@ -1,11 +1,13 @@
 (import
   :std/iter :std/test
-  :clan/utils/exit
+  :clan/utils/exit :clan/utils/ports
   :glow/config/path
   :glow/compiler/syntax-context ;; important for the parsing to work (!)
   ;;(for-template :glow/compiler/syntax-context)
   :glow/config/path :glow/compiler/passes :glow/compiler/multipass
   :glow/compiler/t/common)
+
+(set-current-ports-encoding-standard-unix!)
 
 (def (main . args)
   (eval-print-exit

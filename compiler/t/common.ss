@@ -3,7 +3,7 @@
 (import
   :gerbil/gambit/misc
   :gerbil/expander
-  :std/iter :std/misc/repr :std/srfi/1 :std/srfi/13 :std/sugar :std/test
+  :std/iter :std/misc/repr :std/sort :std/srfi/1 :std/srfi/13 :std/sugar :std/test
   :clan/utils/base :clan/utils/filesystem :clan/utils/path
   :glow/config/path :glow/compiler/multipass :glow/compiler/passes)
 
@@ -21,7 +21,7 @@
   (map shorten-path (find-files top test-dir?)))
 
 (def (find-test-files top)
-  (find-regexp-files "-test.ss" (find-test-directories top)))
+  (sort (find-regexp-files "-test.ss" (find-test-directories top)) string<?))
 
 (def (test-name test)
   (def module-name (path-enough (path-strip-extension (path-simplify test)) (glow-src)))
