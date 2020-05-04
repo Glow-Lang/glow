@@ -55,6 +55,10 @@ Other non-Lisp types of interest?
 
 * Omniscient Debugging: [Pernosco](https://pernos.co/about/related-work/), [rr](https://rr-project.org), TTD, UndoDB, ODB, Chronon, TOD, Chronomancer, Qira, [Reven](https://www.tetrane.com/), SteamDrill.
 
+### Deployment
+
+* [Deploying container and application services with Disnix](https://sandervanderburg.blogspot.com/2020/04/deploying-container-and-application.html)
+
 ### Game Theory
 
 * [Jules Hedges's compositional game theory bibliography](https://julesh.com/compositional-game-theory-bibliography/), including [The game semantics of game theory](https://arxiv.org/abs/1904.11287).
