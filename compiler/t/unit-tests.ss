@@ -1,4 +1,5 @@
 (import
+  :gerbil/gambit/ports
   :std/iter :std/test
   :clan/utils/exit :clan/utils/ports
   :glow/config/path
@@ -13,6 +14,7 @@
   (eval-print-exit
    (match args
      ([] (main "all"))
+     (["meta"] (println "meta all test process pass"))
      (["all"] (silent-exit (run-tests (find-test-files "."))))
      (["test" . files] (silent-exit (run-tests files)))
      (["process" . files] (for-each run-passes files) (silent-exit))

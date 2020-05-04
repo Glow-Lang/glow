@@ -15,26 +15,33 @@
 
 data Action = Bid(TokenAmount) | Close;
 
-@interaction({Seller : FixedParticipant, Bidder : AnyParticipant})
+@interaction([Seller])
 let simpleAuction = (goods : Assets, expirationTime : Timestamp) => {
+   // The following should be added automatically already?
+   // the following should be added automatically as part of validating/unmarshalling
+   // the input data of type Assets, a constraint from the Assets type:
+   require! Assets.is_positive(goods);
+   require! expirationTime > currentTime();
    @Seller deposit! goods; // or escrow for included services (?)
-   let rec auction = (currentBid : TokenAmount, currentBidder : AnyParticipant) => {
+
+   @interaction([Seller, CurrentBidder])
+   let rec auction = (bid) => {
      assert! @deposited == goods + currentBid;
      choice {
-       | forall (bidder : Bidder) {
-           @bidder bid = Bid(input(["Enter next bid"], TokenAmout));
-           @bidder publish! bid ; @bidder deposit! bid.
-           @bidder assume! @value(goods) > @value(bid);
+       | ForAllParticipant (NewBidder) { // THIS CHOICE ACCEPTS A NEW PARTICIPANT!!!!!
+           @NewBidder bid = Bid(input(["Enter next bid"], TokenAmout));
+           @NewBidder publish! bid ; @bidder deposit! bid.
+           @NewBidder assume! @value(goods) > @value(bid);
            require! currentTime() < expirationTime;
            require! bid > currentBid;
-           withdraw! currentBidder, currentBid;
-          auction(bid, bidder);
+           withdraw! CurrentBidder, currentBid;
+           @interaction([Seller, NewBidder]) auction(bid);
       | @_ { publish! Close; } => // only Seller and currentBidder are interested in it.
          require! currentTime() >= expirationTime;
          withdraw! Seller, currentBid;
          withdraw! currentBidder, goods;
      };
-   auction(0, Seller);
+   @interaction([Seller, Seller]) auction(0);
 }
 
 // TODO:
