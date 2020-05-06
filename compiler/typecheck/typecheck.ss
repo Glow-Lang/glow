@@ -97,6 +97,9 @@
 ;; A Pattys is an [Assqof Symbol Type]
 ;; for the types of the pattern variables within a pattern
 
+;; A PatTypingScheme is a (pat-typing-scheme MonoEnv NType Pattys)
+(defstruct pat-typing-scheme (menv ntype pattys) transparent: #t)
+
 ;; pattys-join : [Listof Pattys] -> Pattys
 ;; intersection of keys, join of types for same key
 ;; used for or-patterns
@@ -109,13 +112,22 @@
                        (andmap (lambda (o) (assq-has-key? o k)) (cdr ps)))
            (cons k (types-join (map (lambda (p) (assq-ref p k)) ps)))))))
 
+;; pat-typing-schemes-join : [Listof PatTypingScheme] -> PatTypingScheme
+;; Meet of menvs, meet of ntypes, join of pattys
+;; used for or-patterns
+(def (pat-typing-schemes-join pts)
+  (def nenv (menvs-meet (map pat-typing-scheme-menv pts)))
+  (def ntype (types-meet (map pat-typing-scheme-ntype pts)))
+  (def ptype (pattys-join (map pat-typing-scheme-pattys pts)))
+  (pat-typing-scheme nenv ntype ptype))
+
 ;; pattys-append : [Listof Pattys] -> Pattys
 ;; append, but check no duplicate keys
 ;; used for combinations of patterns in the same scope other than "or"
 (def (pattys-append ps)
   (def p (apply append ps))
   (check-duplicate-symbols (map car p))
- p)
+  p)
 
 ;; check-duplicate-symbols : [Listof Symbol] -> TrueOrError
 ;; true if there are no duplicates, error otherwise
@@ -148,6 +160,8 @@
 ;;  - (entry:unknown MPart)             ; lambda-bound with no type annotation
 ;;  - (entry:known MPart TypingScheme)  ; let-bound, or lambda-bound with annotation
 ;;  - (entry:ctor MPart TypingScheme)   ; note ctor does not have N or P, just Type
+;;                                      ; and constructor definitions should assign the most permissive "output" type
+;;                                      ; because only subtypes of that can be matched against the pattern
 ;;  - (entry:type MPart [Listof Symbol] Type)
 (defstruct entry:unknown (part) transparent: #t)
 (defstruct entry:known (part ts) transparent: #t)
@@ -292,7 +306,7 @@
          (type-interval-ptype tvl))
         (else (error s "could not infer type"))))
 
-;; ptype-bisubst : TyvarBisubst Variance PNType -> PNType
+;; type-bisubst : TyvarBisubst Variance PNType -> PNType
 ;; P vs N depends on the variance
 (def (type-bisubst tybi v t)
   ;; sub : PNType -> PNType
@@ -327,16 +341,35 @@
     ((ntype:intersection ts)
      (types-meet (map sub ts)))))
 
+;; ptype-bisubst : TyvarBisubst PType -> PType
+(def (ptype-bisubst tybi ptype) (type-bisubst tybi covariant ptype))
+
+;; ntype-bisubst : TyvarBisubst NType -> NType
+(def (ntype-bisubst tybi ntype) (type-bisubst tybi contravariant ntype))
+
 ;; menv-bisubst : TyvarBisubst MonoEnv -> MonoEnv
 (def (menv-bisubst tybi menv)
   (for/fold (acc empty-symdict) ((k (symdict-keys menv)))
-    (symdict-put acc k (type-bisubst tybi contravariant (symdict-ref menv k)))))
+    (symdict-put acc k (ntype-bisubst tybi (symdict-ref menv k)))))
 
 ;; typing-scheme-bisubst : TyvarBisubst TypingScheme -> TypingScheme
 (def (typing-scheme-bisubst tybi ts)
   (with (((typing-scheme menv ty) ts))
-    (typing-scheme (menv-bisubst tybi menv)
-                   (type-bisubst tybi covariant ty))))
+    (typing-scheme (menv-bisubst tybi menv) (ptype-bisubst tybi ty))))
+
+;; pattys-bisubst : TyvarBisubst Pattys -> Pattys
+(def (pattys-bisubst tybi patty)
+  (for/collect ((e patty))
+    (match e
+      ((cons k v)
+       (cons k (ptype-bisubst tybi v))))))
+
+;; pat-typing-scheme-bisubst : TyvarBisubst PatTypingScheme -> PatTypingScheme
+(def (pat-typing-scheme-bisubst tybi pts)
+  (with (((pat-typing-scheme menv ntype pattys) pts))
+    (pat-typing-scheme (menv-bisubst tybi menv)
+                       (ntype-bisubst tybi ntype)
+                       (pattys-bisubst tybi pattys))))
 
 ;; A Constraints is a [Listof Constraint]
 ;; A Constraint is one of:
@@ -856,12 +889,7 @@
     ((@make-interaction . _) (tc-expr-make-interaction part env stx))
     ((switch e swcase ...)
      (let ((ts (tc-expr part env #'e)))
-       (def vt (typing-scheme-type ts))
-       ;; TODO: implement exhaustiveness checking
-       (def cts (stx-map (lambda (c) (tc-switch-case part env vt c)) #'(swcase ...)))
-       (def bt (typing-schemes-join cts))
-       (typing-scheme (menv-meet (typing-scheme-menv ts) (typing-scheme-menv bt))
-                      (typing-scheme-type bt))))
+       (tc-switch-cases part env ts (syntax->list #'(swcase ...)))))
     ((input type tag)
      (let ((t (parse-type part env empty-symdict #'type))
            (ts (tc-expr/check part env #'tag type:bytes)))
@@ -980,18 +1008,7 @@
        (def ts-after (typing-scheme-bisubst bity ts-before))
        ts-after))))
 
-;; tc-literal : LiteralStx -> Type
-(def (tc-literal stx)
-  (def e (stx-e stx))
-  (cond ((exact-integer? e)
-         (cond ((negative? e) type:int)
-               (else type:nat)))
-        ((boolean? e) type:bool)
-        ((string? e) type:bytes) ; represent as bytess using UTF-8
-        ((bytes? e) type:bytes)
-        ((and (pair? e) (length=n? e 1) (equal? (stx-e (car e)) '@tuple)) type:unit)
-        (else (error 'tc-literal "unrecognized literal"))))
-
+;; tc-deposit-withdraw : MPart Env ExprStx -> TypingScheme
 (def (tc-deposit-withdraw part env stx)
   (syntax-case stx ()
     ((dw participant amount)
@@ -1002,36 +1019,75 @@
        (typing-scheme (menvs-meet (map typing-scheme-menv [pt at]))
                       type:unit)))))
 
-;; tc-switch-case : MPart Env Type SwitchCaseStx -> TypingScheme
-(def (tc-switch-case part env valty stx)
+;; tc-literal : LiteralStx -> Type
+;; Produces the most specific type for the literal
+(def (tc-literal stx)
+  (def e (stx-e stx))
+  (cond ((exact-integer? e)
+         (cond ((negative? e) type:int)
+               (else type:nat))) ; nat when non-negative, more specific
+        ((boolean? e) type:bool)
+        ((string? e) type:bytes) ; represent as bytess using UTF-8
+        ((bytes? e) type:bytes)
+        ((and (pair? e) (length=n? e 1) (equal? (stx-e (car e)) '@tuple)) type:unit)
+        (else (error 'tc-literal "unrecognized literal"))))
+
+;; tc-pat-literal : LiteralStx -> Type
+;; Produces the most permissive type for the literal, not the most specific
+(def (tc-pat-literal stx)
+  (def e (stx-e stx))
+  (cond ((exact-integer? e) type:int) ; never nat, int is more permissive
+        ((boolean? e) type:bool)
+        ((string? e) type:bytes)
+        ((bytes? e) type:bytes)
+        (else (error 'tc-pat-literal "unrecognized literal"))))
+
+;; tc-switch-cases : MPart Env TypingScheme [Listof SwitchCaseStx] -> TypingScheme
+(def (tc-switch-cases part env valts stxs)
+  (with (((typing-scheme valnenv valty) valts)
+         ([nenvs ntypes ptypes]
+          (transpose (map (cut tc-switch-case part env <>) stxs))))
+    (def ntype (types-meet ntypes))
+    (def ptype (types-join ptypes))
+    (def nenv (menvs-meet (cons valnenv nenvs)))
+    (def before-ts (typing-scheme nenv ptype))
+    ;; valty <: ntype
+    (def bity (biunify [(constraint:subtype valty ntype)] empty-symdict))
+    (typing-scheme-bisubst bity before-ts)))
+
+;; tc-switch-case : MPart Env SwitchCaseStx -> (list MonoEnv NType PType)
+(def (tc-switch-case part env stx)
   (syntax-case stx ()
     ((pat body ...)
-     (let ((pattys (tc-pat part env valty #'pat)))
+     (with (((pat-typing-scheme nenv1 ntype pattys)
+             (tc-pat part env #'pat)))
        (def env/pattys
          (symdict-put/list
           env
           (map (lambda (p) (cons (car p) (entry:known part (typing-scheme empty-symdict (cdr p)))))
                pattys)))
-       (tc-body part env/pattys #'(body ...))))))
+       (with (((typing-scheme nenv2 ptype) (tc-body part env/pattys #'(body ...))))
+         [(menv-meet nenv1 nenv2) ntype ptype])))))
 
-
-;; tc-pat : MPart Env PType PatStx -> Pattys
-(def (tc-pat part env valty stx)
+;; tc-pat : MPart Env PatStx -> PatTypingScheme
+;; Produces the most permissive type for the pattern
+(def (tc-pat part env stx)
   (syntax-case stx (@ : ann @tuple @record @list @or-pat)
     ((@ _ _) (error 'tc-pat "TODO: deal with @"))
     ((ann pat type)
-     (let ((t (parse-type part env empty-symdict #'type)))
-       ;; valty <: t
-       ;; because passing valty into a context expecting t
-       ;; (switch (ann 5 nat) ((ann x int) x))
-       (unless (subtype? valty t)
-         (error 'tc-pat "type mismatch"))
-       (tc-pat part env t #'pat)))
+     (with ((t (parse-type part env empty-symdict #'type))
+            ((pat-typing-scheme nenv ntype ptys) (tc-pat part env #'pat)))
+       ;; t <: ntype
+       (def bity (biunify [(constraint:subtype t ntype)] empty-symdict))
+       (pat-typing-scheme-bisubst bity (pat-typing-scheme nenv t ptys))))
     (blank (and (identifier? #'blank) (free-identifier=? #'blank #'_))
-     [])
+     (pat-typing-scheme empty-symdict ntype:top []))
     (x (and (identifier? #'x) (not-bound-as-ctor? env (syntax-e #'x)))
      (let ((s (syntax-e #'x)))
-       [(cons s valty)]))
+       (def s2 (symbol-fresh s))
+       (pat-typing-scheme (symdict (s (type:var s2)))
+                          (type:var s2)
+                          [(cons s (type:var s2))])))
     (x (and (identifier? #'x) (bound-as-ctor? env (syntax-e #'x)))
      (let ((s (syntax-e #'x)))
        (def ent (symdict-ref env s))
@@ -1039,57 +1095,34 @@
          (error s "access allowed only for" (entry-part ent)))
        (match ent
          ((entry:ctor _ (typing-scheme menv t))
-          (unless (symdict-empty? menv) (error 'tc-pat "handle constructors constraining inputs"))
-          ;; t doesn't necessarily have to be a supertype,
-          ;; but does need to be join-compatible so that
-          ;; valty <: (type-join valty t)
-          (type-join valty t)
-          []))))
+          (pat-typing-scheme menv t [])))))
     (lit (stx-atomic-literal? #'lit)
-     (let ((t (tc-literal #'lit)))
-       ;; t doesn't necessarily have to be a supertype,
-       ;; but does need to be join-compatible so that
-       ;; valty <: (type-join valty t)
-       (type-join valty t)
-       []))
+     (let ((t (tc-pat-literal #'lit)))
+       (pat-typing-scheme empty-symdict t [])))
     ((@or-pat p ...)
-     (pattys-join (stx-map (lambda (p) (tc-pat part env valty p)) #'(p ...))))
+     (pat-typing-schemes-join
+      (stx-map (cut tc-pat part env <>) #'(p ...))))
     ((@list p ...)
-     (cond
-       ((type:listof? valty)
-        (let ((elem-ty (type:listof-elem valty)))
-          (def ptys (stx-map (lambda (p) (tc-pat part env elem-ty p)) #'(p ...)))
-          (pattys-append ptys)))
-       (else
-        (error 'tc-pat "TODO: handle list patterns better, unification?"))))
+     (let ((pts (stx-map (cut tc-pat part env <>) #'(p ...))))
+       (def nenv (menvs-meet (map pat-typing-scheme-menv pts)))
+       ;; meet because the ntypes are already as permissive as they can be
+       (def nty (type:listof (types-meet (map pat-typing-scheme-ntype pts))))
+       (def ptys (pattys-append (map pat-typing-scheme-pattys pts)))
+       (pat-typing-scheme nenv nty ptys)))
     ((@tuple p ...)
-     (match valty
-       ((type:tuple ts)
-        (unless (= (stx-length #'(p ...)) (length ts))
-          (error 'tuple "wrong number of elements in tuple pattern"))
-        (def ptys (stx-map (lambda (t p) (tc-pat part env t p)) ts #'(p ...)))
-        (pattys-append ptys))
-       (_ (error 'tc-pat "TODO: handle tuple patterns better, unification?"))))
+     (let ((pts (stx-map (cut tc-pat part env <>) #'(p ...))))
+       (def nenv (menvs-meet (map pat-typing-scheme-menv pts)))
+       (def nty (type:tuple (map pat-typing-scheme-ntype pts)))
+       (def ptys (pattys-append (map pat-typing-scheme-pattys pts)))
+       (pat-typing-scheme nenv nty ptys)))
     ((@record (x p) ...) (stx-andmap identifier? #'(x ...))
-     (let ((s (stx-map syntax-e #'(x ...))))
-       (match valty
-         ((type:record fldtys)
-          (def flds (symdict-keys fldtys))
-          ;; s ⊆ flds
-          (for (x s)
-            (unless (symdict-has-key? fldtys x)
-              (error x "unexpected key in record pattern")))
-          ;; flds ⊆ s
-          (for (f flds)
-            (unless (member f s)
-              (error f "missing key in record pattern")))
-          (def ptys
-            (stx-map (lambda (x p)
-                       (tc-pat part env (symdict-ref fldtys x) p))
-                     s
-                     #'(p ...)))
-          (pattys-append ptys))
-         (_ (error 'tc-pat "TODO: handle tuple patterns better, unification?")))))
+     (let ((s (stx-map syntax-e #'(x ...)))
+           (pts (stx-map (cut tc-pat part env <>) #'(p ...))))
+       (def nenv (menvs-meet (map pat-typing-scheme-menv pts)))
+       (def ntys (map pat-typing-scheme-ntype pts))
+       (def nty (type:record (list->symdict (map cons s ntys))))
+       (def ptys (pattys-append (map pat-typing-scheme-pattys pts)))
+       (pat-typing-scheme nenv nty ptys)))
     ((f a ...) (and (identifier? #'f) (bound-as-ctor? env (syntax-e #'f)))
      (let ((s (syntax-e #'f)))
        (unless (symdict-has-key? env s)
@@ -1098,19 +1131,16 @@
        (unless (mpart-can-use? part (entry-part ent))
          (error s "access allowed only for" (entry-part ent)))
        (match ent
-         ((entry:ctor _ (typing-scheme menv (type:arrow in-tys out-ty)))
-          (unless (symdict-empty? menv) (error 'tc-pat "handle constructors constraining inputs"))
-          ;; valty <: out-ty
-          ;; because passing valty into a context expecting out-ty
-          (unless (subtype? valty out-ty)
-            (error 'tc-pat "type mismatch"))
+         ((entry:ctor _ (typing-scheme nenv1 (type:arrow in-tys out-ty)))
           (unless (= (stx-length #'(a ...)) (length in-tys))
             (error s "wrong number of arguments to data constructor"))
-          (def ptys
-            (stx-map (lambda (t p) (tc-pat part env t p))
-                     in-tys
-                     #'(a ...)))
-          (pattys-append ptys)))))))
+          (def pts (stx-map (cut tc-pat part env <>) #'(a ...)))
+          (def nenv2 (menvs-meet (cons nenv1 (map pat-typing-scheme-menv pts))))
+          (def ntys (map pat-typing-scheme-ntype pts))
+          (def ptys (pattys-append (map pat-typing-scheme-pattys pts)))
+          ;; [in-ty <: nty] ...
+          (def bity (biunify (map make-constraint:subtype in-tys ntys) empty-symdict))
+          (pat-typing-scheme-bisubst bity (pat-typing-scheme nenv2 out-ty ptys))))))))
 
 #|
 
