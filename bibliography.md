@@ -91,3 +91,7 @@ Other non-Lisp types of interest?
 ### Complexity
 
 * [How Complex Systems Fail](https://web.mit.edu/2.75/resources/random/How%20Complex%20Systems%20Fail.pdf)
+
+### Wallets to Integrate With
+
+* [Trezor](https://wiki.trezor.io/Developers_guide)
