@@ -96,6 +96,7 @@
 
 ;; A Pattys is an [Assqof Symbol Type]
 ;; for the types of the pattern variables within a pattern
+;; TODO: Does order matter? If not, change to a symdict
 
 ;; A PatTypingScheme is a (pat-typing-scheme MonoEnv NType Pattys)
 (defstruct pat-typing-scheme (menv ntype pattys) transparent: #t)
@@ -333,7 +334,7 @@
      (type:record
       (list->symdict
        (map (lambda (p) (cons (car p) (sub (cdr p))))
-            fldtys))))
+            (symdict->list fldtys)))))
     ((type:arrow as b)
      (type:arrow (map nsub as) (sub b)))
     ((ptype:union ts)
@@ -431,7 +432,7 @@
      (map make-constraint:subtype as bs))
     ((constraint:subtype (type:record as) (type:record bs))
      (unless (symdict-key-set=? as bs)
-       (error 'subtype "record field mismatch"))
+       (error 'subtype (format "record field mismatch, expected keys ~a, given keys ~a" (symdict-keys bs) (symdict-keys as))))
      (map (lambda (k)
             (constraint:subtype (symdict-ref as k) (symdict-ref bs k)))
           (symdict-keys as)))
@@ -796,19 +797,18 @@
          in-tys))
   ;; body-env : Env
   (def body-env (symdict-put/list env (map cons xs in-ents*)))
-  (def body-ts (tc-body/check part body-env body exp-out-ty))
-  (def body-menv (typing-scheme-menv body-ts))
-  (def body-ty (typing-scheme-type body-ts))
-  ;; in-tys* : [Listof NType]
-  (def in-tys*
-    (map (lambda (x in-ty)
-           (or in-ty (symdict-get body-menv x ntype:top)))
-         xs
-         in-tys))
-  (def menv (for/fold (acc body-menv) ((x xs) (in-ty in-tys))
-              (cond (in-ty acc)
-                    (else (symdict-remove acc x)))))
-  (typing-scheme menv (type:arrow in-tys* body-ty)))
+  (with (((typing-scheme body-menv body-ty) (tc-body/check part body-env body exp-out-ty)))
+    ;; in-tys* : [Listof NType]
+    (def in-tys*
+      (map (lambda (x in-ty)
+             (or in-ty (symdict-get body-menv x ntype:top)))
+           xs
+           in-tys))
+    ;; remove the xs from the menv before passing it up
+    (def menv (for/fold (acc body-menv) ((x xs) (in-ty in-tys))
+                (cond (in-ty acc)
+                      (else (symdict-remove acc x)))))
+    (typing-scheme menv (type:arrow in-tys* body-ty))))
 
 ;; tc-expr-make-interaction : MPart Env ExprStx -> TypingScheme
 ;; the env result contains only the new entries introduced by the statement
@@ -1061,13 +1061,24 @@
     ((pat body ...)
      (with (((pat-typing-scheme nenv1 ntype pattys)
              (tc-pat part env #'pat)))
-       (def env/pattys
+       (def xs (map car pattys))
+       ;; each pattern-variable gets unknown
+       (def env/patvars
          (symdict-put/list
           env
-          (map (lambda (p) (cons (car p) (entry:known part (typing-scheme empty-symdict (cdr p)))))
-               pattys)))
-       (with (((typing-scheme nenv2 ptype) (tc-body part env/pattys #'(body ...))))
-         [(menv-meet nenv1 nenv2) ntype ptype])))))
+          (map (cut cons <> (entry:unknown part)) xs)))
+       (with (((typing-scheme nenv2 ptype) (tc-body part env/patvars #'(body ...))))
+         (def nenv3 (menv-meet nenv1 nenv2))
+         ;; unify pattys with their respective tys in nenv3
+         (def bity (biunify (for/collect ((e pattys))
+                              (with (((cons x ty) e))
+                                (constraint:subtype ty (symdict-get nenv3 x ntype:top))))
+                            empty-symdict))
+         ;; remove the pattys before passing the final nenv up
+         (def nenv (for/fold (acc nenv3) ((x xs))
+                     (symdict-remove acc x)))
+         ;; apply the bisubstitution to the final nenv, the ntype, and the ptype
+         [(menv-bisubst bity nenv) (ntype-bisubst bity ntype) (ptype-bisubst bity ptype)])))))
 
 ;; tc-pat : MPart Env PatStx -> PatTypingScheme
 ;; Produces the most permissive type for the pattern
@@ -1083,6 +1094,7 @@
     (blank (and (identifier? #'blank) (free-identifier=? #'blank #'_))
      (pat-typing-scheme empty-symdict ntype:top []))
     (x (and (identifier? #'x) (not-bound-as-ctor? env (syntax-e #'x)))
+     ;; pattern variable, since it's not a constructor
      (let ((s (syntax-e #'x)))
        (def s2 (symbol-fresh s))
        (pat-typing-scheme empty-symdict (type:var s2) [(cons s (type:var s2))])))
@@ -1095,7 +1107,7 @@
          ((entry:ctor _ (typing-scheme menv t))
           (pat-typing-scheme menv t [])))))
     (lit (stx-atomic-literal? #'lit)
-     (let ((t (tc-pat-literal #'lit)))
+     (let ((t (tc-pat-literal #'lit))) ; t is the most permissive type for the literal
        (pat-typing-scheme empty-symdict t [])))
     ((@or-pat p ...)
      (pat-typing-schemes-join
@@ -1104,6 +1116,8 @@
      (let ((pts (stx-map (cut tc-pat part env <>) #'(p ...))))
        (def nenv (menvs-meet (map pat-typing-scheme-menv pts)))
        ;; meet because the ntypes are already as permissive as they can be
+       ;; the type of the actual elements of the list, must be a subtype of all
+       ;; the ntypes of the sub-patterns
        (def nty (type:listof (types-meet (map pat-typing-scheme-ntype pts))))
        (def ptys (pattys-append (map pat-typing-scheme-pattys pts)))
        (pat-typing-scheme nenv nty ptys)))
@@ -1119,6 +1133,7 @@
        (def nenv (menvs-meet (map pat-typing-scheme-menv pts)))
        (def ntys (map pat-typing-scheme-ntype pts))
        (def nty (type:record (list->symdict (map cons s ntys))))
+       (printf "nty: ~a\n" (type->string nty))
        (def ptys (pattys-append (map pat-typing-scheme-pattys pts)))
        (pat-typing-scheme nenv nty ptys)))
     ((f a ...) (and (identifier? #'f) (bound-as-ctor? env (syntax-e #'f)))

@@ -272,7 +272,7 @@
      (type:record
       (list->symdict
        (map (lambda (p) (cons (car p) (sub (cdr p))))
-            fldtys))))
+            (symdict->list fldtys)))))
     ((type:arrow as b)
      (type:arrow (map sub as) (sub b)))
     ((ptype:union ts)
