@@ -2,7 +2,8 @@
 ;; To run tests, use: ./unit-tests.ss
 ;; You can even run tests without first building with ./build.ss !
 
-(import :gerbil/expander "config/path")
+(import :gerbil/expander "config/path" :clan/utils/ports)
+(set-current-ports-encoding-standard-unix!)
 (current-directory (glow-src))
 (add-load-path (glow-src))
 (import-module ':glow/compiler/t/unit-tests #t #t)
