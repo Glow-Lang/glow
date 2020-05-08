@@ -8,7 +8,7 @@
 ;; See HACKING.md for details.
 
 (import
-  :std/build-script :std/srfi/1
+  :std/build-script :std/format :std/srfi/1
   :clan/utils/filesystem :clan/utils/version
   "config/path")
 
@@ -22,7 +22,8 @@
    ["config" "compiler" "runtime" "eth"]))
 
 (def (build-spec)
-  [(files) ...
+  [(lset-difference equal? (files) '("eth/keccak.ss"))...
+   [gxc: "eth/keccak" "-cc-options" (format "-I~a" (glow-src))]
    "compiler/t/common"
    "all-glow"
    [exe: "main" bin: "glow"]])
@@ -32,6 +33,6 @@
     (update-version-from-git name: "Glow"))
   (defbuild-script ;; defines an inner "main"
     (build-spec)
-    ;;verbose: 8
+    ;;verbose: 9
     )
   (apply main args))
