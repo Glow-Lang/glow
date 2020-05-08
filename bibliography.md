@@ -76,6 +76,10 @@ Other non-Lisp types of interest?
   [Counter-example](https://arxiv.org/abs/1905.04463),
   [also this](https://arxiv.org/pdf/1907.05523.pdf).
 
+### Proof Systems
+
+* [Lean](https://leanprover.github.io/theorem_proving_in_lean/)
+
 ### Issues with Solidity
 
 * [Consensys: known attacks](https://consensys.github.io/smart-contract-best-practices/known_attacks/)
