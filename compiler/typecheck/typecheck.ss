@@ -19,7 +19,6 @@
         :glow/compiler/common
         :glow/compiler/env
         :glow/compiler/alpha-convert/fresh
-        :glow/compiler/alpha-convert/alpha-convert
         :glow/compiler/typecheck/variance
         :glow/compiler/typecheck/type)
 
@@ -468,7 +467,7 @@
 ;   common:
 ;     \@
 ;   stmt:
-;     : quote def λ deftype defdata publish! verify!
+;     : quote def λ deftype defdata publish!
 ;   expr/pat:
 ;     : ann \@tuple \@record \@list \@or-pat if block switch _ require! assert! deposit! withdraw!
 ;   type:
@@ -605,58 +604,16 @@
 ;; tc-stmt : MPart Env StmtStx -> (values Env MonoEnv)
 ;; the env result contains only the new entries introduced by the statement
 (def (tc-stmt part env stx)
-  (syntax-case stx (@ @interaction @verifiably @publicly : quote splice def λ deftype defdata publish! verify!)
-    ((@interaction _ _) (tc-stmt-interaction part env stx))
-    ((@verifiably _) (tc-stmt-at-verifiably part env stx))
-    ((@publicly _) (tc-stmt-at-publicly part env stx))
+  (syntax-case stx (@ @interaction : quote splice def λ deftype defdata publish!)
     ((@ p _) (identifier? #'p) (tc-stmt-at-participant part env stx))
     ((splice s ...) (tc-stmts part env (syntax->list #'(s ...))))
     ((deftype . _) (tc-stmt-deftype part env stx))
     ((defdata . _) (tc-stmt-defdata part env stx))
     ((def . _) (tc-stmt-def part env stx))
     ((publish! x ...) (stx-andmap identifier? #'(x ...)) (tc-stmt-publish part env stx))
-    ((verify! x ...) (stx-andmap identifier? #'(x ...)) (tc-stmt-verify part env stx))
     (expr
      (with (((typing-scheme menv _) (tc-expr part env #'expr)))
        (values empty-symdict menv)))))
-
-;; tc-stmt-interaction : MPart Env StmtStx -> (values Env MonoEnv)
-;; the env result contains only the new entries introduced by the statement
-(def (tc-stmt-interaction part env stx)
-  (when part
-    (error 'interaction "not allowed within a specific participant"))
-  (syntax-case stx (@interaction @list def λ)
-    ;; TODO: when we design a separate way of calling interactions, create a separate
-    ;;       type for interaction functions that forces them to be called specially
-    ;;       as interactions, not just functions with extra participant arguments
-    ((@interaction ((@list p ...)) (def f (λ params . body))) (stx-andmap identifier? #'(p ...))
-     (tc-stmt-def part env #'(def f (λ ((p : Participant) ... . params) . body))))))
-
-;; tc-stmt-at-verifiably : MPart Env StmtStx -> (values Env MonoEnv)
-;; NOTE: This may become irrelevant depending on what desugaring
-;;       happens before typechecking
-(def (tc-stmt-at-verifiably part env stx)
-  (syntax-case stx (@verifiably)
-    ((@verifiably s)
-     (let ()
-       (defvalues (penv2 nenv2) (tc-stmt part env #'s))
-       ;; TODO: Attach something to the new bindings in `penv2`
-       ;;       so that the `verify!` form knows they can
-       ;;       be verified.
-       ;;       This might also involve dependencies, recording
-       ;;       references to non-published identifiers that
-       ;;       must be published before `verify!` can be called.
-       (values penv2 nenv2)))))
-
-;; tc-stmt-at-publicly : MPart Env StmtStx -> (values Env MonoEnv)
-;; NOTE: This may become irrelevant depending on what desugaring
-;;       happens before typechecking
-(def (tc-stmt-at-publicly part env stx)
-  (syntax-case stx (@publicly)
-    ((@publicly s)
-     (let ()
-       (defvalues (penv2 nenv2) (tc-stmt part env #'s))
-       (values (env-publish penv2 (symdict-keys penv2)) nenv2)))))
 
 ;; tc-stmt-at-participant : MPart Env StmtStx -> (values Env MonoEnv)
 (def (tc-stmt-at-participant part env stx)
@@ -756,28 +713,26 @@
    (env-put/envs empty-symdict (stx-map tcvariant stx))
    empty-symdict))
 
+(def (tx-optional-type-ann part env stx)
+  (syntax-case stx (:)
+    ((: type) (parse-type part env empty-symdict #'type))
+    (_ #f)))
+
 ;; tc-stmt-def : MPart Env StmtStx -> (values Env MonoEnv)
 ;; the env result contains only the new entries introduced by the statement
 (def (tc-stmt-def part env stx)
   (syntax-case stx (@ : quote def λ)
-    ((def f (λ params : out-type body ...)) (identifier? #'f)
+    ((def f () (λ params ?out-type body ...)) (identifier? #'f)
      (let ((s (syntax-e #'f))
            (xs (stx-map parse-param-name #'params))
            (in-ts (stx-map (lambda (p) (parse-param-type part env p)) #'params))
-           (out-t (parse-type part env empty-symdict #'out-type)))
+           (out-t (tx-optional-type-ann part env #'?out-type)))
        (tc-stmt-def/typing-scheme part env s (tc-function part env xs in-ts out-t #'(body ...)))))
-    ((def f (λ params body ...)) (identifier? #'f)
-     (let ((s (syntax-e #'f))
-           (xs (stx-map parse-param-name #'params))
-           (in-ts (stx-map (lambda (p) (parse-param-type part env p)) #'params)))
-       (tc-stmt-def/typing-scheme part env s (tc-function part env xs in-ts #f #'(body ...)))))
-    ((def x : type expr) (identifier? #'x)
+    ((def x ?type expr) (identifier? #'x)
      (let ((s (syntax-e #'x))
-           (t (parse-type part env empty-symdict #'type)))
-       (tc-stmt-def/typing-scheme part env s (tc-expr/check part env #'expr t))))
-    ((def x expr) (identifier? #'x)
-     (let ((s (syntax-e #'x)))
-       (tc-stmt-def/typing-scheme part env s (tc-expr part env #'expr))))))
+           (t (tx-optional-type-ann part env #'?type)))
+       (tc-stmt-def/typing-scheme
+        part env s (if t (tc-expr/check part env #'expr t) (tc-expr part env #'expr)))))))
 
 ;; tc-stmt-def/typing-scheme : MPart Env Symbol TypingScheme -> (values Env MonoEnv)
 ;; the env result contains only the new entries introduced by the statement
@@ -788,16 +743,14 @@
 
 ;; tc-expr-lambda : MPart Env ExprStx -> TypingScheme
 (def (tc-expr-lambda part env stx)
-  (syntax-case stx (λ :)
-    ((λ params : out-type body ...)
+  (syntax-case stx (λ)
+    ((λ params ?out-type body ...)
      (let ((xs (stx-map parse-param-name #'params))
            (in-ts (stx-map (lambda (p) (parse-param-type part env p)) #'params))
-           (out-t (parse-type part env empty-symdict #'out-type)))
-       (tc-function part env xs in-ts out-t #'(body ...))))
-    ((λ params body ...)
-     (let ((xs (stx-map parse-param-name #'params))
-           (in-ts (stx-map (lambda (p) (parse-param-type part env p)) #'params)))
-       (tc-function part env xs in-ts #f #'(body ...))))))
+           (out-t (syntax-case #'?out-type (:)
+                    ((: out-type) (parse-type part env empty-symdict #'out-type))
+                    (_ #f))))
+       (tc-function part env xs in-ts out-t #'(body ...))))))
 
 ;; tc-function : MPart Env [Listof Symbol] [Listof (U #f Type)] (U #f Type) BodyStx -> TypingScheme
 (def (tc-function part env xs in-tys exp-out-ty body)
@@ -824,15 +777,18 @@
                     (else (symdict-remove acc x)))))
   (typing-scheme menv (type:arrow in-tys* body-ty)))
 
-;; tc-stmt-verify : MPart Env StmtStx -> (values Env MonoEnv)
-;; NOTE: the actual checking for verify! will be handled in the desugaring pass
-;;       once that's implemented, this function should be deleted and typechecking
-;;       shouldn't see verify! statements at all
-(def (tc-stmt-verify part env stx)
-  (syntax-case stx (verify!)
-    ((verify! x ...) (stx-andmap identifier? #'(x ...))
-     (let ((ts (stx-map (cut tc-expr-id part env <>) #'(x ...))))
-       (values empty-symdict (menvs-meet (map typing-scheme-menv ts)))))))
+;; tc-expr-make-interaction : MPart Env ExprStx -> TypingScheme
+;; the env result contains only the new entries introduced by the statement
+;; TODO: wrap the function in an interaction constructor (that remembers the number of participants?)
+(def (tc-expr-make-interaction part env stx)
+  (when part
+    (error 'interaction "not allowed within a specific participant"))
+  (syntax-case stx (@make-interaction @list)
+    ;; TODO: when we design a separate way of calling interactions, create a separate
+    ;;       type for interaction functions that forces them to be called specially
+    ;;       as interactions, not just functions with extra participant arguments
+    ((@make-interaction ((@list p ...)) params ?out-type . body) (stx-andmap identifier? #'(p ...))
+     (tc-expr part env #'(λ ((p : Participant) ... . params) ?out-type . body)))))
 
 ;; tc-stmt-publish : MPart Env StmtStx -> (values Env MonoEnv)
 (def (tc-stmt-publish part env stx)
@@ -847,8 +803,7 @@
   (def (tce e) (tc-expr part env e))
   ;; tce/bool : ExprStx -> TypingScheme
   (def (tce/bool e) (tc-expr/check part env e type:bool))
-  (syntax-case stx (@ : ann @dot @tuple @record @list @app and or if block splice == sign λ switch input digest require! assert! deposit! withdraw!)
-    ((@ _ _) (error 'tc-expr "TODO: deal with @"))
+  (syntax-case stx (: ann @dot @tuple @record @list @app and or if block splice == sign λ @make-interaction switch input digest require! assert! deposit! withdraw!)
     ((ann expr type)
      (tc-expr/check part env #'expr (parse-type part env empty-symdict #'type)))
     (x (identifier? #'x) (tc-expr-id part env stx))
@@ -886,22 +841,6 @@
      (tc-body part env #'(b ...)))
     ((splice b ...)
      (tc-body part env #'(b ...)))
-    ((and e ...)
-     (let ((ts (stx-map tce/bool #'(e ...))))
-       (typing-scheme
-        (menvs-meet (map typing-scheme-menv ts))
-        type:bool)))
-    ((or e ...)
-     (let ((ts (stx-map tce/bool #'(e ...))))
-       (typing-scheme
-        (menvs-meet (map typing-scheme-menv ts))
-        type:bool)))
-    ((if c t e)
-     (let ((ct (tce/bool #'c))
-           (tt (tce #'t))
-           (et (tce #'e)))
-       (typing-scheme (menvs-meet (map typing-scheme-menv [ct tt et]))
-                      (type-join (typing-scheme-type tt) (typing-scheme-type et)))))
     ((== a b)
      (let ((at (tce #'a)) (bt (tce #'b)))
        ;; TODO: constrain the types in `at` and `bt` to types that
@@ -912,6 +851,7 @@
      (let ((ts (tc-expr/check part env #'e type:Digest)))
        (typing-scheme (typing-scheme-menv ts) type:Signature)))
     ((λ . _) (tc-expr-lambda part env stx))
+    ((@make-interaction . _) (tc-expr-make-interaction part env stx))
     ((switch e swcase ...)
      (let ((ts (tc-expr part env #'e)))
        (def vt (typing-scheme-type ts))
@@ -1054,6 +994,7 @@
         ((boolean? e) type:bool)
         ((string? e) type:bytes) ; represent as bytess using UTF-8
         ((bytes? e) type:bytes)
+        ((and (pair? e) (length=n? e 1) (equal? (stx-e (car e)) '@tuple)) type:unit)
         (else (error 'tc-literal "unrecognized literal"))))
 
 ;; tc-switch-case : MPart Env Type SwitchCaseStx -> TypingScheme
@@ -1179,10 +1120,9 @@
     [(@ attr stmt) (??? (on-stmt #'stmt))]
     [(deftype head type) (??? (on-type #'type))]
     [(defdata head variant ...) (??? (stx-map on-variant #'(variant ...)))]
-    [(def id (λ params : out-type body ...)) (identifier? #'id) (??? (on-type #'out-type) (on-body #'(body ...)))]
-    [(def id : type expr) (identifier? #'id) (??? (on-type #'type) (on-expr #'expr))]
+    [(def id () (λ params (: out-type) body ...)) (identifier? #'id) (??? (on-type #'out-type) (on-body #'(body ...)))]
+    [(def id (: type) expr) (identifier? #'id) (??? (on-type #'type) (on-expr #'expr))]
     [(publish! id ...) (stx-andmap identifier? #'(id ...)) ???]
-    [(verify! id ...) (stx-andmap identifier? #'(id ...)) ???]
     [_ (on-expr stx)]))
 
 (def (on-expr stx)
@@ -1195,7 +1135,6 @@
     [(@tuple expr ...) (??? (stx-map on-expr #'(expr ...)))]
     [(@record (id expr) ...) (??? (stx-map on-expr #'(expr ...)))]
     [(block body ...) (on-body #'(body ...))]
-    [(if c-expr t-expr e-expr) (??? (on-expr #'c-expr) (on-expr #'t-expr) (on-expr #'e-expr))]
     [(switch expr case ...) (??? (on-expr #'expr) (on-cases #'(case ...)))]
     [(require! expr) (??? (on-expr #'expr))]
     [(assert! expr) (??? (on-expr #'expr))]
@@ -1233,3 +1172,4 @@
     [(@record (id type) ...) (??? (stx-map on-type #'(type ...)))]
     [(id type ...) (identifier? #'id) (??? (stx-map on-type #'(type ...)))]))
 |#
+;;(import :clan/utils/debug) (trace! tc-expr tc-expr-id tc-stmt tc-stmts tc-stmt-make-interaction)

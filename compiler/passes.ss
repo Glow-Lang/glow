@@ -8,22 +8,25 @@
   :glow/compiler/desugar/desugar
   (only-in :glow/compiler/typecheck/typecheck
     typecheck read-type-env-file write-type-env type-env=?)
-  :glow/compiler/anf/anf)
+  :glow/compiler/anf/anf
+  :glow/compiler/participantify/participantify
+  )
 
 ;;; Layers, passes and strategies
 
 ;;; Layers
 
+;; TODO: also represent source location somehow? and unused-table?
+
 ;; TODO: Our source layer, with its JavaScript-like, ReasonML-like syntax
 ;;(define-layer ".glow" parse-glow pretty-print-glow)
 
 ;; SEXP notation for Glow programs
-;; TODO: also represent source location?
 (define-layer sexp read-sexp-file write-sexps stx-sexpr=?)
 
-;; Alpha-converted Glow programs
-;; TODO: also represent source location and unused-table?
+;; Alpha-converted Glow programs, and the Unused table
 (define-layer alpha.sexp read-sexp-file write-sexps stx-sexpr=?)
+(define-layer Unused #f #f #f)
 
 ;; Desugared Glow programs
 ;; TODO: also represent source location and unused-table?
@@ -79,8 +82,8 @@
 ;; (Listof Stmt) Unused → (Listof Stmt)
 (define-pass anf (desugar.sexp Unused) (anf.sexp))
 
-;; *Transaction-grouping*: in an interaction, group all actions into transactions.
-;;(define-pass txgroup ".anf.sexp" ".txgroup.sexp")
+;; *Transaction-ification*: introduce suitable safe points between changes in participants
+(define-pass participantify (anf.sexp Unused) (participantify.sexp))
 
 ;; *Message-extraction*: for each choice of transactions, extract a message type for that choice.
 ;; TODO: maybe merge with previous pass?
@@ -116,7 +119,7 @@
 ;;(define-pass javascript-extraction ".client.sexp" ".js")
 
 (define-strategy ethereum-direct-style
-  alpha-convert desugar typecheck anf) ;; ...
+  alpha-convert desugar typecheck anf participantify) ;; ...
 
 ;; Different layers and passes for State-Channel style:
 ;; the previous contract is virtualized, so that

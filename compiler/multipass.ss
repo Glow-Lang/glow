@@ -20,8 +20,8 @@
 (import
   :std/format :std/iter :std/misc/ports :std/misc/string
   :std/srfi/1 :std/srfi/13 :std/sugar
-  :clan/utils/base :clan/utils/files
-  :glow/compiler/common)
+  :clan/utils/base :clan/utils/files :clan/utils/path
+  :glow/compiler/common :glow/config/path)
 
 ;; A "layer" of language has a name, a reader and a writer.
 ;; - The name, a symbol, is also the file extension of corresponding source files (e.g. 'glow => ".glow").
@@ -111,6 +111,14 @@
         (error 'no-such-pass-in-strategy last-pass strategy))
     passes-from-layer))
 
+(def known-failures
+  ["examples/anf_at_if_at.typedecl.sexp"
+   "examples/type_infer.typedecl.sexp"])
+
+;; PathString -> Bool
+(def (known-failure? x)
+  (and (with-catch false (cut member (subpath? (path-normalize x) (glow-src)) known-failures)) #t))
+
 ;; Symbol String Representation+AncillaryDataIn -> Representation+AncillaryDataOut
 (def (run-pass pass-name basename state)
   (match (registered-pass pass-name)
@@ -124,11 +132,16 @@
        (def expected-output-file (format "~a.~a" basename layer-name))
        (def layer (registered-layer layer-name))
        (when (file-exists? expected-output-file)
-         (unless ((layer-comparer layer) value (read-file/layer layer-name expected-output-file))
-           (eprintf "output for pass ~a output ~a doesn't match expectation from ~a:\n"
-                    pass-name layer-name expected-output-file)
-           (write/layer layer-name value (current-error-port))
-           (error 'pass-output-mismatch pass-name basename layer-name))))
+         (let ((success? ((layer-comparer layer) value (read-file/layer layer-name expected-output-file)))
+               (success-expected? (not (known-failure? expected-output-file))))
+           (unless (eq? success? success-expected?)
+             (eprintf "output for pass ~a output ~a ~a expectations from ~a:\n"
+                      pass-name layer-name
+                      (if success? "unexpectedly matches" "fails to match")
+                      expected-output-file)
+             (unless success?
+               (write/layer layer-name value (current-error-port)))
+             (error 'pass-output-failure pass-name basename layer-name)))))
      state)))
 
 ;; Path layer:  String Representation+AncillaryDataIn -> Representation+AncillaryDataOut
@@ -137,6 +150,7 @@
                  strategy: (strategy default-strategy)
                  pass: (last-pass #f)
                  show?: (show? #t)
+                 ;;override?: (override? #f)
                  save?: (save? #f))
   (def passes (relevant-passes layer strategy last-pass))
   (def in (hash (,layer (read-file/layer layer filename))))

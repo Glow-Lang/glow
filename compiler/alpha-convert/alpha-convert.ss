@@ -33,8 +33,12 @@
     if and or
     block splice switch λ
     == input digest sign
-    interaction verifiably publicly @interaction @verifiably @publicly
-    publish! verify! require! assert! deposit! withdraw!))
+    interaction verifiably publicly
+    publish! verify! require! assert! deposit! withdraw!
+    ;; The following are introduced in passes between parsing and typechecking:
+    ;; TODO: add support for @make-interaction @app-interaction later in this file.
+    @interaction @verifiably @publicly @make-interaction @app-interaction
+    ))
 
 ;; TODO: inherit this list from a map of bindings in our runtime system
 ;; init-syms : [Listof Sym]
@@ -224,7 +228,7 @@
 
 ;; ac-stmt-atinteraction : Env StmtStx -> (values Env StmtStx)
 (def (ac-stmt-atinteraction env stx)
-    ;; env/participants : Env [StxListof Identifier] [StxListof Identifier] -> Env
+  ;; env/participants : Env [StxListof Identifier] [StxListof Identifier] -> Env
   (def (env/participants env ps ps2)
     (for/fold (env env) ((p (syntax->datum ps)) (p2 (syntax->datum ps2)))
       (symdict-put env p (entry p2 #f))))

@@ -6,13 +6,14 @@
   (rename-in :gerbil/core (lambda λ))
   :gerbil/core
   :std/sugar
+  (only-in :clan/poo/mop new)
   ;;:clan/utils/base
+  :glow/runtime/context
   )
 
 (export
+  ;;@make-interaction
   ;;@ @interaction @publicly @verifiably interaction verifiably publicly
-  λ assert!
+  λ assert! new
   (import: :gerbil/core))
 
-;;(defrule (dummies x ...) (begin (def (x) #f) ...))
-;;(dummies @ @interaction @publicly @verifiably interaction verifiably publicly)

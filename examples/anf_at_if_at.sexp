@@ -4,6 +4,7 @@
 (@ (interaction [A B])
    (def inter
      (λ (b x)
+       (require! (< 0 x))
        (@ A
           (def y
             (if b

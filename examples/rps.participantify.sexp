@@ -1,29 +1,51 @@
 (defdata Hand
          (Rock Paper Scissors)
          (with:
-          (def tmp (λ (tag) (: Hand) (def x (input Hand tag)) (ann x Hand) (return x)))
+          (def tmp
+               (λ (tag)
+                  (: Hand)
+                  (def x (input Hand tag))
+                  (ann x Hand)
+                  (return x)))
           (def tmp0
                (λ ((x0 : Hand))
                   (: nat)
-                  (switch x0 (Rock (return 0)) (Paper (return 1)) (Scissors (return 2)))))
+                  (switch x0
+                          (Rock (return 0))
+                          (Paper (return 1))
+                          (Scissors (return 2)))))
           (def tmp2
                (λ ((x1 : nat))
                   (: Hand)
-                  (switch x1 (0 (return Rock)) (1 (return Paper)) (2 (return Scissors)))))
+                  (switch x1
+                          (0 (return Rock))
+                          (1 (return Paper))
+                          (2 (return Scissors)))))
           (def tmp4 (@record (input tmp) (toNat tmp1) (ofNat tmp3)))
           (return tmp4)))
 (defdata Outcome
          (B_Wins Draw A_Wins)
          (with:
-          (def tmp5 (λ (tag0) (: Outcome) (def x2 (input Outcome tag0)) (ann x2 Outcome) (return x2)))
+          (def tmp5
+               (λ (tag0)
+                  (: Outcome)
+                  (def x2 (input Outcome tag0))
+                  (ann x2 Outcome)
+                  (return x2)))
           (def tmp6
                (λ ((x3 : Outcome))
                   (: nat)
-                  (switch x3 (B_Wins (return 0)) (Draw (return 1)) (A_Wins (return 2)))))
+                  (switch x3
+                          (B_Wins (return 0))
+                          (Draw (return 1))
+                          (A_Wins (return 2)))))
           (def tmp8
                (λ ((x4 : nat))
                   (: Outcome)
-                  (switch x4 (0 (return B_Wins)) (1 (return Draw)) (2 (return A_Wins)))))
+                  (switch x4
+                          (0 (return B_Wins))
+                          (1 (return Draw))
+                          (2 (return A_Wins)))))
           (def tmp10 (@record (input tmp5) (toNat tmp7) (ofNat tmp9)))
           (return tmp10)))
 (def winner
@@ -43,6 +65,7 @@
       ((@list A B))
       (wagerAmount)
       ()
+      (participant-checkpoint pc #f A)
       (@ A (def tmp19 (@dot Hand input)))
       (@ A (def handA0 (@app tmp19 "First player, pick your hand")))
       (@ A (def salt (@app randomUInt256)))
@@ -50,10 +73,12 @@
       (@ A (def commitment (digest tmp20)))
       (@ A (publish! commitment))
       (@ A (deposit! wagerAmount))
+      (participant-checkpoint pc0 A B)
       (@ B (def tmp21 (@dot Hand input)))
       (@ B (def handB0 (@app tmp21 "Second player, pick your hand")))
       (@ B (publish! handB0))
       (@ B (deposit! wagerAmount))
+      (participant-checkpoint pc1 B A)
       (@ A (publish! salt handA0))
       (def tmp22 (@tuple salt handA0))
       (def tmp23 (digest tmp22))

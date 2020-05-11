@@ -19,8 +19,8 @@
 ;; accumulate new reduced statements for the current unreduced statement,
 ;; in reversed order at the beginning of the accumulator acc
 (def (desugar-stmt stx)
-  (syntax-case stx (@ @interaction @verifiably @publicly deftype defdata publish! def)
-    ((@interaction x s) (retail-stx stx [#'x (desugar-stmt #'s)]))
+  (syntax-case stx (@ @interaction @verifiably @publicly deftype defdata publish! def λ)
+    ((@interaction _ (def _ (λ . _))) (desugar-def-interaction stx))
     ((@ p (@verifiably definition)) (retail-stx stx [#'p (desugar-verifiably stx #'p #'definition)]))
     ((@ p (@publicly definition)) (desugar-publicly stx #'p #'definition))
     ((@ p s) (identifier? #'p)
@@ -33,6 +33,15 @@
     ((publish! . _) stx)
     ((def . _) (desugar-def stx))
     (expr (desugar-expr stx))))
+
+(def (desugar-def-interaction stx)
+  (defvalues (ip v lp ot body)
+    (syntax-case stx (:)
+      ((@interaction iparams (def v (lam lparams : out-type . body)))
+       (values #'iparams #'v #'lparams #'(: out-type) #'body))
+      ((@interaction iparams (def v (lam lparams . body)))
+       (values #'iparams #'v #'lparams #'() #'body))))
+  (restx1 stx [#'def v '() (restx1 stx [#'@make-interaction ip lp ot (desugar-body body) ...])]))
 
 (def (nat-to-variants variants)
   (let loop ((i 0) (acc []) (variants variants))
@@ -54,15 +63,15 @@
        (def input
          (let ((x (mk-var 'x))
                (tag (mk-var 'tag)))
-           (restx stx [#'λ [tag] [#'def x ': #'spec [#'input #'spec tag]] x])))
+           (restx stx [#'λ [tag] [': #'spec] [#'def x [': #'spec] [#'input #'spec tag]] x])))
        (def toofNat
          (let ((ofNat-cases (nat-to-variants #'(variant ...))))
            (if ofNat-cases
              (let ((of-x (mk-var 'x))
                    (x-to (mk-var 'x))
                    (toNat-cases (map reverse ofNat-cases)))
-               [['toNat [#'λ [[x-to ': #'spec]] [#'switch x-to . toNat-cases]]]
-                ['ofNat [#'λ [[of-x ': #'nat]] [#'switch of-x . ofNat-cases]]]])
+               [['toNat [#'λ [[x-to ': #'spec]] [': 'nat] [#'switch x-to . toNat-cases]]]
+                ['ofNat [#'λ [[of-x ': #'nat]] [': #'spec] [#'switch of-x . ofNat-cases]]]])
              '())))
        (def rtvalue `(@record (input ,input) ,@toofNat))
        (retail-stx stx `(,#'spec ,@(syntax->list #'(variant ...)) with: ,rtvalue))))))
@@ -92,6 +101,7 @@
 
 ;; desugar-verifiably : Identifier Stx -> Stx
 (def (desugar-verifiably stx p definition)
+  ;;(std/misc/repr#prn ['desugar-verifiably stx p definition])
   (syntax-case definition (def)
     ((def name expr)
      (begin
@@ -123,9 +133,9 @@
 (def (desugar-def stx)
   (syntax-case stx (:)
     ((def name : type expr)
-     (retail-stx stx [#'name ': #'type (desugar-expr #'expr)]))
+     (retail-stx stx [#'name [': #'type] (desugar-expr #'expr)]))
     ((def name expr)
-     (retail-stx stx [#'name (desugar-expr #'expr)]))))
+     (retail-stx stx [#'name [] (desugar-expr #'expr)]))))
 
 ;; desugar-expr : Stx -> Stx
 (def (desugar-expr stx)
@@ -138,19 +148,20 @@
     ((@tuple e ...) (desugar-keyword/sub-exprs stx))
     ((@list e ...) (desugar-keyword/sub-exprs stx))
     ((@record (x e) ...) (retail-stx stx (stx-map (lambda (x e) [x (desugar-expr e)]) #'(x ...) #'(e ...))))
-    ((block b ...) (retail-stx stx (desugar-body (syntax->list #'(b ...)))))
-    ((splice b ...) (retail-stx stx (desugar-body (syntax->list #'(b ...)))))
-    ((if c t e) (desugar-keyword/sub-exprs stx)) ;; TODO: should we desugar to switch?
-    ((and) (restx stx #t))
+    ((block b ...) (retail-stx stx (desugar-body #'(b ...))))
+    ((splice b ...) (retail-stx stx (desugar-body #'(b ...))))
+    ((if c t e) (restx1 stx [#'switch (desugar-expr #'c)
+                                      [#t (desugar-expr #'t)] [#f (desugar-expr #'e)]]))
+    ((and) (restx1 stx #t))
     ((and e) #'e)
     ((and e1 e2 ...)
-     (with-syntax ((more (desugar-expr (restx1 stx #'(and e2 ...)))))
-       #'(if e1 more #f)))
+     (restx1 stx [#'switch (desugar-expr #'e1)
+                           [#f #f] [#t (desugar-expr (restx1 stx #'(and e2 ...)))]]))
     ((or) (restx stx #f))
     ((or e) #'e)
     ((or e1 e2 ...)
-     (with-syntax ((more (desugar-expr (restx1 stx #'(or e2 ...)))))
-       #'(if e1 #t more)))
+     (restx1 stx [#'switch (desugar-expr #'e1)
+                           [#t #t] [#f (desugar-expr (restx1 stx #'(and e2 ...)))]]))
     ((switch e swcase ...)
      (retail-stx stx (cons (desugar-expr #'e) (stx-map desugar-switch-case #'(swcase ...)))))
     ((λ . _) (desugar-lambda stx))
@@ -168,21 +179,20 @@
 (def (desugar-keyword/sub-exprs stx)
   (retail-stx stx (stx-map desugar-expr (stx-cdr stx))))
 
+;; Stx -> [Listof Stx]
 (def (desugar-body body)
-  (if (null? body) body
-      (append (desugar-stmts (butlast body)) [(desugar-expr (last body))])))
+  (def b (syntax->list body))
+  (if (stx-null? b) [] (append (desugar-stmts (butlast b)) [(desugar-expr (last b))])))
 
 (def (desugar-switch-case stx)
-  (syntax-case stx ()
-    ((pat body ...)
-     (retail-stx stx (desugar-body (syntax->list #'(body ...)))))))
+  (syntax-case stx () ((pat body ...) (retail-stx stx (desugar-body #'(body ...))))))
 
 (def (desugar-lambda stx)
-  (syntax-case stx (:)
-    ((_ params : out-type body ...)
-     (retail-stx stx (cons* #'params ': #'out-type (desugar-body (syntax->list #'(body ...))))))
-    ((_ params body ...)
-     (retail-stx stx (cons* #'params (desugar-body (syntax->list #'(body ...))))))))
+  (defvalues (params ?out-type body)
+    (syntax-case stx (:)
+      ((_ params : out-type body ...) (values #'params #'(: out-type) #'(body ...)))
+      ((_ params body ...) (values #'params #'() #'(body ...)))))
+  (retail-stx stx (cons* params ?out-type (desugar-body body))))
 
 ;; Conform to pass convention.
 ;; NB: side-effecting the unused-table
