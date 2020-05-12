@@ -17,6 +17,10 @@
 ;; ((a1 a2 a3) (b1 b2 b3)) <-> ((a1 b1) (a2 b2) (a3 b3))
 (def (transpose lol) (apply map list lol))
 
+;; format-symbol : FormatString Any ... -> Symbol
+;; Like format, but produces a symbol
+(def (format-symbol fmt . vs) (string->symbol (apply format fmt vs)))
+
 ;; stx-atomic-literal? : Any -> Bool
 (def (stx-atomic-literal? stx)
   (def e (stx-e stx))
