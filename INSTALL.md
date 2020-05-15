@@ -27,7 +27,7 @@ When we have a stable release, we'll directly provide an image `mukn/glow:stable
 
 In the meantime, you can build your own with:
 
-    docker build -t mukn/glow -f deploy/Dockerfile .
+    docker build -t mukn/glow -f scripts/Dockerfile .
 
 ## Install it the hard way
 

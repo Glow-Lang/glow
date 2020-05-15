@@ -1,15 +1,17 @@
 # You can symlink this overlay into your ~/.config/nixpkgs/overlays/
 # to make glow-unstable available to your nix-env -iA glow-unstable.
 pkgs: super: rec {
-  inherit (super) lib gerbil-unstable fetchFromGitLab fetchgit gerbil-support gerbilPackages;
+  inherit (super) lib fetchFromGitLab fetchgit
+     gerbil-unstable gambit-support gerbil-support gerbilPackages-unstable;
 
-  glow-unstable = gerbil-support.gerbilPackage {
-    pname = "glow";
+  muknglow = gerbil-support.gerbilPackage {
+    pname = "muknglow";
     version = "unstable-2020-05-02";
     git-version = "0.0-207-gd0ad110";
     package = "glow";
     gerbil = gerbil-unstable;
-    gerbilInputs = [gerbilPackages.gerbil-utils];
+    gambit-params = gambit-support.unstable-params;
+    gerbilInputs = [gerbilPackages-unstable.gerbil-utils];
     version-path = "";
     src = ./..;
     #src = fetchFromGitLab { owner = "mukn"; repo = "glow";
