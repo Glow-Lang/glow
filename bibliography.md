@@ -55,6 +55,15 @@ Other non-Lisp types of interest?
 
 * Omniscient Debugging: [Pernosco](https://pernos.co/about/related-work/), [rr](https://rr-project.org), TTD, UndoDB, ODB, Chronon, TOD, Chronomancer, Qira, [Reven](https://www.tetrane.com/), SteamDrill.
 
+### Structured Interactive Development
+
+* [Hazel](https://hazel.org/)
+* [ProjecturEd](https://github.com/projectured/projectured)
+* [Cirru](http://cirru.org)
+* [Lamdu](https://lamdu.org)
+* [Luna (DAGs](https://luna-lang.org)
+* [Pure Data (DAGs)](https://puredata.info)
+
 ### Deployment
 
 * [Deploying container and application services with Disnix](https://sandervanderburg.blogspot.com/2020/04/deploying-container-and-application.html)
@@ -97,6 +106,19 @@ Other non-Lisp types of interest?
 
 * [How Complex Systems Fail](https://web.mit.edu/2.75/resources/random/How%20Complex%20Systems%20Fail.pdf)
 
-### Wallets to Integrate With
+### Smart Contract Vulnerabilities
+
+* [Smart Contract Weakness Classification and Test Cases](https://swcregistry.io/)
+
+## Blockchain Projects to Integrate With
+
+### Kadena
+
+* [Public Chain Interaction](https://kadena-io.github.io/kadena-docs/Public-Chain-Docs/)
+* [wallet signing api](https://kadena-io.github.io/signing-api/)
+* [nodes](https://github.com/kadena-io/chainweb-node)
+
+### Trezor (Hard Wallet)
 
 * [Trezor](https://wiki.trezor.io/Developers_guide)
+

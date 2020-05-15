@@ -19,10 +19,10 @@
     next-participant: Buyer
     session-type-of-the-body:
     ((body : () -> pc0)
-     (timeout : () -> end))
-    body:
-    (@ Buyer (deposit! price))
-    (pc0 Buyer Seller digest0 price))
+     (timeout : () -> end)))
+
+   (deposit! Buyer price)
+   (pc0 Buyer Seller digest0 price))
 
    (participant-checkpoint
     pc0
@@ -36,14 +36,15 @@
     next-participant: Seller
     session-type-of-the-body:
     ((body : () -> end)
-     (timeout : () -> end))
-    body:
-    (@ Seller (def signature (sign digest0)))
-    (@ Seller (publish! signature))
-    (def tmp (@app isValidSignature Seller digest0 signature))
-    (require! tmp)
-    (withdraw! Seller price)
-    (end_interaction))
+     (timeout : () -> end)))
+
+   (@ Seller (def signature (sign digest0)))
+   (publish! Seller signature)
+   (def tmp (@app isValidSignature Seller digest0 signature))
+   (require! tmp)
+   (withdraw! Seller price)
+
+   (end_interaction)
 
    #|
    ;; implicit end state to every top-level interaction
