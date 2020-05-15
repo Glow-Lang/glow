@@ -62,7 +62,7 @@
   :glow/ethereum/hex
 
   ;; Testing Glow
-  :glow/compiler/t/common
+  :glow/t/common
   ;:glow/compiler/t/multipass-test
   ;:glow/compiler/alpha-convert/t/alpha-convert-test
   ;:glow/compiler/anf/t/anf-test

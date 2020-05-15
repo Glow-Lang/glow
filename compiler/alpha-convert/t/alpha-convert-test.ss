@@ -6,7 +6,7 @@
 
 (import
   :std/test
-  :glow/compiler/t/common
+  :glow/t/common
   :gerbil/gambit/exceptions
   :gerbil/gambit/continuations
   :std/format

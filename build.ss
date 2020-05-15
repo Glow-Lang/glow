@@ -24,7 +24,7 @@
 (def (build-spec)
   [(lset-difference equal? (files) '("crypto/keccak.ss"))...
    [gxc: "crypto/keccak" "-cc-options" (format "-I~a" (glow-src))]
-   "compiler/t/common"
+   "t/common"
    "all-glow"
    [exe: "main" bin: "glow"]])
 

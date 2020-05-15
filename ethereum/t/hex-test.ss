@@ -8,7 +8,7 @@
   :glow/ethereum/hex)
 
 (def hex-test
-  (test-suite "test :glow/ethereum/hex"
+  (test-suite "test suite for glow/ethereum/hex"
     (test-case "nat<-0x, 0x<-nat"
       (for-each (match <>
                   ([dec hex]

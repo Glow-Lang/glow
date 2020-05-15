@@ -14,7 +14,7 @@
         :std/misc/string
         :clan/pure/dict
         :clan/utils/exception
-        :glow/compiler/t/common
+        :glow/t/common
         :glow/compiler/syntax-context
         :glow/compiler/multipass
         (for-template :glow/compiler/syntax-context)
