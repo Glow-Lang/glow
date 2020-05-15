@@ -30,7 +30,7 @@
 ;; in the value of a padding byte.
 ;; Note that the standard text representation of the digest can be obtained using function
 ;; std/text/hex#hex-encode, and that Ethereum usually precedes that representation by 0x
-;; when transmitting digests in JSON-RPC, as per function glow/eth/hex#0x<-data.
+;; when transmitting digests in JSON-RPC, as per function glow/ethereum/hex#0x<-data.
 ;; : Bytes32 <- Bytes
 (def (keccak256<-bytes b (start 0) (end (u8vector-length b)))
   (unless (and (u8vector? b) (<= 0 start end (u8vector-length b))) (error 'keccak256 b start end))
@@ -44,6 +44,19 @@
 (def (keccak256<-string s (encoding 'UTF-8))
   (keccak256<-bytes (string->bytes s encoding)))
 
+
+;; : Bytes32 <- Bytes
+(def (sha3-256<-bytes b (start 0) (end (u8vector-length b)))
+  (unless (and (u8vector? b) (<= 0 start end (u8vector-length b))) (error 'sha3-256 b start end))
+  (let ((result (make-u8vector 32)))
+    (ffi-sha3-256 result 0 32 b start end)
+    result))
+
+;; : Bytes32 <- String ?EncodingSymbol
+(def (sha3-256<-string s (encoding 'UTF-8))
+  (sha3-256<-bytes (string->bytes s encoding)))
+
+
 ;; TODO: once our API is stable enough, also support other digests in this family,
 ;; using some macro to generate all the support.
 
@@ -52,7 +65,7 @@
             ffi-keccak-224 ffi-keccak-256 ffi-keccak-384 ffi-keccak-x512)
 
 (c-declare #<<END-C
-#include "eth/keccak-tiny-unrolled.c"
+#include "crypto/keccak-tiny-unrolled.c"
 
 #ifndef ___HAVE_FFI_U8VECTOR
 #define ___HAVE_FFI_U8VECTOR

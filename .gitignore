@@ -3,6 +3,9 @@ compiled/
 build-deps
 config/version.ss
 
+# Runtime data
+run/
+
 # Editor-generated files
 *~
 [#]*[#]

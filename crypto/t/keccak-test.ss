@@ -1,13 +1,13 @@
 (export #t)
 
 (import :gerbil/gambit/bytes
-        :std/text/hex
         :std/test
-        :glow/eth/keccak)
+        :std/text/hex
+        :glow/crypto/keccak)
 
 ;; keccak-test : TestSuite
 (def keccak-test
-  (test-suite "test suite for glow/eth/keccak"
+  (test-suite "test suite for glow/crypto/keccak"
     (test-case "digest test vectors for keccak256"
       (for-each (match <> ([s h] (check-equal? (hex-encode (keccak256<-string s)) h)))
                 [["" "c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"]

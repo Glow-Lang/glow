@@ -1,0 +1,12 @@
+@define_interaction({Participants: [A,B]})
+let swap = (basket1, basket2) => {
+  @A deposit! basket1;
+  @B deposit! basket2;
+  withdraw! B, basket1;
+  withdraw! A, basket2;
+}
+
+// Usage example:
+/*
+swap(alice, {USD: 50}, bob, {EUR: 60});
+*/

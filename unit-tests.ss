@@ -6,6 +6,6 @@
 (set-current-ports-encoding-standard-unix!)
 (current-directory (glow-src))
 (add-load-path (glow-src))
-(import-module ':glow/compiler/t/unit-tests #t #t)
+(import-module ':glow/t/unit-tests #t #t)
 (import "compiler/syntax-context")
-(def main (eval 'glow/compiler/t/unit-tests#main))
+(def main (eval 'glow/t/unit-tests#main))

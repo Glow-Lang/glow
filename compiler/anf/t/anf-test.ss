@@ -12,7 +12,7 @@
   :std/test
   :clan/utils/exception
   :glow/compiler/common
-  :glow/compiler/t/common
+  :glow/t/common
   :glow/compiler/alpha-convert/alpha-convert
   :glow/compiler/desugar/desugar
   :glow/compiler/anf/anf)
@@ -35,6 +35,6 @@
          (assert! (stx-sexpr=? anfprog expected)))))))
 
 (def anf-test
-  (test-suite "anf-test"
+  (test-suite "test suite for glow/compiler/anf"
     (test-case "testing example sexp files"
       (for-each test-file (examples.sexp)))))
