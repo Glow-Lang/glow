@@ -5,10 +5,10 @@
   :gerbil/gambit/exceptions
   :std/sugar
   :std/error :std/text/hex :std/test :std/srfi/1
-  :glow/eth/hex)
+  :glow/ethereum/hex)
 
 (def hex-test
-  (test-suite "test :glow/eth/hex"
+  (test-suite "test suite for glow/ethereum/hex"
     (test-case "nat<-0x, 0x<-nat"
       (for-each (match <>
                   ([dec hex]

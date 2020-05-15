@@ -18,7 +18,7 @@
   :std/actor :std/coroutine
   :std/debug/heap :std/debug/memleak :std/debug/threads
   :std/error :std/format :std/getopt :std/iter :std/logger
-  :std/misc/bytes  :std/misc/list :std/misc/ports :std/misc/process :std/misc/repr :std/misc/string
+  :std/misc/bytes :std/misc/list :std/misc/ports :std/misc/process :std/misc/repr :std/misc/string
   :std/net/websocket
   :std/pregexp :std/sort
   :std/srfi/1 :std/srfi/13 (except-in :std/srfi/19 time) ;; :std/srfi/43
@@ -58,10 +58,11 @@
   :glow/compiler/typecheck/typecheck
   :glow/compiler/anf/anf
   :glow/compiler/participantify/participantify
-  :glow/eth/hex :glow/eth/keccak
+  :glow/crypto/keccak
+  :glow/ethereum/hex
 
   ;; Testing Glow
-  :glow/compiler/t/common
+  :glow/t/common
   ;:glow/compiler/t/multipass-test
   ;:glow/compiler/alpha-convert/t/alpha-convert-test
   ;:glow/compiler/anf/t/anf-test
