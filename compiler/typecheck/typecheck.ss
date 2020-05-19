@@ -507,6 +507,10 @@
     ([] tybi)
     ([fst . rst]
      (match fst
+       ((constraint:subtype (ptype:union _) _)
+        (biunify (append (sub-constraints fst) rst) tybi))
+       ((constraint:subtype _ (ntype:intersection _))
+        (biunify (append (sub-constraints fst) rst) tybi))
        ((constraint:subtype (type:var a) (type:var b))
         (cond
           ((eq? a b) (biunify rst tybi))
@@ -1143,6 +1147,7 @@
     (def nenv (menvs-meet (cons valnenv nenvs)))
     (def before-ts (typing-scheme nenv ptype))
     ;; valty <: ntype
+    (printf "tc-switch-cases: ~r <: ~r\n" valty ntype)
     (def bity (biunify [(constraint:subtype valty ntype)] empty-symdict))
     (typing-scheme-bisubst bity before-ts)))
 
@@ -1247,4 +1252,4 @@
 
 ;; --------------------------------------------------------
 
-;(trace! biunify)
+(trace! biunify)
