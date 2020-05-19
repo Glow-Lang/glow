@@ -340,8 +340,8 @@
 ;; type-variance-pair-bisubst : TyvarBisubst Variance TypeVariancePair -> TypeVariancePair
 (def (type-variance-pair-bisubst tybi v tvp)
   (with (([tn tp] tvp))
-    [(type-bisubst tybi (variance-flip v) tn)
-     (type-bisubst tybi v tp)]))
+    [(and tn (type-bisubst tybi (variance-flip v) tn))
+     (and tp (type-bisubst tybi v tp))]))
 
 ;; type-bisubst : TyvarBisubst Variance PNType -> PNType
 ;; P vs N depends on the variance
@@ -441,8 +441,8 @@
 (def (constraint-bisubst tybi c)
   (match c
     ((constraint:subtype a b)
-     (constraint:subtype (type-bisubst tybi contravariant a)
-                         (type-bisubst tybi covariant b)))
+     (constraint:subtype (type-bisubst tybi covariant a)
+                         (type-bisubst tybi contravariant b)))
     ((constraint:type-equal a b)
      (constraint:type-equal (type-bisubst tybi invariant a)
                             (type-bisubst tybi invariant b)))))
@@ -517,33 +517,42 @@
           ; a does not occur in b
           ((symdict-has-key? tybi a)
            (with (((type-interval tn tp) (symdict-ref tybi a)))
-             (def tybi2 (symdict-put tybi a (type-interval (type-meet tn (type:var b)) tp)))
-             (biunify (constraints-bisubst tybi2 rst) tybi2)))
+             (def ati (type-interval (type-meet tn (type:var b)) tp))
+             (def tybi2 (symdict (a ati)))
+             (biunify (constraints-bisubst tybi2 rst) (symdict-put tybi a ati))))
           (else
-           (let ((tybi2 (symdict-put tybi a (type-interval (type-meet (type:var a) (type:var b)) (type:var a)))))
-             (biunify (constraints-bisubst tybi2 rst) tybi2)))))
+           (let ()
+             (def ati (type-interval (type-meet (type:var a) (type:var b)) (type:var a)))
+             (def tybi2 (symdict (a ati)))
+             (biunify (constraints-bisubst tybi2 rst) (symdict-put tybi a ati))))))
        ((constraint:subtype (type:var a) b)
         (cond
           ((type-has-var? b a) (error 'subtype "recursive types are not yet supported"))
           ; a does not occur in b
           ((symdict-has-key? tybi a)
            (with (((type-interval tn tp) (symdict-ref tybi a)))
-             (def tybi2 (symdict-put tybi a (type-interval (type-meet tn b) tp)))
-             (biunify (constraints-bisubst tybi2 rst) tybi2)))
+             (def ati (type-interval (type-meet tn b) tp))
+             (def tybi2 (symdict (a ati)))
+             (biunify (constraints-bisubst tybi2 rst) (symdict-put tybi a ati))))
           (else
-           (let ((tybi2 (symdict-put tybi a (type-interval (type-meet (type:var a) b) (type:var a)))))
-             (biunify (constraints-bisubst tybi2 rst) tybi2)))))
+           (let ()
+             (def ati (type-interval (type-meet (type:var a) b) (type:var a)))
+             (def tybi2 (symdict (a ati)))
+             (biunify (constraints-bisubst tybi2 rst) (symdict-put tybi a ati))))))
        ((constraint:subtype a (type:var b))
         (cond
           ((type-has-var? a b) (error 'subtype "recursive types are not yet supported"))
           ; b does not occur in a
           ((symdict-has-key? tybi b)
            (with (((type-interval tn tp) (symdict-ref tybi b)))
-             (def tybi2 (symdict-put tybi b (type-interval tn (type-join tp a))))
-             (biunify (constraints-bisubst tybi2 rst) tybi2)))
+             (def bti (type-interval tn (type-join tp a)))
+             (def tybi2 (symdict (b bti)))
+             (biunify (constraints-bisubst tybi2 rst) (symdict-put tybi b bti))))
           (else
-           (let ((tybi2 (symdict-put tybi b (type-interval (type:var b) (type-join (type:var b) a)))))
-             (biunify (constraints-bisubst tybi2 rst) tybi2)))))
+           (let ()
+             (def bti (type-interval (type:var b) (type-join (type:var b) a)))
+             (def tybi2 (symdict (b bti)))
+             (biunify (constraints-bisubst tybi2 rst) (symdict-put tybi b bti))))))
        (_
         (biunify (append (sub-constraints fst) rst) tybi))))))
 
@@ -1141,13 +1150,13 @@
 (def (tc-switch-cases part env valts stxs)
   (with (((typing-scheme valnenv valty) valts)
          ([nenvs ntypes ptypes]
-          (transpose (map (cut tc-switch-case part env <>) stxs))))
+          (transpose/nlist 3 (map (cut tc-switch-case part env <>) stxs))))
     (def ntype (types-meet ntypes))
     (def ptype (types-join ptypes))
     (def nenv (menvs-meet (cons valnenv nenvs)))
     (def before-ts (typing-scheme nenv ptype))
     ;; valty <: ntype
-    (printf "tc-switch-cases: ~r <: ~r\n" valty ntype)
+    ;(printf "tc-switch-cases: ~r <: ~r\n" valty ntype)
     (def bity (biunify [(constraint:subtype valty ntype)] empty-symdict))
     (typing-scheme-bisubst bity before-ts)))
 
@@ -1252,4 +1261,4 @@
 
 ;; --------------------------------------------------------
 
-(trace! biunify)
+;(trace! biunify)

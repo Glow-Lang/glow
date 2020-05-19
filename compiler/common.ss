@@ -15,7 +15,13 @@
 ;; transpose : [Listof [Listof A]] -> [Listof [Listof A]]
 ;; Like transposing a matrix, n-ary cartesian product, or n-ary zip,
 ;; ((a1 a2 a3) (b1 b2 b3)) <-> ((a1 b1) (a2 b2) (a3 b3))
-(def (transpose lol) (apply map list lol))
+(def (transpose lol)
+  (when (null? lol) (error 'transpose "can't transpose empty lists"))
+  (apply map list lol))
+
+;; transpose/nlist : {n : Nat} [Listof [NListof n A]] -> [NListof n [Listof A]]
+(def (transpose/nlist n lonl)
+  (if (null? lonl) (make-list n []) (transpose lonl)))
 
 ;; format-symbol : FormatString Any ... -> Symbol
 ;; Like format, but produces a symbol
