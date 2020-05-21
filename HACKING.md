@@ -21,7 +21,9 @@ You can find the community for both these layers of language on Gitter:
 [Gerbil Scheme gitter](https://gitter.im/gerbil-scheme/community) and
 [Gambit Scheme gitter](https://gitter.im/gambit/gambit).
 
-## Configuring SLIME
+## Configuring Your Editer
+
+### Debugging with Emacs SLIME
 
 Make sure a recent SLIME is installed in Emacs, and use the following,
 replacing the path in it by the place where you checked out the glow source code:
@@ -38,6 +40,15 @@ replacing the path in it by the place where you checked out the glow source code
       (cons `(gerbil-scheme ("gxi" "-:d-")
                             :init gerbil-scheme-start-swank)
             slime-lisp-implementations))
+```
+
+### Syntax Highlighting for Glow
+
+We do not have a Glow mode for Emacs yet, but you can use `javascript-mode` for the syntax highlighting:
+
+```
+(add-to-list 'auto-mode-alist '("\\.glow$" . javascript-mode))
+(add-to-list 'auto-mode-alist '("\\.sexp$" . gerbil-mode))
 ```
 
 ## Hacking the Glow compiler
