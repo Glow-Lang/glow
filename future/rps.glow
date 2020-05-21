@@ -1,4 +1,5 @@
 #lang glow
+// -*- JavaScript -*-
 
 // Generates JS code like
 //   let Hand = Enum("Rock", "Paper", "Scissors");
@@ -17,15 +18,13 @@ data Outcome = | B_Wins | Draw | A_Wins;
 let winner = (handA : Hand, handB : Hand) : Outcome => {
     Outcome.ofNat((Hand.toNat(handA) + (4 - Hand.toNat(handB))) % 3) }
 
-assert! winner(Rock, Rock) == Draw;
-assert! winner(Rock, Paper) == B_Wins;
-assert! winner(Rock, Scissors) == A_Wins;
-assert! winner(Paper, Rock) == A_Wins;
-assert! winner(Paper, Paper) == Draw;
-assert! winner(Paper, Scissors) == B_Wins;
-assert! winner(Scissors, Rock) == B_Wins;
-assert! winner(Scissors, Paper) == A_Wins;
-assert! winner(Scissors, Scissors) == Draw;
+let winner2 = (handA : Hand, handB : Hand) : Outcome => {
+  switch([handA, handB]) {
+    | [Rock, Rock]     => Draw    | [Paper, Rock]     => A_Wins  | [Scissors, Rock]     => B_Wins
+    | [Rock, Paper]    => B_Wins  | [Paper, Paper]    => Draw    | [Scissors, Paper]    => A_Wins
+    | [Rock, Scissors] => A_Wins  | [Paper, Scissors] => B_Wins  | [Scissors, Scissors] => Draw
+  }
+assert! forall(a: Hand, b: Hand) winner(a,b) == winner2(a,b)
 
 @interaction([A, B])
 let rockPaperScissors = (wagerAmount) => {
@@ -46,29 +45,29 @@ let rockPaperScissors = (wagerAmount) => {
     @A assert! canReach(end, end.outcome == A_Wins); // inside @A, canReach means that A can win even *against* others.
     @A let salt = randomUInt256();
     @A @verifiably let commitment = digest(salt, handA);
-    @A publish! commitment;
-    @A deposit! wagerAmount;
+    publish! A -> commitment;
+    deposit! A -> wagerAmount;
     // commit; // Maybe the commit is implicit at the transition between @A and @B ???
 
     @B assert! canReach(end, end.outcome == B_Wins); // inside @B, the canReach means B can win *against* A
       // NB: no implicit escrow for B, because this is B's only message.
     @B let handB = inputHand("Second player, pick your hand");
-    @B publish! handB;
-    @B deposit! wagerAmount;
+    publish! B -> handB;
+    deposit! B -> wagerAmount;
 
     // require! isHand(handB); // Maybe this require! is implicit from the type of B being Hand?
     // commit; // Maybe the commit is implicit at the transition between @B and @A ???
 
-    @A publish! salt, handA; // NB: A will get her escrow back, since that's her last message.
+    publish! A -> salt, handA; // NB: A will get her escrow back, since that's her last message.
     verify! commitment; // invokes the recipe from @verifiably, runs *on the consensus*
     // require! isHand(handA); // implicitly runs on the consensus because of handA's type
     let outcome = winner(handA, handB);
 
     switch(outcome) {
-      | A_Wins => withdraw! Alice <- 2*wagerAmount
-      | B_Wins => withdraw! Bob <- 2*wagerAmount
-      | Draw => withdraw! Alice <- wagerAmount;
-                withdraw! Bob <- wagerAmount };
+      | A_Wins => withdraw! A <- 2*wagerAmount
+      | B_Wins => withdraw! B <- 2*wagerAmount
+      | Draw => withdraw! A <- wagerAmount;
+                withdraw! B <- wagerAmount };
     // commit; // Implicit since at end of interaction
   end: // This label is used by the two canReach() assertions, that refer to the values of bindings at the end.
     outcome // we return the outcome

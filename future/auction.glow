@@ -1,4 +1,5 @@
 #lang glow
+// -*- JavaScript -*-
 
 // Simple English (open ascending price) forward candle auction.
 
@@ -7,22 +8,29 @@
 // ILLUSTRATES FEATURE: any basket of fungible or non-fungible assets as goods being sold
 // ILLUSTRATES FEATURE: generalization for both goods and services as thing being sold
 
+// TODO: UI should present the user with a checklist of the relevant trust hypotheses, including
+// * who reviewed the contract
+// * was the reviewed contract the exact same as run (identified by digest, sigil, etc.)
+// * are the goods worth more to you than the bid + tx costs?
+//
+// You do NOT need to trust:
+// * the seller to put down the goods, after he deposited them in the interaction
+
 // TODO: write versions of this program for multiple language levels
 // 1. with choice, no explicit Action data type.
 // 2. with explicit Action data type, no choice
 // 3. with end-point projection
 
-
-data Action = Bid(TokenAmount) | Close;
+data Action = Bid(TokenAmount) | BuyItNow | Close;
 
 @interaction([Seller])
-let simpleAuction = (goods : Assets, expirationTime : Timestamp) => {
+let simpleAuction = (goods : Assets, expirationTime : Timestamp, buyItNowPrice: TokenAmount) => {
    // The following should be added automatically already?
    // the following should be added automatically as part of validating/unmarshalling
    // the input data of type Assets, a constraint from the Assets type:
    require! Assets.is_positive(goods);
    require! expirationTime > currentTime();
-   @Seller deposit! goods; // or escrow for included services (?)
+   deposit! Seller -> goods; // escrow for the goods (TODO: also allow auction of services with an escrow)
 
    @interaction([Seller, CurrentBidder])
    let rec auction = (bid) => {
@@ -30,16 +38,23 @@ let simpleAuction = (goods : Assets, expirationTime : Timestamp) => {
      choice {
        | ForAllParticipant (NewBidder) { // THIS CHOICE ACCEPTS A NEW PARTICIPANT!!!!!
            @NewBidder bid = Bid(input(["Enter next bid"], TokenAmout));
-           @NewBidder publish! bid ; @NewBidder deposit! bid.
+           publish! NewBidder -> bid ; deposit! NewBidder -> bid;
            @NewBidder assume! @value(goods) > @value(bid);
            require! currentTime() < expirationTime;
            require! bid > currentBid;
-           withdraw! CurrentBidder, currentBid;
+           //optional: require! bid < buyItNowPrice;
+           withdraw! CurrentBidder <- currentBid;
            @interaction([Seller, NewBidder]) auction(bid);
+       | ForAllParticipant (NewBidder) { // THIS CHOICE ACCEPTS A NEW PARTICIPANT!!!!!
+           publish! NewBidder -> BuyItNow ; deposit! NewBidder -> buyItNowPrice;
+           //optional: require! currentTime() < expirationTime;
+           withdraw! NewBidder <- goods;
+           withdraw! CurrentBidder <- currentBid;
+           withdraw! Seller <- buyItNowPrice;
       | @_ { publish! Close; } => // only Seller and currentBidder are interested in it.
          require! currentTime() >= expirationTime;
-         withdraw! Seller, currentBid;
-         withdraw! CurrentBidder, goods;
+         withdraw! Seller <- currentBid;
+         withdraw! CurrentBidder <- goods;
      };
    @interaction([Seller, Seller]) auction(0);
 }
