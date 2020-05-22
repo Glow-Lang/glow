@@ -30,7 +30,7 @@
        (_ (retail-stx stx [#'p (desugar-stmt #'s)]))))
     ((defdata . _) (desugar-defdata stx))
     ((deftype . _) (desugar-deftype stx))
-    ((publish! . _) stx)
+    ((publish! . _) (desugar-publish! stx))
     ((def . _) (desugar-def stx))
     (expr (desugar-expr stx))))
 
@@ -70,11 +70,19 @@
              (let ((of-x (mk-var 'x))
                    (x-to (mk-var 'x))
                    (toNat-cases (map reverse ofNat-cases)))
+               ;; TODO: use some magic sum-index internal, not switches
                [['toNat [#'λ [[x-to ': #'spec]] [': 'nat] [#'switch x-to . toNat-cases]]]
                 ['ofNat [#'λ [[of-x ': #'nat]] [': #'spec] [#'switch of-x . ofNat-cases]]]])
              '())))
        (def rtvalue `(@record (input ,input) ,@toofNat))
        (retail-stx stx `(,#'spec ,@(syntax->list #'(variant ...)) with: ,rtvalue))))))
+
+(def (desugar-publish! stx)
+  (syntax-case stx ()
+    ((_ participant variable) stx)
+    ((_ participant variable ...)
+     (with-syntax (((pubvar ...) (stx-map (lambda (v) (retail-stx stx [#'participant v])) #'(variable ...))))
+       (restx1 stx #'(splice pubvar ...))))))
 
 ;; TODO: input, isA, JSON converters, EthBytes converters, etc.
 ;; desugar-deftype : Stx -> Stx
@@ -126,7 +134,7 @@
   (syntax-case definition (def)
     ((def name expr)
      (restx1 stx [#'splice [#'@ p (desugar-verifiably stx p definition)]
-                           [#'@ p #'(publish! name)]
+                           [#'publish! p #'name]
                            (desugar-verify [#'name])]))))
 
 ;; desugar-def : Stx -> Stx
@@ -171,7 +179,7 @@
     ((sign e ...) (desugar-keyword/sub-exprs stx))
     ((require! e) (desugar-keyword/sub-exprs stx))
     ((assert! e) (desugar-keyword/sub-exprs stx))
-    ((deposit! e) (desugar-keyword/sub-exprs stx))
+    ((deposit! x e) (desugar-keyword/sub-exprs stx))
     ((withdraw! x e) (desugar-keyword/sub-exprs stx))
     ((verify! x ...) (desugar-verify #'(x ...)))
     ((@app a ...) (desugar-keyword/sub-exprs stx))))

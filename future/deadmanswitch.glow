@@ -1,4 +1,7 @@
 #lang glow
+// -*- JavaScript -*-
+// Inspired by https://github.com/KarolTrzeszczkowski/Electron-Cash-Last-Will-Plugin
+
 data Command = Withdraw(x : nat) | Inherit(x : nat)
 
 @interaction([Owner, Heir])
@@ -8,10 +11,10 @@ let deadManSwitch = (expirationDelay) => {
      | @_ deposit! x ;
        loop (expirationTimestamp);
      | @Owner publish! Withdraw(x);
-       withdraw! Owner, x ;
+       withdraw! Owner <- x ;
        loop (now() + expirationDelay);
      | @Heir publish! Inherit(x);
        require! now() >= expirationTimestamp;
-       withdraw! Heir, x;
+       withdraw! Heir <- x;
        loop (expirationTimestamp); };
    loop(now() + expirationDelay); }

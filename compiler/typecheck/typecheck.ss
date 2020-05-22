@@ -172,13 +172,12 @@
     ((entry:ctor _ ts)   (entry:ctor #f ts))
     ((entry:type _ xs t) (entry:type #f xs t))))
 
-;; env-publish : Env [Listof Symbol] -> Env
+;; env-publish : Env Symbol -> Env
 ;; Produces a new env containing only the published versions of the xs
-(def (env-publish env xs)
+(def (env-publish env x)
+  (unless (symdict-has-key? env x) (error x "unbound identifier"))
   (list->symdict
-   (for/collect ((x xs))
-     (unless (symdict-has-key? env x) (error x "unbound identifier"))
-     (cons x (entry-publish (symdict-ref env x))))))
+   [(cons x (entry-publish (symdict-ref env x)))]))
 
 ;; An Env is a [Symdictof EnvEntry]
 ;; Instead of type environments Γ, the reformulated rules use typing
@@ -610,7 +609,8 @@
     ((deftype . _) (tc-stmt-deftype part env stx))
     ((defdata . _) (tc-stmt-defdata part env stx))
     ((def . _) (tc-stmt-def part env stx))
-    ((publish! x ...) (stx-andmap identifier? #'(x ...)) (tc-stmt-publish part env stx))
+    ((publish! participant v) (and (identifier? #'participant) (identifier? #'v))
+     (tc-stmt-publish part env stx))
     (expr
      (with (((typing-scheme menv _) (tc-expr part env #'expr)))
        (values empty-symdict menv)))))
@@ -793,9 +793,12 @@
 ;; tc-stmt-publish : MPart Env StmtStx -> (values Env MonoEnv)
 (def (tc-stmt-publish part env stx)
   (syntax-case stx (publish!)
-    ((publish! x ...) (stx-andmap identifier? #'(x ...))
-     (let ((xs (stx-map stx-e #'(x ...))))
-       (values (env-publish env xs) empty-symdict)))))
+    ((publish! participant v) (and (identifier? #'participant) (identifier? #'v))
+     (if part (error 'publish! "only allowed in the consensus")
+         (let (pt (tc-expr/check part env #'participant type:Participant))
+           ;; TODO LATER: check that v is a variable with a *data* type.
+           ;; TODO NOW: merge information from pt into the below:
+           (values (env-publish env (stx-e #'v)) empty-symdict))))))
 
 ;; tc-expr : MPart Env ExprStx -> TypingScheme
 (def (tc-expr part env stx)
@@ -876,16 +879,10 @@
     ((assert! e)
      (let ((et (tce/bool #'e)))
        (typing-scheme (typing-scheme-menv et) type:unit)))
-    ((deposit! e)
-     (let ((et (tc-expr/check part env #'e type:int)))
-       (typing-scheme (typing-scheme-menv et) type:unit)))
+    ((deposit! x e) (identifier? #'x)
+     (tc-deposit-withdraw part env stx))
     ((withdraw! x e) (identifier? #'x)
-     (let ()
-       (when part (error 'withdraw! "only allowed in the consensus"))
-       (def xt (tc-expr/check part env #'x type:Participant))
-       (def et (tc-expr/check part env #'e type:int))
-       (typing-scheme (menvs-meet (map typing-scheme-menv [xt et]))
-                      type:unit)))
+     (tc-deposit-withdraw part env stx))
     ((@app f a ...)
      (let ((s (syntax-e (head-id #'f)))
            (ft (tc-expr part env #'f)))
@@ -922,7 +919,6 @@
            bisub
            (typing-scheme (menvs-meet (cons (typing-scheme-menv ft) (map typing-scheme-menv atss)))
                           (type:var bv)))))))))
-
 
 ;; tc-expr-id : MPart Env Identifier -> TypingScheme
 (def (tc-expr-id part env x)
@@ -996,6 +992,16 @@
         ((bytes? e) type:bytes)
         ((and (pair? e) (length=n? e 1) (equal? (stx-e (car e)) '@tuple)) type:unit)
         (else (error 'tc-literal "unrecognized literal"))))
+
+(def (tc-deposit-withdraw part env stx)
+  (syntax-case stx ()
+    ((dw participant amount)
+     (let ()
+       (when part (error (stx-e #'dw) "only allowed in the consensus"))
+       (def pt (tc-expr/check part env #'participant type:Participant))
+       (def at (tc-expr/check part env #'amount type:int))
+       (typing-scheme (menvs-meet (map typing-scheme-menv [pt at]))
+                      type:unit)))))
 
 ;; tc-switch-case : MPart Env Type SwitchCaseStx -> TypingScheme
 (def (tc-switch-case part env valty stx)

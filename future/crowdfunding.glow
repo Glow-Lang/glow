@@ -1,0 +1,35 @@
+#lang glow
+
+import Ledger;
+
+data Action = Pledge(TokenAmount) | Close | Reclaim(TokenAmount);
+
+@interaction(Organizer)
+let crowdfunding = (target: TokenAmount, expirationTime : Timestamp) => {
+   require! expirationTime > currentTime();
+
+   @interaction({participants: [Organizer], currencies: [Token]}) // TODO: figure this out
+   let rec crowdfund = (ledger : Ledger(Token), totalPledged: TokenAmount) => {
+     assert! totalPledged == totalAmount(ledger);
+     choice {
+       | ForAllParticipant (NewPledger) {
+           @NewPledger amount = input(["Enter next pledge"], TokenAmount);
+           publish! NewPledger -> Pledge(amount) ; deposit! NewPledger -> amount;
+           require! currentTime() < expirationTime;
+           crowdfund(ledger.add(NewPledger, amount), totalPledged + amount);
+
+       | publish! Organizer -> Success;
+           require! currentTime() >= expirationTime;
+           require! totalPledged >= target;
+           withdraw! Organizer <- totalPledged;
+
+       | ForAllParticipant(Pledger)
+           publish! Pledger -> Reclaim(amount);
+           require! currentTime() >= expirationTime;
+           require! totalPledged < target;
+           require! ledger.has(Pledger, amount);
+           withdraw! Pledger <- amount;
+           crowdfund(ledger.remove(Pledger, amount), totalPledged - amount);
+   }
+   crowdfund({}, 0);
+}

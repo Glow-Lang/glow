@@ -1,10 +1,22 @@
-#lang glow
+#lang glow // -*- JavaScript -*-
+
+// Decentralized Applications:
+// - "swaps" where you sign a message for another blockchain
+// - rental where you sign a key access message that some door's / some car's reader will accept
+// - "Diploma" or other affidavit
 
 @interaction([Buyer, Seller])
 let payForSignature = (digest : Digest, price : Assets) => {
-   @Buyer deposit! price;
-   @Seller @verifiably let signature = sign(digest);
-   @Seller publish! signature;
-   verify! signature;
-   withdraw! Seller <- price;
+  deposit! Buyer -> price;
+
+  // This line is equivalent to the three below:
+  @Seller @publicly let signature = sign(digest);
+
+  // These three:
+  /* @Seller @verifiably let signature = sign(digest);
+     publish! Seller -> signature;
+     verify! signature; // same as: require! isValidSignature(Seller, signature, digest);
+  */
+
+  withdraw! Seller <- price;
 };

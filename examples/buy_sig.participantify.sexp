@@ -1,4 +1,3 @@
-;;-*- Gerbil -*-
 (def payForSignature
      (@make-interaction
       ((@list Buyer Seller))
@@ -6,12 +5,12 @@
       ()
       ;; Entry point for the interaction -- from here on user must be Buyer
       (participant-checkpoint pc #f Buyer);;;NEW!
-      (@ Buyer (deposit! price))
+      (deposit! Buyer price)
 
       ;; Switching to Seller
       (participant-checkpoint pc0 Buyer Seller);;;NEW!
       (@ Seller (def signature (sign digest0)))
-      (@ Seller (publish! signature))
+      (publish! Seller signature)
       ;; This part is consensual, but part of the Seller transaction
       (def tmp (@app isValidSignature Seller digest0 signature))
       (require! tmp)

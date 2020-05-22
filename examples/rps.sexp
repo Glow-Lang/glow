@@ -12,15 +12,15 @@
     ;;(@ A (assert! (canReach end (== (@dot end outcome) A_Wins))))
     (@ A (def salt (randomUInt256)))
     (@ A (@ verifiably (def commitment (digest (@tuple salt handA)))))
-    (@ A (publish! commitment))
-    (@ A (deposit! wagerAmount))
+    (publish! A commitment)
+    (deposit! A wagerAmount)
 
     ;;(@ B (assert! (canReach end (== (@dot end outcome) B_Wins))))
     (@ B (def handB ((@dot Hand input) "Second player, pick your hand")))
-    (@ B (publish! handB))
-    (@ B (deposit! wagerAmount))
+    (publish! B handB)
+    (deposit! B wagerAmount)
 
-    (@ A (publish! salt handA))
+    (publish! A salt handA)
     (verify! commitment)
     (def outcome (winner handA handB))
 
