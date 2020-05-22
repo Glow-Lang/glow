@@ -3,9 +3,8 @@
 (import
   :gerbil/gambit/misc
   :gerbil/expander
-  :std/iter :std/misc/repr :std/sort :std/srfi/1 :std/srfi/13 :std/sugar :std/test
   :clan/utils/base :clan/utils/filesystem :clan/utils/path
-  :glow/config/path :glow/compiler/multipass :glow/compiler/passes)
+  :glow/config/path :glow/compiler/multipass)
 
 ;; examples-dir
 (def (examples-dir)
