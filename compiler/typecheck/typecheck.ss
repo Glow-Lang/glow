@@ -797,8 +797,7 @@
      (if part (error 'publish! "only allowed in the consensus")
          (let (pt (tc-expr/check part env #'participant type:Participant))
            ;; TODO LATER: check that v is a variable with a *data* type.
-           ;; TODO NOW: merge information from pt into the below:
-           (values (env-publish env (stx-e #'v)) empty-symdict))))))
+           (values (env-publish env (stx-e #'v)) (typing-scheme-menv pt)))))))
 
 ;; tc-expr : MPart Env ExprStx -> TypingScheme
 (def (tc-expr part env stx)
