@@ -12,17 +12,15 @@
        (splice
          (def handA ((@dot Hand input) "First player, pick your hand"))
          (def salt (randomUInt256))
-         (@ verifiably (def commitment (digest (@tuple salt handA))))
-         (publish! commitment)
-         (deposit! wagerAmount)))
+         (@ verifiably (def commitment (digest (@tuple salt handA))))))
+    (publish! A commitment)
+    (deposit! A wagerAmount)
 
-    (@ B
-       (splice
-         (def handB ((@dot Hand input) "Second player, pick your hand"))
-         (publish! handB)
-         (deposit! wagerAmount)))
+    (@ B (def handB ((@dot Hand input) "Second player, pick your hand")))
+    (publish! B handB)
+    (deposit! B wagerAmount)
 
-    (@ A (publish! salt handA))
+    (publish! A salt handA)
     (verify! commitment)
     (def outcome (winner handA handB))
 

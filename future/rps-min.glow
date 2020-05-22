@@ -2,7 +2,7 @@
 data Hand = | Rock | Paper | Scissors;
 data Outcome = | B_Wins | Draw | A_Wins;
 let winner = (handA : Hand, handB : Hand) : Outcome => {
-    Outcome.ofNat((HandToNat(handA) + (4 - HandToNat(handB))) % 3) }
+    Outcome.ofNat((Hand.toNat(handA) + (4 - Hand.toNat(handB))) % 3) }
 
 @interaction([A, B])
 let rockPaperScissors = (wagerAmount) => {
@@ -10,16 +10,16 @@ let rockPaperScissors = (wagerAmount) => {
     @A let handA = Hand.input("First player, pick your hand");
     @A let salt = randomUInt256();
     @A @verifiably let commitment = digest([salt, handA]);
-    @A publish! commitment; @A deposit! wagerAmount;
+    publish! A -> commitment; deposit! A -> wagerAmount;
 
     @B assert! canReach(end, end.outcome == B_Wins);
     @B let handB = Hand.input("Second player, pick your hand");
-    @B publish! handB; @B deposit! wagerAmount;
+    publish! B -> handB; deposit! B -> wagerAmount;
 
-    @A publish! salt, handA;
+    publish! A -> salt, handA;
     verify! commitment;
     let outcome = winner(handA, handB);
   end: switch(outcome) {
-      | A_Wins => withdraw! A, 2*wagerAmount
-      | B_Wins => withdraw! B, 2*wagerAmount
-      | Draw => withdraw! A, wagerAmount; withdraw! B, wagerAmount }}
+      | A_Wins => withdraw! A <- 2*wagerAmount
+      | B_Wins => withdraw! B <- 2*wagerAmount
+      | Draw => withdraw! A <- wagerAmount; withdraw! B <- wagerAmount }}

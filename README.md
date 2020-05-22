@@ -19,9 +19,6 @@ See [INSTALL.md](INSTALL.md) for installation instructions.
 You can watch on our [gitlab repository](https://gitlab.com/mukn/glow)
 what we are currently working on.
 
-For background information, see the videos and documentation linked from our website:
-[https://mukn.io](https://mukn.io)
+### More information
 
-See also the predecessor language [Alacrity](https://alacrity-lang.org/),
-its [github repository](https://github.com/AlacrisIO/alacrity) and
-[introductory paper](https://github.com/alacrisio/alacrity/tree/master/docs/paper.md).
+For more information on Glow, see our [bibliography](docs/bibliography.md).

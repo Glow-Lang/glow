@@ -79,8 +79,8 @@
     (values
      (if (equal? p participant)
        (cons s acc)
-       ;; Put the participant-checkpoint *BEFORE* the statement,
-       ;; which in accumulated reverse order means after.
+       ;; Ensure the participant-checkpoint is executed *BEFORE* the statement with a new participant,
+       ;; which means cons it after since we accumulate in reverse order.
        (cons* s (participant-checkpoint stx participant p) acc))
      p))
   (syntax-case stx (@ deftype defdata publish! def ann return ignore! switch require! assert! deposit! withdraw!)
@@ -96,13 +96,13 @@
     ((def . _) (continue participantify-prefixed-expr stx participant))
     ((ignore! . _) (continue participantify-prefixed-expr stx participant))
     ((return . _) (continue participantify-prefixed-expr stx participant))
+    ((publish! . _) (continue participantify-publish-deposit stx participant))
+    ((deposit! . _) (continue participantify-publish-deposit stx participant))
     ((deftype . _) (simple)) ;; TODO: support future variant with: rtvalue?
     ((ann . _) (simple))
-    ((publish! . _) (simple))
+    ((withdraw! . _) (simple))
     ((require! _) (simple))
-    ((assert! _) (simple))
-    ((deposit! . _) (simple))
-    ((withdraw! . _) (simple))))
+    ((assert! _) (simple))))
 
 (def (participantify-defdata stx participant)
   (syntax-case stx ()
@@ -130,6 +130,11 @@
      (let-values (((s p) (participantify-stmts (syntax->list #'(body ...)) participant [])))
        (with-syntax (((stmts2 ...) (reverse s)))
          [(restx1 stx #'(pattern stmts2 ...)) p])))))
+
+(def (participantify-publish-deposit stx participant)
+  (syntax-case stx ()
+    ((_ x _ ...)
+     (values stx (stx-e #'x)))))
 
 ;; After ANF, expressions are all simple, except for those containing bodies of statements,
 ;; like conditionals and lambdas.
