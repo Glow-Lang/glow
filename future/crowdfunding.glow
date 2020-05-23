@@ -1,35 +1,46 @@
-#lang glow
-
-import Ledger;
-
 data Action = Pledge(TokenAmount) | Close | Reclaim(TokenAmount);
 
-@interaction(Organizer)
-let crowdfunding = (target: TokenAmount, expirationTime : Timestamp) => {
+let platformCommission amount = quotient(amount, 100);
+
+// NB: This only works well because the ledger is linear.
+// Can we make the linearity explicit in the typing?
+// Also, for large merkleized trees,
+// The Table.{add,get,remove} operations actually depend on publish! effects
+// for the current participant to exhibit witnesses for the explored or summarized branches of the tree.
+// For efficient refund on Ethereum, it could be an array / alist.
+@interaction
+let crowdfunding = (target: TokenAmount,
+                    expirationTime : Timestamp) => {
    require! expirationTime > currentTime();
 
-   @interaction({participants: [Organizer], currencies: [Token]}) // TODO: figure this out
-   let rec crowdfund = (ledger : Ledger(Token), totalPledged: TokenAmount) => {
+   let rec crowdfund = (ledger : Table(TokenAmount <- Participant),
+                        totalPledged: TokenAmount) => {
      assert! totalPledged == totalAmount(ledger);
      choice {
        | ForAllParticipant (NewPledger) {
-           @NewPledger amount = input(["Enter next pledge"], TokenAmount);
-           publish! NewPledger -> Pledge(amount) ; deposit! NewPledger -> amount;
+           @NewPledger amount =
+             input(["Enter next pledge"], TokenAmount);
+           publish! NewPledger -> Pledge(amount);
+           deposit! NewPledger -> amount;
            require! currentTime() < expirationTime;
-           crowdfund(ledger.add(NewPledger, amount), totalPledged + amount);
+           crowdfund(Table.add(ledger, NewPledger, amount),
+                     totalPledged + amount);
 
        | publish! Organizer -> Success;
            require! currentTime() >= expirationTime;
            require! totalPledged >= target;
-           withdraw! Organizer <- totalPledged;
+           let commission = platformCommission(totalPledged);
+           withdraw! Platform <- commission;
+           withdraw! Organizer <- totalPledged - commission;
 
        | ForAllParticipant(Pledger)
            publish! Pledger -> Reclaim(amount);
            require! currentTime() >= expirationTime;
            require! totalPledged < target;
-           require! ledger.has(Pledger, amount);
+           require! Table.get(ledger, Pledger) == amount;
            withdraw! Pledger <- amount;
-           crowdfund(ledger.remove(Pledger, amount), totalPledged - amount);
+           crowdfund(Table.remove(ledger, Pledger),
+                     totalPledged - amount);
    }
    crowdfund({}, 0);
 }
