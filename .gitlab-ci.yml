@@ -1,5 +1,8 @@
 image: fahree/gerbil-utils:latest
 
+variables:
+  GIT_DEPTH: 50
+
 build:
   stage: build
   script:
@@ -15,3 +18,4 @@ test:
   script:
     - export GERBIL_PATH=$PWD/.build
     - ./unit-tests.ss
+    - ./unit-tests.ss check_git_up_to_date

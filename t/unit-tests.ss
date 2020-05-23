@@ -1,13 +1,26 @@
 (import
   :gerbil/gambit/ports
-  :std/iter
+  :std/format :std/iter :std/misc/process
   :clan/utils/exit :clan/utils/ports
   :clan/t/test-support
   ;;:glow/compiler/syntax-context ;; important for the parsing to work (!)
+  :glow/config/path
   :glow/compiler/passes :glow/compiler/multipass
   :glow/t/common)
 
 (set-current-ports-encoding-standard-unix!)
+
+(def (gerbil.pkg)
+  (with-catch false (lambda () (call-with-input-file (path-expand "gerbil.pkg" (glow-src)) read))))
+
+(def (git-origin-repo)
+  (or (pgetq repo: (gerbil.pkg)) "origin"))
+
+(def (git-origin-branch)
+  (or (pgetq branch: (gerbil.pkg)) "master"))
+
+(def (git-merge-base . commitishs)
+  (run-process ["git" "merge-base" . commitishs] coprocess: read-line))
 
 (def (main . args)
   (eval-print-exit
@@ -28,4 +41,11 @@
        ;; Either way, print test results.
        (def pass-sym (string->symbol pass))
        (for (file files) (run-passes file pass: pass-sym))
-       #t)))))
+       #t)
+      (["check_git_up_to_date"]
+       (def branch (git-origin-branch))
+       (run-process ["git" "fetch" "--depth" "1" (git-origin-repo) branch])
+       (def up-to-date? (equal? (git-merge-base "FETCH_HEAD" "FETCH_HEAD")
+                                (with-catch false (cut git-merge-base "HEAD" "FETCH_HEAD"))))
+       (printf "Checkout~a up-to-date with branch ~a\n" (if up-to-date? "" " not") branch)
+       up-to-date?)))))

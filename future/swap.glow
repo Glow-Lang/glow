@@ -1,9 +1,10 @@
-@define_interaction({Participants: [A,B]})
-let swap = (basket1, basket2) => {
-  @A deposit! basket1;
-  @B deposit! basket2;
-  withdraw! B, basket1;
-  withdraw! A, basket2;
+@interaction
+let swap = (A: Participant, basket1: Asset1,
+            B: Participant, basket2: Asset2) => {
+  deposit! A -> basket1;
+  deposit! B -> basket2;
+  withdraw! B <- basket1;
+  withdraw! A <- basket2;
 }
 
 // Usage example:
