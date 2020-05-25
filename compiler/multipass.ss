@@ -112,8 +112,7 @@
     passes-from-layer))
 
 (def known-failures
-  ["examples/anf_at_if_at.typedecl.sexp"
-   "examples/type_infer.typedecl.sexp"])
+  [])
 
 ;; PathString -> Bool
 (def (known-failure? x)
