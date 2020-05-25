@@ -1,8 +1,8 @@
 (export #t)
 
-(import :std/format
-        :std/pregexp
-        :std/misc/list)
+(import :std/pregexp
+        :std/misc/list
+        :glow/compiler/common)
 
 ;; symbol-split : Symbol -> (values Symbol (U #f Nat))
 (def (symbol-split sym)
@@ -16,7 +16,7 @@
 
 ;; symbolnat : Symbol (U #f Nat) -> Symbol
 (def (symbolnat s n)
-  (cond (n (string->symbol (format "~a~a" s n)))
+  (cond (n (format-symbol "~a~a" s n))
         (else s)))
 
 ;; An UnusedList is a [Listof Nat]

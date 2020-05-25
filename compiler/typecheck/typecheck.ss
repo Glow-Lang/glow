@@ -14,6 +14,7 @@
         :std/misc/repr
         :clan/pure/dict/assq
         :clan/pure/dict/symdict
+        :clan/utils/debug ;; TODO: remove after debugging
         :glow/compiler/syntax-context
         (for-template :glow/compiler/syntax-context)
         :glow/compiler/common
@@ -56,6 +57,14 @@
   (and (or (variance-covariant? v) (subtype? b a))
        (or (variance-contravariant? v) (subtype? a b))))
 
+;; variance-type-pair~? : Variance TypeVariancePair TypeVariancePair -> Bool
+(def (variance-type-pair~? v avp bvp)
+  (def (?type~? a b)
+    (cond ((and a b) (variance-type~? v a b))
+          (else (and (not a) (not b)))))
+  (with (([an ap] avp) ([bn bp] bvp))
+    (and (?type~? bn an) (?type~? ap bp))))
+
 ;; subtype? : PType NType -> Bool
 (def (subtype? a b)
   (match* (a b)
@@ -85,7 +94,7 @@
      (def v1s (type-name-variances f1))
      (and (eq? f1 f2)
           (= (length v1s) (length a1s) (length a2s))
-          (andmap variance-type~? v1s a1s a2s)))
+          (andmap variance-type-pair~? v1s a1s a2s)))
     ((_ _) #f)))
 
 ;; typing-scheme=? : TypingScheme TypingScheme -> Bool
@@ -96,6 +105,10 @@
 
 ;; A Pattys is an [Assqof Symbol Type]
 ;; for the types of the pattern variables within a pattern
+;; TODO: Does order matter? If not, change to a symdict
+
+;; A PatTypingScheme is a (pat-typing-scheme MonoEnv NType Pattys)
+(defstruct pat-typing-scheme (menv ntype pattys) transparent: #t)
 
 ;; pattys-join : [Listof Pattys] -> Pattys
 ;; intersection of keys, join of types for same key
@@ -109,13 +122,22 @@
                        (andmap (lambda (o) (assq-has-key? o k)) (cdr ps)))
            (cons k (types-join (map (lambda (p) (assq-ref p k)) ps)))))))
 
+;; pat-typing-schemes-join : [Listof PatTypingScheme] -> PatTypingScheme
+;; Meet of menvs, meet of ntypes, join of pattys
+;; used for or-patterns
+(def (pat-typing-schemes-join pts)
+  (def nenv (menvs-meet (map pat-typing-scheme-menv pts)))
+  (def ntype (types-meet (map pat-typing-scheme-ntype pts)))
+  (def ptype (pattys-join (map pat-typing-scheme-pattys pts)))
+  (pat-typing-scheme nenv ntype ptype))
+
 ;; pattys-append : [Listof Pattys] -> Pattys
 ;; append, but check no duplicate keys
 ;; used for combinations of patterns in the same scope other than "or"
 (def (pattys-append ps)
   (def p (apply append ps))
   (check-duplicate-symbols (map car p))
- p)
+  p)
 
 ;; check-duplicate-symbols : [Listof Symbol] -> TrueOrError
 ;; true if there are no duplicates, error otherwise
@@ -148,12 +170,24 @@
 ;;  - (entry:unknown MPart)             ; lambda-bound with no type annotation
 ;;  - (entry:known MPart TypingScheme)  ; let-bound, or lambda-bound with annotation
 ;;  - (entry:ctor MPart TypingScheme)   ; note ctor does not have N or P, just Type
-;;  - (entry:type MPart [Listof Symbol] Type)
+;;                                      ; and constructor definitions should assign the most permissive "output" type
+;;                                      ; because only subtypes of that can be matched against the pattern
+;;  - (entry:type MPart [Listof ParamVariancePair] Type)
+;; A ParamVariancePair is one of:
+;;  - (list #f #f)         ; for irrelevant
+;;  - (list #f Symbol)     ; for covariant
+;;  - (list Symbol #f)     ; for contravariant
+;;  - (list Symbol Symbol) ; for invariant
+;; The order follows section 9.1.1 and 9.1.2 of Algebraic Subyping:
+;; https://www.cl.cam.ac.uk/~sd601/thesis.pdf#subsection.9.1.1
 (defstruct entry:unknown (part) transparent: #t)
 (defstruct entry:known (part ts) transparent: #t)
 (defstruct entry:ctor (part ts) transparent: #t)
 (defstruct entry:type (part params type) transparent: #t)
 (def (env-entry? v) (or (entry:unknown? v) (entry:known? v) (entry:ctor? v) (entry:type? v)))
+;; xvp+, xvp- : Symbol -> ParamVariancePair
+(def (xvp+ x) [#f x]) ; covariant
+(def (xvp- x) [x #f]) ; contravariant
 
 ;; entry-part : EnvEntry -> MPart
 (def (entry-part e)
@@ -170,7 +204,7 @@
     ((entry:unknown _)   (entry:unknown #f))
     ((entry:known _ ts)  (entry:known #f ts))
     ((entry:ctor _ ts)   (entry:ctor #f ts))
-    ((entry:type _ xs t) (entry:type #f xs t))))
+    ((entry:type _ xvps t) (entry:type #f xvps t))))
 
 ;; env-publish : Env Symbol -> Env
 ;; Produces a new env containing only the published versions of the xs
@@ -193,15 +227,25 @@
 ;; entries later in the list override earlier ones
 (def (env-put/envs e1 es2) (for/fold (e e1) (e2 es2) (env-put/env e e2)))
 
+;; param-variance-pair->repr-sexpr : ParamVariancePair -> Sexpr
+(def (param-variance-pair->repr-sexpr xvp)
+  (def (?->s x) (and x (symbol->repr-sexpr x)))
+  (list->repr-sexpr xvp ?->s))
+
+;; repr-sexpr->param-variance-pair : Sexpr -> ParamVariancePair
+(def (repr-sexpr->param-variance-pair xvp)
+  (def (s->? x) (and x (repr-sexpr->symbol x)))
+  (repr-sexpr->list xvp s->?))
+
 ;; env-entry->repr-sexpr : EnvEntry -> Sexpr
 (def (env-entry->repr-sexpr e)
   (match e
     ((entry:unknown p)   `(entry:unknown ,(mpart->repr-sexpr p)))
     ((entry:known p ts)  `(entry:known ,(mpart->repr-sexpr p) ,(typing-scheme->repr-sexpr ts)))
     ((entry:ctor p ts)   `(entry:ctor ,(mpart->repr-sexpr p) ,(typing-scheme->repr-sexpr ts)))
-    ((entry:type p xs t)
+    ((entry:type p xvps t)
      `(entry:type ,(mpart->repr-sexpr p)
-                  ,(list->repr-sexpr xs symbol->repr-sexpr)
+                  ,(list->repr-sexpr xvps param-variance-pair->repr-sexpr)
                   ,(type->repr-sexpr t)))))
 
 ;; repr-sexpr->env-entry : Sexpr -> EnvEntry
@@ -210,9 +254,9 @@
     (['entry:unknown p]  (entry:unknown (repr-sexpr->mpart p)))
     (['entry:known p ts] (entry:known (repr-sexpr->mpart p) (repr-sexpr->typing-scheme ts)))
     (['entry:ctor p ts]  (entry:ctor (repr-sexpr->mpart p) (repr-sexpr->typing-scheme ts)))
-    (['entry:type p xs t]
+    (['entry:type p xvps t]
      (entry:type (repr-sexpr->mpart p)
-                 (repr-sexpr->list xs repr-sexpr->symbol)
+                 (repr-sexpr->list xvps repr-sexpr->param-variance-pair)
                  (repr-sexpr->type t)))))
 
 ;; type-env->repr-sexpr : Env -> Sexpr
@@ -285,14 +329,21 @@
        (entry:type? (symdict-ref env s))))
 
 ;; tyvar-bisubst : TypeInterval Variance Symbol -> PNType
+;; use variance to see which one
 (def (tyvar-bisubst tvl v s)
   (cond ((variance-covariant? v) (type-interval-ptype tvl))
         ((variance-contravariant? v) (type-interval-ntype tvl))
-        ((eq? (type-interval-ptype tvl) (type-interval-ntype tvl))
+        ((equal? (type-interval-ptype tvl) (type-interval-ntype tvl))
          (type-interval-ptype tvl))
         (else (error s "could not infer type"))))
 
-;; ptype-bisubst : TyvarBisubst Variance PNType -> PNType
+;; type-variance-pair-bisubst : TyvarBisubst Variance TypeVariancePair -> TypeVariancePair
+(def (type-variance-pair-bisubst tybi v tvp)
+  (with (([tn tp] tvp))
+    [(and tn (type-bisubst tybi (variance-flip v) tn))
+     (and tp (type-bisubst tybi v tp))]))
+
+;; type-bisubst : TyvarBisubst Variance PNType -> PNType
 ;; P vs N depends on the variance
 (def (type-bisubst tybi v t)
   ;; sub : PNType -> PNType
@@ -301,6 +352,10 @@
   ;; variance is within v, so must compose with v
   (def (vsub v2 t)
     (type-bisubst tybi (variance-compose v v2) t))
+  ;; vsub-pair : Variance TypeVariancePair -> TypeVariancePair
+  (def (vsub-pair v2 tvp)
+    ;; So v2 should determine what's type/#f in tvp, but not change v
+    (type-variance-pair-bisubst tybi v tvp))
   (def (nsub t) (vsub contravariant t))
   (match t
     ((type:name _) t)
@@ -312,14 +367,14 @@
            (else t)))
     ((type:app (type:name f) as)
      (def vs (type-name-variances f))
-     (type:app (type:name f) (map vsub vs as)))
+     (type:app (type:name f) (map vsub-pair vs as)))
     ((type:tuple as)
      (type:tuple (map sub as)))
     ((type:record fldtys)
      (type:record
       (list->symdict
        (map (lambda (p) (cons (car p) (sub (cdr p))))
-            fldtys))))
+            (symdict->list fldtys)))))
     ((type:arrow as b)
      (type:arrow (map nsub as) (sub b)))
     ((ptype:union ts)
@@ -327,16 +382,35 @@
     ((ntype:intersection ts)
      (types-meet (map sub ts)))))
 
+;; ptype-bisubst : TyvarBisubst PType -> PType
+(def (ptype-bisubst tybi ptype) (type-bisubst tybi covariant ptype))
+
+;; ntype-bisubst : TyvarBisubst NType -> NType
+(def (ntype-bisubst tybi ntype) (type-bisubst tybi contravariant ntype))
+
 ;; menv-bisubst : TyvarBisubst MonoEnv -> MonoEnv
 (def (menv-bisubst tybi menv)
   (for/fold (acc empty-symdict) ((k (symdict-keys menv)))
-    (symdict-put acc k (type-bisubst tybi contravariant (symdict-ref menv k)))))
+    (symdict-put acc k (ntype-bisubst tybi (symdict-ref menv k)))))
 
 ;; typing-scheme-bisubst : TyvarBisubst TypingScheme -> TypingScheme
 (def (typing-scheme-bisubst tybi ts)
   (with (((typing-scheme menv ty) ts))
-    (typing-scheme (menv-bisubst tybi menv)
-                   (type-bisubst tybi covariant ty))))
+    (typing-scheme (menv-bisubst tybi menv) (ptype-bisubst tybi ty))))
+
+;; pattys-bisubst : TyvarBisubst Pattys -> Pattys
+(def (pattys-bisubst tybi patty)
+  (for/collect ((e patty))
+    (match e
+      ((cons k v)
+       (cons k (ptype-bisubst tybi v))))))
+
+;; pat-typing-scheme-bisubst : TyvarBisubst PatTypingScheme -> PatTypingScheme
+(def (pat-typing-scheme-bisubst tybi pts)
+  (with (((pat-typing-scheme menv ntype pattys) pts))
+    (pat-typing-scheme (menv-bisubst tybi menv)
+                       (ntype-bisubst tybi ntype)
+                       (pattys-bisubst tybi pattys))))
 
 ;; A Constraints is a [Listof Constraint]
 ;; A Constraint is one of:
@@ -345,12 +419,19 @@
 (defstruct constraint:subtype (a b) transparent: #t)
 (defstruct constraint:type-equal (a b) transparent: #t)
 
-;; constraints-from-variance : Variance PNType PNType -> Constraints
-(def (constraints-from-variance v a b)
+;; constraints-from-variance-pair : Variance TypeVariancePair TypeVariancePair -> Constraints
+(def (constraints-from-variance-pair v avp bvp)
   (cond ((variance-irrelevant? v) [])
-        ((variance-covariant? v) [(constraint:subtype a b)])
-        ((variance-contravariant? v) [(constraint:subtype b a)])
-        (else [(constraint:type-equal a b)])))
+        ((variance-covariant? v)
+         (with (([#f ap] avp) ([#f bp] bvp))
+           [(constraint:subtype ap bp)]))
+        ((variance-contravariant? v)
+         (with (([an #f] avp) ([bn #f] bvp))
+           [(constraint:subtype bn an)]))
+        (else
+         (with (([an ap] avp) ([bn bp] bvp))
+           [(constraint:subtype ap bp)
+            (constraint:subtype bn an)]))))
 
 ;; constraints-bisubst : TyvarBisubst Constraints -> Constraints
 (def (constraints-bisubst tybi cs)
@@ -360,8 +441,8 @@
 (def (constraint-bisubst tybi c)
   (match c
     ((constraint:subtype a b)
-     (constraint:subtype (type-bisubst tybi contravariant a)
-                         (type-bisubst tybi covariant b)))
+     (constraint:subtype (type-bisubst tybi covariant a)
+                         (type-bisubst tybi contravariant b)))
     ((constraint:type-equal a b)
      (constraint:type-equal (type-bisubst tybi invariant a)
                             (type-bisubst tybi invariant b)))))
@@ -398,7 +479,7 @@
      (map make-constraint:subtype as bs))
     ((constraint:subtype (type:record as) (type:record bs))
      (unless (symdict-key-set=? as bs)
-       (error 'subtype "record field mismatch"))
+       (error 'subtype (format "record field mismatch, expected keys ~a, given keys ~a" (symdict-keys bs) (symdict-keys as))))
      (map (lambda (k)
             (constraint:subtype (symdict-ref as k) (symdict-ref bs k)))
           (symdict-keys as)))
@@ -407,7 +488,7 @@
      (def v1s (type-name-variances f1))
      (unless (= (length v1s) (length a1s) (length a2s))
        (error 'subtype "wrong number of arguments to type constructor"))
-     (flatten1 (map constraints-from-variance v1s a1s a2s)))
+     (flatten1 (map constraints-from-variance-pair v1s a1s a2s)))
     ((constraint:subtype (type:arrow a1s b1) (type:arrow a2s b2))
      (unless (length=? a1s a2s)
        (error 'subype "type mismatch, wrong number of arguments"))
@@ -426,39 +507,52 @@
     ([] tybi)
     ([fst . rst]
      (match fst
+       ((constraint:subtype (ptype:union _) _)
+        (biunify (append (sub-constraints fst) rst) tybi))
+       ((constraint:subtype _ (ntype:intersection _))
+        (biunify (append (sub-constraints fst) rst) tybi))
        ((constraint:subtype (type:var a) (type:var b))
         (cond
           ((eq? a b) (biunify rst tybi))
           ; a does not occur in b
           ((symdict-has-key? tybi a)
            (with (((type-interval tn tp) (symdict-ref tybi a)))
-             (def tybi2 (symdict-put tybi a (type-interval (type-meet tn (type:var b)) tp)))
-             (biunify (constraints-bisubst tybi2 rst) tybi2)))
+             (def ati (type-interval (type-meet tn (type:var b)) tp))
+             (def tybi2 (symdict (a ati)))
+             (biunify (constraints-bisubst tybi2 rst) (symdict-put tybi a ati))))
           (else
-           (let ((tybi2 (symdict-put tybi a (type-interval (type-meet (type:var a) (type:var b)) (type:var a)))))
-             (biunify (constraints-bisubst tybi2 rst) tybi2)))))
+           (let ()
+             (def ati (type-interval (type-meet (type:var a) (type:var b)) (type:var a)))
+             (def tybi2 (symdict (a ati)))
+             (biunify (constraints-bisubst tybi2 rst) (symdict-put tybi a ati))))))
        ((constraint:subtype (type:var a) b)
         (cond
           ((type-has-var? b a) (error 'subtype "recursive types are not yet supported"))
           ; a does not occur in b
           ((symdict-has-key? tybi a)
            (with (((type-interval tn tp) (symdict-ref tybi a)))
-             (def tybi2 (symdict-put tybi a (type-interval (type-meet tn b) tp)))
-             (biunify (constraints-bisubst tybi2 rst) tybi2)))
+             (def ati (type-interval (type-meet tn b) tp))
+             (def tybi2 (symdict (a ati)))
+             (biunify (constraints-bisubst tybi2 rst) (symdict-put tybi a ati))))
           (else
-           (let ((tybi2 (symdict-put tybi a (type-interval (type-meet (type:var a) b) (type:var a)))))
-             (biunify (constraints-bisubst tybi2 rst) tybi2)))))
+           (let ()
+             (def ati (type-interval (type-meet (type:var a) b) (type:var a)))
+             (def tybi2 (symdict (a ati)))
+             (biunify (constraints-bisubst tybi2 rst) (symdict-put tybi a ati))))))
        ((constraint:subtype a (type:var b))
         (cond
           ((type-has-var? a b) (error 'subtype "recursive types are not yet supported"))
           ; b does not occur in a
           ((symdict-has-key? tybi b)
            (with (((type-interval tn tp) (symdict-ref tybi b)))
-             (def tybi2 (symdict-put tybi b (type-interval tn (type-join tp a))))
-             (biunify (constraints-bisubst tybi2 rst) tybi2)))
+             (def bti (type-interval tn (type-join tp a)))
+             (def tybi2 (symdict (b bti)))
+             (biunify (constraints-bisubst tybi2 rst) (symdict-put tybi b bti))))
           (else
-           (let ((tybi2 (symdict-put tybi b (type-interval (type:var b) (type-join (type:var b) a)))))
-             (biunify (constraints-bisubst tybi2 rst) tybi2)))))
+           (let ()
+             (def bti (type-interval (type:var b) (type-join (type:var b) a)))
+             (def tybi2 (symdict (b bti)))
+             (biunify (constraints-bisubst tybi2 rst) (symdict-put tybi b bti))))))
        (_
         (biunify (append (sub-constraints fst) rst) tybi))))))
 
@@ -472,10 +566,13 @@
 ;   type:
 ;     quote \@tuple \@record
 
-;; parse-type : MPart Env TyvarEnv TypeStx -> Type
-(def (parse-type part env tyvars stx)
+;; parse-type : MPart Env Variance TyvarBisubst TypeStx -> Type
+;; The variance should only be used to determine which entry from the
+;; bisubstitution should be used when looking up a variable.
+(def (parse-type part env vnc xsbi stx)
   ;; party : TypeStx -> Type
-  (def (party s) (parse-type part env tyvars s))
+  ;; Doesn't change variance, only suitable for covariant s relative to stx
+  (def (party s) (parse-type part env vnc xsbi s))
   (syntax-case stx (@ quote @tuple @record)
     ((@ _ _) (error 'parse-type "TODO: deal with @"))
     ((@tuple t ...) (type:tuple (stx-map party #'(t ...))))
@@ -487,8 +584,11 @@
                 #'(t ...)))))
     ('x (identifier? #'x)
      (let ((s (syntax-e #'x)))
-       (cond ((symdict-has-key? tyvars s) (symdict-ref tyvars s))
-             (else (type:var s)))))
+       (cond
+         ((symdict-has-key? xsbi s)
+          ;; use variance to see which one
+          (tyvar-bisubst (symdict-ref xsbi s) vnc s))
+         (else (type:var s)))))
     (x (identifier? #'x)
      (let ((s (syntax-e #'x)))
        (unless (symdict-has-key? env s)
@@ -497,8 +597,9 @@
        (unless (mpart-can-use? part (entry-part ent))
          (error s "access allowed only for" (entry-part ent)))
        (match ent
-         ((entry:type part* [] t)
-          t))))
+         ((entry:type part* [] t)  t)
+         ((entry:type _ [_ . _] _) (error s "expects type arguments"))
+         (_                        (error s "not a type")))))
     ((f a ...) (identifier? #'f)
      (let ((s (syntax-e #'f)))
        (unless (symdict-has-key? env s)
@@ -507,12 +608,25 @@
        (unless (mpart-can-use? part (entry-part ent))
          (error s "access allowed only for" (entry-part ent)))
        (match ent
-         ((entry:type _ xs b)
-          (def as (stx-map party #'(a ...)))
-          (unless (= (length xs) (length as))
+         ((entry:type _ xvps b)
+          (unless (= (length xvps) (stx-length #'(a ...)))
             (error 'parse-type "wrong number of type arguments"))
-          (def tyvars2 (symdict-put/list tyvars (map cons xs as)))
-          (type-subst tyvars2 b)))))))
+          (def tyvars2
+            (for/fold (tyvars empty-symdict) ((xvp xvps) (a (syntax->list #'(a ...))))
+              (with (([xn xp] xvp))
+                (symdict-put/list
+                 tyvars
+                 (append
+                  (if xn [(cons xn (parse-type part env (variance-flip vnc) xsbi a))] [])
+                  (if xp [(cons xp (parse-type part env vnc xsbi a))]))))))
+          (type-subst tyvars2 b))
+         (_ (error s "not a type")))))))
+
+;; parse-closed-type : MPart Env TypeStx -> Type
+;; When the tyvar bisubstitution is empty,
+;; the variance doesn't matter and can be covariant
+(def (parse-closed-type part env stx)
+  (parse-type part env covariant empty-symdict stx))
 
 ;; parse-param-name : ParamStx -> Symbol
 (def (parse-param-name p)
@@ -522,7 +636,7 @@
 (def (parse-param-type part env p)
   (syntax-case p (:)
     (x (identifier? #'x) #f)
-    ((x : type) (parse-type part env empty-symdict #'type))))
+    ((x : type) (parse-closed-type part env #'type))))
 
 ;; The reformulated rules produce judgements of the form
 ;; Π ⊩ e : [∆]τ
@@ -634,16 +748,29 @@
      (values
       (symdict
        ((syntax-e #'x)
-        (entry:type part [] (parse-type part env empty-symdict #'t))))
+        (entry:type part [] (parse-closed-type part env #'t))))
       empty-symdict))
     ((deftype (f 'x ...) b) (identifier? #'f)
      (let ((s (syntax-e #'f))
            (xs (stx-map syntax-e #'(x ...))))
-       (def tyvars (list->symdict (map cons xs (map make-type:var xs))))
+       ;; xvps : [Listof ParamVariancePair]
+       (def xvps
+         (for/collect ((x xs))
+           [(symbol-fresh (format-symbol "~aₙ" x))
+            (symbol-fresh (format-symbol "~aₚ" x))]))
+       ;; xsbi : TyvarBisubst
+       (def xsbi
+         (for/fold (acc empty-symdict) ((x xs) (xvp xvps))
+           (with (([xn xp] xvp))
+             (symdict-put acc x (type-interval (type:var xn) (type:var xp))))))
+       ;; bt : Type
+       (def bt (parse-type part env covariant xsbi #'b))
+       ;; TODO: infer variance by looking at which xn/xp versions are used in bt,
+       ;;       and then update xvps to drop the unused ones
        (values
         (symdict
          (s
-          (entry:type part xs (parse-type part env tyvars #'b))))
+          (entry:type part xvps bt)))
         empty-symdict)))))
 
 ;; tc-stmt-defdata : MPart Env StmtStx -> (values Env MonoEnv)
@@ -660,7 +787,7 @@
          (parameterize ((current-type-info-table (copy-current-type-info-table)))
            (add-type-info! sym (type-info [] empty-methods))
            (defvalues (penv nenv)
-            (tc-defdata-variants part env env2 [] b #'(variant ...)))
+            (tc-defdata-variants part env env2 empty-symdict b #'(variant ...)))
            ;; handle the rtvalue
            (def methods (tc-expr part (env-put/envs env [env2 penv]) #'rtvalue))
           (values penv nenv methods)))
@@ -670,16 +797,29 @@
      (let ((s (syntax-e #'f))
            (xs (stx-map syntax-e #'(x ...))))
        (def sym (symbol-fresh s))
+       ;; xvps : [Listof ParamVariancePair]
+       (def xvps
+         (for/collect ((x xs))
+           [(symbol-fresh (format-symbol "~aₙ" x))
+            (symbol-fresh (format-symbol "~aₚ" x))]))
+       ;; xsbi : TyvarBisubst
+       (def xsbi
+         (for/fold (acc empty-symdict) ((x xs) (xvp xvps))
+           (with (([xn xp] xvp))
+             (symdict-put acc x (type-interval (type:var xn) (type:var xp))))))
        ;; TODO: allow variances to be either annotated or inferred
        (def vances (map (lambda (x) invariant) xs))
-       (def b (type:app (type:name sym) (map make-type:var xs)))
-       (def env2 (symdict (s (entry:type part xs b))))
+       (def b
+         (type:app (type:name sym)
+                   (for/collect ((xvp xvps))
+                     (with (([xn xp] xvp)) [(type:var xn) (type:var xp)]))))
+       (def env2 (symdict (s (entry:type part xvps b))))
        ;; TODO: this pattern would be easier with spicing-parameterize
        (defvalues (penv nenv methods)
          (parameterize ((current-type-info-table (copy-current-type-info-table)))
            (add-type-info! sym (type-info vances empty-methods))
            (defvalues (penv nenv)
-             (tc-defdata-variants part env env2 xs b #'(variant ...)))
+             (tc-defdata-variants part env env2 xsbi b #'(variant ...)))
            ;; handle the rtvalue
            (def methods (tc-expr part (env-put/envs env [env2 penv]) #'rtvalue))
            (values penv nenv methods)))
@@ -687,13 +827,11 @@
        (values (env-put/env env2 penv) nenv)))))
 
 
-;; tc-defdata-variant : MPart Env [Listof Symbol] Type VariantStx -> Env
+;; tc-defdata-variant : MPart Env TyvarBisubst Type VariantStx -> Env
 ;; the env result contains only the new symbols introduced by the variant
-(def (tc-defdata-variant part env xs b stx)
-  ;; tyvars : TyvarEnv
-  (def tyvars (list->symdict (map cons xs (map make-type:var xs))))
+(def (tc-defdata-variant part env xsbi b stx)
   ;; party : TypeStx -> Type
-  (def (party s) (parse-type part env tyvars s))
+  (def (party s) (parse-type part env covariant xsbi s))
   (syntax-case stx ()
     (x (identifier? #'x)
      (let ((s (syntax-e #'x)))
@@ -703,19 +841,19 @@
            (t (type:arrow (stx-map party #'(a ...)) b)))
        (symdict (s (entry:ctor part (typing-scheme empty-symdict t))))))))
 
-;; tc-defdata-variants : MPart Env Env [Listof Symbol] Type [StxListof VariantStx] -> (values Env MonoEnv)
+;; tc-defdata-variants : MPart Env Env TyvarBisubst Type [StxListof VariantStx] -> (values Env MonoEnv)
 ;; the env result contains only the new symbols introduced by the variants
-(def (tc-defdata-variants part env1 env2 xs b stx)
+(def (tc-defdata-variants part env1 env2 xsbi b stx)
   (def env12 (env-put/env env1 env2))
   ;; tcvariant : VariantStx -> Env
-  (def (tcvariant v) (tc-defdata-variant part env12 xs b v))
+  (def (tcvariant v) (tc-defdata-variant part env12 xsbi b v))
   (values
    (env-put/envs empty-symdict (stx-map tcvariant stx))
    empty-symdict))
 
 (def (tx-optional-type-ann part env stx)
   (syntax-case stx (:)
-    ((: type) (parse-type part env empty-symdict #'type))
+    ((: type) (parse-type part env covariant empty-symdict #'type))
     (_ #f)))
 
 ;; tc-stmt-def : MPart Env StmtStx -> (values Env MonoEnv)
@@ -748,7 +886,7 @@
      (let ((xs (stx-map parse-param-name #'params))
            (in-ts (stx-map (lambda (p) (parse-param-type part env p)) #'params))
            (out-t (syntax-case #'?out-type (:)
-                    ((: out-type) (parse-type part env empty-symdict #'out-type))
+                    ((: out-type) (parse-type part env covariant empty-symdict #'out-type))
                     (_ #f))))
        (tc-function part env xs in-ts out-t #'(body ...))))))
 
@@ -763,19 +901,18 @@
          in-tys))
   ;; body-env : Env
   (def body-env (symdict-put/list env (map cons xs in-ents*)))
-  (def body-ts (tc-body/check part body-env body exp-out-ty))
-  (def body-menv (typing-scheme-menv body-ts))
-  (def body-ty (typing-scheme-type body-ts))
-  ;; in-tys* : [Listof NType]
-  (def in-tys*
-    (map (lambda (x in-ty)
-           (or in-ty (symdict-get body-menv x ntype:top)))
-         xs
-         in-tys))
-  (def menv (for/fold (acc body-menv) ((x xs) (in-ty in-tys))
-              (cond (in-ty acc)
-                    (else (symdict-remove acc x)))))
-  (typing-scheme menv (type:arrow in-tys* body-ty)))
+  (with (((typing-scheme body-menv body-ty) (tc-body/check part body-env body exp-out-ty)))
+    ;; in-tys* : [Listof NType]
+    (def in-tys*
+      (map (lambda (x in-ty)
+             (or in-ty (symdict-get body-menv x ntype:top)))
+           xs
+           in-tys))
+    ;; remove the xs from the menv before passing it up
+    (def menv (for/fold (acc body-menv) ((x xs) (in-ty in-tys))
+                (cond (in-ty acc)
+                      (else (symdict-remove acc x)))))
+    (typing-scheme menv (type:arrow in-tys* body-ty))))
 
 ;; tc-expr-make-interaction : MPart Env ExprStx -> TypingScheme
 ;; the env result contains only the new entries introduced by the statement
@@ -807,7 +944,7 @@
   (def (tce/bool e) (tc-expr/check part env e type:bool))
   (syntax-case stx (: ann @dot @tuple @record @list @app and or if block splice == sign λ @make-interaction switch input digest require! assert! deposit! withdraw!)
     ((ann expr type)
-     (tc-expr/check part env #'expr (parse-type part env empty-symdict #'type)))
+     (tc-expr/check part env #'expr (parse-type part env covariant empty-symdict #'type)))
     (x (identifier? #'x) (tc-expr-id part env stx))
     (lit (stx-atomic-literal? #'lit) (typing-scheme empty-symdict (tc-literal #'lit)))
     ((@dot et x) (identifier? #'x)
@@ -856,14 +993,9 @@
     ((@make-interaction . _) (tc-expr-make-interaction part env stx))
     ((switch e swcase ...)
      (let ((ts (tc-expr part env #'e)))
-       (def vt (typing-scheme-type ts))
-       ;; TODO: implement exhaustiveness checking
-       (def cts (stx-map (lambda (c) (tc-switch-case part env vt c)) #'(swcase ...)))
-       (def bt (typing-schemes-join cts))
-       (typing-scheme (menv-meet (typing-scheme-menv ts) (typing-scheme-menv bt))
-                      (typing-scheme-type bt))))
+       (tc-switch-cases part env ts (syntax->list #'(swcase ...)))))
     ((input type tag)
-     (let ((t (parse-type part env empty-symdict #'type))
+     (let ((t (parse-type part env covariant empty-symdict #'type))
            (ts (tc-expr/check part env #'tag type:bytes)))
        (typing-scheme (typing-scheme-menv ts) t)))
     ((digest e ...)
@@ -980,18 +1112,7 @@
        (def ts-after (typing-scheme-bisubst bity ts-before))
        ts-after))))
 
-;; tc-literal : LiteralStx -> Type
-(def (tc-literal stx)
-  (def e (stx-e stx))
-  (cond ((exact-integer? e)
-         (cond ((negative? e) type:int)
-               (else type:nat)))
-        ((boolean? e) type:bool)
-        ((string? e) type:bytes) ; represent as bytess using UTF-8
-        ((bytes? e) type:bytes)
-        ((and (pair? e) (length=n? e 1) (equal? (stx-e (car e)) '@tuple)) type:unit)
-        (else (error 'tc-literal "unrecognized literal"))))
-
+;; tc-deposit-withdraw : MPart Env ExprStx -> TypingScheme
 (def (tc-deposit-withdraw part env stx)
   (syntax-case stx ()
     ((dw participant amount)
@@ -1002,36 +1123,86 @@
        (typing-scheme (menvs-meet (map typing-scheme-menv [pt at]))
                       type:unit)))))
 
-;; tc-switch-case : MPart Env Type SwitchCaseStx -> TypingScheme
-(def (tc-switch-case part env valty stx)
+;; tc-literal : LiteralStx -> Type
+;; Produces the most specific type for the literal
+(def (tc-literal stx)
+  (def e (stx-e stx))
+  (cond ((exact-integer? e)
+         (cond ((negative? e) type:int)
+               (else type:nat))) ; nat when non-negative, more specific
+        ((boolean? e) type:bool)
+        ((string? e) type:bytes) ; represent as bytess using UTF-8
+        ((bytes? e) type:bytes)
+        ((and (pair? e) (length=n? e 1) (equal? (stx-e (car e)) '@tuple)) type:unit)
+        (else (error 'tc-literal "unrecognized literal"))))
+
+;; tc-pat-literal : LiteralStx -> Type
+;; Produces the most permissive type for the literal, not the most specific
+(def (tc-pat-literal stx)
+  (def e (stx-e stx))
+  (cond ((exact-integer? e) type:int) ; never nat, int is more permissive
+        ((boolean? e) type:bool)
+        ((string? e) type:bytes)
+        ((bytes? e) type:bytes)
+        (else (error 'tc-pat-literal "unrecognized literal"))))
+
+;; tc-switch-cases : MPart Env TypingScheme [Listof SwitchCaseStx] -> TypingScheme
+(def (tc-switch-cases part env valts stxs)
+  (with (((typing-scheme valnenv valty) valts)
+         ([nenvs ntypes ptypes]
+          (transpose/nlist 3 (map (cut tc-switch-case part env <>) stxs))))
+    (def ntype (types-meet ntypes))
+    (def ptype (types-join ptypes))
+    (def nenv (menvs-meet (cons valnenv nenvs)))
+    (def before-ts (typing-scheme nenv ptype))
+    ;; valty <: ntype
+    ;(printf "tc-switch-cases: ~r <: ~r\n" valty ntype)
+    (def bity (biunify [(constraint:subtype valty ntype)] empty-symdict))
+    (typing-scheme-bisubst bity before-ts)))
+
+;; tc-switch-case : MPart Env SwitchCaseStx -> (list MonoEnv NType PType)
+(def (tc-switch-case part env stx)
   (syntax-case stx ()
     ((pat body ...)
-     (let ((pattys (tc-pat part env valty #'pat)))
-       (def env/pattys
+     (with (((pat-typing-scheme nenv1 ntype pattys)
+             (tc-pat part env #'pat)))
+       (def xs (map car pattys))
+       ;; each pattern-variable gets unknown
+       (def env/patvars
          (symdict-put/list
           env
-          (map (lambda (p) (cons (car p) (entry:known part (typing-scheme empty-symdict (cdr p)))))
-               pattys)))
-       (tc-body part env/pattys #'(body ...))))))
+          (map (cut cons <> (entry:unknown part)) xs)))
+       (with (((typing-scheme nenv2 ptype) (tc-body part env/patvars #'(body ...))))
+         (def nenv3 (menv-meet nenv1 nenv2))
+         ;; unify pattys with their respective tys in nenv3
+         (def bity (biunify (for/collect ((e pattys))
+                              (with (((cons x ty) e))
+                                (constraint:subtype ty (symdict-get nenv3 x ntype:top))))
+                            empty-symdict))
+         ;; remove the pattys before passing the final nenv up
+         (def nenv (for/fold (acc nenv3) ((x xs))
+                     (symdict-remove acc x)))
+         ;; apply the bisubstitution to the final nenv, the ntype, and the ptype
+         [(menv-bisubst bity nenv) (ntype-bisubst bity ntype) (ptype-bisubst bity ptype)])))))
 
-
-;; tc-pat : MPart Env PType PatStx -> Pattys
-(def (tc-pat part env valty stx)
+;; tc-pat : MPart Env PatStx -> PatTypingScheme
+;; Produces the most permissive type for the pattern
+(def (tc-pat part env stx)
   (syntax-case stx (@ : ann @tuple @record @list @or-pat)
     ((@ _ _) (error 'tc-pat "TODO: deal with @"))
     ((ann pat type)
-     (let ((t (parse-type part env empty-symdict #'type)))
-       ;; valty <: t
-       ;; because passing valty into a context expecting t
-       ;; (switch (ann 5 nat) ((ann x int) x))
-       (unless (subtype? valty t)
-         (error 'tc-pat "type mismatch"))
-       (tc-pat part env t #'pat)))
+     (with ((t (parse-type part env covariant empty-symdict #'type))
+            ((pat-typing-scheme nenv ntype ptys) (tc-pat part env #'pat)))
+       ;; t <: ntype
+       (def bity (biunify [(constraint:subtype t ntype)] empty-symdict))
+       (pat-typing-scheme-bisubst bity (pat-typing-scheme nenv t ptys))))
     (blank (and (identifier? #'blank) (free-identifier=? #'blank #'_))
-     [])
+     (pat-typing-scheme empty-symdict ntype:top []))
     (x (and (identifier? #'x) (not-bound-as-ctor? env (syntax-e #'x)))
+     ;; pattern variable, since it's not a constructor
      (let ((s (syntax-e #'x)))
-       [(cons s valty)]))
+       (def s2 (symbol-fresh s))
+       (pat-typing-scheme empty-symdict (type:var s2) [(cons s (type:var s2))])))
     (x (and (identifier? #'x) (bound-as-ctor? env (syntax-e #'x)))
      (let ((s (syntax-e #'x)))
        (def ent (symdict-ref env s))
@@ -1039,57 +1210,36 @@
          (error s "access allowed only for" (entry-part ent)))
        (match ent
          ((entry:ctor _ (typing-scheme menv t))
-          (unless (symdict-empty? menv) (error 'tc-pat "handle constructors constraining inputs"))
-          ;; t doesn't necessarily have to be a supertype,
-          ;; but does need to be join-compatible so that
-          ;; valty <: (type-join valty t)
-          (type-join valty t)
-          []))))
+          (pat-typing-scheme menv t [])))))
     (lit (stx-atomic-literal? #'lit)
-     (let ((t (tc-literal #'lit)))
-       ;; t doesn't necessarily have to be a supertype,
-       ;; but does need to be join-compatible so that
-       ;; valty <: (type-join valty t)
-       (type-join valty t)
-       []))
+     (let ((t (tc-pat-literal #'lit))) ; t is the most permissive type for the literal
+       (pat-typing-scheme empty-symdict t [])))
     ((@or-pat p ...)
-     (pattys-join (stx-map (lambda (p) (tc-pat part env valty p)) #'(p ...))))
+     (pat-typing-schemes-join
+      (stx-map (cut tc-pat part env <>) #'(p ...))))
     ((@list p ...)
-     (cond
-       ((type:listof? valty)
-        (let ((elem-ty (type:listof-elem valty)))
-          (def ptys (stx-map (lambda (p) (tc-pat part env elem-ty p)) #'(p ...)))
-          (pattys-append ptys)))
-       (else
-        (error 'tc-pat "TODO: handle list patterns better, unification?"))))
+     (let ((pts (stx-map (cut tc-pat part env <>) #'(p ...))))
+       (def nenv (menvs-meet (map pat-typing-scheme-menv pts)))
+       ;; meet because the ntypes are already as permissive as they can be
+       ;; the type of the actual elements of the list, must be a subtype of all
+       ;; the ntypes of the sub-patterns
+       (def nty (type:listof (types-meet (map pat-typing-scheme-ntype pts))))
+       (def ptys (pattys-append (map pat-typing-scheme-pattys pts)))
+       (pat-typing-scheme nenv nty ptys)))
     ((@tuple p ...)
-     (match valty
-       ((type:tuple ts)
-        (unless (= (stx-length #'(p ...)) (length ts))
-          (error 'tuple "wrong number of elements in tuple pattern"))
-        (def ptys (stx-map (lambda (t p) (tc-pat part env t p)) ts #'(p ...)))
-        (pattys-append ptys))
-       (_ (error 'tc-pat "TODO: handle tuple patterns better, unification?"))))
+     (let ((pts (stx-map (cut tc-pat part env <>) #'(p ...))))
+       (def nenv (menvs-meet (map pat-typing-scheme-menv pts)))
+       (def nty (type:tuple (map pat-typing-scheme-ntype pts)))
+       (def ptys (pattys-append (map pat-typing-scheme-pattys pts)))
+       (pat-typing-scheme nenv nty ptys)))
     ((@record (x p) ...) (stx-andmap identifier? #'(x ...))
-     (let ((s (stx-map syntax-e #'(x ...))))
-       (match valty
-         ((type:record fldtys)
-          (def flds (symdict-keys fldtys))
-          ;; s ⊆ flds
-          (for (x s)
-            (unless (symdict-has-key? fldtys x)
-              (error x "unexpected key in record pattern")))
-          ;; flds ⊆ s
-          (for (f flds)
-            (unless (member f s)
-              (error f "missing key in record pattern")))
-          (def ptys
-            (stx-map (lambda (x p)
-                       (tc-pat part env (symdict-ref fldtys x) p))
-                     s
-                     #'(p ...)))
-          (pattys-append ptys))
-         (_ (error 'tc-pat "TODO: handle tuple patterns better, unification?")))))
+     (let ((s (stx-map syntax-e #'(x ...)))
+           (pts (stx-map (cut tc-pat part env <>) #'(p ...))))
+       (def nenv (menvs-meet (map pat-typing-scheme-menv pts)))
+       (def ntys (map pat-typing-scheme-ntype pts))
+       (def nty (type:record (list->symdict (map cons s ntys))))
+       (def ptys (pattys-append (map pat-typing-scheme-pattys pts)))
+       (pat-typing-scheme nenv nty ptys)))
     ((f a ...) (and (identifier? #'f) (bound-as-ctor? env (syntax-e #'f)))
      (let ((s (syntax-e #'f)))
        (unless (symdict-has-key? env s)
@@ -1098,83 +1248,17 @@
        (unless (mpart-can-use? part (entry-part ent))
          (error s "access allowed only for" (entry-part ent)))
        (match ent
-         ((entry:ctor _ (typing-scheme menv (type:arrow in-tys out-ty)))
-          (unless (symdict-empty? menv) (error 'tc-pat "handle constructors constraining inputs"))
-          ;; valty <: out-ty
-          ;; because passing valty into a context expecting out-ty
-          (unless (subtype? valty out-ty)
-            (error 'tc-pat "type mismatch"))
+         ((entry:ctor _ (typing-scheme nenv1 (type:arrow in-tys out-ty)))
           (unless (= (stx-length #'(a ...)) (length in-tys))
             (error s "wrong number of arguments to data constructor"))
-          (def ptys
-            (stx-map (lambda (t p) (tc-pat part env t p))
-                     in-tys
-                     #'(a ...)))
-          (pattys-append ptys)))))))
+          (def pts (stx-map (cut tc-pat part env <>) #'(a ...)))
+          (def nenv2 (menvs-meet (cons nenv1 (map pat-typing-scheme-menv pts))))
+          (def ntys (map pat-typing-scheme-ntype pts))
+          (def ptys (pattys-append (map pat-typing-scheme-pattys pts)))
+          ;; [in-ty <: nty] ...
+          (def bity (biunify (map make-constraint:subtype in-tys ntys) empty-symdict))
+          (pat-typing-scheme-bisubst bity (pat-typing-scheme nenv2 out-ty ptys))))))))
 
-#|
+;; --------------------------------------------------------
 
-(def (on-body stx)
-  (syntax-case stx ()
-    [() (on-expr #'(@tuple))]
-    [(expr) (on-expr #'expr)]
-    [(stmt body ...) (??? (on-stmt #'stmt) (on-body #'(body ...)))]))
-
-(def (on-stmt stx)
-  (syntax-case stx (@ : quote def λ deftype defdata publish! assert! deposit! withdraw!)
-    [(@ attr stmt) (??? (on-stmt #'stmt))]
-    [(deftype head type) (??? (on-type #'type))]
-    [(defdata head variant ...) (??? (stx-map on-variant #'(variant ...)))]
-    [(def id () (λ params (: out-type) body ...)) (identifier? #'id) (??? (on-type #'out-type) (on-body #'(body ...)))]
-    [(def id (: type) expr) (identifier? #'id) (??? (on-type #'type) (on-expr #'expr))]
-    [(publish! id ...) (stx-andmap identifier? #'(id ...)) ???]
-    [_ (on-expr stx)]))
-
-(def (on-expr stx)
-  (syntax-case stx (@ : ann \@tuple \@record \@list \@or-pat if block switch _)
-    [(@ attr expr) (??? (on-expr #'expr))]
-    [(ann expr type) (??? (on-expr #'expr) (on-type #'type))]
-    [id (identifier? #'id) ???]
-    [lit (stx-atomic-literal? #'lit) ???]
-    [(@list expr ...) (??? (stx-map on-expr #'(expr ...)))]
-    [(@tuple expr ...) (??? (stx-map on-expr #'(expr ...)))]
-    [(@record (id expr) ...) (??? (stx-map on-expr #'(expr ...)))]
-    [(block body ...) (on-body #'(body ...))]
-    [(switch expr case ...) (??? (on-expr #'expr) (on-cases #'(case ...)))]
-    [(require! expr) (??? (on-expr #'expr))]
-    [(assert! expr) (??? (on-expr #'expr))]
-    [(deposit! expr) (??? (on-expr #'expr))]
-    [(withdraw! id expr) (identifier? #'id) (??? (on-expr #'expr))]
-    [(id expr ...) (identifier? #'id) (??? (stx-map on-expr #'(expr ...)))]))
-
-(def (on-cases stx)
-  (??? (stx-map on-case stx)))
-
-(def (on-case stx)
-  (syntax-case stx ()
-    [(pat body ...) (??? (on-pat #'pat) (on-body #'(body ...)))]))
-
-(def (on-pat stx)
-  (syntax-case stx (@ : ann \@tuple \@record \@list \@or-pat if block switch _)
-    [(@ attr pat) (??? (on-pat #'pat))]
-    [(ann pat type) (??? (on-pat #'pat) (on-type #'type))]
-    [id (identifier? #'id) ???]
-    [_ ???]
-    [lit (stx-atomic-literal? #'lit) ???]
-    [(@list pat ...) (??? (stx-map on-pat #'(pat ...)))]
-    [(@tuple pat ...) (??? (stx-map on-pat #'(pat ...)))]
-    [(@record (id pat) ...) (??? (stx-map on-pat #'(pat ...)))]
-    [(@or-pat pat ...) (??? (stx-map on-pat #'(pat ...)))]
-    [(id pat ...) (identifier? #'id) (??? (stx-map on-pat #'(pat ...)))]))
-
-
-(def (on-type stx)
-  (syntax-case stx (@ quote \@tuple \@record)
-    [(@ attr type) (??? (on-type #'type))]
-    [id (identifier? #'id) ???]
-    [(quote tyvar) (identifier? #'tyvar) ???]
-    [(@tuple type ...) (??? (stx-map on-type #'(type ...)))]
-    [(@record (id type) ...) (??? (stx-map on-type #'(type ...)))]
-    [(id type ...) (identifier? #'id) (??? (stx-map on-type #'(type ...)))]))
-|#
-;;(import :clan/utils/debug) (trace! tc-expr tc-expr-id tc-stmt tc-stmts tc-stmt-make-interaction)
+;(trace! biunify)

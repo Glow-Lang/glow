@@ -17,7 +17,7 @@
             (symdict)
             (type:app
              (type:name 'listof)
-             (@list (type:name-subtype 'nat (type:name 'int)))))))
+             (@list (@list #f (type:name-subtype 'nat (type:name 'int))))))))
          ('omega (entry:known #f (typing-scheme (symdict) (type:name 'lcexpr0))))
          ('ymn (entry:type #f (@list) (type:name 'ymn0)))
          ('i
@@ -77,7 +77,7 @@
              (ptype:union
               (@list (type:app
                       (type:name 'listof)
-                      (@list (type:name 'int)))
+                      (@list (@list #f (ptype:union (@list (type:var 'x8) (type:name 'int))))))
                      (type:app
                       (type:name 'listof)
-                      (@list (type:name-subtype 'nat (type:name 'int)))))))))))
+                      (@list (@list #f (type:name-subtype 'nat (type:name 'int))))))))))))

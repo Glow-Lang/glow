@@ -24,9 +24,10 @@
                     (type:name 'Participant)
                     (ntype:intersection (@list (type:var 'b0) (type:name 'bool)))
                     (ntype:intersection
-                     (@list (type:var 'x1)
+                     (@list (type:var 'x0)
+                            (type:var 'x1)
                             (type:var 'a0)
-                            (type:var 'x0)
+                            (type:var 'x2)
                             (type:var 'a3)
                             (type:name 'int))))
              (type:tuple (@list)))))))

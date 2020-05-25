@@ -12,7 +12,7 @@
 ;;  - (type:name Symbol)  ;; TODO: add srcloc
 ;;  - (type:name-subtype Symbol Type)
 ;;  - (type:var Symbol)
-;;  - (type:app Type [Listof Type])
+;;  - (type:app Type [Listof TypeVariancePair])
 ;;  - (type:tuple [Listof Type])
 ;;  - (type:record [Symdictof Type])
 ;;  - (type:arrow [Listof Type] Type)
@@ -31,6 +31,16 @@
       (type:tuple? v)
       (type:record? v)
       (type:arrow? v)))
+
+;; A TypeVariancePair is one of:
+;;  - (list #f #f)     ; for irrelevant
+;;  - (list #f Type)   ; for covariant
+;;  - (list Type #f)   ; for contravariant
+;;  - (list Type Type) ; for invariant
+;; The order follows section 9.1.1 and 9.1.2 of Algebraic Subyping:
+;; https://www.cl.cam.ac.uk/~sd601/thesis.pdf#subsection.9.1.1
+(def (tvp+ t) [#f t]) ; covariant
+(def (tvp- t) [t #f]) ; contravariant
 
 ;; PTypes are types used for outputs, while NTypes are types used for inputs.
 ;; PTypes are extended to allow unions, while NTypes allow intersections.
@@ -126,14 +136,14 @@
 (def typector:listof (type:name 'listof))
 (add-type-info! 'listof (type-info [covariant] empty-methods))
 
-(def (type:listof t) (type:app typector:listof [t]))
+(def (type:listof t) (type:app typector:listof [(tvp+ t)]))
 (def (type:listof? t)
   (match t
-    ((type:app c [_]) (eq? c typector:listof))
+    ((type:app c [[#f _]]) (eq? c typector:listof))
     (_ #f)))
 (def (type:listof-elem t)
   (match t
-    ((type:app c [e])
+    ((type:app c [[#f e]])
      (unless (eq? c typector:listof) (error 'listof-elem "expected a listof type"))
      e)))
 
@@ -143,6 +153,8 @@
 ;; the type that is a supertype of both types
 (def (type-join a b)
   (match* (a b)
+    (((ptype:union []) b) b)
+    ((a (ptype:union [])) a)
     (((ptype:union as) (ptype:union bs))
      (ptype:union
       (for/fold (bs bs) ((a (reverse as)))
@@ -172,6 +184,8 @@
 ;; NOTE: the meet of non-overlapping types is still different from bottom
 (def (type-meet a b)
   (match* (a b)
+    (((ntype:intersection []) b) b)
+    ((a (ntype:intersection [])) a)
     (((ntype:intersection as) (ntype:intersection bs))
      (ntype:intersection
       (for/fold (bs bs) ((a (reverse as)))
@@ -219,7 +233,7 @@
     ((type:name-subtype _ sup) (type-vars sup))
     ((type:var s) [s])
     ((type:app f as)
-     (append (type-vars f) (flatten1 (map type-vars as))))
+     (append (type-vars f) (flatten1 (map type-variance-pair-vars as))))
     ((type:tuple as)
      (flatten1 (map type-vars as)))
     ((type:record flds)
@@ -232,15 +246,20 @@
     ((ntype:intersection ts)
      (flatten1 (map type-vars ts)))))
 
+;; type-variance-pair-vars : TypeVariancePair -> [Listof symbol]
+(def (type-variance-pair-vars tvp)
+  (flatten1 (map type-vars (filter identity tvp))))
+
 ;; type-has-var? : Type Symbol -> Bool
 (def (type-has-var? t x)
   (def (hv? t) (type-has-var? t x))
+  (def (tvp-hv? tvp) (type-variance-pair-has-var? tvp x))
   (match t
     ((type:name s) #f)
     ((type:name-subtype _ sup) (hv? sup))
     ((type:var s) (eq? x s))
     ((type:app f as)
-     (or (hv? f) (ormap hv? as)))
+     (or (hv? f) (ormap tvp-hv? as)))
     ((type:tuple as)
      (ormap hv? as))
     ((type:record flds)
@@ -253,10 +272,17 @@
     ((ntype:intersection ts)
      (ormap hv? ts))))
 
+;; type-variance-pair-has-var? : TypeVariancePair Symbol -> Bool
+(def (type-variance-pair-has-var? tvp x)
+  (def (?hv? t) (and t (type-has-var? t x)))
+  (ormap ?hv? tvp))
+
 ;; type-subst : [Symdict Type] Type -> Type
 (def (type-subst tyvars t)
   ;; sub : Type -> Type
   (def (sub t) (type-subst tyvars t))
+  ;; tvp-sub : TypeVariancePair -> TypeVariancePair
+  (def (tvp-sub tvp) (type-variance-pair-subst tyvars tvp))
   (match t
     ((type:name _) t)
     ((type:name-subtype nm sup)
@@ -265,20 +291,26 @@
      (cond ((symdict-has-key? tyvars s) (symdict-ref tyvars s))
            (else t)))
     ((type:app f as)
-     (type:app (sub f) (map sub as)))
+     (type:app (sub f) (map tvp-sub as)))
     ((type:tuple as)
      (type:tuple (map sub as)))
     ((type:record fldtys)
      (type:record
       (list->symdict
        (map (lambda (p) (cons (car p) (sub (cdr p))))
-            fldtys))))
+            (symdict->list fldtys)))))
     ((type:arrow as b)
      (type:arrow (map sub as) (sub b)))
     ((ptype:union ts)
      (types-join (map sub ts)))
     ((ntype:intersection ts)
      (types-meet (map sub ts)))))
+
+;; type-variance-pair-subst :
+;; [Symdict Type] TypeVariancePair -> TypeVariancePair
+(def (type-variance-pair-subst tyvars tvp)
+  (def (?sub t) (and t (type-subst tyvars t)))
+  (map ?sub tvp))
 
 ;; --------------------------------------------------------
 
@@ -315,7 +347,7 @@
     ((type:name s) s)
     ((type:name-subtype s _) s)
     ((type:var s) `',s)
-    ((type:app f as) (cons (type->sexpr f) (map type->sexpr as)))
+    ((type:app f as) (cons (type->sexpr f) (map type-variance-pair->sexpr as)))
     ((type:tuple as) (cons '@tuple (map type->sexpr as)))
     ((type:record flds) (cons '@record
                               (map (lambda (k) [k (type->sexpr (symdict-ref flds k))])
@@ -323,6 +355,17 @@
     ((type:arrow as b) (cons '-> (append1 (map type->sexpr as) (type->sexpr b))))
     ((ptype:union ts) (cons '∪ (map type->sexpr ts)))
     ((ntype:intersection ts) (cons '∩ (map type->sexpr ts)))))
+
+;; type-variance-pair->sexpr : TypeVariancePair -> Sexpr
+;; A human-readable form, no disciction between covariant and contravariant
+(def (type-variance-pair->sexpr tvp)
+  (match tvp
+    ([#f #f] '())
+    ([t #f] (type->sexpr t))
+    ([#f t] (type->sexpr t))
+    ([t1 t2]
+     (let ((s1 (type->sexpr t1)) (s2 (type->sexpr t2)))
+       (if (equal? s1 s2) s1 [s1 s2])))))
 
 ;; type->string : Type -> String
 (def (type->string t) (format "~y" (type->sexpr t)))
@@ -369,12 +412,18 @@
     ((type:name s) `(type:name ',s))
     ((type:name-subtype s t) `(type:name-subtype ',s ,(type->repr-sexpr t)))
     ((type:var s) `(type:var ',s))
-    ((type:app f as) `(type:app ,(type->repr-sexpr f) ,(list->repr-sexpr as type->repr-sexpr)))
+    ((type:app f as) `(type:app ,(type->repr-sexpr f) ,(list->repr-sexpr as type-variance-pair->repr-sexpr)))
     ((type:tuple as) `(type:tuple ,(list->repr-sexpr as type->repr-sexpr)))
     ((type:record flds) `(type:record ,(symdict->repr-sexpr flds type->repr-sexpr)))
     ((type:arrow as b) `(type:arrow ,(list->repr-sexpr as type->repr-sexpr) ,(type->repr-sexpr b)))
     ((ptype:union ts) `(ptype:union ,(list->repr-sexpr ts type->repr-sexpr)))
     ((ntype:intersection ts) `(ntype:intersection ,(list->repr-sexpr ts type->repr-sexpr)))))
+
+;; type-variance-pair->repr-sexpr : TypeVariancePair -> Sexpr
+;; A lossless s-expression representation in "repr" style
+(def (type-variance-pair->repr-sexpr tvp)
+  (def (?->s t) (and t (type->repr-sexpr t)))
+  (list->repr-sexpr tvp ?->s))
 
 ;; repr-sexpr->type : Sexpr -> Type
 ;; The left-inverse for type->repr-sexpr
@@ -385,12 +434,18 @@
     (['type:name ['quote s]] (type:name s))
     (['type:name-subtype ['quote s] t] (type:name-subtype s (repr-sexpr->type t)))
     (['type:var ['quote s]] (type:var s))
-    (['type:app f as] (type:app (repr-sexpr->type f) (repr-sexpr->list as repr-sexpr->type)))
+    (['type:app f as] (type:app (repr-sexpr->type f) (repr-sexpr->list as repr-sexpr->type-variance-pair)))
     (['type:tuple as] (type:tuple (repr-sexpr->list as repr-sexpr->type)))
     (['type:record flds] (type:record (repr-sexpr->symdict flds repr-sexpr->type)))
     (['type:arrow as b] (type:arrow (repr-sexpr->list as repr-sexpr->type) (repr-sexpr->type b)))
     (['ptype:union ts] (ptype:union (repr-sexpr->list ts repr-sexpr->type)))
     (['ntype:intersection ts] (ntype:intersection (repr-sexpr->list ts repr-sexpr->type)))))
+
+;; repr-sexpr->type-variance-pair : Sexpr -> TypeVariancePair
+;; The left-inverse for type-variance-pair->repr-sexpr
+(def (repr-sexpr->type-variance-pair tvp)
+  (def (?->t t) (and t (repr-sexpr->type t)))
+  (repr-sexpr->list tvp ?->t))
 
 ;; typing-scheme->repr-sexpr : TypingScheme -> Sexpr
 (def (typing-scheme->repr-sexpr ts)

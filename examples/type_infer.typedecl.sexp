@@ -28,12 +28,12 @@
              (@list (ntype:intersection
                      (@list (type:var 'p0)
                             (type:arrow
-                             (@list (type:var 'v1))
+                             (@list (type:var 'v0))
                              (ntype:intersection
                               (@list (type:var 'p1) (type:name 'bool))))))
-                    (ntype:intersection (@list (type:var 'v2) (type:var 'v1) (type:var 'v0)))
+                    (ntype:intersection (@list (type:var 'v1) (type:var 'v0) (type:var 'v2)))
                     (type:var 'd0))
-             (ptype:union (@list (type:var 'v0) (type:var 'd0)))))))
+             (ptype:union (@list (type:var 'v2) (type:var 'd0)))))))
          ('pick_one
           (entry:known
            #f
