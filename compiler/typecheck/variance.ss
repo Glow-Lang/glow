@@ -28,6 +28,12 @@
     (variance (and (or ap bn) (or an bp))
               (and (or ap bp) (or an bn)))))
 
+;; variance-flip : Variance -> Variance
+;; Flips covariant <-> contravariant
+(def (variance-flip v)
+  (with (((variance p n) v))
+    (variance n p)))
+
 ;; --------------------------------------------------------
 
 ;; variance->repr-sexpr : Variance -> Sexpr
