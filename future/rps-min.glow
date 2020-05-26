@@ -1,4 +1,3 @@
-#lang glow
 data Hand = | Rock | Paper | Scissors;
 data Outcome = | B_Wins | Draw | A_Wins;
 let winner = (handA : Hand, handB : Hand) : Outcome => {
