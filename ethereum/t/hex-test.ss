@@ -21,7 +21,7 @@
                  [8271117963530313756381553648673 "0x68656c6c6f2c20776f726c6421"]])
       (for-each (match <>
                   ([hex err]
-                   (check-equal? err (with-catch error-exception-message (lambda () (nat<-0x hex))))))
+                   (check-equal? err (with-catch error-exception-message (cut nat<-0x hex)))))
                 [["0" "Hex string does not begin with 0x"]
                  ["" "Hex string does not begin with 0x"]
                  ["0x" "Hex quantity has no digits"]
@@ -41,7 +41,7 @@
                  [(@bytes "hello, world!") "0x68656c6c6f2c20776f726c6421"]])
       (for-each (match <>
                   ([hex err]
-                   (check-equal? err (with-catch error-exception-message (lambda () (bytes<-0x hex))))))
+                   (check-equal? err (with-catch error-exception-message (cut bytes<-0x hex)))))
                 [["0" "Hex string does not begin with 0x"]
                  ["" "Hex string does not begin with 0x"]
                  ["004200" "Hex string does not begin with 0x"]
