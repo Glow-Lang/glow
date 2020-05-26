@@ -21,10 +21,24 @@ You can find the community for both these layers of language on Gitter:
 [Gerbil Scheme gitter](https://gitter.im/gerbil-scheme/community) and
 [Gambit Scheme gitter](https://gitter.im/gambit/gambit).
 
-## Configuring Your Editer
+## Configuring Your Editor
+
+### Debugging with Emacs gerbil-mode
+
+You can setup [Gerbil Development with Emacs](https://cons.io/guide/emacs.html).
+In addition to the regular setup, you can arrange for `gxi` to come
+with all the relevant Glow modules already loaded at startup,
+by configure your Emacs with something like:
+
+```
+(setq gerbil-program-name "/path/to/glow/ggxi")
+(setq scheme-program-name gerbil-program-name)
+```
 
 ### Debugging with Emacs SLIME
 
+As an alternative to `gerbil-mode`, but still in Emacs,
+you can use [SLIME](https://common-lisp.net/project/slime/).
 Make sure a recent SLIME is installed in Emacs, and use the following,
 replacing the path in it by the place where you checked out the glow source code:
 
