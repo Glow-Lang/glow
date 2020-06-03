@@ -1,3 +1,4 @@
+(@module
 (def payForSignature
      ()
      (@make-interaction
@@ -8,4 +9,4 @@
       (@ Seller (def signature () (sign digest0)))
       (publish! Seller signature)
       (require! (@app isValidSignature Seller digest0 signature))
-      (withdraw! Seller price)))
+      (withdraw! Seller price))))

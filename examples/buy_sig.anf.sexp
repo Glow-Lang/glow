@@ -1,3 +1,4 @@
+(@module
 (def payForSignature
      (@make-interaction
       ((@list Buyer Seller))
@@ -10,4 +11,4 @@
       (require! tmp)
       (withdraw! Seller price)
       (return (@tuple))))
-(return (@tuple))
+(return (@tuple)))

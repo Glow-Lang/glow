@@ -1,3 +1,4 @@
+(@module
 (def f (λ (a1) () (return (@app + a1 1))))
 (def g (λ (a2) () (return (@app * a2 2))))
 (def inter
@@ -12,4 +13,4 @@
                  (#t (def tmp0 (@app f x)) (def y (@app g tmp0)))
                  (#f (def tmp1 (@app g x)) (def y (@app f tmp1)))))
       (return (@tuple))))
-(return (@tuple))
+(return (@tuple)))

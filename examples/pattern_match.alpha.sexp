@@ -1,3 +1,4 @@
+(@module
 (def i 2)
 (switch i
   (0 "zero")
@@ -67,4 +68,4 @@
   ((@tuple #t #t) "yes")
   ((@tuple #t #f) "maybe")
   ((@tuple #f #f) "no")
-  ((@tuple #f #t) "inconceivable!"))
+  ((@tuple #f #t) "inconceivable!")))

@@ -30,14 +30,14 @@
   ;; :ecraven/gerbil-swank
 
   ;; Clan Utilities
-  :clan/net/s3 :clan/net/simple-http-client :clan/net/websocket
+  :clan/net/s3 :clan/net/simple-http-client :clan/net/websocket :clan/net/json-rpc.net
   :clan/utils/assert :clan/utils/base :clan/utils/basic-parsers :clan/utils/basic-printers
   :clan/utils/call-limiter :clan/utils/concurrency :clan/utils/config
   :clan/utils/date :clan/utils/debug :clan/utils/diceware
   :clan/utils/error :clan/utils/exit :clan/utils/ffi :clan/utils/files :clan/utils/filesystem
   :clan/utils/generator :clan/utils/hash
   :clan/utils/json :clan/utils/list :clan/utils/logger
-  :clan/utils/memo :clan/utils/multicall :clan/utils/number
+  :clan/utils/maybe :clan/utils/memo :clan/utils/multicall :clan/utils/number :clan/utils/option
   :clan/utils/path :clan/utils/path-config :clan/utils/peekable-iterator
   :clan/utils/random :clan/utils/source
   :clan/utils/simple-rpc-client :clan/utils/stateful-avl-map :clan/utils/string
@@ -59,7 +59,7 @@
   :glow/compiler/anf/anf
   :glow/compiler/participantify/participantify
   :glow/crypto/keccak
-  :glow/ethereum/hex
+  :glow/ethereum/hex :glow/ethereum/types
 
   ;; Testing Glow
   :glow/t/common

@@ -1,3 +1,4 @@
+(@module
 (defdata yn
          Yes
          No
@@ -80,4 +81,4 @@
          (@record (input (λ (tag8) (: nothing) (def x12 (: nothing) (input nothing tag8)) x12))
                   (toNat (λ ((x13 : nothing)) (: nat) (switch x13)))
                   (ofNat (λ ((x14 : nat)) (: nothing) (switch x14)))))
-(deftype purelcexpr (lcexpr nothing))
+(deftype purelcexpr (lcexpr nothing)))

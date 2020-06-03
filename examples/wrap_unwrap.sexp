@@ -1,3 +1,4 @@
+(@module
 ;; 'a is invariant for now, though it could be
 ;; inferred as covariant
 (defdata (wrap 'a) (Wrap 'a))
@@ -45,4 +46,4 @@
       ((ConsumeProduce c3 p3)
        (c3 x3)
        (p3 (@tuple))))))
-|#
+|#)

@@ -16,21 +16,24 @@
 
 ;;; Layers
 
+;; TODO: at the top-level, have a @module form or structure, NOT a list of statements,
+;; so we can attach meta-data to it.
+
 ;; TODO: also represent source location somehow? and unused-table?
 
 ;; TODO: Our source layer, with its JavaScript-like, ReasonML-like syntax
 ;;(define-layer ".glow" parse-glow pretty-print-glow)
 
 ;; SEXP notation for Glow programs
-(define-layer sexp read-sexp-file write-sexps stx-sexpr=?)
+(define-layer sexp read-sexp-module write-sexp-module stx-sexpr=?)
 
 ;; Alpha-converted Glow programs, and the Unused table
-(define-layer alpha.sexp read-sexp-file write-sexps stx-sexpr=?)
+(define-layer alpha.sexp read-sexp-module write-sexp-module stx-sexpr=?)
 (define-layer Unused #f #f #f)
 
 ;; Desugared Glow programs
 ;; TODO: also represent source location and unused-table?
-(define-layer desugar.sexp read-sexp-file write-sexps stx-sexpr=?)
+(define-layer desugar.sexp read-sexp-module write-sexp-module stx-sexpr=?)
 
 ;; Typed Glow programs
 ;; TODO: also represent source location, unused-table and type annotations?
@@ -39,17 +42,17 @@
 ;; (Typed) Glow programs in A-Normal form
 ;; where all function call arguments are trivial (reference to constant or variable).
 ;; TODO: also represent source location, unused-table and type annotations?
-(define-layer anf.sexp read-sexp-file write-sexps stx-sexpr=?)
+(define-layer anf.sexp read-sexp-module write-sexp-module stx-sexpr=?)
 
 ;; (Typed) Glow programs in A-Normal form with safe-points between participant changes.
 ;; where all function call arguments are trivial (reference to constant or variable).
-(define-layer participantify.sexp read-sexp-file write-sexps stx-sexpr=?)
+(define-layer participantify.sexp read-sexp-module write-sexp-module stx-sexpr=?)
 
 
-(define-layer safepointify.sexp read-sexp-file write-sexps stx-sexpr=?) ;; after safepoints added
-(define-layer bbepp.sexp read-sexp-file write-sexps stx-sexpr=?) ;; right Before BEPP
-(define-layer contract.sexp read-sexp-file write-sexps stx-sexpr=?) ;; BEPP for contracts
-(define-layer client.sexp read-sexp-file write-sexps stx-sexpr=?) ;; BEPP for clients
+(define-layer safepointify.sexp read-sexp-module write-sexp-module stx-sexpr=?) ;; after safepoints added
+(define-layer bbepp.sexp read-sexp-module write-sexp-module stx-sexpr=?) ;; right Before BEPP
+(define-layer contract.sexp read-sexp-module write-sexp-module stx-sexpr=?) ;; BEPP for contracts
+(define-layer client.sexp read-sexp-module write-sexp-module stx-sexpr=?) ;; BEPP for clients
 
 
 ;;; Passes
@@ -63,23 +66,23 @@
 ;; *Alpha-Conversion*: ensure that each identifier only appears once in the entire program.
 ;; TODO: the user-visible identifiers should stay the same (i.e. (export #f) by default?)
 ;; TODO: in some future, intersperse alpha-conversion, macro-expansion and type-inference passes?
-;; (Listof Stmt) → (values (Listof Stmt) Unused AlphaEnv)
+;; ModuleStx → (values ModuleStx Unused AlphaEnv)
 (define-pass alpha-convert (sexp) (alpha.sexp Unused AlphaEnv))
 
 ;; *Desugaring*: expand away some more complex syntax into simpler one.
 ;; NB: Unused is used as a side-effect instead of passed in a pure monadic style
-;; (Listof Stmt) Unused AlphaEnv → (Listof Stmt)
+;; ModuleStx Unused AlphaEnv → ModuleStx
 (define-pass desugar (alpha.sexp Unused) (desugar.sexp))
 
 ;; *Typechecking*: annotate every binding and every sub-expression
 ;; with an inferred (or explicitly specified) type
 ;; NB: the Unused table is modified in this pass
-;; (Listof Stmt) Unused → TypeEnv
+;; ModuleStx Unused → TypeEnv
 (define-pass typecheck (desugar.sexp Unused) (typedecl.sexp TypeInfoTable))
 
 ;; *A-normalization*: ensure all call arguments are trivial,
 ;; hence a well-defined sequence for all side-effects.
-;; (Listof Stmt) Unused → (Listof Stmt)
+;; ModuleStx Unused → ModuleStx
 (define-pass anf (desugar.sexp Unused) (anf.sexp))
 
 ;; *Transaction-ification*: introduce suitable safe points between changes in participants
@@ -93,6 +96,7 @@
 ;; *Liveness properties*:
 
 ;; *Escrow insertion*:
+;;(define-pass escrowify (participantity.sexp Unused) (escrowify.sexp))
 
 ;; *Timeout insertion*:
 
