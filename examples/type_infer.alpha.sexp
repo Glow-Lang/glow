@@ -1,3 +1,4 @@
+(@module
 (def pick_one
   (λ (b x y) (if b x y)))
 
@@ -10,4 +11,4 @@
 (def id_on_int
   (λ (x1)
     (@app + x1 1)
-    x1))
+    x1)))

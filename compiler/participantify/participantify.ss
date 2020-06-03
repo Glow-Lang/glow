@@ -27,11 +27,13 @@
 ;; They matter when extracting the logical model of the interaction.
 
 
-;; participantify : [Listof StmtStx] UnusedTable -> [Listof StmtStx]
-(def (participantify stmts unused-table)
+;; participantify : ModuleStx UnusedTable -> ModuleStx
+(def (participantify module unused-table)
   (parameterize ((current-unused-table unused-table))
-    (defvalues (stmts2 part2) (participantify-stmts stmts #f []))
-    (reverse stmts2)))
+    (syntax-case module (@module)
+      ((@module stmts ...)
+       (let-values (((stmts2 part2) (participantify-stmts (syntax->list #'(stmts ...)) #f [])))
+         (retail-stx module (reverse stmts2)))))))
 
 ;; I don't know for sure what we should return, so it's a ParticipantX for now
 ;; #f if all consensual so far. -- or should it be variable, introduced if need be?

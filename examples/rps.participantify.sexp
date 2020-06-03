@@ -1,4 +1,5 @@
-(defdata Hand
+(@module
+    (defdata Hand
          (Rock Paper Scissors)
          (with:
           (def tmp
@@ -91,4 +92,4 @@
               (B_Wins (def tmp26 (@app * 2 wagerAmount)) (withdraw! B tmp26))
               (Draw (withdraw! A wagerAmount) (withdraw! B wagerAmount)))
       (return outcome)))
-(return (@tuple))
+(return (@tuple)))

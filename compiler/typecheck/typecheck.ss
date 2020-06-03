@@ -269,7 +269,7 @@
   (with-catch
    (lambda (e) (display-exception e) #f)
    (lambda ()
-     (match (read-sexp-file file)
+     (match (read-syntax-from-file file)
        ([s] (repr-sexpr->type-env (syntax->datum s)))
        (_ (printf "read-type-env-file: expected a single symdict sexpr\n") #f)))))
 
@@ -672,18 +672,20 @@
    ('randomUInt256 (entry:known #f (typing-scheme empty-symdict (type:arrow [] type:nat))))
    ('isValidSignature (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Participant type:Digest type:Signature] type:bool))))))
 
-;; typecheck : [Listof Stmt] UnusedTable → (values Env TypeInfoTable)
+;; typecheck : ModuleStx UnusedTable → (values Env TypeInfoTable)
 ;; Input unused-table is mutated.
 ;; Output env has types of top-level identifiers.
-(def (typecheck stmts unused-table)
+(def (typecheck module unused-table)
   (def type-info-tbl (copy-current-type-info-table))
   (parameterize ((current-unused-table unused-table)
                  (current-type-info-table type-info-tbl)
                  (current-symbol-ntype-table (make-symbol-ntype-table)))
-    (defvalues (penv nenv) (tc-stmts #f init-env stmts))
-    (unless (symdict-empty? nenv)
-      (error 'typecheck "non-empty D⁻ for free lambda-bound vars at top level"))
-    (values penv type-info-tbl)))
+    (syntax-case module (@module)
+      ((@module stmts ...)
+       (let-values (((penv nenv) (tc-stmts #f init-env (syntax->list #'(stmts ...)))))
+         (unless (symdict-empty? nenv)
+           (error 'typecheck "non-empty D⁻ for free lambda-bound vars at top level"))
+         (values penv type-info-tbl))))))
 
 ;; tc-stmts : MPart Env [Listof StmtStx] -> (values Env MonoEnv)
 ;; the env result contains only the new entries introduced by the statements
@@ -790,7 +792,7 @@
             (tc-defdata-variants part env env2 empty-symdict b #'(variant ...)))
            ;; handle the rtvalue
            (def methods (tc-expr part (env-put/envs env [env2 penv]) #'rtvalue))
-          (values penv nenv methods)))
+           (values penv nenv methods)))
        (add-type-info! sym (type-info [] methods))
        (values (env-put/env env2 penv) nenv)))
     ((defdata (f 'x ...) variant ... with: rtvalue) (identifier? #'f)
@@ -814,7 +816,7 @@
                    (for/collect ((xvp xvps))
                      (with (([xn xp] xvp)) [(type:var xn) (type:var xp)]))))
        (def env2 (symdict (s (entry:type part xvps b))))
-       ;; TODO: this pattern would be easier with spicing-parameterize
+       ;; TODO: this pattern would be easier with splicing-parameterize
        (defvalues (penv nenv methods)
          (parameterize ((current-type-info-table (copy-current-type-info-table)))
            (add-type-info! sym (type-info vances empty-methods))

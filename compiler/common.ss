@@ -109,14 +109,17 @@
          (else
           (stx-sexpr=?/recur a b stx-deep-source=?)))))
 
+(def (first-and-only x)
+  (assert! (and (pair? x) (null? (cdr x))))
+  (car x))
+
 ;; TODO: do we need to properly parameterize the context (?)
-(def (read-sexp-file file)
-  (read-syntax-from-file file))
+(def (read-sexp-module file)
+  (first-and-only (read-syntax-from-file file)))
 
 ;; NB: this is lossy of source location and identifier resolution
-(def (write-sexps statements (port (current-output-port)))
-  (for ((stmt statements))
-    (fprintf port "~y" (syntax->datum stmt))))
+(def (write-sexp-module module (port (current-output-port)))
+  (fprintf port "~y" (syntax->datum module)))
 
 ;; Splice multiple statements if needed, otherwise just include a single one
 ;; spice-stmts : Stx [listof StmtStx] -> StmtStx

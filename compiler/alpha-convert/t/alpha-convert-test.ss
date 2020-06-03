@@ -30,8 +30,7 @@
 (def (alpha-convert-display prog maybe-alpha)
   (defvalues (prog2 _unused-table env) (alpha-convert prog))
   (prn env)
-  (for ((stmt prog2))
-    (printf "~y" (syntax->datum stmt)))
+  (printf "~y" (syntax->datum prog2))
   (def failed #f)
   (when maybe-alpha
     (cond ((stx-sexpr=? prog2 maybe-alpha)
@@ -56,9 +55,9 @@
 
 (def (try-alpha-convert-files files)
   (def files-alpha (map sexp-alpha-version files))
-  (def progs (map read-sexp-file files))
+  (def progs (map read-sexp-module files))
   (def progs-alpha
-    (map (lambda (f) (and (file-exists? f) (read-sexp-file f))) files-alpha))
+    (map (lambda (f) (and (file-exists? f) (read-sexp-module f))) files-alpha))
   (let ((failed '()))
     (for ((f files) (p progs) (pa progs-alpha))
       (displayln f)

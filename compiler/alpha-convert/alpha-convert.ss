@@ -49,15 +49,17 @@
     randomUInt256 isValidSignature
     canReach mustReach))
 
-;; alpha-convert : [Listof StmtStx] -> (values [Listof StmtStx] UnusedTable Env)
-(def (alpha-convert stmts)
+;; alpha-convert : ModuleStx -> (values ModuleStx UnusedTable Env)
+(def (alpha-convert module)
   (parameterize ((current-unused-table (make-unused-table)))
     (for ((k keyword-syms)) (use/check-unused k))
     (def init-env
       (for/fold (acc empty-symdict) ((x init-syms))
         (symdict-put acc x (entry (symbol-fresh x) #f))))
-    (defvalues (env2 stmts2) (alpha-convert-stmts init-env stmts))
-    (values stmts2 (current-unused-table) env2)))
+    (syntax-case module (@module)
+      ((@module stmts ...)
+       (let-values (((env2 stmts2) (alpha-convert-stmts init-env (syntax->list #'(stmts ...)))))
+         (values (retail-stx module stmts2) (current-unused-table) env2))))))
 
 ;; alpha-convert-type : Env TypeStx -> TypeStx
 (def (alpha-convert-type env stx)

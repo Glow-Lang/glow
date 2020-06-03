@@ -1,3 +1,4 @@
+(@module
 (def payForSignature
      (@make-interaction
       ((@list Buyer Seller))
@@ -22,4 +23,4 @@
 ;; Return from the application-defining interaction.
 ;; Instead of returning a unit, should it be returning a first-class environment
 ;; exporting all the variables defined?
-(return (@tuple))
+(return (@tuple)))

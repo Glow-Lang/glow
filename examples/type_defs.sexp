@@ -1,3 +1,4 @@
+(@module
 (defdata yn Yes No)
 
 (defdata ordering LT EQ GT)
@@ -48,4 +49,4 @@
 
 (defdata nothing)
 
-(deftype purelcexpr (lcexpr nothing))
+(deftype purelcexpr (lcexpr nothing)))
