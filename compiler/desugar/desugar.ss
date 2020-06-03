@@ -74,6 +74,7 @@
                [['toNat [#'λ [[x-to ': #'spec]] [': 'nat] [#'switch x-to . toNat-cases]]]
                 ['ofNat [#'λ [[of-x ': #'nat]] [': #'spec] [#'switch of-x . ofNat-cases]]]])
              '())))
+       (def spec-name (stx-e (if (identifier? #'spec) #'spec (stx-car #'spec))))
        (def rtvalue `(@record (input ,input) ,@toofNat))
        (retail-stx stx `(,#'spec ,@(syntax->list #'(variant ...)) with: ,rtvalue))))))
 
@@ -176,7 +177,7 @@
     ((== a b) (desugar-keyword/sub-exprs stx))
     ((input type tag) (retail-stx stx [#'type (desugar-expr #'tag)]))
     ((digest e ...) (desugar-keyword/sub-exprs stx))
-    ((sign e ...) (desugar-keyword/sub-exprs stx))
+    ((sign e) (desugar-keyword/sub-exprs stx))
     ((require! e) (desugar-keyword/sub-exprs stx))
     ((assert! e) (desugar-keyword/sub-exprs stx))
     ((deposit! x e) (desugar-keyword/sub-exprs stx))
@@ -204,8 +205,10 @@
 
 ;; Conform to pass convention.
 ;; NB: side-effecting the unused-table
-;; desugar : [Listof StmtStx] UnusedTable AlphaEnv -> [Listof StmtStx]
-(def (desugar stmts unused-table)
+;; desugar : ModuleStx UnusedTable AlphaEnv -> ModuleStx
+(def (desugar module unused-table)
   (parameterize ((current-unused-table unused-table)
                  (current-verifications (make-hash-table)))
-    (desugar-stmts stmts)))
+    (syntax-case module (@module)
+      ((@module stmts ...)
+       (retail-stx module (desugar-stmts (syntax->list #'(stmts ...))))))))

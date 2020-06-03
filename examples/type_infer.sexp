@@ -1,3 +1,4 @@
+(@module
 ;; Examples taken from MLsub:
 ;;  - Video: ICFP 2015 03 Polymorphism, subtyping, and type inference in MLsub
 ;;    https://www.youtube.com/watch?v=E3PIKlsXOQo
@@ -39,4 +40,4 @@
 (def id_on_int ; (-> (∩ int 'a) 'a)
   (λ (x)
     (+ x 1)
-    x))
+    x)))

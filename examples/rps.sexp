@@ -1,3 +1,4 @@
+(@module
 (defdata Hand Rock Paper Scissors)
 (defdata Outcome B_Wins Draw A_Wins)
 
@@ -31,4 +32,4 @@
       (Draw (withdraw! A wagerAmount)
             (withdraw! B wagerAmount)))
 
-    outcome)))
+    outcome))))

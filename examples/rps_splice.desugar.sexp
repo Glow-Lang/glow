@@ -1,3 +1,4 @@
+(@module
 (defdata Hand
          Rock
          Paper
@@ -42,4 +43,4 @@
               (A_Wins (withdraw! A (@app * 2 wagerAmount)))
               (B_Wins (withdraw! B (@app * 2 wagerAmount)))
               (Draw (withdraw! A wagerAmount) (withdraw! B wagerAmount)))
-      outcome))
+      outcome)))

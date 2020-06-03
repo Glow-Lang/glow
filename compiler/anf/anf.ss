@@ -213,7 +213,7 @@
     ((assert! . _) (anf-k-multiarg-stmt k stx acc))
     ((deposit! . _) (anf-k-multiarg-stmt k stx acc))
     ((withdraw! . _) (anf-k-multiarg-stmt k stx acc))
-    ((digest . _) (anf-k-multiarg-expr k stx acc))
+    ((digest . _) (anf-k-multiarg-expr k stx acc)) ;; TODO: make an explicit tuple?
     ((sign . _) (anf-k-multiarg-expr k stx acc))
     ((@app . _)
      (let-values (((reduced-expr acc2) (anf-multiarg-expr stx acc)))
@@ -246,10 +246,12 @@
      (anf-kontinue-expr k (retail-stx stx [#'ip #'lp #'ot (anf-standalone-body #'(return) #'body) ...])
                         acc))))
 
-;; anf : [Listof StmtStx] UnusedTable -> [Listof StmtStx]
-(def (anf stmts unused-table)
+;; anf : ModuleStx UnusedTable -> ModuleStx
+(def (anf module unused-table)
   (parameterize ((current-unused-table unused-table)
                  (current-tmp (hash)))
-    (reverse (anf-stmts #'(return) stmts []))))
+    (syntax-case module (@module)
+      ((@module stmts ...)
+       (retail-stx module (reverse (anf-stmts #'(return) (syntax->list #'(stmts ...)) [])))))))
 
 ;;(trace! anf anf-stmts anf-stmt anf-expr anf-body anf-kontinue-expr anf-kontinue-stmt anf-k-multiarg-stmt anf-multiarg-expr anf-k-reduced-expr anf-arg-expr);;XXX DEBUG

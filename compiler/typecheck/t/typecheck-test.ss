@@ -84,7 +84,7 @@
 ;; try-typecheck-files : [Listof PathString] -> Void
 (def (try-typecheck-files files)
   (def decl-files (map sexp-typedecl-version files))
-  (def progs (map read-sexp-file files))
+  (def progs (map read-sexp-module files))
   (def decls
     (map (lambda (f) (and (file-exists? f) (read-type-env-file f))) decl-files))
   (def known-fails (map known-failure? decl-files))
