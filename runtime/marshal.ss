@@ -3,7 +3,8 @@
 (import
   :gerbil/gambit/bytes :gerbil/gambit/ports
   :std/misc/bytes :std/sugar
-  :clan/utils/base :clan/poo/mop
+  :clan/utils/base
+  :clan/poo/poo :clan/poo/mop
   )
 
 (def (write-u8vector v p) (write-subu8vector v 0 (u8vector-length v) p))
@@ -48,3 +49,8 @@
 
 (.defgeneric (unmarshal type port)
    slot: .unmarshal)
+
+(.def (bytes<-un/marshal @ [] .marshal .unmarshal)
+   .bytes<-: (bytes<-<-marshal .marshal)
+   .<-bytes: (<-bytes<-unmarshal .unmarshal))
+
