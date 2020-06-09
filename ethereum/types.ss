@@ -67,7 +67,7 @@
   (def a (map/car sym<-kw (alist<-plist plist)))
   {(:: @ [Class])
    repr: ['Record . plist]
-   slots: (o<-alist
+   slots: (.<-alist
            (map (match <> ([sym . type] (cons sym {type: Type}))) a))
    methods: =>.+ {(:: @ [bytes<-un/marshal])
      .json<-: (lambda (v)
@@ -75,13 +75,13 @@
                  (map (match <> ([sym . type] (cons sym (.call type .json<- (.ref v sym))))) a)))
      .<-json: (lambda (j)
                 (.mix
-                    (o<-alist (map (match <> ([sym . type] (cons sym (.call type .<-json (hash-ref j sym))))) a))
+                    (.<-alist (map (match <> ([sym . type] (cons sym (.call type .<-json (hash-ref j sym))))) a))
                     proto))
      .marshal: (lambda (v port)
                  (for-each (match <> ([sym . type] (marshal type (.ref v sym) port))) a))
      .unmarshal: (lambda (v port)
                    (.mix
-                    (o<-alist (map-in-order
+                    (.<-alist (map-in-order
                                (match <> ([sym . type] (cons sym (unmarshal type port)))) a))
                     proto))
      }
@@ -104,13 +104,13 @@
                  (map (match <> ([sym . type] (cons sym (.call type .json<- (.ref v sym))))) a)))
      .<-json: (lambda (j)
                 (.mix
-                    (o<-alist (map (match <> ([sym . type] (cons sym (.call type .<-json (hash-ref j sym))))) a))
+                    (.<-alist (map (match <> ([sym . type] (cons sym (.call type .<-json (hash-ref j sym))))) a))
                     proto))
      .marshal: (lambda (v port)
                  (for-each (match <> ([sym . type] (marshal type (.ref v sym) port))) a))
      .unmarshal: (lambda (v port)
                    (.mix
-                    (o<-alist (map-in-order
+                    (.<-alist (map-in-order
                                (match <> ([sym . type] (cons sym (unmarshal type port)))) a))
                     proto))
      }
