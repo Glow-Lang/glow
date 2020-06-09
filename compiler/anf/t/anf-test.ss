@@ -15,6 +15,8 @@
   :glow/t/common
   :glow/compiler/alpha-convert/alpha-convert
   :glow/compiler/desugar/desugar
+  :glow/compiler/typecheck/typecheck
+  :glow/compiler/method-resolve/method-resolve
   :glow/compiler/anf/anf)
 
 ;; test-file : Path -> Void
@@ -28,7 +30,9 @@
        (def prog (read-sexp-module file))
        (defvalues (acprog unused-table alpha-env) (alpha-convert prog))
        (defvalues (desugprog) (desugar acprog unused-table))
-       (defvalues (anfprog) (anf desugprog unused-table))
+       (defvalues (tcenv tinfo) (typecheck desugprog unused-table))
+       (defvalues (mereprog) (method-resolve desugprog unused-table))
+       (defvalues (anfprog) (anf mereprog unused-table))
        (def expected-file (format "~a.anf.sexp" (string-trim-suffix ".sexp" file)))
        (ppd anfprog) (newline)
        (when (file-exists? expected-file)

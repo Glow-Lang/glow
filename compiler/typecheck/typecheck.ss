@@ -1,4 +1,8 @@
-(export #t
+(export typecheck
+        (struct-out entry:unknown entry:known entry:ctor entry:type)
+        read-type-env-file
+        write-type-env
+        type-env=?
         (import:
          :glow/compiler/common
          :glow/compiler/typecheck/variance
@@ -21,7 +25,8 @@
         :glow/compiler/env
         :glow/compiler/alpha-convert/fresh
         :glow/compiler/typecheck/variance
-        :glow/compiler/typecheck/type)
+        :glow/compiler/typecheck/type
+        :glow/compiler/typecheck/stx-prop)
 
 ;; Typechecking glow-sexpr
 
@@ -573,54 +578,57 @@
   ;; party : TypeStx -> Type
   ;; Doesn't change variance, only suitable for covariant s relative to stx
   (def (party s) (parse-type part env vnc xsbi s))
-  (syntax-case stx (@ quote @tuple @record)
-    ((@ _ _) (error 'parse-type "TODO: deal with @"))
-    ((@tuple t ...) (type:tuple (stx-map party #'(t ...))))
-    ((@record (fld t) ...)
-     (type:record
-      (list->symdict
-       (stx-map (lambda (fld t) (cons (syntax-e fld) (party t)))
-                #'(fld ...)
-                #'(t ...)))))
-    ('x (identifier? #'x)
-     (let ((s (syntax-e #'x)))
-       (cond
-         ((symdict-has-key? xsbi s)
+  (def t
+   (syntax-case stx (@ quote @tuple @record)
+     ((@ _ _) (error 'parse-type "TODO: deal with @"))
+     ((@tuple t ...) (type:tuple (stx-map party #'(t ...))))
+     ((@record (fld t) ...)
+      (type:record
+       (list->symdict
+        (stx-map (lambda (fld t) (cons (syntax-e fld) (party t)))
+                 #'(fld ...)
+                 #'(t ...)))))
+     ('x (identifier? #'x)
+      (let ((s (syntax-e #'x)))
+        (cond
+          ((symdict-has-key? xsbi s)
           ;; use variance to see which one
-          (tyvar-bisubst (symdict-ref xsbi s) vnc s))
-         (else (type:var s)))))
-    (x (identifier? #'x)
-     (let ((s (syntax-e #'x)))
-       (unless (symdict-has-key? env s)
-         (error s "unknown type"))
-       (def ent (symdict-ref env s))
-       (unless (mpart-can-use? part (entry-part ent))
-         (error s "access allowed only for" (entry-part ent)))
-       (match ent
-         ((entry:type part* [] t)  t)
-         ((entry:type _ [_ . _] _) (error s "expects type arguments"))
-         (_                        (error s "not a type")))))
-    ((f a ...) (identifier? #'f)
-     (let ((s (syntax-e #'f)))
-       (unless (symdict-has-key? env s)
-         (error s "unknown type"))
-       (def ent (symdict-ref env s))
-       (unless (mpart-can-use? part (entry-part ent))
-         (error s "access allowed only for" (entry-part ent)))
-       (match ent
-         ((entry:type _ xvps b)
-          (unless (= (length xvps) (stx-length #'(a ...)))
-            (error 'parse-type "wrong number of type arguments"))
-          (def tyvars2
-            (for/fold (tyvars empty-symdict) ((xvp xvps) (a (syntax->list #'(a ...))))
-              (with (([xn xp] xvp))
-                (symdict-put/list
-                 tyvars
-                 (append
-                  (if xn [(cons xn (parse-type part env (variance-flip vnc) xsbi a))] [])
-                  (if xp [(cons xp (parse-type part env vnc xsbi a))]))))))
-          (type-subst tyvars2 b))
-         (_ (error s "not a type")))))))
+           (tyvar-bisubst (symdict-ref xsbi s) vnc s))
+          (else (type:var s)))))
+     (x (identifier? #'x)
+      (let ((s (syntax-e #'x)))
+        (unless (symdict-has-key? env s)
+          (error s "unknown type"))
+        (def ent (symdict-ref env s))
+        (unless (mpart-can-use? part (entry-part ent))
+          (error s "access allowed only for" (entry-part ent)))
+        (match ent
+          ((entry:type part* [] t)  t)
+          ((entry:type _ [_ . _] _) (error s "expects type arguments"))
+          (_                        (error s "not a type")))))
+     ((f a ...) (identifier? #'f)
+      (let ((s (syntax-e #'f)))
+        (unless (symdict-has-key? env s)
+          (error s "unknown type"))
+        (def ent (symdict-ref env s))
+        (unless (mpart-can-use? part (entry-part ent))
+          (error s "access allowed only for" (entry-part ent)))
+        (match ent
+          ((entry:type _ xvps b)
+           (unless (= (length xvps) (stx-length #'(a ...)))
+             (error 'parse-type "wrong number of type arguments"))
+           (def tyvars2
+             (for/fold (tyvars empty-symdict) ((xvp xvps) (a (syntax->list #'(a ...))))
+               (with (([xn xp] xvp))
+                 (symdict-put/list
+                  tyvars
+                  (append
+                   (if xn [(cons xn (parse-type part env (variance-flip vnc) xsbi a))] [])
+                   (if xp [(cons xp (parse-type part env vnc xsbi a))]))))))
+           (type-subst tyvars2 b))
+          (_ (error s "not a type")))))))
+  (set-is-type stx t)
+  t)
 
 ;; parse-closed-type : MPart Env TypeStx -> Type
 ;; When the tyvar bisubstitution is empty,
@@ -783,6 +791,7 @@
      (let ((s (syntax-e #'x)))
        (def sym (symbol-fresh s))
        (def b (type:name sym))
+       (set-is-type #'x b)
        (def env2 (symdict (s (entry:type part [] b))))
        ;; TODO: this pattern would be easier with splicing-parameterize
        (defvalues (penv nenv methods)
@@ -811,8 +820,10 @@
              (symdict-put acc x (type-interval (type:var xn) (type:var xp))))))
        ;; TODO: allow variances to be either annotated or inferred
        (def vances (map (lambda (x) invariant) xs))
+       (def ft (type:name sym))
+       (set-is-type #'f ft)
        (def b
-         (type:app (type:name sym)
+         (type:app ft
                    (for/collect ((xvp xvps))
                      (with (([xn xp] xvp)) [(type:var xn) (type:var xp)]))))
        (def env2 (symdict (s (entry:type part xvps b))))
@@ -944,22 +955,13 @@
   (def (tce e) (tc-expr part env e))
   ;; tce/bool : ExprStx -> TypingScheme
   (def (tce/bool e) (tc-expr/check part env e type:bool))
-  (syntax-case stx (: ann @dot @tuple @record @list @app and or if block splice == sign λ @make-interaction switch input digest require! assert! deposit! withdraw!)
+  (syntax-case stx (: ann @dot @dot/type @tuple @record @list @app and or if block splice == sign λ @make-interaction switch input digest require! assert! deposit! withdraw!)
     ((ann expr type)
      (tc-expr/check part env #'expr (parse-type part env covariant empty-symdict #'type)))
     (x (identifier? #'x) (tc-expr-id part env stx))
     (lit (stx-atomic-literal? #'lit) (typing-scheme empty-symdict (tc-literal #'lit)))
-    ((@dot et x) (identifier? #'x)
-     (let ((s (syntax-e #'x))
-           (ts (tc-expr/type-methods part env #'et)))
-       (match (typing-scheme-type ts)
-         ((type:record fldtys)
-          (unless (symdict-has-key? fldtys s)
-            (error '@dot "expected record with field" s))
-          (typing-scheme (typing-scheme-menv ts)
-                         (symdict-ref fldtys s)))
-         (t
-          (error 'tc-expr "TODO: @dot, unify with a record type" "et" (syntax->datum #'et) "ts" ts "(typing-scheme? ts)" (typing-scheme? ts) "t" t)))))
+    ((@dot e x) (identifier? #'x) (tc-expr-dot (tce #'e) (syntax-e #'x)))
+    ((@dot/type t x) (identifier? #'x) (tc-expr-dot (tc-type-methods part env #'t) (syntax-e #'x)))
     ((@tuple e ...)
      (let ((ts (stx-map tce #'(e ...))))
        (typing-scheme (menvs-meet (map typing-scheme-menv ts))
@@ -1069,27 +1071,32 @@
     ((entry:known _ t) t)
     ((entry:ctor _ t) t)))
 
-;; tc-expr/type-methods : MPart Env ExprStx -> TypingScheme
-;; Typechecks stx as either an expression, or as a type with
-;; methods in a record that can be accessed with `@dot`
-(def (tc-expr/type-methods part env stx)
+;; tc-expr-dot : TypingScheme Symbol -> TypingScheme
+(def (tc-expr-dot ts s)
+  (match (typing-scheme-type ts)
+    ((type:record fldtys)
+     (unless (symdict-has-key? fldtys s)
+       (error '@dot "expected record with field" s))
+     (typing-scheme (typing-scheme-menv ts)
+                    (symdict-ref fldtys s)))
+    (t
+     (error 'tc-expr-dot "TODO: @dot, unify with a record type" "et" (syntax->datum #'et) "ts" ts "(typing-scheme? ts)" (typing-scheme? ts) "t" t))))
+
+;; tc-type-methods : MPart Env TypeStx -> TypingScheme
+;; Typechecks stx as a type with methods in a record that can be accessed with `@dot/type`
+(def (tc-type-methods part env stx)
   (syntax-case stx (quote)
     (x (and (identifier? #'x) (bound-as-type? env (syntax-e #'x)))
-     (let ((s (syntax-e #'x)))
-       (def ent (symdict-ref env s))
-       (unless (mpart-can-use? part (entry-part ent))
-         (error s "access allowed only for" (entry-part ent)))
-       (match ent
-         ((entry:type _ [] t) (type-methods t))
-         (_ (error 'tc-expr/type-methods "TODO: handle types with parameters as records for @dot")))))
+     (let ((t (parse-closed-type part env #'x)))
+       (type-methods t)))
     ('x (identifier? #'x)
      ;; TODO: when traits are added, look in the trait constraints
-     (error 'tc-expr/type-methods "type variable used out of context:" (syntax->datum stx)))
+     (error 'tc-type-methods "type variable used out of context:" (syntax->datum stx)))
     ((tf . _) (and (identifier? #'x) (bound-as-type? env (syntax-e #'tf)))
      ;; TODO: when traits are added, handle trait constraints for arguments
-     (error 'tc-expr/type-methods "TODO: handle types with arguments used as records for @dot"))
+     (error 'tc-type-methods "TODO: handle types with arguments used as records for @dot"))
     (_
-     (tc-expr part env stx))))
+     (error 'tc-type-methods "not a type with methods" (syntax->datum stx)))))
 
 ;; type-methods : Type -> TypingScheme
 (def (type-methods t)

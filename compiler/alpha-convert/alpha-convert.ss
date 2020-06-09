@@ -7,7 +7,7 @@
         (for-template :glow/compiler/syntax-context)
         :glow/compiler/syntax-context
         :glow/compiler/common
-        :glow/compiler/env
+        :glow/compiler/alpha-convert/env
         :glow/compiler/alpha-convert/at-prefix-normalize
         :glow/compiler/alpha-convert/fresh)
 
@@ -28,7 +28,7 @@
 
 ;; keyword-syms : [Listof Sym]
 (def keyword-syms
-  '(@ : quote ann @dot @tuple @record @list @app
+  '(@ : quote ann @dot @dot/type @tuple @record @list @app
     def deftype defdata
     if and or
     block splice switch λ
@@ -55,7 +55,7 @@
     (for ((k keyword-syms)) (use/check-unused k))
     (def init-env
       (for/fold (acc empty-symdict) ((x init-syms))
-        (symdict-put acc x (entry (symbol-fresh x) #f))))
+        (symdict-put acc x (entry-val (symbol-fresh x)))))
     (syntax-case module (@module)
       ((@module stmts ...)
        (let-values (((env2 stmts2) (alpha-convert-stmts init-env (syntax->list #'(stmts ...)))))
@@ -79,14 +79,14 @@
 (def (alpha-convert-expr env stx)
   ;; ace : ExprStx -> ExprStx
   (def (ace e) (alpha-convert-expr env e))
-  (syntax-case stx (@ ann @dot @tuple @list @record if and or block splice == sign switch λ input digest require! assert! deposit! withdraw! @app)
+  (syntax-case stx (@ ann @dot @dot/type @tuple @list @record if and or block splice == sign switch λ input digest require! assert! deposit! withdraw! @app)
     ((@ _ _) (error 'alpha-convert-expr "TODO: deal with @"))
     ((ann expr type)
      (retail-stx stx [(ace #'expr) (alpha-convert-type env #'type)]))
     (x (identifier? #'x) (identifier-refer env #'x))
     (lit (stx-atomic-literal? #'lit) #'lit)
-    ((@dot e x) (identifier? #'x)
-     (retail-stx stx [(ace #'e) #'x]))
+    ((@dot e x) (identifier? #'x) (ac-expr-dot env stx #'e #'x))
+    ((@dot/type t x) (identifier? #'x) (retail-stx stx [(alpha-convert-type env #'t) #'x]))
     ((@tuple e ...)
      (alpha-convert-keyword/sub-exprs env stx))
     ((@list e ...)
@@ -123,6 +123,15 @@
     ((@app f a ...) (alpha-convert-keyword/sub-exprs env stx))
     ((f a ...)
      (alpha-convert-keyword/sub-exprs env (intro-app stx)))))
+
+;; ac-expr-dot : Env ExprStx ExprStx Identifier -> ExprStx
+(def (ac-expr-dot env stx e fld)
+  (def (w/type) (restx stx ['@dot/type (alpha-convert-type env e) fld]))
+  (syntax-case e (quote)
+    (x (and (identifier? #'x) (bound-as-type? env (syntax-e #'x))) (w/type))
+    ('x (identifier? #'x) (w/type))
+    ((tf . _) (and (identifier? #'x) (bound-as-type? env (syntax-e #'tf))) (w/type))
+    (_ (retail-stx stx [(alpha-convert-expr env e) fld]))))
 
 ;; intro-app : Stx -> Stx
 (def (intro-app stx)
@@ -181,12 +190,12 @@
     (x (identifier? #'x)
      (with-syntax ((x2 (identifier-fresh #'x)))
        (let ((s (syntax-e #'x)) (s2 (syntax-e #'x2)))
-         (values (symdict (s (entry s2 #f)))
+         (values (symdict (s (entry-val s2)))
                  #'x2))))
     ((x : type)
      (with-syntax ((x2 (identifier-fresh #'x)))
        (let ((s (syntax-e #'x)) (s2 (syntax-e #'x2)))
-         (values (symdict (s (entry s2 #f)))
+         (values (symdict (s (entry-val s2)))
                  (restx stx [#'x2 ': (alpha-convert-type env #'type)])))))))
 
 ;; ac-switch-case : Env SwitchCaseStx -> SwitchCaseStx
@@ -234,7 +243,7 @@
   ;; env/participants : Env [StxListof Identifier] [StxListof Identifier] -> Env
   (def (env/participants env ps ps2)
     (for/fold (env env) ((p (syntax->datum ps)) (p2 (syntax->datum ps2)))
-      (symdict-put env p (entry p2 #f))))
+      (symdict-put env p (entry-val p2))))
   (syntax-case stx (@list)
     ((aint ((@list p ...)) s) (stx-andmap identifier? #'(p ...))
      (let ((ps2 (stx-map identifier-fresh #'(p ...))))
@@ -271,12 +280,12 @@
     ((dt x t) (identifier? #'x)
      (with-syntax ((x2 (identifier-fresh #'x)))
        (let ((s (syntax-e #'x)) (s2 (syntax-e #'x2)))
-         (values (symdict (s (entry s2 #f)))
+         (values (symdict (s (entry-type s2)))
                  (restx stx [#'dt #'x2 (alpha-convert-type env #'t)])))))
     ((dt (f . xs) b) (identifier? #'f)
      (with-syntax ((f2 (identifier-fresh #'f)))
        (let ((s (syntax-e #'f)) (s2 (syntax-e #'f2)))
-         (values (symdict (s (entry s2 #f)))
+         (values (symdict (s (entry-type s2)))
                  (restx stx [#'dt (cons #'f2 #'xs) (alpha-convert-type env #'b)])))))))
 
 ;; ac-stmt-defdata : Env StmtStx -> (values Env StmtStx)
@@ -297,7 +306,7 @@
       ;; TODO: also a-c the type parameters? In the same/another namespace?
       ((id . args) (identifier? #'id) (restx lhs (cons alpha-id #'args)))
       (id (identifier? #'id) alpha-id)))
-  (def env2 (symdict (name (entry alpha-name #f))))
+  (def env2 (symdict (name (entry-type alpha-name))))
   (defvalues (env3 variants3) (ac-defdata-variants env env2 variants))
   (def env4 (env-put/env env2 env3))
   (if rtvalue
@@ -325,12 +334,12 @@
     (x (identifier? #'x)
      (with-syntax ((x2 (identifier-fresh #'x)))
        (let ((s (syntax-e #'x)) (s2 (syntax-e #'x2)))
-         (values (symdict (s (entry s2 #t)))
+         (values (symdict (s (entry-ctor s2)))
                  #'x2))))
     ((f a ...) (identifier? #'f)
      (with-syntax ((f2 (identifier-fresh #'f)))
        (let ((s (syntax-e #'f)) (s2 (syntax-e #'f2)))
-         (values (symdict (s (entry s2 #t)))
+         (values (symdict (s (entry-ctor s2)))
                  (restx stx (cons #'f2 (stx-map acty #'(a ...))))))))))
 
 ;; ac-stmt-def : Env StmtStx -> (values Env StmtStx)
@@ -340,14 +349,14 @@
     ((d x : type expr) (identifier? #'x)
      (with-syntax ((x2 (identifier-fresh #'x)))
        (let ((s (syntax-e #'x)) (s2 (syntax-e #'x2)))
-         (values (symdict (s (entry s2 #f)))
+         (values (symdict (s (entry-val s2)))
                  (restx stx [#'d #'x2 ':
                              (alpha-convert-type env #'type)
                              (alpha-convert-expr env #'expr)])))))
     ((d x expr) (identifier? #'x)
      (with-syntax ((x2 (identifier-fresh #'x)))
        (let ((s (syntax-e #'x)) (s2 (syntax-e #'x2)))
-         (values (symdict (s (entry s2 #f)))
+         (values (symdict (s (entry-val s2)))
                  (restx stx [#'d #'x2 (alpha-convert-expr env #'expr)])))))))
 
 ;; ac-stmt-publish : Env StmtStx -> (values Env StmtStx)
@@ -386,7 +395,7 @@
     (x (and (identifier? #'x) (not-bound-as-ctor? env (syntax-e #'x)))
      (with-syntax ((x2 (identifier-fresh #'x)))
        (let ((s (syntax-e #'x)) (s2 (syntax-e #'x2)))
-         (values (symdict (s (entry s2 #f)))
+         (values (symdict (s (entry-val s2)))
                  #'x2))))
     ((@or-pat p ...)
      (let-values (((env2 ps2) (ac-pats-join env (syntax->list #'(p ...)))))
@@ -438,10 +447,10 @@
   (def new-syms (map symbol-fresh syms))
   (def env/vars
     (for/fold (acc empty-symdict) ((s1 syms) (s2 new-syms))
-      (symdict-put acc s1 (entry s2 #f))))
+      (symdict-put acc s1 (entry-val s2))))
   (def env/ctors
     (for/fold (acc env) ((s1 syms) (s2 new-syms))
-      (symdict-put acc s1 (entry s2 #t))))
+      (symdict-put acc s1 (entry-ctor s2))))
   (values env/vars
           (map (lambda (p)
                  (let-values (((env3 p3) (alpha-convert-pat env/ctors p)))
