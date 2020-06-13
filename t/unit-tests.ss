@@ -28,8 +28,9 @@
     (match args
       ([] (run-tests "."))
       (["meta"] (println "meta all test process pass"))
-      (["all"] (run-tests "." (find-test-files ".")))
-      (["test" . files] (run-tests "." files))
+      (["all"] (run-tests "." test-files: (find-test-files ".")))
+      (["integrationtests"] (run-tests "." test-files: (find-test-files "." "-integrationtest.ss$")))
+      (["test" . files] (run-tests "." test-files: files))
       (["process" . files] (for-each run-passes files) #t)
       (["pass" pass . files]
        ;; Given a pass by name, and for each specified files,

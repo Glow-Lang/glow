@@ -1,14 +1,14 @@
 (export #t)
 
 (import
-  :gerbil/gambit/bits :gerbil/gambit/bytes
+  :gerbil/gambit/bits :gerbil/gambit/bytes :gerbil/gambit/ports
   (for-syntax :std/iter)
   :std/misc/bytes :std/srfi/1 :std/sugar
   :clan/utils/base :clan/utils/list
-  :clan/poo/poo :clan/poo/mop :clan/poo/brace
+  :clan/poo/poo :clan/poo/mop :clan/poo/brace :clan/poo/io
   (prefix-in :clan/poo/type poo.)
   (for-syntax :glow/compiler/common)
-  :glow/runtime/marshal :glow/ethereum/hex)
+  :glow/ethereum/hex)
 
 ;; --- something for types in general, including Record, Union, Maybe
 ;; --- something for ethereum types in particular
