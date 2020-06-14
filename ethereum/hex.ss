@@ -4,7 +4,8 @@
 ;; The following format represents data as hexadecimal strings with the prefix "0x".
 ;; It is defined as part of the Ethereum JSON-RPC protocol, variants of which are used
 ;; by go-ethereum, the parity client, etc. The definitional document is:
-;;    https://github.com/ethereum/wiki/wiki/JSON-RPC
+;;    https://github.com/ethereum/wiki/wiki/JSON-RPC#hex-value-encoding
+
 ;;
 ;; The Ethereum JSON-RPC 0x format comes in two distinct, incompatible, flavors,
 ;; that it is important to distinguish:
@@ -38,7 +39,10 @@
 
 (export #t)
 
-(import :std/text/hex :std/misc/bytes)
+(import
+  :gerbil/gambit/bits :gerbil/gambit/bytes
+  :std/iter :std/misc/bytes :std/srfi/13 :std/text/hex
+  :glow/crypto/keccak)
 
 ;; Raise an error if the string doesn't strictly start with "0x"
 ;; : Unit <- 0xString
@@ -89,3 +93,39 @@
 ;; : 0xDataString <- Bytes
 (def (0x<-bytes s)
   (string-append "0x" (hex-encode s)))
+
+;; Address format with builtin checksum, from EIP-55
+;; https://github.com/ethereum/EIPs/blob/master/EIPS/eip-55.md
+(def (0x<-address address)
+  (def hex-digits (0x<-bytes address))
+  (def hashed-digits (keccak256<-string (substring hex-digits 2 42)))
+  (for (i (in-range 40))
+    (def j (+ i 2))
+    (def ch (string-ref hex-digits j))
+    (when (and (char<=? #\a ch #\f)
+               (not (zero? (bitwise-and (bytes-ref hashed-digits (arithmetic-shift i -1))
+                                        (if (even? i) #x80 #x08)))))
+      (string-set! hex-digits j (char-upcase ch))))
+  hex-digits)
+
+(def (validate-address-0x hs)
+  ;; see https://www.quora.com/How-can-we-do-Ethereum-address-validation *)
+  ;; which says to check a bit of the hash, but means byte
+  (unless (string-prefix? "0x" hs) (error "Not a 0x string" hs))
+  (unless (= (string-length hs) 42) (error "invalid address string length" hs))
+  (def hex-digits (substring hs 2 42))
+  (def hashed-digits (keccak256<-string (string-downcase hex-digits)))
+  (for (i (in-range 40))
+    (def ch (string-ref hex-digits i))
+    (cond
+     ((char<=? #\0 ch #\9) (void))
+     ((not (or (char<=? #\a ch #\f) (char<=? #\A ch #\F)))
+      (error "Invalid hex digit" hs (+ i 2)))
+     ((not (eq? (char<=? #\a ch #\f)
+                (zero? (bitwise-and (bytes-ref hashed-digits (arithmetic-shift i -1))
+                                    (if (even? i) #x80 #x08)))))
+      (error "Invalid address checksum" hs (+ i 2))))))
+
+(def (address<-0x hs)
+  (validate-address-0x hs)
+  (bytes<-0x hs))
