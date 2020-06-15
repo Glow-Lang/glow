@@ -13,7 +13,7 @@ fi
 
 export GLOW_SRC="$(dirname $this)"
 export GLOW_HOME
-: ${GLOW_HOME:=/home/glow}
+: ${GLOW_HOME:=${GLOW_SRC}}
 bindir=${GLOW_SRC}/.build_outputs
 GERBIL_PACKAGE=gerbil-unstable
 
