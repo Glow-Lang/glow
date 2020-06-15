@@ -1,16 +1,12 @@
 (export #t)
 
-(import :gerbil/gambit/bytes
+(import :gerbil/gambit/bytes :gerbil/gambit/hash
         <expander-runtime> :gerbil/expander/common
-        (for-template :glow/compiler/syntax-context)
+        :std/misc/repr
+        :std/format :std/iter :std/misc/list
+        :clan/utils/base :clan/utils/files :clan/utils/list
         :glow/compiler/syntax-context
-        :std/misc/repr :gerbil/gambit/hash
-        :glow/compiler/syntax-context
-        :std/format
-        :std/iter
-        :std/misc/list
-        :clan/utils/base
-        :clan/utils/files)
+        (for-template :glow/compiler/syntax-context))
 
 ;; transpose : [Listof [Listof A]] -> [Listof [Listof A]]
 ;; Like transposing a matrix, n-ary cartesian product, or n-ary zip,
@@ -108,10 +104,6 @@
           (and (stx-leaf? a) (stx-leaf? b)))
          (else
           (stx-sexpr=?/recur a b stx-deep-source=?)))))
-
-(def (first-and-only x)
-  (assert! (and (pair? x) (null? (cdr x))))
-  (car x))
 
 ;; TODO: do we need to properly parameterize the context (?)
 (def (read-sexp-module file)
