@@ -5,7 +5,7 @@
   :gerbil/gambit/exceptions
   :std/sugar
   :std/error :std/text/hex :std/test :std/srfi/1
-  :glow/crypto/keccak
+  :crypto/keccak
   :glow/ethereum/hex)
 
 (def hex-test

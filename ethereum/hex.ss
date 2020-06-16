@@ -42,7 +42,7 @@
 (import
   :gerbil/gambit/bits :gerbil/gambit/bytes
   :std/iter :std/misc/bytes :std/srfi/13 :std/text/hex
-  :glow/crypto/keccak)
+  :crypto/keccak)
 
 ;; Raise an error if the string doesn't strictly start with "0x"
 ;; : Unit <- 0xString
