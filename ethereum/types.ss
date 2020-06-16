@@ -3,7 +3,8 @@
 (import
   (for-syntax :gerbil/gambit/exact :std/iter :glow/compiler/common)
   :gerbil/gambit/bits :gerbil/gambit/bytes :gerbil/gambit/exact :gerbil/gambit/hash :gerbil/gambit/ports
-  :std/iter :std/misc/bytes :std/misc/hash :std/sort :std/srfi/1 :std/srfi/43 :std/sugar
+  :std/iter :std/misc/bytes :std/misc/hash :std/sort :std/srfi/1 :std/sugar
+  (only-in :std/srfi/43 vector-index)
   :clan/utils/base :clan/utils/io :clan/utils/json :clan/utils/list :clan/utils/maybe :clan/utils/number
   :clan/poo/poo :clan/poo/io
   (only-in :clan/poo/mop .defgeneric Type Type. proto Class Class. Slot validate element?)
@@ -206,19 +207,17 @@
 
 (.def (Tuple. @ Type. types)
   methods: =>.+ {(:: @ [bytes<-un/marshal])
-    .json<-: (lambda (v) (vector-map (lambda (_ type val) ((.@ type methods .json<-) val))
-                                types v))
-    .<-json: (lambda (j) (vector-map (lambda (_ type j) ((.@ type methods .<-json) j))
-                                types (if (list? j) (list->vector j) j)))
+    .json<-: (lambda (v) (vector-map json<- types v))
+    .<-json: (lambda (j) (vector-map <-json types (if (list? j) (list->vector j) j)))
     .marshal: (lambda (v port)
-                (vector-for-each (lambda (_ type val) ((.@ type methods .marshal) val port))
+                (vector-for-each (lambda (type val) (marshal type val port))
                                  types v))
     .unmarshal: (lambda (port)
-                  (vector-for-each (lambda (_ type) ((.@ type methods .marshal) port)) types))
+                  (vector-for-each (lambda (type) (unmarshal type port)) types))
   })
 
-(def (Tuple . types) ;; type of tuples, heterogeneous arrays of given length and type
-  (def types (list->vector (map (cut validate Type <>) types)))
+(def (Tuple . types_) ;; type of tuples, heterogeneous arrays of given length and type
+  (def types (list->vector (map (cut validate Type <>) types_)))
   {(:: @ Tuple.) (types)})
 
 ;; Untagged union. Can be used for JSON, but no automatic marshaling.

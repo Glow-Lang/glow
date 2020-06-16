@@ -29,7 +29,7 @@
       ([] (run-tests "."))
       (["meta"] (println "meta all test process pass"))
       (["all"] (run-tests "." test-files: (find-test-files ".")))
-      (["integrationtests"] (run-tests "." test-files: (find-test-files "." "-integrationtest.ss$")))
+      (["integration"] (run-tests "." test-files: (find-test-files "." "-integrationtest.ss$")))
       (["test" . files] (run-tests "." test-files: files))
       (["process" . files] (for-each run-passes files) #t)
       (["pass" pass . files]
