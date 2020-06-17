@@ -108,10 +108,8 @@
 
 (def (participantify-defdata stx participant)
   (syntax-case stx ()
-    ((prefix ... (with: stmts ...))
-     (let-values (((w p) (participantify-body stx #'(with:) #'(stmts ...) participant [])))
-       (with-syntax ((with w))
-         (values (restx1 stx #'(prefix ... with)) p))))))
+    ((prefix ...)
+     (values stx participant))))
 
 (def (participantify-body stx prefix body participant acc)
   (defvalues (s p) (participantify-stmts (syntax->list body) participant acc))

@@ -8,6 +8,7 @@
   :glow/compiler/desugar/desugar
   (only-in :glow/compiler/typecheck/typecheck
     typecheck read-type-env-file write-type-env type-env=?)
+  (only-in :glow/compiler/method-resolve/method-resolve method-resolve)
   :glow/compiler/anf/anf
   :glow/compiler/participantify/participantify
   )
@@ -38,6 +39,9 @@
 ;; Typed Glow programs
 ;; TODO: also represent source location, unused-table and type annotations?
 (define-layer typedecl.sexp read-type-env-file write-type-env type-env=?)
+
+;; Method-resolved Glow programs
+(define-layer mere.sexp read-sexp-module write-sexp-module stx-sexpr=?)
 
 ;; (Typed) Glow programs in A-Normal form
 ;; where all function call arguments are trivial (reference to constant or variable).
@@ -80,10 +84,13 @@
 ;; ModuleStx Unused → TypeEnv
 (define-pass typecheck (desugar.sexp Unused) (typedecl.sexp TypeInfoTable))
 
+;; *Method-resolve*: handle type methods, attached in `defdata with:` and accessed in `type.method`
+(define-pass method-resolve (desugar.sexp Unused) (mere.sexp))
+
 ;; *A-normalization*: ensure all call arguments are trivial,
 ;; hence a well-defined sequence for all side-effects.
 ;; ModuleStx Unused → ModuleStx
-(define-pass anf (desugar.sexp Unused) (anf.sexp))
+(define-pass anf (mere.sexp Unused) (anf.sexp))
 
 ;; *Transaction-ification*: introduce suitable safe points between changes in participants
 (define-pass participantify (anf.sexp Unused) (participantify.sexp))
@@ -123,7 +130,7 @@
 ;;(define-pass javascript-extraction ".client.sexp" ".js")
 
 (define-strategy ethereum-direct-style
-  alpha-convert desugar typecheck anf participantify) ;; ...
+  alpha-convert desugar typecheck method-resolve anf participantify) ;; ...
 
 ;; Different layers and passes for State-Channel style:
 ;; the previous contract is virtualized, so that

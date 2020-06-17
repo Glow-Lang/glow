@@ -103,10 +103,6 @@
 ;; anf-defdata : StmtStx [Listof StmtStx] -> [Listof StmtStx]
 (def (anf-defdata k stx acc)
   (syntax-case stx ()
-    ((_ spec variant ... with: rtvalue)
-     (cons (retail-stx stx [#'spec (syntax->list #'(variant ...))
-                                   (cons with: (anf-standalone-expr #'(return) #'rtvalue))])
-           acc))
     ((_ spec variant ...) (anf-kontinue-stmt k (cons stx acc)))))
 
 ;; anf-def : StmtStx [Listof StmtStx] -> [Listof StmtStx]
