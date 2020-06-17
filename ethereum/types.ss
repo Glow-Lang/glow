@@ -243,7 +243,7 @@
   repr: `(Enum. ,@vals)
   .element?: (cut member <> vals)
   .vals@: (list->vector vals)
-  .json@: (list->vector (map string<-json vals))
+  .json@: (list->vector (map (lambda (x) (json<-string (string<-json x))) vals))
   methods: {(:: @ [un/marshal<-bytes])
     length-in-bytes: (n-bytes<-n-bits (integer-length (vector-length .vals@)))
     .<-nat: (cut vector-ref .vals@ <>)
@@ -270,9 +270,13 @@
 (.def (Maybe. @ Type. type)
   repr: `(Maybe ,type)
   .element?: (lambda (x) (or (eq? x null) (element? type x)))
-  methods: {
+  methods: {(:: @@ [bytes<-un/marshal])
     .json<-: (lambda (v) (if (eq? v null) v ((.@ type methods .json<-) v)))
-    .<-json: (lambda (j) (if (eq? j null) j ((.@ type methods .<-json) j)))})
+    .<-json: (lambda (j) (if (eq? j null) j ((.@ type methods .<-json) j)))
+    .marshal: (λ (x port) (cond ((eq? x null) (write-byte 0 port))
+                                (else (write-byte 1 port) (marshal type x port))))
+    .unmarshal: (λ (port) (if (zero? (read-byte port)) null (unmarshal type port)))
+})
 
 (def (Maybe type) {(:: @ Maybe.) (type)})
 

@@ -6,10 +6,6 @@
   :clan/poo/poo :clan/poo/brace (only-in :clan/poo/mop Type.)
   ./types ./hex)
 
-;;(define-type Signature Bytes65) ;; NB: The first byte is always 0x04(!), meaning "uncompressed" secp256k1
-;;(define-type PrivateKey Bytes65)
-;;(define-type PublicKey Bytes32)
-
 ;; TODO: implement and use a "newtype"
 (define-type Quantity UInt256)
 (define-type Digest Bytes32)
@@ -17,6 +13,7 @@
 (define-type Address {(:: @ Bytes20) methods: =>.+ {.json<-: 0x<-address}})
 
 (def one-ether-in-wei (expt 10 18)) ;; 1 ETH = 10^18 wei
+(def one-gwei-in-wei (expt 10 9)) ;; 1 gwei = 10^9 wei
 
 (define-type Confirmation
   (Record
@@ -98,6 +95,6 @@
    to: [Address]
    value: [Quantity]
    data: [Bytes]
-   v: [Quantity] ;; actually UInt8
+   v: [Quantity] ;; actually UInt8... plus offset from chainId!
    r: [Quantity] ;; UInt256
    s: [Quantity])) ;; UInt256
