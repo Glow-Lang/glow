@@ -10,7 +10,7 @@
     typecheck read-type-env-file write-type-env type-env=?)
   (only-in :glow/compiler/method-resolve/method-resolve method-resolve)
   :glow/compiler/anf/anf
-  :glow/compiler/participantify/participantify
+  :glow/compiler/checkpointify/checkpointify
   )
 
 ;;; Layers, passes and strategies
@@ -50,7 +50,7 @@
 
 ;; (Typed) Glow programs in A-Normal form with safe-points between participant changes.
 ;; where all function call arguments are trivial (reference to constant or variable).
-(define-layer participantify.sexp read-sexp-module write-sexp-module stx-sexpr=?)
+(define-layer checkpointify.sexp read-sexp-module write-sexp-module stx-sexpr=?)
 
 
 (define-layer safepointify.sexp read-sexp-module write-sexp-module stx-sexpr=?) ;; after safepoints added
@@ -93,7 +93,7 @@
 (define-pass anf (mere.sexp Unused) (anf.sexp))
 
 ;; *Transaction-ification*: introduce suitable safe points between changes in participants
-(define-pass participantify (anf.sexp Unused) (participantify.sexp))
+(define-pass checkpointify (anf.sexp Unused) (checkpointify.sexp))
 
 ;; *Message-extraction*: for each choice of transactions, extract a message type for that choice.
 ;; TODO: maybe merge with previous pass?
@@ -130,7 +130,7 @@
 ;;(define-pass javascript-extraction ".client.sexp" ".js")
 
 (define-strategy ethereum-direct-style
-  alpha-convert desugar typecheck method-resolve anf participantify) ;; ...
+  alpha-convert desugar typecheck method-resolve anf checkpointify) ;; ...
 
 ;; Different layers and passes for State-Channel style:
 ;; the previous contract is virtualized, so that

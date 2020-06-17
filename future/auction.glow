@@ -33,7 +33,7 @@ let simpleAuction = (goods : Assets, expirationTime : Timestamp, buyItNowPrice: 
    deposit! Seller -> goods; // escrow for the goods (TODO: also allow auction of services with an escrow)
 
    @interaction([Seller, CurrentBidder])
-   let rec auction = (bid) => {
+   let rec auction = (currentBid) => {
      assert! @deposited == goods + currentBid;
      choice {
        | ForAllParticipant (NewBidder) { // THIS CHOICE ACCEPTS A NEW PARTICIPANT!!!!!
