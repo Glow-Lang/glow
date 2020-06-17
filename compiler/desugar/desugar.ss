@@ -148,12 +148,13 @@
 
 ;; desugar-expr : Stx -> Stx
 (def (desugar-expr stx)
-  (syntax-case stx (@ ann @dot @tuple @record @list if and or block splice switch λ == input digest sign require! assert! deposit! withdraw! verify! @app)
+  (syntax-case stx (@ ann @dot @dot/type @tuple @record @list if and or block splice switch λ == input digest sign require! assert! deposit! withdraw! verify! @app)
     ((@ _ _) (error 'desugar-expr "TODO: deal with @"))
     ((ann expr type) (retail-stx stx [(desugar-expr #'expr) #'type]))
     (x (identifier? #'x) stx)
     (lit (stx-atomic-literal? #'lit) #'lit)
     ((@dot e x) (identifier? #'x) (retail-stx stx [(desugar-expr #'e) #'x]))
+    ((@dot/type t x) (identifier? #'x) stx)
     ((@tuple e ...) (desugar-keyword/sub-exprs stx))
     ((@list e ...) (desugar-keyword/sub-exprs stx))
     ((@record (x e) ...) (retail-stx stx (stx-map (lambda (x e) [x (desugar-expr e)]) #'(x ...) #'(e ...))))

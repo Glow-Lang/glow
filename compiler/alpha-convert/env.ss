@@ -1,11 +1,22 @@
-(export #t)
+(export (struct-out entry entry-val entry-ctor entry-type)
+        env-put/env
+        bound-as-ctor?
+        not-bound-as-ctor?
+        bound-as-type?
+        symbol-refer)
 
 (import
   :clan/pure/dict/symdict)
 
 ;; An Env is a [Symdictof Entry]
-;; An Entry is an (entry Symbol Bool)
-(defstruct entry (sym ctor?) transparent: #t)
+;; An Entry is an (entry Symbol), one of:
+;;  - (entry-val Symbol)
+;;  - (entry-ctor Symbol)
+;;  - (entry-type Symbol)
+(defstruct entry (sym) transparent: #t)
+(defstruct (entry-val entry) () transparent: #t)
+(defstruct (entry-ctor entry) () transparent: #t)
+(defstruct (entry-type entry) () transparent: #t)
 
 ;; env-put/env : Env Env -> Env
 ;; entries in the 2nd env override ones in the 1st
@@ -20,6 +31,11 @@
 (def (not-bound-as-ctor? env s)
   (or (not (symdict-has-key? env s))
       (not (entry-ctor? (symdict-ref env s)))))
+
+;; bound-as-type? : Env Symbol -> Bool
+(def (bound-as-type? env s)
+  (and (symdict-has-key? env s)
+       (entry-type? (symdict-ref env s))))
 
 ;; symbol-refer : Env Symbol -> Symbol
 ;; looks up the symbol in the env
