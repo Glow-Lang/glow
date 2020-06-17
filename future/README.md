@@ -339,13 +339,26 @@ between the two matched sets of assets, fast, through collateralized side-chains
 
 ZCash or MimbleWimble on a side-chain.
 
-- ZK Computations
+- ZK Computations.
 
 ### Supply Chain
 
 Public acknowledgements for fixed multiparty workflow on a scalable side-chain.
 
-- Scaling solution
-- Contracts that validate claims about logical predicates on the data structures
-- Arbitration in case of dispute
-- Ways to publish encore amendments to otherwise immutable data structure
+- Scaling solution.
+- Contracts that validate claims about logical predicates on the data structures.
+- Arbitration in case of dispute.
+- Ways to publish encore amendments to otherwise immutable data structure.
+
+### Accounting Audit
+
+Audit accounting based on blockchain.
+
+Off-chain, on top of supply chain on-chain.
+
+### DAO
+
+On top of existing Token:
+
+- voting for decisions.
+- voting

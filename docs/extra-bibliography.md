@@ -74,10 +74,11 @@ Other non-Lisp types of interest?
 ### Non-blockchain Languages to learn from
 
 * [Fugue](https://fugue.co), a proprietary alternative to Hashicorp's [Terraform](https://terraform.io), puts engineers in command of cloud security with tools for visualizing resources and changes over time.
-* [dhall](https://dhall-lang.org), a strongly typed terminating programmable configuration language that you can think of as: JSON + functions + types + imports
-* [Hazel](https://hazel.org), a live functional language programming environment with typed holes
+* [dhall](https://dhall-lang.org), a strongly typed terminating programmable configuration language that you can think of as: JSON + functions + types + imports.
+* [Hazel](https://hazel.org), a live functional language programming environment with typed holes.
 * [Dark](https://darklang.com), a holistic programming language, editor, and infrastructure for building backends without accidental complexity.
 * [Unison](https://unisonweb.org), an open source functional programming language based on a simple idea with big implications: code is content-addressed and immutable.
+* [Pony](https://www.ponylang.io/), an open-source, object-oriented, actor-model, capabilities-secure, high-performance programming language.
 
 ### Complexity
 
