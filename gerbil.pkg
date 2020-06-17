@@ -1,5 +1,6 @@
 ;; The Glow language
 (package: glow
  depend: ("github.com/fare/gerbil-utils"
+          "github.com/fare/gerbil-crypto"
           ;;"github.com/fare-patches/r7rs-swank"
           "github.com/drewc/js-syntax"))

@@ -58,7 +58,7 @@
   :glow/compiler/typecheck/typecheck
   :glow/compiler/anf/anf
   :glow/compiler/participantify/participantify
-  :glow/crypto/keccak
+  :crypto/keccak :crypto/secp256k1
   :glow/ethereum/hex :glow/ethereum/types
 
   ;; Testing Glow
