@@ -19,11 +19,10 @@
    (cut find-files <>
         (lambda (x) (equal? (path-extension x) ".ss"))
         recurse?: (lambda (x) (not (equal? (path-strip-directory x) "t"))))
-   ["config" "compiler" "runtime" "ethereum" "crypto"]))
+   ["config" "compiler" "runtime" "ethereum"]))
 
 (def (build-spec)
-  [(lset-difference equal? (files) '("crypto/keccak.ss"))...
-   [gxc: "crypto/keccak" "-cc-options" (format "-I~a" (glow-src))]
+  [(files) ...
    "t/common"
    "all-glow"
    [exe: "main" bin: "glow"]])
@@ -32,7 +31,6 @@
   (when (match args ([] #t) (["compile" . _] #t) (_ #f))
     (update-version-from-git name: "Glow"))
   (defbuild-script ;; defines an inner "main"
-    (build-spec)
     ;;verbose: 9
-    )
+    (build-spec))
   (apply main args))
