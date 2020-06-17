@@ -393,6 +393,7 @@
     (x (and (identifier? #'x) (bound-as-ctor? env (syntax-e #'x)))
      (values empty-symdict (identifier-refer env #'x)))
     (x (and (identifier? #'x) (not-bound-as-ctor? env (syntax-e #'x)))
+     ;; TODO: wrap pat vars in a `@var-pat` pattern
      (with-syntax ((x2 (identifier-fresh #'x)))
        (let ((s (syntax-e #'x)) (s2 (syntax-e #'x2)))
          (values (symdict (s (entry-val s2)))

@@ -60,11 +60,10 @@
      (with-syntax* ((id (definition-lhs->id #'spec))
                     (methods-id (identifier-fresh #'id)))
        (def t (get-is-type #'id))
-       (unless (type:name? t) (error "internal error: expected type:name, given" t))
+       (assert! (type:name? t) ["internal error: expected type:name, given" t])
        (set-tysym-methods-id! (type:name-sym t) #'methods-id)
        (cons (retail-stx stx (cons #'spec (syntax->list #'(variant ...))))
-             (mr-stmt #'(def methods-id () rtvalue)))))
-    ((_ spec variant ...) [stx])))
+             (mr-stmt #'(def methods-id () rtvalue)))))))
 
 ;; mr-stmt-def : StmtStx -> [Listof StmtStx]
 (def (mr-stmt-def stx)

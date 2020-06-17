@@ -22,7 +22,7 @@
         :glow/compiler/syntax-context
         (for-template :glow/compiler/syntax-context)
         :glow/compiler/common
-        :glow/compiler/env
+        :glow/compiler/alpha-convert/env
         :glow/compiler/alpha-convert/fresh
         :glow/compiler/typecheck/variance
         :glow/compiler/typecheck/type
