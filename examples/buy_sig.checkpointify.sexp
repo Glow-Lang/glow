@@ -1,15 +1,18 @@
-(@module
+(@module (begin end)
+(@label begin)
 (def payForSignature
      (@make-interaction
       ((@list Buyer Seller))
       ((digest0 : Digest) (price : nat))
       ()
+      (begin0 end0)
       ;; Entry point for the interaction -- from here on user must be Buyer
-      (participant-checkpoint pc #f Buyer);;;NEW!
+      (@label begin0)
+      (@label cp)
       (deposit! Buyer price)
 
       ;; Switching to Seller
-      (participant-checkpoint pc0 Buyer Seller);;;NEW!
+      (@label cp0)
       (@ Seller (def signature (sign digest0)))
       (publish! Seller signature)
       ;; This part is consensual, but part of the Seller transaction
@@ -19,8 +22,10 @@
       ;; In a standalone app, return kills the contract.
       ;; In a function called as part of a larger application,
       ;; it will actually set the state to the invoked continuation.
-      (return (@tuple))))
+      (return (@tuple))
+      (@label end0)))
 ;; Return from the application-defining interaction.
 ;; Instead of returning a unit, should it be returning a first-class environment
 ;; exporting all the variables defined?
-(return (@tuple)))
+(return (@tuple))
+(@label end))

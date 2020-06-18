@@ -86,7 +86,7 @@
   (syntax-case stx (@ splice : quote def deftype defdata publish! deposit!)
     ((@ p s) (identifier? #'p) (append (anf-at-participant k stx) acc))
     ((splice . body) (anf-body k #'body acc))
-    ((defdata . _) (anf-defdata k stx acc))
+    ((defdata . _) (anf-kontinue-stmt k (cons stx acc)))
     ((deftype . _) (anf-kontinue-stmt k (cons stx acc)))
     ((publish! . _) (anf-kontinue-stmt k (cons stx acc)))
     ((def . _) (anf-kontinue-stmt k (anf-def stx acc)))
@@ -98,12 +98,6 @@
   (syntax-case stx ()
     ((at p s) (identifier? #'p)
      (map (lambda (s2) (restx1 stx [#'at #'p s2])) (anf-stmt k #'s [])))))
-
-;; Right now using (return ...) for the value in defdata.
-;; anf-defdata : StmtStx [Listof StmtStx] -> [Listof StmtStx]
-(def (anf-defdata k stx acc)
-  (syntax-case stx ()
-    ((_ spec variant ...) (anf-kontinue-stmt k (cons stx acc)))))
 
 ;; anf-def : StmtStx [Listof StmtStx] -> [Listof StmtStx]
 (def (anf-def stx acc)
