@@ -11,6 +11,7 @@
   (only-in :glow/compiler/method-resolve/method-resolve method-resolve)
   :glow/compiler/anf/anf
   :glow/compiler/checkpointify/checkpointify
+  :glow/compiler/checkpointify/checkpoint-info-table
   )
 
 ;;; Layers, passes and strategies
@@ -51,6 +52,9 @@
 ;; (Typed) Glow programs in A-Normal form with safe-points between participant changes.
 ;; where all function call arguments are trivial (reference to constant or variable).
 (define-layer checkpointify.sexp read-sexp-module write-sexp-module stx-sexpr=?)
+
+;; CheckpointInfoTable
+(define-layer cpitable.sexp read-checkpoint-info-table write-checkpoint-info-table checkpoint-info-table=?)
 
 
 (define-layer safepointify.sexp read-sexp-module write-sexp-module stx-sexpr=?) ;; after safepoints added
@@ -93,7 +97,7 @@
 (define-pass anf (mere.sexp Unused) (anf.sexp))
 
 ;; *Transaction-ification*: introduce suitable safe points between changes in participants
-(define-pass checkpointify (anf.sexp Unused) (checkpointify.sexp))
+(define-pass checkpointify (anf.sexp Unused) (checkpointify.sexp cpitable.sexp))
 
 ;; *Message-extraction*: for each choice of transactions, extract a message type for that choice.
 ;; TODO: maybe merge with previous pass?

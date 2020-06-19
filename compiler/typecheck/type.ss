@@ -6,6 +6,7 @@
         :std/misc/repr
         :clan/pure/dict/symdict
         :clan/utils/debug
+        :glow/compiler/common
         ./variance)
 
 ;; A Type is one of:
@@ -369,22 +370,6 @@
 
 ;; type->string : Type -> String
 (def (type->string t) (format "~y" (type->sexpr t)))
-
-;; symbol->repr-sexpr : Symbol -> Sexpr
-(def (symbol->repr-sexpr s) `',s)
-
-;; repr-sexpr->symbol : Sexpr -> Symbol
-(def (repr-sexpr->symbol s) (match s (['quote x] x)))
-
-;; list->repr-sexpr : [Listof V] [V -> Sexpr] -> Sexpr
-(def (list->repr-sexpr l v->s)
-  `(@list ,@(map v->s l)))
-
-;; repr-sexpr->list : Sexpr [Sexpr -> V] -> [Listof V]
-(def (repr-sexpr->list s s->v)
-  (match s
-    ((cons '@list l) (map s->v l))
-    (_ (error 'repr-sexpr->list "expected `@list`"))))
 
 ;; symdict->repr-sexpr : [Symdictof V] [V -> Sexpr] -> Sexpr
 (def (symdict->repr-sexpr d v->s)
