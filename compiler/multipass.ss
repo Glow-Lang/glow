@@ -155,8 +155,14 @@
   (def in (hash (,layer (read-file/layer layer filename))))
   (def basename (string-trim-suffix (format ".~a" layer) filename))
   (def out (for/fold (state in) ((pass passes)) (run-pass pass basename state)))
-  (def last-layer (first (pass-outputs (registered-pass (last passes)))))
-  (def (write-last port) (write/layer last-layer (hash-ref out last-layer) port))
-  (when show? (write-last (current-output-port)))
-  (when save? (clobber-file (string-append basename last-layer) write-last))
+  (def last-layers (pass-outputs (registered-pass (last passes))))
+  (for ((l last-layers))
+    (def (write-last port)
+      (write/layer l (hash-ref out l) port))
+    (when (layer-writer (registered-layer l))
+      (when show?
+        (printf "~a.~a\n" basename l)
+        (write-last (current-output-port)))
+      (when save?
+        (clobber-file (string-append basename l) write-last))))
   out)
