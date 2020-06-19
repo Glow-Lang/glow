@@ -6,7 +6,7 @@
   :std/sugar
   :std/error :std/text/hex :std/test :std/srfi/1
   :crypto/keccak
-  :glow/ethereum/hex)
+  ../hex)
 
 (def hex-test
   (test-suite "test suite for glow/ethereum/hex"

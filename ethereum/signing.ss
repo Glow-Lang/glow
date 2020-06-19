@@ -4,7 +4,7 @@
   :std/sugar
   :clan/utils/base :clan/poo/poo (only-in :clan/poo/mop Any Type.) :clan/poo/brace :clan/poo/io
   :crypto/keccak :crypto/secp256k1
-  ./types ./ethereum
+  ./types
   )
 
 (define-type SecretKey

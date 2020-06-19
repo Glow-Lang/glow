@@ -46,13 +46,13 @@
      (let* ((method-name (apply format "~a_~a" (syntax->datum #'(namespace method))))
             (fun-id (datum->syntax (stx-car stx) (string->symbol method-name))))
        (with-syntax ((method-name method-name) (fun-id fun-id))
-         #'(def fun-id
-             (let (params-type (Tuple argument-type ...))
-               (lambda (timeout: (timeout #f) log: (log #f) . a)
+         #'(begin
+             (def params-type (Tuple argument-type ...))
+             (def (fun-id timeout: (timeout #f) log: (log #f) . a)
                  (ethereum-json-rpc method-name
                                     (.@ result-type methods .<-json)
                                     (.@ params-type methods .json<-) (list->vector a)
-                                    timeout: timeout log: log)))))))))
+                                    timeout: timeout log: log))))))))
 
 (define-ethereum-api web3 clientVersion String <-)
 
