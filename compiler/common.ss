@@ -154,6 +154,19 @@
     ((id . _) (identifier? #'id) #'id)
     (id (identifier? #'id) #'id)))
 
+;; symbol->repr-sexpr : Symbol -> Sexpr
+;; repr-sexpr->symbol : Sexpr -> Symbol
+(def (symbol->repr-sexpr s) `',s)
+(def (repr-sexpr->symbol s) (match s (['quote x] x)))
+
+;; list->repr-sexpr : [Listof V] [V -> Sexpr] -> Sexpr
+;; repr-sexpr->list : Sexpr [Sexpr -> V] -> [Listof V]
+(def (list->repr-sexpr l v->s) `(@list ,@(map v->s l)))
+(def (repr-sexpr->list s s->v)
+  (match s
+    ((cons '@list l) (map s->v l))
+    (_ (error 'repr-sexpr->list "expected `@list`"))))
+
 ;; TODO: move this to std/misc/repr ?
 (defmethod {:pr AST}
   (λ (object (port (current-output-port)) (options (current-representation-options)))
