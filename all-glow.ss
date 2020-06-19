@@ -74,7 +74,7 @@
   :glow/ethereum/signing :glow/ethereum/known-addresses
   :glow/ethereum/config :glow/ethereum/json-rpc :glow/ethereum/transaction
   :glow/ethereum/assembly :glow/ethereum/contract-config :glow/ethereum/contract-support
-  :glow/ethereum/nonce-tracker :glow/ethereum/tx-tracker ;; :glow/ethereum/batch-send :glow/ethereum/watch
+  :glow/ethereum/nonce-tracker :glow/ethereum/tx-tracker :glow/ethereum/batch-send ;;:glow/ethereum/watch
 
   ;; Testing Glow
   :glow/t/common
