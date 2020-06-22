@@ -4,10 +4,11 @@
   (for-syntax :gerbil/gambit/exact :std/iter :glow/compiler/common)
   :gerbil/gambit/bits :gerbil/gambit/bytes :gerbil/gambit/exact
   :gerbil/gambit/hash :gerbil/gambit/ports
-  :std/format :std/iter :std/misc/bytes :std/misc/hash :std/misc/repr
+  :std/format :std/iter :std/misc/bytes :std/misc/hash
   :std/sort :std/srfi/1 :std/srfi/43 :std/sugar
   :clan/utils/base :clan/utils/io :clan/utils/json :clan/utils/list
   :clan/utils/maybe :clan/utils/number
+  :clan/pure/dict/intdict
   :clan/poo/poo :clan/poo/io
   (only-in :clan/poo/mop .defgeneric Type Type. proto Class Class. Slot validate element? .method)
   (prefix-in (only-in :clan/poo/mop Integer String Symbol) poo.)
@@ -19,7 +20,7 @@
 ;; --- something for ethereum types in particular
 
 ;; For now, types are just runtime descriptors...
-(defrule (define-type a desc) (def a (.mix {repr: 'a} desc)))
+(defrule (define-type a desc) (def a (.mix {sexp: 'a} desc)))
 
 ;; Variable-length Int
 (.def (Integer @ poo.Integer n-bits)
@@ -29,13 +30,12 @@
     })
 
 (.def (IntegerSet @ Type.)
-   .repr: 'IntegerSet
-   .element?: (lambda (x) (and (table? x)
-                          (every exact-integer? (hash-keys x))
-                          (every (cut eq? #t <>) (hash-values x))))
+   .sexp: 'IntegerSet
+   .element?: (lambda (x) (and (intdict? x)
+                          (every (lambda (x) (eq? #t (cdr x))) (intdict->list x))))
    methods: =>.+ {(:: methods [bytes<-un/marshal])
-     .json<-: (lambda (x) '(list-sort < (hash-keys x))) ;; XXXXX
-     .<-json: (lambda (x) (list->hash-table (map (cut cons <> #t) x)))
+     .json<-: .<-list
+     .<-json: .list<-
      .marshal: (lambda (x port)
                  (def l (.json<- x))
                  (marshal Integer (length l) port)
@@ -43,7 +43,16 @@
      .unmarshal: (lambda (port)
                    (.<-json (for/collect (_ (in-range (unmarshal Integer port)))
                               (unmarshal Integer port))))
-     .<-json: (lambda (x) (list->hash-table (map (cut cons <> #t) x)))
+     .empty: empty-intdict
+     .empty?: intdict-empty?
+     .add: (lambda (x i) (intdict-put x i #t))
+     .remove: intdict-remove
+     .has?: intdict-has-key?
+     .<-list: intdict-keys
+     .list<-: (lambda (x) (list->intdict (map (cut cons <> #t) x)))
+     .=?: intdict=?
+     .min-elt: intdict-min-key
+     .max-elt: intdict-max-key
    })
 
 (def (ensure-zeroes bytes start len)
@@ -52,7 +61,7 @@
 
 ;; Integer and Bytes types
 (.def (UInt. @ poo.UInt. n-bits)
-  repr: `(UInt ,n-bits)
+  sexp: `(UInt ,n-bits)
   ethabi-display-type: (lambda (port) (fprintf port "uint~d" n-bits))
   ethabi-static?: #t
   ethabi-head-length: 32
@@ -76,11 +85,11 @@
   (cons #'begin (for/collect (i (in-range 8 257 8))
                   (with-syntax ((name (datum->syntax (stx-car stx) (format-symbol "UInt~d" i)))
                                 (i i))
-                    #'(.def (name @ UInt.) n-bits: i repr: 'name)))))
+                    #'(.def (name @ UInt.) n-bits: i sexp: 'name)))))
 (defUIntNs)
 
 (.def (Bytes. @ Type. n)
-  repr: `(Bytes ,n)
+  sexp: `(Bytes ,n)
   ethabi-display-type: (lambda (port) (fprintf port "bytes~d" n))
   ethabi-static?: #t
   ethabi-head-length: 32
@@ -109,7 +118,7 @@
   (syntax-case stx ()
     ((_ i ctx) (exact-integer? (stx-e #'i))
      (with-syntax ((name (datum->syntax #'ctx (format-symbol "Bytes~d" (stx-e #'i)))))
-       #'(.def (name @ Bytes.) n: i repr: 'name)))
+       #'(.def (name @ Bytes.) n: i sexp: 'name)))
     ((d i) #'(d i d))))
 (defsyntax (defBytesNs stx)
   (syntax-case stx ()
@@ -118,7 +127,7 @@
 (defBytesN 65) ; Signature, PublicKey using Secp256k1
 
 (.def (JsInt @ poo.Integer)
-   repr: 'JsInt
+   sexp: 'JsInt
    .element?: (λ (x) (and (exact-integer? x) (<= .most-negative x .most-positive)))
    .most-positive: (1- (expt 2 53))
    .most-negative: (- .most-positive)
@@ -133,7 +142,7 @@
    })
 
 (.def (BytesL16 @ Type.)
-   repr: 'BytesL16
+   sexp: 'BytesL16
    ethabi-display-type: (cut display "bytes" <>)
    ethabi-static?: #f
    ethabi-head-length: 32
@@ -226,7 +235,7 @@
   (u8vector-double-ref bytes 0 big))
 
 (.def (Real @ Type.)
-   repr: 'Real
+   sexp: 'Real
    .element?: real?
    methods: =>.+ {(:: @@ [un/marshal<-bytes])
     length-in-bytes: 8
@@ -237,7 +246,7 @@
   })
 
 (.def (Bool @ Type.)
-   repr: 'Bool
+   sexp: 'Bool
    .element?: boolean?
    ethabi-display-type: (cut display "bool" <>)
    ethabi-static?: #t
@@ -261,7 +270,7 @@
   })
 
 (.def (Json @ Type.)
-   repr: 'Json
+   sexp: 'Json
    .element?: true
    methods: =>.+ {
     .json<-: identity
@@ -280,7 +289,7 @@
   (def a (map (match <> ([kw type . options] (cons (sym<-kw kw) (apply RecordSlot type options))))
               (alist<-plist plist)))
   {(:: @ [Class.] proto)
-   repr: ['Record . plist]
+   sexp: ['Record . plist]
    slots: (.<-alist a)
    types: (map cadr plist)
    ethabi-display-type: (cut ethabi-display-types types <>)
@@ -345,25 +354,25 @@
 
 ;; Untagged union. Can be used for JSON, but no automatic marshaling.
 (.def (Union. @ Type. types)
-  repr: `(Union ,@(map (cut .@ <> repr) types))
+  sexp: `(Union ,@(map (cut .@ <> sexp) types))
   .element?: (λ (x) (any (cut element? <> x) types))
   methods: {(:: @ [bytes<-un/marshal])
     .json<-: (lambda (v) (let/cc return
                       (for-each (λ (type)
                                   (when (element? type v) (return (json<- type v))))
                                 types)
-                      (error "invalid element of type" v repr)))
+                      (error "invalid element of type" v sexp)))
     .<-json: (lambda (j) (let/cc return
                       (for-each (λ (type)
                                   (with-catch void (lambda () (return (<-json type j)))))
                                 types)
-                      (error "invalid json for type" j repr)))})
+                      (error "invalid json for type" j sexp)))})
 
 (def (Union . types) ;; type of tuples, heterogeneous arrays of given length and type
   {(:: @ Union.) (types)})
 
 (.def (Enum. @ Type. vals)
-  repr: `(Enum. ,@vals)
+  sexp: `(Enum. ,@vals)
   .element?: (cut member <> vals)
   .vals@: (list->vector vals)
   .json@: (list->vector (map (lambda (x) (json<-string (string<-json x))) vals))
@@ -404,7 +413,7 @@
 }})
 
 (.def (Maybe. @ Type. type)
-  repr: `(Maybe ,(.@ type repr))
+  sexp: `(Maybe ,(.@ type sexp))
   .element?: (lambda (x) (or (eq? x null) (element? type x)))
   methods: {(:: @@ [bytes<-un/marshal])
     .json<-: (lambda (v) (if (eq? v null) v ((.@ type methods .json<-) v)))
@@ -417,7 +426,7 @@
 (def (Maybe type) {(:: @ Maybe.) (type)})
 
 (.def (List. @ Type. type)
-  repr: `(List ,(.@ type repr))
+  sexp: `(List ,(.@ type sexp))
   .element?: (lambda (x) (let loop ((x x))
                       (or (null? x)
                           (and (pair? x) (element? type (car x)) (loop (cdr x))))))
@@ -433,7 +442,7 @@
 (def (List type) {(:: @ List.) (type)})
 
 (.def (FixedVector. @ Type. type size)
-  repr: `(Vector ,(.@ type repr) ,(.@ type size))
+  sexp: `(Vector ,(.@ type sexp) ,(.@ type size))
   .element?: (let (e? (.@ type methods .element?))
                (lambda (x) (and (vector? x) (= (vector-length x) size) (vector-every e? x))))
   ethabi-display-type: (lambda (port) (.call type ethabi-display-type port)
@@ -465,7 +474,7 @@
     })
 
 (.def (DynamicVector. @ Type. type)
-  repr: `(Vector ,(.@ type repr))
+  sexp: `(Vector ,(.@ type sexp))
   .element?: (let (e? (.@ type methods .element?))
                (lambda (x) (and (vector? x) (vector-every e? x))))
   ethabi-display-type: (lambda (port) (.call type ethabi-display-type port) (display "[]" port))
@@ -518,7 +527,7 @@
     {(:: @ DynamicVector.) (type)}))
 
 (.def (StringMap. @ Type. value-type)
-  repr: `(StringMap ,(.@ value-type repr))
+  sexp: `(StringMap ,(.@ value-type sexp))
   key-type: String
   .element?: (lambda (x) (and (hash-table? x)
                          (let/cc return

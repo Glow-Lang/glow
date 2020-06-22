@@ -2,15 +2,20 @@
 (export #t)
 
 (import
-  :std/sugar :std/text/hex
+  :std/error :std/sugar :std/text/hex
   :clan/utils/option
   :clan/utils/failure
   :clan/net/json-rpc
-  :clan/poo/poo :clan/poo/brace
-  ./ethereum ./config ./signing ./types ./json-rpc ./known-addresses ./hex)
+  :clan/poo/poo (only-in :clan/poo/mop .method) :clan/poo/brace
+  :clan/runtime/db
+  ./hex ./ethereum ./config ./signing ./known-addresses ./types ./json-rpc ./nonce-tracker)
+
+(defstruct (TransactionRejected exception) (receipt))
+(defstruct (StillPending exception) ())
+(defstruct (ReplacementTransactionUnderpriced exception) ())
 
 (def (ensure-secret-key timeout: (timeout #f) log: (log #f) keypair)
-  (when log (log "ethereum-transaction: ensure-secret-key ~a" (0x<-bytes (keypair-address keypair))))
+  (when log (log "ethereum-transaction: ensure-secret-key ~a" (0x<-address (keypair-address keypair))))
   (try
    (personal_importRawKey (hex-encode (keypair-secret-key keypair)) (keypair-password keypair)
                           timeout: timeout log: log)
@@ -44,7 +49,7 @@
 ;; : <- TransactionReceipt
 (def (check-transaction-receipt-status receipt)
   (unless (successful-receipt? receipt)
-    (error "Transaction Rejected" receipt)))
+    (raise (TransactionRejected receipt))))
 
 (def (receipt-sufficiently-confirmed? receipt block-number)
   (>= block-number
@@ -53,7 +58,7 @@
 
 (def (check-receipt-sufficiently-confirmed receipt)
   (unless (receipt-sufficiently-confirmed? receipt (eth_blockNumber))
-    (error "Still Pending")))
+    (raise (StillPending))))
 
 ;; Given a putative sender, some transaction data, and a confirmation,
 ;; make sure that it all matches.
@@ -94,3 +99,58 @@
   (def kp (keypair<-address address))
   (unless kp (error "Couldn't find registered keypair" (json<- Address address)))
   (personal_signTransaction (TransactionParameters<-Transaction transaction) (keypair-password kp)))
+
+;; : TransactionReceipt <- Address Digest
+(def (confirmed-or-known-issue sender hash)
+  (cond
+   ((eth_getTransactionReceipt hash) => check-transaction-receipt-status)
+   (else (nonce-too-low sender #f))))
+
+;; TxHeader <- Address Quantity Quantity
+(def (make-tx-header sender: sender value: value gas: gas
+                     log: (log #f) tx: (dbtx (current-db-transaction)))
+  ;; TODO: get gas price and nonce from geth
+  (def gas-price (eth_gasPrice))
+  (def nonce (.method NonceTracker next sender dbtx))
+  {sender: sender nonce: nonce gasPrice: gas-price gas: gas value: value})
+
+;; Prepare a signed transaction, that you may later issue onto Ethereum network,
+;; from given address, with given operation, value and gas-limit
+;; : Transaction SignedTransaction <- Address Operation Quantity Quantity
+(def (make-signed-transaction sender: sender operation: operation value: value gas: gas)
+  (def tx-header (make-tx-header sender: sender value: value gas: gas))
+  (sign-transaction {(tx-header) (operation)}))
+
+;; : Digest <- Address SignedTransaction
+(def (send-raw-transaction sender signed)
+  (def data (.@ signed data))
+  (def hash (.@ signed signed transactionHash))
+  (match (with-result (eth_sendRawTransaction data))
+    ((some transaction-hash)
+     (if (equal? transaction-hash hash)
+       hash
+       (error "eth-send-raw-transaction: invalid hash" transaction-hash hash)))
+    ((failure (json-rpc-error code: -32000 message: "nonce too low"))
+     (confirmed-or-known-issue sender hash))
+    ((failure (json-rpc-error code: -32000 message: "replacement transaction underpriced"))
+     (raise (ReplacementTransactionUnderpriced)))
+    ((failure (json-rpc-error code: -32000 message:
+                              (? (let (m (string-append "known transaction: " (hex-encode hash)))
+                                   (cut equal? <> m)))))
+     hash)
+    ((failure e)
+     (raise e))))
+
+;; : TransactionReceipt <- Transaction SignedTransaction
+(def (send-and-confirm-transaction signed)
+  (def sender (.@ signed signed from))
+  (def hash (send-raw-transaction sender signed))
+  (def receipt (eth_getTransactionReceipt hash))
+  (if receipt
+    (check-transaction-receipt-status receipt)
+    (let ((nonce (.@ signed signed nonce)))
+      (def sender-nonce (eth_getTransactionCount sender 'latest))
+      (if (< nonce sender-nonce)
+        (confirmed-or-known-issue sender hash)
+        (raise (StillPending)))))
+  (check-receipt-sufficiently-confirmed receipt))

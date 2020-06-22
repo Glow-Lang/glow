@@ -64,7 +64,7 @@
   (secp256k1-recoverable-signature<-bytes compact recid))
 
 (.def (Signature @ Type.)
-   repr: 'Signature
+   sexp: 'Signature
    methods: =>.+ {(:: methods [bytes<-un/marshal])
      length-in-bytes: 65
      .marshal: marshal-signature
