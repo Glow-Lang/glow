@@ -84,11 +84,11 @@
     ((CreateContract code) (values null code))
     ((CallFunction recipient data) (values recipient data))))
 
-(def (TransactionParameters<-Operation sender operation value)
+(def (TransactionParameters<-Operation from operation value)
   (defvalues (to data) (ToData<-Operation operation))
   ;; TransactionParameters
-  {from: sender to: to gas: null gasPrice: null
-   value: value data: data nonce: null condition: null})
+  {(from) (to) (value) (data)
+   gas: null gasPrice: null nonce: null condition: null})
 
 (def (Transactionparameters<-PreTransaction sender pretx)
   (defrule (.pretx x ...) (begin (def x (.@ pretx x)) ...)) (.pretx operation gas value)
@@ -143,11 +143,6 @@
    address: [(Maybe Address) default: null]
    topics: [(Maybe (List Bytes32)) default: null]
    blockhash: [(Maybe Digest) default: null]))
-
-(define-type ParitySignedTransaction
-  (Record
-   raw: [Bytes]
-   tx: [TransactionInformation]))
 
 (define-type SignTransactionResult
   (Record
@@ -205,15 +200,15 @@
    value: [(Maybe Quantity) default: null]
    data: [(Maybe Bytes) default: null]))
 
-(def (CallParameter<-Operation sender operation)
+(def (CallParameter<-Operation from operation)
   (defvalues (to data) (ToData<-Operation operation))
-  {from: sender (to) gas: null gasPrice: null value: null (data)}) ;; CallParameter
+  {(from) (to) (data) gas: null gasPrice: null value: null}) ;; CallParameter
 
-#;
-(def (CallParameter<-PreTransaction sender pretx)
-  (defrule (.pt x ...) (begin (def x (.@ pretx x)) ...))
-  (.pt operation gas value)
-  {(:: @ (Pretransaction<-Operation sender operation)) (gas) (value)})
+(def (CallParameter<-PreTransaction pretx)
+  (defrule [x ...] (begin (def x (.@ pretx x)) ...))
+  [sender operation gas value]
+  {from: sender to: (operation-to operation) data: (operation-data operation)
+   gasPrice: null (gas) (value)})
 
 (def (CallParameter<-Transaction tx)
   (defrule (.tx x ...) (begin (def x (.@ tx x)) ...))
@@ -245,7 +240,7 @@
    s: [(Maybe UInt256) default: null]
    hash: [Digest]))
 
-(def SignedTransaction
+(define-type SignedTransaction
   (Record
    raw: [Bytes]
    tx: [SignedTx]))
@@ -300,7 +295,7 @@
 ;; Computes an eth signature
 (define-ethereum-api eth sign Data <- Address Data)
 
-(define-ethereum-api eth signTransaction SignTransactionResult <- TransactionParameters)
+;;(define-ethereum-api eth signTransaction SignTransactionResult <- TransactionParameters)
 
 (define-ethereum-api eth blockNumber Quantity <-)
 
@@ -322,7 +317,7 @@
   (Maybe Real)) ;; duration in seconds (default 300)
 
 (define-ethereum-api personal sendTransaction
-  SignTransactionResult <- TransactionParameters String) ;; passphrase
+  Digest <- TransactionParameters String) ;; passphrase
 
 ;;; The sign method calculates an Ethereum specific signature with:
 ;;; sign(keccack256("\x19Ethereum Signed Message:\n" + len(message) + message))).
@@ -333,7 +328,7 @@
 (define-ethereum-api personal ecRecover Address <- String Signature) ;; message signature
 
 ;; https://github.com/ethereum/go-ethereum/pull/15971/files
-(define-ethereum-api personal signTransaction SignTransactionResult <- TransactionParameters String)
+(define-ethereum-api personal signTransaction SignedTransaction <- TransactionParameters String)
 
 
 ;; txpool namespace https://geth.ethereum.org/docs/rpc/ns-txpool

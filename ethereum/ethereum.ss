@@ -14,7 +14,10 @@
 (define-type Address
   {(:: @ Bytes20)
    ethabi: "address"
-   methods: =>.+ {.json<-: 0x<-address}})
+   methods: =>.+ {
+    .json<-: 0x<-address
+    .sexp<-: (lambda (x) `(address<-0x ,(0x<-address x)))
+  }})
 
 ;; TODO: mixin the prototype with a formula that caches the abi bytes4 selector.
 (define-type EthFunction
@@ -65,7 +68,7 @@
 (define-type Operation
   {(:: @ Type.)
    .element?: $Operation?
-   methods: =>.+ {
+   methods: =>.+ {(:: @m un/marshal<-json)
      .json<-: (match <>
                 ((TransferTokens to) (hash ("to" (json<- Address to))))
                 ((CreateContract data) (hash ("data" (json<- Bytes data))))
@@ -77,13 +80,14 @@
                  ((and to (not data)) (TransferTokens to))
                  ((and data (not to)) (CreateContract data))
                  (else (CallFunction to data))))
-   }})
+     }})
 
 (define-type PreTransaction
   (Record
+   sender: [Address]
    operation: [Operation]
    value: [Quantity] ;; in wei
-   gas: [Quantity]))
+   gas: [Quantity])) ;; in gas
 
 ;; Transaction (to be) posted to the chain Ethereum
 ;; TODO: merge the fields of tx-header and operation instead, just with a new type tag.
@@ -93,7 +97,8 @@
    operation: [Operation]))
 
 (def (PreTransaction<-Transaction tx)
-  {operation: (.@ tx operation)
+  {sender: (.@ tx tx-header sender)
+   operation: (.@ tx operation)
    value: (.@ tx tx-header value)
    gas: (.@ tx tx-header gas)})
 

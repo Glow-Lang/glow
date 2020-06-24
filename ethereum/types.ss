@@ -5,12 +5,12 @@
   :gerbil/gambit/bits :gerbil/gambit/bytes :gerbil/gambit/exact
   :gerbil/gambit/hash :gerbil/gambit/ports
   :std/format :std/iter :std/misc/bytes :std/misc/hash
-  :std/sort :std/srfi/1 :std/srfi/43 :std/sugar
+  :std/sort :std/srfi/1 :std/srfi/43 :std/sugar :std/text/json
   :clan/utils/base :clan/utils/io :clan/utils/json :clan/utils/list
   :clan/utils/maybe :clan/utils/number
   :clan/pure/dict/intdict
   :clan/poo/poo :clan/poo/io
-  (only-in :clan/poo/mop .defgeneric Type Type. proto Class Class. Slot validate element? .method)
+  (only-in :clan/poo/mop .defgeneric Type Type. proto Class Class. Slot validate element? .method sexp<-)
   (prefix-in (only-in :clan/poo/mop Integer String Symbol) poo.)
   (prefix-in :clan/poo/type poo.)
   :clan/poo/brace
@@ -25,12 +25,13 @@
 ;; Variable-length Int
 (.def (Integer @ poo.Integer n-bits)
   methods: =>.+ {(:: methods [bytes<-un/marshal])
+    .sexp<-: (lambda (x) `(nat<-0x ,(0x<-nat x)))
     .json<-: 0x<-nat
     .<-json: (λ (x) (validate @ (nat<-0x x)))
     })
 
 (.def (IntegerSet @ Type.)
-   .sexp: 'IntegerSet
+   sexp: 'IntegerSet
    .element?: (lambda (x) (and (intdict? x)
                           (every (lambda (x) (eq? #t (cdr x))) (intdict->list x))))
    methods: =>.+ {(:: methods [bytes<-un/marshal])
@@ -66,6 +67,7 @@
   ethabi-static?: #t
   ethabi-head-length: 32
   methods: =>.+ {(:: methods [un/marshal<-bytes] length-in-bytes)
+    .sexp<-: (lambda (x) `(nat<-0x ,(0x<-nat x)))
     .json<-: 0x<-nat
     .<-json: (λ (x) (validate @ (nat<-0x x)))
     .bytes<-: (cut bytes<-nat <> length-in-bytes)
@@ -272,10 +274,21 @@
 (.def (Json @ Type.)
    sexp: 'Json
    .element?: true
-   methods: =>.+ {
+   methods: =>.+ {(:: @m un/marshal<-bytes)
     .json<-: identity
     .<-json: identity
+    .bytes<-: (lambda (x) (call-with-output-u8vector (cut write-json x <>)))
+    .<-bytes: (lambda (bytes) (call-with-input-u8vector bytes json<-port))
   })
+
+(def (marshal<-json<- json<-)
+  (lambda (x port) (marshal Json (json<- x) port)))
+(def (unmarshal<-<-json <-json)
+  (lambda (port) (<-json (unmarshal Json port))))
+
+(.def (un/marshal<-json @ bytes<-un/marshal .json<- .<-json)
+   .marshal: (marshal<-json<- .json<-)
+   .unmarshal: (unmarshal<-<-json .<-json))
 
 (def (sym<-kw k) (string->symbol (keyword->string k)))
 
@@ -296,6 +309,7 @@
    ethabi-static?: (every (cut .@ <> ethabi-static?) types)
    ethabi-head-length: (ethabi-head-length types)
    methods: =>.+ {(:: @ [bytes<-un/marshal])
+     .sexp<-: (lambda (v) `(.mix (.<-alist (@list ,@(map (match <> ([sym . slotdef] `(cons ',sym ,(sexp<- (.@ slotdef type) (.ref v sym))))) a))) (proto ,sexp)))
      .json<-: (lambda (v)
                 (list->hash-table
                  (map (match <> ([sym . slotdef] (cons (symbol->string sym) ((.@ slotdef type methods .json<-) (.ref v sym))))) a)))

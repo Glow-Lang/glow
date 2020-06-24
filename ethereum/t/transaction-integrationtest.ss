@@ -17,7 +17,7 @@
 ;; Use the test database
 (ensure-db-connection (run-path "testdb"))
 
-;; Create a key for the initial have-it-all user of the test network
+;; Create a key for the initial have-it-all user of the Geth test network
 (def croesus (get-first-account))
 
 (register-keypair

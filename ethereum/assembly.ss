@@ -60,17 +60,11 @@
 ;; at a given address which is used as key of the fixup table.
 ;; (deftype Fixup (Pair FixupExpression Integer))
 
-;; a LabelInfo has maybe an offset, and a list of fixups that use the label
-(defstruct LabelInfo
-  (offset ;; (Maybe UInt16)
-   fixups) ;; (List (Pair UInt16 Fixup))
-  transparent: #t)
-
 ;; an Assembler has a Segment and/or buffer, a table from Symbol to LabelInformation,
 ;; and a table from address to fixup
 (defstruct Assembler
   (segment ;;
-   labels  ;; (Table LabelInfo <- Symbol)
+   labels  ;; (Table UInt16 <- Symbol)
    fixups) ;; (Table Fixup <- UInt16)
   transparent: #t)
 (def (new-assembler)
@@ -87,7 +81,7 @@
 (def (eval-fixup-expression labels expr)
   (match expr
     ((? number? x) x)
-    ((? symbol? s) (LabelInfo-offset (hash-get labels s)))
+    ((? symbol? s) (hash-get labels s))
     ([f . l]
      (apply (hash-get fixup-functions f) (map (cut eval-fixup-expression labels <>) l)))))
 
@@ -121,6 +115,8 @@
   (u8vector-uint-set! (Segment-bytes (Assembler-segment a)) offset value big (n-bytes<-n-bits n-bits))
   (hash-remove! (Assembler-fixups a) offset))
 
+;; TODO: somehow check that fixup ranges don't overlap.
+;; e.g. 32-bit fixup at address 10 and 8-bit fixup at address 12.
 (def (&fixup a n-bits expr)
   (def offset (Segment-fill-pointer (Assembler-segment a)))
   (&int a 0 n-bits)
@@ -128,15 +124,11 @@
 
 (def (&label a l)
   (def labels (Assembler-labels a))
-  (def info (hash-get labels l))
+  (def label-offset (hash-get labels l))
   (def offset (current-offset a))
-  (cond
-   ((not info)
-    (hash-put! labels l (LabelInfo offset [])))
-   ((LabelInfo-offset info) =>
-    (cut error "label already defined" l offset <>))
-   (else
-    (set! (LabelInfo-offset info) offset))))
+  (if label-offset
+    (error "label already defined" l offset label-offset)
+    (hash-put! labels l offset)))
 
 (def rev-opcodes (make-vector 256))
 (def opcodes (make-hash-table))
@@ -307,7 +299,7 @@
   (PUSH1 a)
   (&fixup a 8 l))
 (def (pushlabel2 a l)
-  (PUSH1 a)
+  (PUSH2 a)
   (&fixup a 16 l))
 (def (jump1 a l)
   (pushlabel1 a l)
@@ -323,16 +315,15 @@
   (JUMPI a))
 ;; NB: fixed size for now, even if the address starts with zeros,
 ;; because the current assembler cannot deal with dynamic sizes
-(def (push-address a address)
-  (PUSH20 a)
-  (&type a Address address))
-(def (push-int a z)
+(def (&address a address)
+  (&int a (nat<-bytes address)))
+(def (&z a z)
   (cond
    ((and (> 0 z) (< (integer-length z) 240))
-    (push-int a (bitwise-not z))
+    (&z a (bitwise-not z))
     (NOT a))
    ((> 0 z)
-    (push-int a ((.@ UInt256 methods normalize) z)))
+    (&z a ((.@ UInt256 methods normalize) z)))
    ((= 0 z)
     (PUSH1 a) (&byte a 0))
    (else

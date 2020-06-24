@@ -3,8 +3,7 @@
 
 (import
   :std/error :std/sugar :std/text/hex
-  :clan/utils/option
-  :clan/utils/failure
+  :clan/utils/assert :clan/utils/failure :clan/utils/option
   :clan/net/json-rpc
   :clan/poo/poo (only-in :clan/poo/mop .method) :clan/poo/brace
   :clan/runtime/db
@@ -110,21 +109,21 @@
 (def (make-tx-header sender: sender value: value gas: gas
                      log: (log #f) tx: (dbtx (current-db-transaction)))
   ;; TODO: get gas price and nonce from geth
-  (def gas-price (eth_gasPrice))
-  (def nonce (.method NonceTracker next sender dbtx))
-  {sender: sender nonce: nonce gasPrice: gas-price gas: gas value: value})
+  (def gasPrice (eth_gasPrice))
+  (def nonce (.call NonceTracker next sender dbtx))
+  {(sender) (nonce) (gasPrice) (gas) (value)})
 
 ;; Prepare a signed transaction, that you may later issue onto Ethereum network,
 ;; from given address, with given operation, value and gas-limit
-;; : Transaction SignedTransaction <- Address Operation Quantity Quantity
-(def (make-signed-transaction sender: sender operation: operation value: value gas: gas)
-  (def tx-header (make-tx-header sender: sender value: value gas: gas))
-  (sign-transaction {(tx-header) (operation)}))
+;; : Transaction SignedTransaction <- PreTransaction
+(def (make-signed-transaction pre)
+  (def tx-header (make-tx-header sender: (.@ pre sender) value: (.@ pre value) gas: (.@ pre gas)))
+  (sign-transaction {(tx-header) operation: (.@ pre operation)}))
 
 ;; : Digest <- Address SignedTransaction
 (def (send-raw-transaction sender signed)
-  (def data (.@ signed data))
-  (def hash (.@ signed signed transactionHash))
+  (def data (.@ signed raw))
+  (def hash (.@ signed tx hash))
   (match (with-result (eth_sendRawTransaction data))
     ((some transaction-hash)
      (if (equal? transaction-hash hash)
@@ -142,15 +141,42 @@
      (raise e))))
 
 ;; : TransactionReceipt <- Transaction SignedTransaction
-(def (send-and-confirm-transaction signed)
-  (def sender (.@ signed signed from))
+(def (send-and-confirm-transaction sender signed)
   (def hash (send-raw-transaction sender signed))
+  (assert-equal! hash (.@ signed tx hash))
   (def receipt (eth_getTransactionReceipt hash))
   (if receipt
     (check-transaction-receipt-status receipt)
-    (let ((nonce (.@ signed signed nonce)))
+    (let ((nonce (.@ signed tx nonce)))
       (def sender-nonce (eth_getTransactionCount sender 'latest))
       (if (< nonce sender-nonce)
         (confirmed-or-known-issue sender hash)
         (raise (StillPending)))))
   (check-receipt-sufficiently-confirmed receipt))
+
+;; Gas used for a transfer transaction. Hardcoded value defined in the Yellowpaper.
+;; : Quantity
+(def transfer-gas-used 21000)
+
+;; : PreTransaction <- Address Quantity
+(def (transfer-tokens from: sender to: recipient value)
+  {(sender)
+   operation: (TransferTokens recipient)
+   (value)
+   gas: transfer-gas-used})
+
+;; : PreTransaction <- Address Operation Quantity gas: ?(Maybe Quantity)
+(def (make-pre-transaction sender operation value gas: (gas #f))
+  (def gas-limit (or gas
+                     (eth_estimateGas (TransactionParameters<-Operation sender operation value))))
+  ;; TODO: The multiplication by 2 is a hack that needs to be addressed
+  (def gas-limit-n-fold (* 2 gas-limit))
+  {(sender) (operation) (value) gas: gas-limit-n-fold})
+
+;; : PreTransaction <- Address Bytes value: ?Quantity gas: ?(Maybe Quantity)
+(def (create-contract sender code value: (value 0) gas: (gas #f))
+  (make-pre-transaction sender (CreateContract code) value gas: gas))
+
+;; : PreTransaction <- Address Address Bytes Quantity gas: ?(Maybe Quantity)
+(def (call-function sender contract call value: (value 0) gas: (gas #f))
+  (make-pre-transaction sender (CallFunction contract call) value gas: gas))

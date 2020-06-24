@@ -54,7 +54,7 @@
 
 (def (marshal-signature signature port)
   (defvalues (bytes recid) (bytes<-secp256k1-recoverable-signature signature))
-  (write-byte (+ recid 27) port)
+  (write-byte (+ recid 27) port) ;; TODO: handle the way that ethereum uses an offset different from 27
   (write-bytes bytes port))
 
 (def (unmarshal-signature port)
