@@ -48,7 +48,7 @@
     (error "Contract configuration not matched by on-chain transaction"
       config chain-config)))
 
-;; : ContractConfig <- (ContractConfig <- 'a) (Unit <- 'a ContractConfig) 'a (Digest <- Unit)
+;; : ContractConfig <- (ContractConfig <- 'a) (Unit <- 'a ContractConfig) 'a (Digest <-)
 (def (ensure-contract getter setter arg maker)
   (try
    (def config (getter arg))
@@ -60,8 +60,10 @@
      (setter arg config)
      config)))
 
+;; : ContractConfig <- PathString (Digest <-)
 (def (ensure-contract-config/file filename maker)
   (ensure-contract contract-config<-file file<-contract-config filename maker))
 
+;; : ContractConfig <- DBKey (Digest <-)
 (def (ensure-contract-config/db db-key maker)
   (ensure-contract contract-config<-db db<-contract-config db-key maker))
