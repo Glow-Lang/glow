@@ -69,9 +69,11 @@
    separator: ","
    display-element: (cut .call <> ethabi-display-type <>)))
 
+;; : Bytes32 <- AbiFunctionSignature
 (def (digest<-function-signature signature)
   (keccak256<-string (string<-signature signature)))
 
+;; : Bytes4 <- AbiFunctionSignature
 (def (selector<-function-signature signature)
   (subu8vector (digest<-function-signature signature) 0 4))
 
@@ -82,6 +84,9 @@
 (def (ethabi-length types xs)
   (+ (ethabi-head-length types) (ethabi-tail-length types xs)))
 
+;; : Bytes <- [Listof Type] [Listof Any] Bytes
+;; types and xs are lists of the same length,
+;; each x at index i corresponds to the type at index i.
 (def (ethabi-encode types xs (prefix #u8()))
   (def prefix-length (bytes-length prefix))
   (def head-length (ethabi-head-length types))
@@ -97,12 +102,19 @@
   (ethabi-encode-into types xs bytes prefix-length prefix-length get-tail set-tail!)
   bytes)
 
+;; : Void <- [Listof Type] [Listof Any] Bytes Nat Nat [-> Nat] [Nat -> Void]
+;; types and xs are lists of the same length,
+;; each x corresponds to the type at the same index.
+;; start is the location that addresses are relative to, at the beginning of the current fixed-size header section,
+;; head is the location within that header section at which the current/next entry will be stored.
+;; get-tail and set-tail! are a getter/setter pair for where the next tail goes.
 (def (ethabi-encode-into types xs bytes start head get-tail set-tail!)
   (for-each (lambda (type x)
               (.method type .ethabi-encode-into x bytes start head get-tail set-tail!)
               (inc! head (.@ type ethabi-head-length)))
             types xs))
 
+;; : [Listof Any] <- [Listof Type] Bytes Nat Nat
 (def (ethabi-decode types bytes (start 0) (end (bytes-length bytes)))
   (def head-end (+ start (ethabi-head-length types)))
   (def tail head-end)
@@ -113,6 +125,10 @@
   (begin0 (ethabi-decode-from types bytes start start get-tail set-tail!)
     (assert! (= tail end))))
 
+;; : [Listof Any] <- [Listof Type] Bytes Nat Nat [-> Nat] [Nat -> Void]
+;; start is the location that addresses are relative to, at the beginning of the current fixed-size header section,
+;; head is the location within that header section at which the current/next entry will be stored.
+;; get-tail and set-tail! are a getter/setter pair for where the next tail goes.
 (def (ethabi-decode-from types bytes start head get-tail set-tail!)
   (def head-end (get-tail))
   (begin0 (map-in-order
@@ -122,6 +138,7 @@
            types)
     (assert! (= head head-end))))
 
+;; : Bytes <- AbiFunctionSignature [Listof Any]
 ;; Encode a function call to pass it to an Ethereum contract
 (def (bytes<-ethereum-function-call signature arguments)
   (ethabi-encode (cdr signature) arguments (selector<-function-signature signature)))
