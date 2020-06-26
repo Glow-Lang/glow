@@ -110,6 +110,8 @@
 
 (def (do-fixup a offset expr n-bits)
   (def value (eval-fixup-expression (Assembler-labels a) expr))
+  (unless value
+    (error "fixup has no computed value" offset expr n-bits value))
   (unless (and (<= 0 value) (< (integer-length value) n-bits))
     (error "fixup has incorrect computed value" offset expr n-bits value))
   (u8vector-uint-set! (Segment-bytes (Assembler-segment a)) offset value big (n-bytes<-n-bits n-bits))
