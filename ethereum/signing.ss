@@ -4,7 +4,7 @@
   :std/sugar
   :clan/utils/base :clan/poo/poo (only-in :clan/poo/mop Any Type.) :clan/poo/brace :clan/poo/io
   :crypto/keccak :crypto/secp256k1
-  ./types ./ethereum
+  ./types
   )
 
 (define-type SecretKey
@@ -54,7 +54,7 @@
 
 (def (marshal-signature signature port)
   (defvalues (bytes recid) (bytes<-secp256k1-recoverable-signature signature))
-  (write-byte (+ recid 27) port)
+  (write-byte (+ recid 27) port) ;; TODO: handle the way that ethereum uses an offset different from 27
   (write-bytes bytes port))
 
 (def (unmarshal-signature port)
@@ -64,7 +64,7 @@
   (secp256k1-recoverable-signature<-bytes compact recid))
 
 (.def (Signature @ Type.)
-   repr: 'Signature
+   sexp: 'Signature
    methods: =>.+ {(:: methods [bytes<-un/marshal])
      length-in-bytes: 65
      .marshal: marshal-signature

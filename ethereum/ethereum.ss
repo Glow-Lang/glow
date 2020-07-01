@@ -6,17 +6,27 @@
   :clan/poo/poo :clan/poo/brace (only-in :clan/poo/mop Type.)
   ./types ./hex)
 
-;;(define-type Signature Bytes65) ;; NB: The first byte is always 0x04(!), meaning "uncompressed" secp256k1
-;;(define-type PrivateKey Bytes65)
-;;(define-type PublicKey Bytes32)
-
 ;; TODO: implement and use a "newtype"
 (define-type Quantity UInt256)
+(define-type UInt UInt256)
 (define-type Digest Bytes32)
 (define-type Data Bytes)
-(define-type Address {(:: @ Bytes20) methods: =>.+ {.json<-: 0x<-address}})
+(define-type Address
+  {(:: @ Bytes20)
+   ethabi: "address"
+   methods: =>.+ {
+    .json<-: 0x<-address
+    .sexp<-: (lambda (x) `(address<-0x ,(0x<-address x)))
+  }})
+
+;; TODO: mixin the prototype with a formula that caches the abi bytes4 selector.
+(define-type EthFunction
+  (.mix (Record contract: [Address] selector: [Bytes4])
+        {ethabi: "function"}))
+
 
 (def one-ether-in-wei (expt 10 18)) ;; 1 ETH = 10^18 wei
+(def one-gwei-in-wei (expt 10 9)) ;; 1 gwei = 10^9 wei
 
 (define-type Confirmation
   (Record
@@ -58,7 +68,7 @@
 (define-type Operation
   {(:: @ Type.)
    .element?: $Operation?
-   methods: =>.+ {
+   methods: =>.+ {(:: @m un/marshal<-json)
      .json<-: (match <>
                 ((TransferTokens to) (hash ("to" (json<- Address to))))
                 ((CreateContract data) (hash ("data" (json<- Bytes data))))
@@ -70,13 +80,14 @@
                  ((and to (not data)) (TransferTokens to))
                  ((and data (not to)) (CreateContract data))
                  (else (CallFunction to data))))
-   }})
+     }})
 
 (define-type PreTransaction
   (Record
+   sender: [Address]
    operation: [Operation]
    value: [Quantity] ;; in wei
-   gas: [Quantity]))
+   gas: [Quantity])) ;; in gas
 
 ;; Transaction (to be) posted to the chain Ethereum
 ;; TODO: merge the fields of tx-header and operation instead, just with a new type tag.
@@ -86,7 +97,8 @@
    operation: [Operation]))
 
 (def (PreTransaction<-Transaction tx)
-  {operation: (.@ tx operation)
+  {sender: (.@ tx tx-header sender)
+   operation: (.@ tx operation)
    value: (.@ tx tx-header value)
    gas: (.@ tx tx-header gas)})
 
@@ -98,6 +110,6 @@
    to: [Address]
    value: [Quantity]
    data: [Bytes]
-   v: [Quantity] ;; actually UInt8
+   v: [Quantity] ;; actually UInt8... plus offset from chainId!
    r: [Quantity] ;; UInt256
    s: [Quantity])) ;; UInt256

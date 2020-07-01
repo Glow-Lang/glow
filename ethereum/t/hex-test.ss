@@ -6,7 +6,7 @@
   :std/sugar
   :std/error :std/text/hex :std/test :std/srfi/1
   :crypto/keccak
-  :glow/ethereum/hex)
+  ../hex)
 
 (def hex-test
   (test-suite "test suite for glow/ethereum/hex"
@@ -70,5 +70,4 @@
                   "Invalid address checksum \"0x9797809415e4b8efea0963e362ff68b9d98f9e00\" 12\n"]
                  ["0x507877C2E26f1387432D067D2DaAfa7D0420d90a"
                   "Invalid address checksum \"0x507877C2E26f1387432D067D2DaAfa7D0420d90a\" 33\n"]
-                 ["0x507877" "invalid address string length \"0x507877\"\n"]]))
-    ))
+                 ["0x507877" "invalid address string length \"0x507877\"\n"]]))))

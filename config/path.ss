@@ -11,3 +11,7 @@
 (set! source-directory glow-src)
 (set! home-directory glow-home)
 (set! config-directory (lambda () (path-expand "etc" (home-directory))))
+
+(def (in-glow-src)
+  (current-directory (glow-src))
+  ((eval 'add-load-path) (glow-src)))
