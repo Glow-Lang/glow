@@ -8,7 +8,7 @@
 ;; See HACKING.md for details.
 
 (import
-  :std/build-script :std/format :std/srfi/1
+  :std/build-script :std/format :std/misc/list :std/srfi/1
   :clan/utils/filesystem :clan/utils/version
   "config/path")
 
@@ -21,16 +21,35 @@
         recurse?: (lambda (x) (not (equal? (path-strip-directory x) "t"))))
    ["config" "compiler" "runtime" "ethereum"]))
 
+(def gsc-options/no-optimize '("-cc-options" "-O0" "-cc-options" "-U___SINGLE_HOST"))
+(def gsc-options/tcc '("-cc" "tcc" "-cc-options" "-shared"))
+
+(def (tcc?) (case (getenv "USE_TCC" #f) (("y" "Y" "yes" "YES" "1") #t) (else #f)))
+(def (optimize?) (case (getenv "USE_OPT" #f) (("n" "N" "no" "NO" "0") #f) (else #t)))
+(def (debug?) (case (getenv "USE_DBG" #f) (("src") 'src) (("env") 'env) (else #f)))
+
+(def gsc-options
+  (append (when/list (tcc?) gsc-options/tcc)
+          (when/list (not (optimize?)) gsc-options/no-optimize)))
+
+(def (normalize-spec x)
+  (match x
+    ((? string?) [gxc: x . gsc-options])
+    ([(? (cut member <> '(gxc: gsc: exe:))) . _] (append x gsc-options))))
+
 (def (build-spec)
-  [(files) ...
-   "t/common"
-   "all-glow"
-   [exe: "main" bin: "glow"]])
+  (map normalize-spec
+       [(files) ...
+        "t/common"
+        "all-glow"
+        [exe: "main" bin: "glow"]]))
 
 (def (main . args)
   (when (match args ([] #t) (["compile" . _] #t) (_ #f))
     (update-version-from-git name: "Glow"))
   (defbuild-script ;; defines an inner "main"
+    (build-spec)
     ;;verbose: 9
-    (build-spec))
+    debug: (debug?)
+    optimize: (optimize?))
   (apply main args))
