@@ -33,7 +33,7 @@
           max-retries: +inf.0
           (cut eth_getTransactionCount address 'latest))))
      (def (continue result n)
-       (with-committed-tx (tx) (save! nonce tx) (set! nonce n))
+       (with-committed-tx (tx) (set! nonce n) (save! nonce tx))
        result)
      (def (next n)
        (continue n (1+ n)))
