@@ -2,6 +2,8 @@
 
 (import
   :std/format :clan/utils/json
+  :clan/poo/io
+  (only-in :clan/poo/type StringMap)
   ./types ./signing)
 
 ;; TODO: handle collisions, exceptions

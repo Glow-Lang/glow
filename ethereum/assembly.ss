@@ -58,14 +58,14 @@
 
 ;; a Fixup is a pair of an expression and a size in bits specifying how much space there is for the fixup,
 ;; at a given address which is used as key of the fixup table.
-;; (deftype Fixup (Pair FixupExpression Integer))
+;; (deftype Fixup (Pair FixupExpression UInt24))
 
 ;; an Assembler has a Segment and/or buffer, a table from Symbol to LabelInformation,
 ;; and a table from address to fixup
 (defstruct Assembler
-  (segment ;;
-   labels  ;; (Table UInt16 <- Symbol)
-   fixups) ;; (Table Fixup <- UInt16)
+  (segment ;; : Segment
+   labels  ;; : (Table UInt16 <- Symbol)
+   fixups) ;; : (Table Fixup <- UInt16)
   transparent: #t)
 (def (new-assembler)
   (make-Assembler (new-segment) (make-hash-table) (make-hash-table)))
@@ -73,7 +73,7 @@
 ;; TODO: have chunks of code of constant or unknown but bounded length,
 ;; labels, fixups, displacements, etc.; compile-time merging of constant stuff(?)
 
-;; deftype Directive (Fun Unit <- Assembler)
+;; (define-type Directive (Fun Unit <- Assembler))
 
 (def fixup-functions
   (hash (+ +) (- -)))
@@ -142,6 +142,7 @@
            (vector-set! rev-opcodes code 'symbol)
            (export symbol)) ...))
 
+;; For precise semantics, see evm.md in https://github.com/kframework/evm-semantics
 (define-ethereum-bytecodes
   (#x00 STOP 0) ;; Halts execution.
   (#x01 ADD 3) ;; Addition operation.

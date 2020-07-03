@@ -34,30 +34,28 @@
         (def ?name-label (assq i nats/names))
         (cond (?name-label [[jumplabel (cdr ?name-label)] instr-jump])
               (else        [instr-jump])))))
-   (test-suite "test-labels"
-     (def code (assemble instrs))
-     (test-case "check code length"
-       (check-equal? (u8vector-length code) (+ (nat->i-code (last nats)) jumplabel-len jump2-len)))
-     (test-case "check JUMPDEST on every jumplabel"
-       (for ((nat nats))
-         (def i-code (nat->i-code nat))
-         (def j-code (+ i-code jumplabel-len))
-         ; #x5b is JUMPDEST
-         (check-equal? (subu8vector code i-code j-code) #u8(#x5b))))
-     (test-case "check jump2 code pointers"
-       (for ((i (in-range n-jumps)))
-         (def nat-jump (list-ref nats (modulo i n-labels)))
-         (def i-code-dest (nat->i-code nat-jump))
-         (def i-code-jump (+ (nat->i-code i) (if (member i nats) jumplabel-len 0)))
-         (def j-code-jump (+ i-code-jump jump2-len))
-         (check-equal? (subu8vector code i-code-jump j-code-jump)
-                       ; #x61 is PUSH2, #x56 is JUMP
-                       (u8vector-append #u8(#x61) (bytes<-nat i-code-dest 2) #u8(#x56))))))))
+   (def code (assemble instrs))
+   (test-case "check code length"
+     (check-equal? (u8vector-length code) (+ (nat->i-code (last nats)) jumplabel-len jump2-len)))
+   (test-case "check JUMPDEST on every jumplabel"
+     (for ((nat nats))
+       (def i-code (nat->i-code nat))
+       (def j-code (+ i-code jumplabel-len))
+       ;; #x5b is JUMPDEST
+       (check-equal? (subu8vector code i-code j-code) #u8(#x5b))))
+   (test-case "check jump2 code pointers"
+     (for ((i (in-range n-jumps)))
+       (def nat-jump (list-ref nats (modulo i n-labels)))
+       (def i-code-dest (nat->i-code nat-jump))
+       (def i-code-jump (+ (nat->i-code i) (if (member i nats) jumplabel-len 0)))
+       (def j-code-jump (+ i-code-jump jump2-len))
+       (check-equal? (subu8vector code i-code-jump j-code-jump)
+                     ;; #x61 is PUSH2, #x56 is JUMP
+                     (u8vector-append #u8(#x61) (bytes<-nat i-code-dest 2) #u8(#x56)))))))
 
 ;; pair-flip : (cons a b) -> (cons b a)
 (def (pair-flip p) (with ((cons a b) p) (cons b a)))
 
-;; --------------------------------------------------------
-
 (def assembly-test
-  (test-labels '((a . 13) (b . 8) (c . 21) (d . 0) (e . 34) (f . 3) (g . 5))))
+  (test-suite "test suite for glow/ethereum/assembly"
+    (test-labels '((a . 13) (b . 8) (c . 21) (d . 0) (e . 34) (f . 3) (g . 5)))))

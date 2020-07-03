@@ -47,6 +47,9 @@
   ;; POO
   ;;:clan/poo/poo (only-in :clan/poo/mop new) :clan/poo/type :clan/poo/io
 
+  ;; Versions for dependencies
+  :clan/version :crypto/version
+
   ;; Glow
   (for-template :glow/compiler/syntax-context)
   :glow/config/path :glow/config/version

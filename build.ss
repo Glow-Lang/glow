@@ -46,7 +46,7 @@
 
 (def (main . args)
   (when (match args ([] #t) (["compile" . _] #t) (_ #f))
-    (update-version-from-git name: "Glow"))
+    (update-version-from-git name: "Glow" path: "config/version.ss"))
   (defbuild-script ;; defines an inner "main"
     (build-spec)
     ;;verbose: 9

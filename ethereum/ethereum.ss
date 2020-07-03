@@ -3,7 +3,7 @@
 (import
   :std/sugar
   :clan/utils/maybe
-  :clan/poo/poo :clan/poo/brace (only-in :clan/poo/mop Type.)
+  :clan/poo/poo :clan/poo/io :clan/poo/brace (only-in :clan/poo/mop Type. define-type)
   ./types ./hex)
 
 ;; TODO: implement and use a "newtype"
@@ -69,16 +69,20 @@
   {(:: @ Type.)
    .element?: $Operation?
    methods: =>.+ {(:: @m un/marshal<-json)
+     .sexp<-: (match <>
+                ((TransferTokens to) ['TransferTokens (sexp<- Address to)])
+                ((CreateContract data) ['CreateContract (sexp<- Bytes data)])
+                ((CallFunction to data) ['CallFunction (sexp<- Address to) (sexp<- Bytes data)]))
      .json<-: (match <>
                 ((TransferTokens to) (hash ("to" (json<- Address to))))
                 ((CreateContract data) (hash ("data" (json<- Bytes data))))
                 ((CallFunction to data) (hash ("to" (json<- Address to)) ("data" (json<- Bytes data)))))
      .<-json: (lambda (h)
-                (def to (map/maybe (cut <-json Address <>) (hash-get h "to")))
-                (def data (map/maybe (cut <-json Bytes <>) (hash-get h "data")))
+                (def to (map/maybe (cut <-json Address <>) (hash-ref h "to" null)))
+                (def data (map/maybe (cut <-json Bytes <>) (hash-ref h "data" null)))
                 (cond
-                 ((and to (not data)) (TransferTokens to))
-                 ((and data (not to)) (CreateContract data))
+                 ((and to (eq? data null)) (TransferTokens to))
+                 ((and data (eq? to null)) (CreateContract data))
                  (else (CallFunction to data))))
      }})
 

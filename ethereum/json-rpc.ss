@@ -20,20 +20,23 @@
   (for-syntax :std/format)
   :std/format :std/lazy :std/sugar
   :clan/net/json-rpc
-  :clan/poo/poo :clan/poo/brace
-  :clan/utils/json :clan/utils/maybe :clan/utils/path-config
+  :clan/utils/json :clan/utils/logger :clan/utils/maybe :clan/utils/path-config
+  :clan/poo/poo :clan/poo/brace :clan/poo/io
+  (only-in :clan/poo/mop define-type)
+  (only-in :clan/poo/number Real)
+  (only-in :clan/poo/type List Maybe Unit)
   ./types ./signing ./ethereum ./config
   )
+
+(def geth-rpc-logger (json-logger "geth-rpc"))
 
 ;; Use a mutex for access to geth, not to overload it and get timeouts.
 ;; have a pool of a small number of connections to geth rather than just one.
 (def ethereum-mutex (make-mutex 'ethereum))
 
 (def (ethereum-json-rpc method-name result-decoder param-encoder
-                        timeout: (timeout #f) log: (log #f)
+                        timeout: (timeout #f) log: (log geth-rpc-logger)
                         params)
-  (when log
-    (log "ETH json rpc method-name=~a" method-name))
   (with-lock ethereum-mutex
              (cut json-rpc (ethereum-rpc-config) method-name params
                   result-decoder: result-decoder
@@ -48,7 +51,7 @@
        (with-syntax ((method-name method-name) (fun-id fun-id))
          #'(begin
              (def params-type (Tuple argument-type ...))
-             (def (fun-id timeout: (timeout #f) log: (log #f) . a)
+             (def (fun-id timeout: (timeout #f) log: (log geth-rpc-logger) . a)
                  (ethereum-json-rpc method-name
                                     (.@ result-type methods .<-json)
                                     (.@ params-type methods .json<-) (list->vector a)
@@ -161,7 +164,7 @@
    data: [Bytes]
    topics: [(List Digest)]))
 
-(define-type Bloom Bytes32)
+(define-type Bloom Bytes256)
 
 (define-type TransactionReceipt
   (Record

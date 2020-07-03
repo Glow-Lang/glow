@@ -5,7 +5,7 @@
   :std/error :std/sugar :std/text/hex
   :clan/utils/assert :clan/utils/failure :clan/utils/option
   :clan/net/json-rpc
-  :clan/poo/poo (only-in :clan/poo/mop .method) :clan/poo/brace
+  :clan/poo/poo :clan/poo/io (only-in :clan/poo/mop .method) :clan/poo/brace
   :clan/runtime/db
   ./hex ./ethereum ./config ./signing ./known-addresses ./types ./json-rpc ./nonce-tracker)
 
@@ -75,22 +75,17 @@
   (def receipt (eth_getTransactionReceipt hash))
   (check-transaction-receipt-status receipt)
   (unless (receipt-sufficiently-confirmed? receipt (eth_blockNumber))
-    (error "Invalid-transaction-confirmation" "Transaction still pending"))
-  (def txinfo (eth_getTransactionByHash hash))
-  (unless (and (equal? sender (.@ txinfo from))
-               (equal? recipient (.@ txinfo to))
-               (equal? recipient (.@ txdata to))
-               (equal? (.@ txinfo nonce) (.@ txdata nonce))
-               (equal? (.@ txinfo value) (.@ txdata value))
-               (equal? (.@ txinfo gasPrice) (.@ txdata gasPrice))
-               (<= (.@ txinfo gas) (.@ txdata gas))
-               (equal? (.@ txinfo input) (.@ txdata data)))
-    (error "Invalid transaction confirmation" "transaction received doesn't match transaction sent"))
-  (unless (and (equal? (.@ confirmation transactionHash) (.@ txinfo hash))
-               (equal? (.@ confirmation transactionIndex) (.@ txinfo transactionIndex))
-               (equal? (.@ confirmation blockNumber) (.@ txinfo blockNumber))
-               (equal? (.@ confirmation blockHash) (.@ txinfo blockHash)))
-    (error "Invalid transaction confirmation" "confirmation doesn't match transaction information")))
+    (raise (StillPending)))
+  (unless (and (equal? sender (.@ receipt from))
+               (equal? recipient (.@ receipt to))
+               (equal? hash (.@ receipt transactionHash))
+               (<= (.@ receipt gasUsed) (.@ txdata gas)))
+    (error "receipt doesn't match transaction sent"))
+  (unless (and (equal? (.@ confirmation transactionHash) hash)
+               (equal? (.@ confirmation transactionIndex) (.@ receipt transactionIndex))
+               (equal? (.@ confirmation blockNumber) (.@ receipt blockNumber))
+               (equal? (.@ confirmation blockHash) (.@ receipt blockHash)))
+    (error "confirmation doesn't match transaction information")))
 
 ;; SignedTransaction <- Transaction
 (def (sign-transaction transaction)
@@ -103,14 +98,14 @@
 (def (confirmed-or-known-issue sender hash)
   (cond
    ((eth_getTransactionReceipt hash) => check-transaction-receipt-status)
-   (else (nonce-too-low sender #f))))
+   (else (nonce-too-low sender))))
 
 ;; TxHeader <- Address Quantity Quantity
 (def (make-tx-header sender: sender value: value gas: gas
-                     log: (log #f) tx: (dbtx (current-db-transaction)))
+                     log: (log #f))
   ;; TODO: get gas price and nonce from geth
   (def gasPrice (eth_gasPrice))
-  (def nonce (.call NonceTracker next sender dbtx))
+  (def nonce (.call NonceTracker next sender))
   {(sender) (nonce) (gasPrice) (gas) (value)})
 
 ;; Prepare a signed transaction, that you may later issue onto Ethereum network,
@@ -130,7 +125,8 @@
        hash
        (error "eth-send-raw-transaction: invalid hash" transaction-hash hash)))
     ((failure (json-rpc-error code: -32000 message: "nonce too low"))
-     (confirmed-or-known-issue sender hash))
+     (confirmed-or-known-issue sender hash)
+     hash)
     ((failure (json-rpc-error code: -32000 message: "replacement transaction underpriced"))
      (raise (ReplacementTransactionUnderpriced)))
     ((failure (json-rpc-error code: -32000 message:
@@ -140,11 +136,16 @@
     ((failure e)
      (raise e))))
 
+(import :clan/utils/debug)
+
 ;; : TransactionReceipt <- Transaction SignedTransaction
 (def (send-and-confirm-transaction sender signed)
   (def hash (send-raw-transaction sender signed))
+  (DBG send-and-confirm-transaction-1: (0x<-address sender) (sexp<- SignedTransaction signed) hash (0x<-bytes hash) (.@ signed tx hash) (0x<-bytes (.@ signed tx hash)) (equal? hash (.@ signed tx hash)))
   (assert-equal! hash (.@ signed tx hash))
+  (DBG send-and-confirm-transaction-1-bis:)
   (def receipt (eth_getTransactionReceipt hash))
+  (DBG send-and-confirm-transaction-2: (sexp<- TransactionReceipt receipt))
   (if receipt
     (check-transaction-receipt-status receipt)
     (let ((nonce (.@ signed tx nonce)))
@@ -152,7 +153,9 @@
       (if (< nonce sender-nonce)
         (confirmed-or-known-issue sender hash)
         (raise (StillPending)))))
+  (DBG send-and-confirm-transaction-3:
   (check-receipt-sufficiently-confirmed receipt))
+  receipt)
 
 ;; Gas used for a transfer transaction. Hardcoded value defined in the Yellowpaper.
 ;; : Quantity
@@ -180,3 +183,5 @@
 ;; : PreTransaction <- Address Address Bytes Quantity gas: ?(Maybe Quantity)
 (def (call-function sender contract call value: (value 0) gas: (gas #f))
   (make-pre-transaction sender (CallFunction contract call) value gas: gas))
+
+(import :clan/utils/debug) (trace! send-and-confirm-transaction receipt-sufficiently-confirmed?)

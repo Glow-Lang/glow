@@ -2,7 +2,7 @@
 (import
   :gerbil/gambit/bits :gerbil/gambit/bytes :gerbil/gambit/foreign
   :std/sugar
-  :clan/utils/base :clan/poo/poo (only-in :clan/poo/mop Any Type.) :clan/poo/brace :clan/poo/io
+  :clan/utils/base :clan/poo/poo (only-in :clan/poo/mop Any Type. define-type) :clan/poo/brace :clan/poo/io
   :crypto/keccak :crypto/secp256k1
   ./types
   )

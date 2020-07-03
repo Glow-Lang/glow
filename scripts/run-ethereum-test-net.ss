@@ -4,7 +4,8 @@
 (import
   :gerbil/gambit/exceptions :gerbil/gambit/ports
   :std/format :std/getopt :std/misc/list :std/misc/ports :std/misc/process :std/srfi/13 :std/sugar
-  :clan/utils/base :clan/utils/files :clan/utils/maybe :clan/utils/multicall :clan/utils/path-config
+  :clan/utils/base :clan/utils/files :clan/utils/maybe :clan/utils/multicall
+  :clan/utils/path-config :clan/utils/shell
   :clan/net/json-rpc
   :glow/config/path)
 
@@ -43,33 +44,12 @@
              stdin-redirection: #t stdout-redirection: #t stderr-redirection: #t show-console: #f)
 (create-directory* geth-logs-directory)
 
-(def (ascii-alphanumeric? x)
-  (or (char<=? #\A x #\Z) (char<=? #\a x #\z) (char<=? #\0 x #\9)))
-
-(def (easy-shell-character? x)
-  (or (ascii-alphanumeric? x) (string-index "+-_.,%@:/=" x)))
-
-(def (needs-shell-escape? token)
-  (not (string-every easy-shell-character? token)))
-
-(def (escape-shell-token token)
-  (if (needs-shell-escape? token)
-    (call-with-output-string
-     (lambda (port)
-       (display #\" port)
-       (string-for-each
-        (lambda (c) (when (string-index "$`\\\"" c) (display #\\ port)) (display c port))
-        token)
-       (display #\" port)))
-    token))
-
-(def (escape-shell-tokens tokens)
-  (string-join (map escape-shell-token tokens) " "))
-
 (def geth-arguments
   ["--dev"
    (when/list (and geth-dev-period (< 0 geth-dev-period))
               ["--dev.period" (number->string geth-dev-period)])...
+  "--fakepow"
+  "--verbosity" "4" ;; 3: info, 4: debug
   "--mine"
   "--identity" "GlowEthereumPrivateTestNet"
   "--datadir" geth-data-directory

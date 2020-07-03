@@ -3,6 +3,7 @@
 (import
   :std/format :std/test
   :clan/utils/base :clan/utils/concurrency :clan/utils/path-config
+  :clan/poo/io
   :clan/runtime/db
   ../types ../config ../signing ../known-addresses ../json-rpc ../transaction
   ./signing-test)
@@ -29,7 +30,7 @@
   ""))
 
 ;; Ensure Geth can issue transactions for all test accounts
-(for-each (lambda (nkp) (ensure-secret-key (cadr nkp) log: printf)) test-keypairs)
+(for-each (lambda (nkp) (ensure-secret-key (cadr nkp))) test-keypairs)
 
 (def transaction-integrationtest
   (test-suite "integration test for glow/ethereum/transaction"

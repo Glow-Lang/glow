@@ -4,14 +4,16 @@
   (for-syntax :gerbil/gambit/exact :std/iter :glow/compiler/common)
   :gerbil/gambit/bits :gerbil/gambit/bytes :gerbil/gambit/exact
   :gerbil/gambit/hash :gerbil/gambit/ports
-  :std/format :std/iter :std/misc/bytes :std/misc/hash
+  :std/format :std/iter :std/misc/bytes :std/misc/completion
   :std/sort :std/srfi/1 :std/srfi/43 :std/sugar :std/text/json
   :clan/utils/base :clan/utils/io :clan/utils/json :clan/utils/list
   :clan/utils/maybe :clan/utils/number
-  :clan/pure/dict/intdict
   :clan/poo/poo :clan/poo/io
-  (only-in :clan/poo/mop .defgeneric Type Type. proto Class Class. Slot validate element? .method sexp<-)
-  (prefix-in (only-in :clan/poo/mop Integer String Symbol) poo.)
+  (only-in :clan/poo/mop
+           Type Type. proto Class Class. Slot
+           .defgeneric validate element? .method define-type)
+  (prefix-in (only-in :clan/poo/mop Bool String Symbol) poo.)
+  (prefix-in (only-in :clan/poo/number Nat UInt. IntSet) poo.)
   (prefix-in :clan/poo/type poo.)
   :clan/poo/brace
   ./hex ./abi)
@@ -19,55 +21,30 @@
 ;; --- something for types in general, including Record, Union, Maybe
 ;; --- something for ethereum types in particular
 
-;; For now, types are just runtime descriptors...
-(defrule (define-type a desc) (def a (.mix {sexp: 'a} desc)))
-
-;; Variable-length Int
-(.def (Integer @ poo.Integer n-bits)
+;; Variable-length Nat
+(.def (Nat @ poo.Nat n-bits)
   methods: =>.+ {(:: methods [bytes<-un/marshal])
     .sexp<-: (lambda (x) `(nat<-0x ,(0x<-nat x)))
     .json<-: 0x<-nat
     .<-json: (λ (x) (validate @ (nat<-0x x)))
     })
 
-(.def (IntegerSet @ Type.)
-   sexp: 'IntegerSet
-   .element?: (lambda (x) (and (intdict? x)
-                          (every (lambda (x) (eq? #t (cdr x))) (intdict->list x))))
-   methods: =>.+ {(:: methods [bytes<-un/marshal])
-     .json<-: .<-list
-     .<-json: .list<-
-     .marshal: (lambda (x port)
-                 (def l (.json<- x))
-                 (marshal Integer (length l) port)
-                 (for-each (cut marshal Integer <> port) l))
-     .unmarshal: (lambda (port)
-                   (.<-json (for/collect (_ (in-range (unmarshal Integer port)))
-                              (unmarshal Integer port))))
-     .empty: empty-intdict
-     .empty?: intdict-empty?
-     .add: (lambda (x i) (intdict-put x i #t))
-     .remove: intdict-remove
-     .has?: intdict-has-key?
-     .<-list: intdict-keys
-     .list<-: (lambda (x) (list->intdict (map (cut cons <> #t) x)))
-     .=?: intdict=?
-     .min-elt: intdict-min-key
-     .max-elt: intdict-max-key
-   })
+(.def (NatSet @ poo.IntSet)
+  sexp: 'NatSet
+  Int: Nat)
 
 (def (ensure-zeroes bytes start len)
   (for (i (in-range len))
     (assert! (zero? (bytes-ref bytes (+ start i))))))
 
-;; Integer and Bytes types
+;; Integer types
 (.def (UInt. @ poo.UInt. n-bits)
   sexp: `(UInt ,n-bits)
   ethabi-display-type: (lambda (port) (fprintf port "uint~d" n-bits))
   ethabi-static?: #t
   ethabi-head-length: 32
   methods: =>.+ {(:: methods [un/marshal<-bytes] length-in-bytes)
-    .sexp<-: (lambda (x) `(nat<-0x ,(0x<-nat x)))
+    .sexp<-: identity
     .json<-: 0x<-nat
     .<-json: (λ (x) (validate @ (nat<-0x x)))
     .bytes<-: (cut bytes<-nat <> length-in-bytes)
@@ -82,7 +59,6 @@
       (ensure-zeroes bytes head .ethabi-padding)
       (u8vector-uint-ref bytes (+ head .ethabi-padding) big length-in-bytes))
     })
-
 (defsyntax (defUIntNs stx)
   (cons #'begin (for/collect (i (in-range 8 257 8))
                   (with-syntax ((name (datum->syntax (stx-car stx) (format-symbol "UInt~d" i)))
@@ -90,6 +66,7 @@
                     #'(.def (name @ UInt.) n-bits: i sexp: 'name)))))
 (defUIntNs)
 
+;; Bytes types
 (.def (Bytes. @ Type. n)
   sexp: `(Bytes ,n)
   ethabi-display-type: (lambda (port) (fprintf port "bytes~d" n))
@@ -97,6 +74,7 @@
   ethabi-head-length: 32
   .element?: (λ (x) (and (bytes? x) (= (bytes-length x) n)))
   methods: =>.+ {
+    .sexp<-: (lambda (x) ['bytes<-0x (0x<-bytes x)])
     length-in-bytes: n
     zero: (make-bytes n)
     .json<-: 0x<-bytes
@@ -127,21 +105,7 @@
     ((d) (cons #'begin (for/collect (i (in-range 1 33)) (with-syntax ((i i)) #'(defBytesN i d)))))))
 (defBytesNs)
 (defBytesN 65) ; Signature, PublicKey using Secp256k1
-
-(.def (JsInt @ poo.Integer)
-   sexp: 'JsInt
-   .element?: (λ (x) (and (exact-integer? x) (<= .most-negative x .most-positive)))
-   .most-positive: (1- (expt 2 53))
-   .most-negative: (- .most-positive)
-   methods: =>.+ {(:: @@ [un/marshal<-bytes])
-    length-in-bytes: 7
-    .json<-: identity
-    .<-json: (λ (x) (validate @ x))
-    .bytes<-: (λ (n) (def bytes (make-bytes 7))
-                 (u8vector-sint-set! bytes 0 n big 7)
-                 bytes)
-    .<-bytes: (λ (bytes) (validate @ (u8vector-sint-ref bytes 0 big 7)))
-   })
+(defBytesN 256) ; Bloom filter
 
 (.def (BytesL16 @ Type.)
    sexp: 'BytesL16
@@ -150,6 +114,7 @@
    ethabi-head-length: 32
    .element?: (λ (x) (and (bytes? x) (<= (bytes-length x) 65535)))
    methods: =>.+ {(:: @@ [bytes<-un/marshal])
+    .sexp<-: (.@ Bytes. methods .sexp<-)
     .json<-: 0x<-bytes
     .<-json: (λ (x) (validate @ (bytes<-0x x)))
     .marshal: write-sized16-bytes
@@ -172,8 +137,25 @@
       (set-tail! (+ data-start (ceiling-align len 32)))
       (subu8vector bytes data-start (+ data-start len)))
   })
-
 (define-type Bytes BytesL16)
+
+(.def (un/marshal<-dynamic-bytes @ [] .<-bytes .bytes<-)
+  .marshal: (lambda (x port) (marshal Bytes (.bytes<- x) port))
+  .unmarshal: (lambda (port) (.<-bytes (unmarshal Bytes port))))
+
+(.def (Json @ Type.)
+   sexp: 'Json
+   .element?: true
+   methods: =>.+ {(:: @@ un/marshal<-dynamic-bytes)
+    .json<-: identity
+    .<-json: identity
+    .bytes<-: (lambda (x) (call-with-output-u8vector [] (cut write-json x <>)))
+    .<-bytes: (lambda (bytes) (call-with-input-u8vector bytes json<-port))
+  })
+
+(.def (un/marshal<-json @ un/marshal<-dynamic-bytes .json<- .<-json)
+   .bytes<-: (lambda (x) (bytes<- Json (.json<- x)))
+   .<-bytes: (lambda (x) (.<-json (<-bytes Json x))))
 
 (.def (String @ poo.String)
    ethabi-display-type: (cut display "string" <>)
@@ -183,11 +165,11 @@
                           (or (< (string-length x) 16384)
                               (and (not (< 65535 (string-length x)))
                                    (<= (bytes-length (string->bytes x)) 65535)))))
-   methods: =>.+ {(:: @@ [bytes<-un/marshal])
+   methods: =>.+ {(:: @@ un/marshal<-dynamic-bytes)
     .json<-: identity
     .<-json: (λ (x) (validate @ x))
-    .marshal: (lambda (s port) (write-sized16-bytes (string->bytes s) port))
-    .unmarshal: (lambda (port) (bytes->string (read-sized16-bytes port)))
+    .<-bytes: bytes->string
+    .bytes<-: string->bytes
     .ethabi-tail-length: (rcompose string->bytes (.@ Bytes methods .ethabi-tail-length))
     .ethabi-encode-into:
     (lambda (x bytes start head get-tail set-tail!)
@@ -197,28 +179,16 @@
       (bytes->string (.method Bytes .ethabi-decode-from bytes start head get-tail set-tail!)))
   })
 
-;; Use maybe-intern-symbol instead of string->symbol to avoid DoS attacks
-;; that cause you to intern too many symbols and run out of memory.
-;; : (Or Symbol String) <- String
-(def (maybe-intern-symbol string)
-  (or (##find-interned-symbol string) string))
-
-;; Use maybe-intern-symbol instead of string->keyword to avoid DoS attacks
-;; that cause you to intern too many keywords and run out of memory.
-;; : (Or Keyword String) <- String
-(def (maybe-intern-keyword string)
-  (or (##find-interned-keyword string) string))
-
 ;; TODO: have a function that only interns the string to a symbol if already found?
 (.def (Symbol @ poo.Symbol)
    ethabi-display-type: (cut display "bytes" <>)
    ethabi-static?: #f
    ethabi-head-length: 32
-   methods: =>.+ {(:: @@ [bytes<-un/marshal])
+   methods: =>.+ {(:: @@ un/marshal<-dynamic-bytes)
     .json<-: symbol->string
     .<-json: maybe-intern-symbol
-    .marshal: (lambda (s port) (write-sized16-bytes (string->bytes (symbol->string s)) port))
-    .unmarshal: (lambda (port) (string->symbol (bytes->string (read-sized16-bytes port))))
+    .bytes<-: (rcompose symbol->string string->bytes)
+    .<-bytes: (rcompose bytes->string string->symbol)
     .ethabi-tail-length: (rcompose symbol->string (.@ String methods .ethabi-tail-length))
     .ethabi-encode-into:
     (lambda (x bytes start head get-tail set-tail!)
@@ -228,37 +198,11 @@
       (maybe-intern-symbol (.method String .ethabi-decode-from bytes start head get-tail set-tail!)))
     })
 
-(def (bytes<-double d)
-  (def bytes (make-bytes 8))
-  (u8vector-double-set! bytes 0 d big)
-  bytes)
-
-(def (double<-bytes bytes)
-  (u8vector-double-ref bytes 0 big))
-
-(.def (Real @ Type.)
-   sexp: 'Real
-   .element?: real?
-   methods: =>.+ {(:: @@ [un/marshal<-bytes])
-    length-in-bytes: 8
-    .json<-: identity
-    .<-json: (cut validate @ <>)
-    .bytes<-: bytes<-double
-    .<-bytes: double<-bytes
-  })
-
-(.def (Bool @ Type.)
-   sexp: 'Bool
-   .element?: boolean?
+(.def (Bool @ poo.Bool)
    ethabi-display-type: (cut display "bool" <>)
    ethabi-static?: #t
    ethabi-head-length: 32
-   methods: =>.+ {(:: @@ [un/marshal<-bytes])
-    length-in-bytes: 1
-    .json<-: identity
-    .<-json: (cut validate @ <>)
-    .bytes<-: (lambda (x) (if x #u8(1) #u8(0)))
-    .<-bytes: (λ (b) (< 0 (u8vector-ref b 0)))
+   methods: =>.+ {
     .ethabi-padding: 31
     .ethabi-tail-length: (lambda (_) 0)
     .ethabi-encode-into:
@@ -271,33 +215,11 @@
         ((1) #t) ((0) #f) (else (error "Invalid bool"))))
   })
 
-(.def (Json @ Type.)
-   sexp: 'Json
-   .element?: true
-   methods: =>.+ {(:: @m un/marshal<-bytes)
-    .json<-: identity
-    .<-json: identity
-    .bytes<-: (lambda (x) (call-with-output-u8vector (cut write-json x <>)))
-    .<-bytes: (lambda (bytes) (call-with-input-u8vector bytes json<-port))
-  })
-
-(def (marshal<-json<- json<-)
-  (lambda (x port) (marshal Json (json<- x) port)))
-(def (unmarshal<-<-json <-json)
-  (lambda (port) (<-json (unmarshal Json port))))
-
-(.def (un/marshal<-json @ bytes<-un/marshal .json<- .<-json)
-   .marshal: (marshal<-json<- .json<-)
-   .unmarshal: (unmarshal<-<-json .<-json))
-
-(def (sym<-kw k) (string->symbol (keyword->string k)))
-
 ;; Records
 ;; TODO: support defaults
 (def (RecordSlot type . options)
   (def o (.<-alist (alist<-plist options)))
   {(:: @ [o]) (type) optional: (.has? o default)})
-
 (def (Record . plist)
   (def a (map (match <> ([kw type . options] (cons (sym<-kw kw) (apply RecordSlot type options))))
               (alist<-plist plist)))
@@ -309,7 +231,7 @@
    ethabi-static?: (every (cut .@ <> ethabi-static?) types)
    ethabi-head-length: (ethabi-head-length types)
    methods: =>.+ {(:: @ [bytes<-un/marshal])
-     .sexp<-: (lambda (v) `(.mix (.<-alist (@list ,@(map (match <> ([sym . slotdef] `(cons ',sym ,(sexp<- (.@ slotdef type) (.ref v sym))))) a))) (proto ,sexp)))
+     .sexp<-: (lambda (v) `(.cc (proto ,sexp) ,@(append-map (match <> ([sym . slotdef] [(kw<-sym sym) (sexp<- (.@ slotdef type) (.ref v sym))])) a)))
      .json<-: (lambda (v)
                 (list->hash-table
                  (map (match <> ([sym . slotdef] (cons (symbol->string sym) ((.@ slotdef type methods .json<-) (.ref v sym))))) a)))
@@ -353,15 +275,14 @@
                 (vector-for-each (lambda (_ type val) (marshal type val port))
                                  types v))
     .unmarshal: (lambda (port) (vector-map (lambda (_ type) (unmarshal type port)) types))
-     .ethabi-tail-length: (lambda (x) (ethabi-tail-length type-list (vector->list x)))
-     .ethabi-encode-into:
-     (lambda (x bytes start head get-tail set-tail!)
-       (ethabi-encode-into type-list (vector->list x) bytes start head get-tail set-tail!))
-     .ethabi-decode-from:
-     (lambda (bytes start head get-tail set-tail!)
-       (list->vector (ethabi-decode-from type-list bytes start head get-tail set-tail!)))
+    .ethabi-tail-length: (lambda (x) (ethabi-tail-length type-list (vector->list x)))
+    .ethabi-encode-into:
+    (lambda (x bytes start head get-tail set-tail!)
+      (ethabi-encode-into type-list (vector->list x) bytes start head get-tail set-tail!))
+    .ethabi-decode-from:
+    (lambda (bytes start head get-tail set-tail!)
+      (list->vector (ethabi-decode-from type-list bytes start head get-tail set-tail!)))
   })
-
 (def (Tuple . types_) ;; type of tuples, heterogeneous arrays of given length and type
   (def types (list->vector (map (cut validate Type <>) types_)))
   {(:: @ Tuple.) (types)})
@@ -381,7 +302,6 @@
                                   (with-catch void (lambda () (return (<-json type j)))))
                                 types)
                       (error "invalid json for type" j sexp)))})
-
 (def (Union . types) ;; type of tuples, heterogeneous arrays of given length and type
   {(:: @ Union.) (types)})
 
@@ -389,7 +309,7 @@
   sexp: `(Enum. ,@vals)
   .element?: (cut member <> vals)
   .vals@: (list->vector vals)
-  .json@: (list->vector (map (lambda (x) (json<-string (string<-json x))) vals))
+  .json@: (list->vector (map json-normalize vals))
   n-bytes: (n-bytes<-n-bits (integer-length (vector-length .vals@)))
   ethabi-display-type: (lambda (port) (fprintf port "uint~d" (* 8 n-bytes)))
   ethabi-static?: #t
@@ -412,48 +332,7 @@
       (ensure-zeroes bytes head .ethabi-padding)
       (.<-nat (u8vector-uint-ref bytes (+ head .ethabi-padding) big length-in-bytes)))
 })
-
 (defrule (Enum values ...) {(:: @ Enum.) vals: '(values ...)})
-
-(define-type Unit
-  {(:: @ (Enum null))
-   methods: =>.+ {
-     .json<-: void
-     .<-json: void
-     .bytes<-: (lambda _ #u8())
-     .<-bytes: void
-     .marshal: void
-     .unmarshal: void
-}})
-
-(.def (Maybe. @ Type. type)
-  sexp: `(Maybe ,(.@ type sexp))
-  .element?: (lambda (x) (or (eq? x null) (element? type x)))
-  methods: {(:: @@ [bytes<-un/marshal])
-    .json<-: (lambda (v) (if (eq? v null) v ((.@ type methods .json<-) v)))
-    .<-json: (lambda (j) (if (eq? j null) j ((.@ type methods .<-json) j)))
-    .marshal: (λ (x port) (cond ((eq? x null) (write-byte 0 port))
-                                (else (write-byte 1 port) (marshal type x port))))
-    .unmarshal: (λ (port) (if (zero? (read-byte port)) null (unmarshal type port)))
-})
-
-(def (Maybe type) {(:: @ Maybe.) (type)})
-
-(.def (List. @ Type. type)
-  sexp: `(List ,(.@ type sexp))
-  .element?: (lambda (x) (let loop ((x x))
-                      (or (null? x)
-                          (and (pair? x) (element? type (car x)) (loop (cdr x))))))
-  methods: {(:: methods [bytes<-un/marshal])
-    .json<-: (lambda (v) (map (.@ type methods .json<-) v))
-    .<-json: (lambda (j) (map (.@ type methods .<-json) j))
-    .marshal: (let (m (.@ type methods .marshal))
-                (lambda (v port) (write-uint16 (length v) port) (for-each (cut m <> port) v)))
-    .unmarshal: (let (u (.@ type methods .unmarshal))
-                  (lambda (port) (def l (read-uint16 port))
-                     (for/collect (_ (in-range l)) (u port))))})
-
-(def (List type) {(:: @ List.) (type)})
 
 (.def (FixedVector. @ Type. type size)
   sexp: `(Vector ,(.@ type sexp) ,(.@ type size))
@@ -486,7 +365,6 @@
                                 bytes start (+ head (* i ethabi-element-head-length))
                                 get-tail set-tail!)) size))
     })
-
 (.def (DynamicVector. @ Type. type)
   sexp: `(Vector ,(.@ type sexp))
   .element?: (let (e? (.@ type methods .element?))
@@ -534,46 +412,10 @@
                                 get-tail set-tail!))
                      size))
     })
-
 (def (Vector type (size #f))
   (if size
     {(:: @ FixedVector.) (type) (size)}
     {(:: @ DynamicVector.) (type)}))
-
-(.def (StringMap. @ Type. value-type)
-  sexp: `(StringMap ,(.@ value-type sexp))
-  key-type: String
-  .element?: (lambda (x) (and (hash-table? x)
-                         (let/cc return
-                           (hash-for-each (lambda (k v) (unless (and (element? key-type k)
-                                                                (element? value-type v))
-                                                     (return #f)))
-                                          x)
-                           #t)))
-  methods: =>.+ {
-    .json<-: (lambda (m) (hash-value-map (.@ value-type methods .json<-) m))
-    .<-json: (lambda (j) (hash-value-map (.@ value-type methods .<-json) j))
-  })
-
-(def (StringMap value-type) {(:: @ StringMap.) (value-type)})
-
-(.defgeneric (printable-slots x)
-   from: type
-   default: .all-slots
-   slot: .printable-slots)
-
-(.defgeneric (<-json type j)
-   from: methods
-   slot: .<-json)
-
-(.defgeneric (json<- type x)
-   from: methods
-   slot: .json<-)
-
-(def (@@method :json poo) (json<- (.@ poo .type) poo))
-
-(def (json-string<- type x)
-  (string<-json (json<- type x)))
 
 ;; TODO:
 #;(def (TaggedUnion . plist)

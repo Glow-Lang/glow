@@ -4,6 +4,7 @@
   :std/sugar
   :clan/utils/json :clan/utils/path-config
   :clan/poo/poo :clan/poo/brace :clan/poo/io
+  (only-in :clan/poo/mop define-type)
   :clan/runtime/db
   ./types ./ethereum ./json-rpc ./transaction)
 

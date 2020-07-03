@@ -3,7 +3,10 @@
 (import
   :std/text/json
   :clan/utils/json :clan/utils/path-config
-  :clan/poo/poo
+  :clan/poo/poo :clan/poo/io
+  (only-in :clan/poo/mop define-type)
+  (only-in :clan/poo/number JsInt)
+  (only-in :clan/poo/type List Maybe)
   ./types)
 
 ;; TODO: move to another file.

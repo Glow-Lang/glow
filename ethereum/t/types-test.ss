@@ -4,7 +4,7 @@
   :gerbil/gambit/bytes
   :gerbil/gambit/exceptions
   :std/error :std/text/hex :std/sort :std/srfi/1 :std/sugar :std/test
-  :clan/utils/base :clan/poo/poo
+  :clan/utils/base :clan/poo/poo :clan/poo/io (only-in :clan/poo/mop define-type)
   :glow/ethereum/types :glow/ethereum/hex)
 
 (define-type EthereumRpcConfig
