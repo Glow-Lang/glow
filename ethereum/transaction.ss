@@ -13,6 +13,7 @@
 (defstruct (StillPending exception) ())
 (defstruct (ReplacementTransactionUnderpriced exception) ())
 
+;; : Unit <- Keypair timeout:?(OrFalse Real) log:?(Fun Unit <- Json)
 (def (ensure-secret-key timeout: (timeout #f) log: (log #f) keypair)
   (when log (log "ethereum-transaction: ensure-secret-key ~a" (0x<-address (keypair-address keypair))))
   (try
@@ -23,6 +24,7 @@
        (keypair-address keypair)
        (raise e)))))
 
+;; : Unit <- Address timeout:?(OrFalse Real) log:?(Fun Unit <- Json)
 (def (ensure-eth-signing-address timeout: (timeout #f) log: (log #f) address)
   (def keypair (keypair<-address address))
   (unless keypair
@@ -31,30 +33,32 @@
   (unless (equal? actual-address address)
     (error "registered keypair has mismatched address" address actual-address)))
 
+;; : Address <-
 (def (get-first-account) (car (personal_listAccounts)))
 
+;; : Unit <- Address duration:?Real log:?(Fun Unit <- Json)
 (def (unlock-account address duration: (duration 5) log: (log #f))
   (when log (log "ethereum-transaction: unlock-account ~a ~a" address duration))
   (def keypair (keypair<-address address))
   (personal_unlockAccount address (keypair-password keypair) duration))
-
-;; TODO: create exception classes for transaction rejected, still pending.
 
 ;; : Bool <- TransactionReceipt
 (def (successful-receipt? receipt)
   (and (poo? receipt)
        (= (.@ receipt status) 1)))
 
-;; : <- TransactionReceipt
+;; : Unit <- TransactionReceipt
 (def (check-transaction-receipt-status receipt)
   (unless (successful-receipt? receipt)
     (raise (TransactionRejected receipt))))
 
+;; : Bool <- TransactionReceipt Quantity
 (def (receipt-sufficiently-confirmed? receipt block-number)
   (>= block-number
       (+ (.@ receipt blockNumber)
          (.@ (current-ethereum-config) confirmationsWantedInBlocks))))
 
+;; : Unit <- TransactionReceipt
 (def (check-receipt-sufficiently-confirmed receipt)
   (unless (receipt-sufficiently-confirmed? receipt (eth_blockNumber))
     (raise (StillPending))))
@@ -87,7 +91,7 @@
                (equal? (.@ confirmation blockHash) (.@ receipt blockHash)))
     (error "confirmation doesn't match transaction information")))
 
-;; SignedTransaction <- Transaction
+;; : SignedTransaction <- Transaction
 (def (sign-transaction transaction)
   (def address (.@ transaction tx-header sender))
   (def kp (keypair<-address address))
@@ -100,7 +104,7 @@
    ((eth_getTransactionReceipt hash) => check-transaction-receipt-status)
    (else (nonce-too-low sender))))
 
-;; TxHeader <- Address Quantity Quantity
+;; : TxHeader <- Address Quantity Quantity
 (def (make-tx-header sender: sender value: value gas: gas
                      log: (log #f))
   ;; TODO: get gas price and nonce from geth
@@ -136,16 +140,11 @@
     ((failure e)
      (raise e))))
 
-(import :clan/utils/debug)
-
 ;; : TransactionReceipt <- Transaction SignedTransaction
 (def (send-and-confirm-transaction sender signed)
   (def hash (send-raw-transaction sender signed))
-  (DBG send-and-confirm-transaction-1: (0x<-address sender) (sexp<- SignedTransaction signed) hash (0x<-bytes hash) (.@ signed tx hash) (0x<-bytes (.@ signed tx hash)) (equal? hash (.@ signed tx hash)))
   (assert-equal! hash (.@ signed tx hash))
-  (DBG send-and-confirm-transaction-1-bis:)
   (def receipt (eth_getTransactionReceipt hash))
-  (DBG send-and-confirm-transaction-2: (sexp<- TransactionReceipt receipt))
   (if receipt
     (check-transaction-receipt-status receipt)
     (let ((nonce (.@ signed tx nonce)))
@@ -153,8 +152,7 @@
       (if (< nonce sender-nonce)
         (confirmed-or-known-issue sender hash)
         (raise (StillPending)))))
-  (DBG send-and-confirm-transaction-3:
-  (check-receipt-sufficiently-confirmed receipt))
+  (check-receipt-sufficiently-confirmed receipt)
   receipt)
 
 ;; Gas used for a transfer transaction. Hardcoded value defined in the Yellowpaper.
@@ -162,7 +160,7 @@
 (def transfer-gas-used 21000)
 
 ;; : PreTransaction <- Address Quantity
-(def (transfer-tokens from: sender to: recipient value)
+(def (transfer-tokens from: sender to: recipient value: value)
   {(sender)
    operation: (TransferTokens recipient)
    (value)
@@ -183,5 +181,3 @@
 ;; : PreTransaction <- Address Address Bytes Quantity gas: ?(Maybe Quantity)
 (def (call-function sender contract call value: (value 0) gas: (gas #f))
   (make-pre-transaction sender (CallFunction contract call) value gas: gas))
-
-(import :clan/utils/debug) (trace! send-and-confirm-transaction receipt-sufficiently-confirmed?)

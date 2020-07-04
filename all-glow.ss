@@ -1,10 +1,9 @@
 ;; -*- Gerbil -*-
-#| Use this file by include'ing it in your gxi REPL:
-(eval `(include ,(path-expand "all-glow.ss" (getenv "GLOW_SRC"))))
+;; Use this file by include'ing it in your gxi REPL:
+;;   (eval `(include ,(path-expand "all-glow.ss" (getenv "GLOW_SRC"))))
 ;; Or if you prefer without eval, but computing the absolute path yourself, something like:
-(include "~/src/glow/all-glow.ss")
+;;   (include "~/src/glow/all-glow.ss")
 ;; Or just run ./ggxi
-|#
 
 ;; TODO: maybe have build.ss extract the list of files from this file (?)
 
@@ -30,22 +29,31 @@
   ;; :ecraven/gerbil-swank
 
   ;; Clan Utilities
-  :clan/net/s3 :clan/net/simple-http-client :clan/net/websocket :clan/net/json-rpc.net
+  :clan/net/json-rpc.net :clan/net/s3 :clan/net/simple-http-client :clan/net/websocket
   :clan/utils/assert :clan/utils/base :clan/utils/basic-parsers :clan/utils/basic-printers
   :clan/utils/call-limiter :clan/utils/concurrency :clan/utils/config
   :clan/utils/date :clan/utils/debug :clan/utils/diceware
-  :clan/utils/error :clan/utils/exit :clan/utils/ffi :clan/utils/files :clan/utils/filesystem
+  :clan/utils/error :clan/utils/exit
+  :clan/utils/failure :clan/utils/ffi :clan/utils/files :clan/utils/filesystem
   :clan/utils/generator :clan/utils/hash
   :clan/utils/json :clan/utils/list :clan/utils/logger
   :clan/utils/maybe :clan/utils/memo :clan/utils/multicall :clan/utils/number :clan/utils/option
   :clan/utils/path :clan/utils/path-config :clan/utils/peekable-iterator
-  :clan/utils/random :clan/utils/source
-  :clan/utils/simple-rpc-client :clan/utils/stateful-avl-map :clan/utils/string
-  :clan/utils/subprocess :clan/utils/temporary-files
+  :clan/utils/random
+  :clan/utils/source :clan/utils/simple-rpc-client :clan/utils/stateful-avl-map :clan/utils/string
+  :clan/utils/subprocess
+  :clan/utils/temporary-files
   :clan/utils/vector :clan/utils/version :clan/utils/watch
+  :clan/runtime/db :clan/runtime/persist
+  :clan/pure/dict/intdict
 
   ;; POO
-  ;;:clan/poo/poo (only-in :clan/poo/mop new) :clan/poo/type :clan/poo/io
+  :clan/poo/poo :clan/poo/io
+  (prefix-in :clan/poo/mop poo.) (prefix-in :clan/poo/type poo.)
+  (only-in :clan/poo/mop
+           Type Type. Class Class. Slot Lens Function Fun
+           .defgeneric .method proto validate element? slot-lens sexp<-)
+  (only-in :clan/poo/number Number Real JsInt IntSet)
 
   ;; Versions for dependencies
   :clan/version :crypto/version
@@ -60,9 +68,13 @@
   :glow/compiler/desugar/desugar
   :glow/compiler/typecheck/typecheck
   :glow/compiler/anf/anf
-  :glow/compiler/participantify/participantify
+  ;;:glow/compiler/checkpointify/checkpointify
   :crypto/keccak :crypto/secp256k1
-  :glow/ethereum/hex :glow/ethereum/types
+  :glow/ethereum/hex :glow/ethereum/abi :glow/ethereum/types :glow/ethereum/ethereum
+  :glow/ethereum/signing :glow/ethereum/known-addresses
+  :glow/ethereum/config :glow/ethereum/json-rpc :glow/ethereum/transaction
+  :glow/ethereum/assembly :glow/ethereum/contract-config :glow/ethereum/contract-support
+  :glow/ethereum/nonce-tracker :glow/ethereum/tx-tracker ;; :glow/ethereum/batch-send :glow/ethereum/watch
 
   ;; Testing Glow
   :glow/t/common
@@ -71,7 +83,7 @@
   ;:glow/compiler/anf/t/anf-test
 )
 
-;;(import :clan/poo/brace)
+(import :clan/poo/brace)
 
 ;; COPY THE LINE BELOW to files you try to debug
 (import :clan/utils/debug)
@@ -79,3 +91,6 @@
 ;;(extern namespace: #f add-load-path) (add-load-path (glow-src))
 
 ;;(printf "Welcome, Glow hacker\n")
+
+;;(##set-debug-settings! 15 3)
+(##vector-set! ##stdout-port 37 (lambda (port) 218))

@@ -276,9 +276,7 @@
                 ;; TODO: should we return the tx with the status in the completion-post! ???
                 (let ((user (.@ key user))
                       (txsn (.@ key txsn)))
-                  (DBG finalize-1: (sexp<- Key key) (sexp<- State status))
                   (.call UserTransactionsTracker remove-transaction user txsn))
-                (DBG finalize-2:)
                 (completion-post! result final))))))
         ['TransactionTracker (sexp<- Address (.@ key user)) (.@ key txsn)])))
     {(result) (manager)})
@@ -297,15 +295,11 @@
   ;; NB: You must (<-key key) the activity and wait for it from *outside* any transaction
   ;; (otherwise you'll hang the system).
   ;; : FinalTransactionStatus <- @
-  wait: tx-tracker-wait!)
-
-(def (tx-tracker-wait! tracker) (completion-wait! (.@ tracker result)))
+  wait: (lambda (tracker) (completion-wait! (.@ tracker result))))
 
 (define-type UserTransactionsState
   (Record transaction-counter: [Nat]
           ongoing-transactions: [NatSet]))
-
-(import :clan/utils/debug)
 
 (.def (UserTransactionsTracker @ [SavingDebug PersistentActor]
        <-key action async-action)
@@ -337,17 +331,12 @@
     (action user
             (fun (remove-transaction get-state set-state! tx)
               (def state (get-state))
-              (DBG remove-transaction: (0x<-address user) txsn (sexp<- UserTransactionsState state))
               (when (.method NatSet .has? (.@ state ongoing-transactions) txsn)
-                (DBG remove-transaction-2: (0x<-address user) txsn)
                 (let (new-state
                       (.method Lens .modify (slot-lens 'ongoing-transactions)
                                (cut .method NatSet .remove <> txsn) state))
-                  (DBG remove-transaction-3: (0x<-address user) txsn (sexp<- UserTransactionsState new-state))
                   (set-state! new-state)
-                  (DBG remove-transaction-4: (0x<-address user) txsn (sexp<- UserTransactionsState new-state))
-                  (resume-transactions user new-state)))
-              (DBG remove-transaction-done:))))
+                  (resume-transactions user new-state))))))
 
   ;; After we resume the activity, resume transactions
   ;; : @ <- Key State TX
@@ -355,10 +344,7 @@
   (lambda (super)
     (fun (UserTransactionsTracker.resume user state tx)
       (begin0 (super user state tx)
-        (DBG UserTransactionsTracker.resume-1: (0x<-address user) (sexp<- State state))
-        (action user (lambda (get-state _set-state! tx) (resume-transactions user (get-state))))
-        (DBG UserTransactionsTracker.resume-2: (0x<-address user))
-        )))
+        (action user (lambda (get-state _set-state! tx) (resume-transactions user (get-state)))))))
 
   ;; Add a transaction.
   ;; : TransactionTracker.Key TransactionTracker <- UserTransactionsTracker OngoingTransactionStatus TX
@@ -370,20 +356,16 @@
        (def state (get-state))
        (def txsn (.@ state transaction-counter))
        (def key {(user) (txsn)})
-       (DBG add-transaction-1: (0x<-address user) (sexp<- State state) (sexp<- TransactionStatus transaction-status))
        (def tracker (.call TransactionTracker make key (lambda _ transaction-status) tx))
        (when (.method NatSet .empty? (.@ state ongoing-transactions))
          (.call TransactionTracker activate key))
-       (DBG add-transaction-2:)
        (def new-state
         (!> state
             (cut .method Lens .modify
                  (slot-lens 'ongoing-transactions) (cut .method NatSet .add <> txsn) <>)
             (cut .method Lens .modify
                  (slot-lens 'transaction-counter) 1+ <>)))
-       (DBG add-transaction-3: (sexp<- State new-state))
        (set-state! new-state)
-       (DBG add-transaction-4:)
        (values key tracker)))))
 
 ;; TODO: do it transactionally. Reserve a ticket number first?
@@ -399,7 +381,7 @@
 
 ;; : Transaction SignedTransaction TransactionReceipt <- TransactionTracker
 (def (track-transaction tracker)
-  (check-transaction-confirmed (tx-tracker-wait! tracker)))
+  (check-transaction-confirmed (.call TransactionTracker wait tracker)))
 
 ;; : TransactionReceipt <- TransactionTracker
 (def (receipt<-tracker tracker)
@@ -409,5 +391,3 @@
 (def (post-transaction pre-transaction)
   (defvalues (_key tracker) (issue-pre-transaction pre-transaction))
   (receipt<-tracker tracker))
-
-;;(import :clan/utils/debug) (trace! issue-pre-transaction tx-tracker-wait!)
