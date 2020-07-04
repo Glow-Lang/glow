@@ -35,6 +35,12 @@ by configure your Emacs with something like:
 (setq scheme-program-name gerbil-program-name)
 ```
 
+After you rebuild some modules, you can reload them with:
+
+```
+(reload "path/to/module.ss")
+```
+
 ### Debugging with Emacs SLIME
 
 As an alternative to `gerbil-mode`, but still in Emacs,

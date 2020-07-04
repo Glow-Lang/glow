@@ -32,13 +32,18 @@ Other non-Lisp types of interest?
 
 * Omniscient Debugging: [Pernosco](https://pernos.co/about/related-work/), [rr](https://rr-project.org), TTD, UndoDB, ODB, Chronon, TOD, Chronomancer, Qira, [Reven](https://www.tetrane.com/), SteamDrill.
 
+### Persistence of Long-Running Activities
+
+* [Sagas](https://dl.acm.org/doi/10.1145/38713.38742).
+  Daniel Yokomizo says there are plenty of papers, blogs, videos, implementations, etc., about Sagas.
+
 ### Structured Interactive Development
 
 * [Hazel](https://hazel.org/)
 * [ProjecturEd](https://github.com/projectured/projectured)
 * [Cirru](http://cirru.org)
 * [Lamdu](https://lamdu.org)
-* [Luna (DAGs](https://luna-lang.org)
+* [Luna (DAGs)](https://luna-lang.org)
 * [Pure Data (DAGs)](https://puredata.info)
 
 ### Deployment
