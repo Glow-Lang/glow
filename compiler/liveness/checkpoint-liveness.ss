@@ -6,6 +6,7 @@
 
 (import :std/iter
         :std/format
+        :std/misc/list
         :std/misc/repr
         :std/misc/hash
         <expander-runtime>
@@ -44,7 +45,7 @@
          (def ls (remove* ds (append-nonmem us cpl)))
          ;; TODO add variable-eliminated too:
          ;; (def elim (remove* cpl (ti-variables-publicly-used inti)))
-         (hash-update! cplt (ti-from inti) (cut append-nonmem ls <>) []))
+         (hash-update! cplt (ti-from inti) (cut append-nodup ls <>) []))
        (def seen2 (cons at seen))
        (def nexts (remove* seen2 incps))
        (loop (append nexts rst) seen2))))
@@ -107,3 +108,6 @@
 
 (def (append-nonmem . args)
   (foldr append-nonmem2 [] args))
+
+(def (append-nodup . args)
+  (unique (apply append args)))
