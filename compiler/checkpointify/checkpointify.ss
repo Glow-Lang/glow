@@ -73,6 +73,11 @@
   ;                      ;;                              publicly eleminated if MPart is false
   transparent: #t)
 
+;; ti-variables-publicly-introduced : TI -> (Listof Symbol)
+;; ti-variables-publicly-used : TI -> (Listof Symbol)
+(def (ti-variables-publicly-introduced t) (map car (filter (compose not cdr) (ti-variables-introduced t))))
+(def (ti-variables-publicly-used t) (map car (filter (compose not cdr) (ti-variables-used t))))
+
 ;; TI at the start of an atomic block, just after a checkpoint
 ;; create-ti : Symbol MaybeParticipant -> TI
 (def (create-ti from to participant)

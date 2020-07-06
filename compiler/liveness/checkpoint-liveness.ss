@@ -1,5 +1,6 @@
 
-(export read-checkpoint-liveness-table
+(export checkpoint-liveness
+        read-checkpoint-liveness-table
         write-checkpoint-liveness-table
         checkpoint-liveness-table=?)
 
@@ -23,7 +24,7 @@
 ;; checkpoint-liveness : CheckpointInfoTable -> CheckpointLivenessTable
 (def (checkpoint-liveness cpit)
   (def cps (hash-keys cpit))
-  (def ends (filter (compose null? ci-outgoing-transitions (cut hash-ref cpit <>) cps)))
+  (def ends (filter (compose null? ci-outgoing-transitions (cut hash-ref cpit <>)) cps))
   (unless (pair? ends) (error 'checkpoint-liveness "no ending points"))
   (def cplt (make-hash-table-eq))
   (for-each (cut hash-put! cplt <> []) ends)
@@ -38,13 +39,20 @@
        (def intis (ci-incoming-transitions cpi))
        (def incps (map ti-from intis))
        (for ((inti intis))
-         (def new (remove* (ti-variables-introduced inti) (ti-variables-used inti)))
+         (def ds (ti-variables-publicly-introduced inti))
+         (def us (ti-variables-publicly-used inti))
+         (def ls (remove* ds (append-nonmem us cpl)))
          ;; TODO add variable-eliminated too:
-         ;; (def elim (remove* cpl (ti-variable-used inti)))
-         (hash-update! cplt inti (cut append-nonmem new cpl <>) []))
+         ;; (def elim (remove* cpl (ti-variables-publicly-used inti)))
+         (hash-update! cplt (ti-from inti) (cut append-nonmem ls <>) []))
        (def seen2 (cons at seen))
        (def nexts (remove* seen2 incps))
-       (loop (append nexts rst) seen2)))))
+       (loop (append nexts rst) seen2))))
+  (for ((k (hash-keys cpit)))
+    (def cpi (hash-ref cpit k))
+    (def ls (hash-ref cplt k))
+    (ci-variables-live-set! cpi ls))
+  cplt)
 
 ;; --------------------------------------------------------
 ;; Read, Write, and Equal for CheckpointLivenessTable
