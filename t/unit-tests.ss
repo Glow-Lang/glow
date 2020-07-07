@@ -28,7 +28,7 @@
    (silent-exit
     (match args
       ([] (run-tests "."))
-      (["meta"] (println "meta all test process pass show-version check_git_up_to_date"))
+      (["meta"] (println "meta all integration test process pass show-version check_git_up_to_date"))
       (["all"] (run-tests "." test-files: (find-test-files ".")))
       (["integration"] (run-tests "." test-files: (find-test-files "." "-integrationtest.ss$")))
       (["test" . files] (run-tests "." test-files: files))

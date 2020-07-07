@@ -56,7 +56,7 @@
   (only-in :clan/poo/number Number Real JsInt IntSet)
 
   ;; Versions for dependencies
-  :clan/version :crypto/version
+  :clan/version :crypto/version :ethereum/version
 
   ;; Glow
   (for-template :glow/compiler/syntax-context)
@@ -70,11 +70,11 @@
   :glow/compiler/anf/anf
   ;;:glow/compiler/checkpointify/checkpointify
   :crypto/keccak :crypto/secp256k1
-  :glow/ethereum/hex :glow/ethereum/abi :glow/ethereum/types :glow/ethereum/ethereum
-  :glow/ethereum/signing :glow/ethereum/known-addresses
-  :glow/ethereum/config :glow/ethereum/json-rpc :glow/ethereum/transaction
-  :glow/ethereum/assembly :glow/ethereum/contract-config :glow/ethereum/contract-support
-  :glow/ethereum/nonce-tracker :glow/ethereum/tx-tracker :glow/ethereum/batch-send ;;:glow/ethereum/watch
+  :ethereum/hex :ethereum/abi :ethereum/types :ethereum/ethereum
+  :ethereum/signing :ethereum/known-addresses
+  :ethereum/network-config :ethereum/json-rpc :ethereum/transaction
+  :ethereum/assembly :ethereum/contract-config :ethereum/contract-support
+  :ethereum/nonce-tracker :ethereum/tx-tracker :ethereum/batch-send
 
   ;; Testing Glow
   :glow/t/common
