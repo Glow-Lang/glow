@@ -11,7 +11,7 @@ pkgs: super: rec {
     package = "glow";
     gerbil = gerbil-unstable;
     gambit-params = gambit-support.unstable-params;
-    gerbilInputs = [gerbilPackages-unstable.gerbil-utils];
+    gerbilInputs = with gerbilPackages-unstable; [gerbil-utils gerbil-crypto gerbil-ethereum];
     version-path = "config/version.ss";
     src = ./..;
     #src = fetchFromGitLab { owner = "mukn"; repo = "glow";
