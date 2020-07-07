@@ -3,8 +3,8 @@
 (import
   :std/format :clan/utils/json
   :clan/poo/io
-  (only-in :clan/poo/type StringMap)
-  ./types ./signing)
+  (only-in :clan/poo/type Map)
+  ./hex ./types ./signing)
 
 ;; TODO: handle collisions, exceptions
 (def address-by-nickname (make-hash-table))
@@ -14,12 +14,12 @@
   (hash-put! address-by-nickname nickname address))
 (def (nickname<-address address)
   (hash-get nickname-by-address address))
-  ;; (or (get-nickname-of-address address) (error "No registered nickname for address" (json<- Bytes20 address)))
+  ;; (or (get-nickname-of-address address) (error "No registered nickname for address" (0x<-address address)))
 (def (address<-nickname nickname)
   (hash-get address-by-nickname nickname))
   ;; (or (address<-nickname nickname) (error "No registered nickname" nickname)))
 (def (nicknamed-string<-address address)
-  (def s (json<- Bytes20 address))
+  (def s (0x<-address address))
   (def n (nickname<-address address))
   (if n (format "~a (~a)" n s) s))
 (def (unregister-address nickname)
@@ -44,7 +44,7 @@
 
 ;; TODO: Add a layer of encryption for these files.
 (def (register-file-keypairs file)
-  (hash-for-each register-keypair (<-json (StringMap Keypair) (read-file-json file))))
+  (hash-for-each register-keypair (<-json (Map Keypair <- String) (read-file-json file))))
 
 (def (addresses-with-registered-keypair)
   (hash-keys keypair-by-address))

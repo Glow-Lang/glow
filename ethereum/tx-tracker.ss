@@ -7,7 +7,7 @@
   :clan/utils/failure :clan/utils/option :clan/utils/maybe
   :clan/net/json-rpc
   :clan/poo/poo :clan/poo/brace :clan/poo/io
-  (only-in :clan/poo/mop .method Lens slot-lens sexp<- Type. define-type)
+  (only-in :clan/poo/mop Lens slot-lens sexp<- Type. define-type)
   :clan/runtime/db :clan/runtime/persist
   ./hex ./types ./signing ./known-addresses ./ethereum ./json-rpc ./nonce-tracker ./transaction)
 
@@ -141,55 +141,53 @@
       (with-output-to-string (lambda () (display-exception e)))))
 
 (define-type TransactionStatus
-  {(:: @ Type.)
+  {(:: @ [methods.bytes<-marshal Type.])
    .element?: $TransactionStatus?
-   methods: =>.+ {(:: @methods bytes<-un/marshal)
-     ;; TODO: provide automation for sum types!
-     .sexp<-:
-     (match <>
-       ((TxWanted pre) ['TxWanted (sexp<- PreTransaction pre)])
-       ((TxSigned pre signed) ['TxSigned (sexp<- PreTransaction pre)
-                                         (sexp<- SignedTransaction signed)])
+   ;; TODO: provide automation for sum types!
+   .sexp<-:
+   (match <>
+     ((TxWanted pre) ['TxWanted (sexp<- PreTransaction pre)])
+     ((TxSigned pre signed) ['TxSigned (sexp<- PreTransaction pre)
+                                       (sexp<- SignedTransaction signed)])
+     ((TxConfirmed pre signed receipt)
+      ['TxConfirmed (sexp<- PreTransaction pre) (sexp<- SignedTransaction signed)
+                    (sexp<- TransactionReceipt receipt)])
+     ((TxFailed status e)
+      ['TxFailed (.sexp<- status) (normalize-exn e)]))
+   .marshal:
+   (lambda (x port)
+     (match x
+       ((TxWanted pre)
+        (write-byte 0 port)
+        (marshal PreTransaction pre port))
+       ((TxSigned pre signed)
+        (write-byte 1 port)
+        (marshal PreTransaction pre port)
+        (marshal SignedTransaction signed port))
        ((TxConfirmed pre signed receipt)
-        ['TxConfirmed (sexp<- PreTransaction pre) (sexp<- SignedTransaction signed)
-                      (sexp<- TransactionReceipt receipt)])
+        (write-byte 2 port)
+        (marshal PreTransaction pre port)
+        (marshal SignedTransaction signed port)
+        (marshal TransactionReceipt receipt port))
        ((TxFailed status e)
-        ['TxFailed (.sexp<- status) (normalize-exn e)]))
-     .marshal:
-     (lambda (x port)
-       (match x
-         ((TxWanted pre)
-          (write-byte 0 port)
-          (marshal PreTransaction pre port))
-         ((TxSigned pre signed)
-          (write-byte 1 port)
-          (marshal PreTransaction pre port)
-          (marshal SignedTransaction signed port))
-         ((TxConfirmed pre signed receipt)
-          (write-byte 2 port)
-          (marshal PreTransaction pre port)
-          (marshal SignedTransaction signed port)
-          (marshal TransactionReceipt receipt port))
-         ((TxFailed status e)
-          (write-byte 3 port)
-          (.marshal status port)
-          ;; TODO: find a better way to handle the exception!!!
-          (marshal String (normalize-exn e) port))))
-     .unmarshal:
-     (lambda (port)
-       (case (read-byte port)
-         ((0) (TxWanted (unmarshal PreTransaction port)))
-         ((1) (let* ((pre (unmarshal PreTransaction port))
-                     (signed (unmarshal SignedTransaction port)))
-                (TxSigned pre signed)))
-         ((2) (let* ((pre (unmarshal PreTransaction port))
-                     (signed (unmarshal SignedTransaction port))
-                     (receipt (unmarshal TransactionReceipt port)))
-                (TxConfirmed pre signed receipt)))
-         ((3) (let* ((status (.unmarshal port))
-                     (e (unmarshal String port)))
-                (TxFailed status e)))))
-  }})
+        (write-byte 3 port)
+        (.marshal status port)
+        ;; TODO: find a better way to handle the exception!!!
+        (marshal String (normalize-exn e) port))))
+   .unmarshal:
+   (lambda (port)
+     (case (read-byte port)
+       ((0) (TxWanted (unmarshal PreTransaction port)))
+       ((1) (let* ((pre (unmarshal PreTransaction port))
+                   (signed (unmarshal SignedTransaction port)))
+              (TxSigned pre signed)))
+       ((2) (let* ((pre (unmarshal PreTransaction port))
+                   (signed (unmarshal SignedTransaction port))
+                   (receipt (unmarshal TransactionReceipt port)))
+              (TxConfirmed pre signed receipt)))
+       ((3) (let* ((status (.unmarshal port))
+                   (e (unmarshal String port)))
+              (TxFailed status e)))))})
 
 (def transaction-status-ongoing?
   (match <>
@@ -199,10 +197,9 @@
 
 (def transaction-status-final?
   (match <>
-    ((TxConfirmed _) #t)
-    ((TxFailed _) #t)
+    ((TxConfirmed _ _ _) #t)
+    ((TxFailed _ _) #t)
     (_ #f)))
-
 
 (def PreTransaction<-TransactionStatus
   (match <>
@@ -210,6 +207,9 @@
     ((TxSigned preTx _) preTx)
     ((TxConfirmed preTx _ _) preTx)
     ((TxFailed ots _) (PreTransaction<-TransactionStatus ots)))) ;; ots must be TxWanted or TxSigned
+
+(def (sender<-TransactionStatus status)
+  (.@ (PreTransaction<-TransactionStatus status) sender))
 
 (def (Operation<-TransactionStatus ts)
   (.@ (PreTransaction<-TransactionStatus ts) operation))
@@ -236,6 +236,8 @@
   ;;       (2) for resumed activity, start the thread immediately
   .restore:
   (lambda (key save! status _tx)
+    (def user (.@ key user))
+    (def txsn (.@ key txsn))
     (def result (make-completion))
     (def manager
       (without-tx
@@ -247,6 +249,7 @@
            (let loop ((status status))
              (def (continue status) (update status) (loop status))
              (def (invalidate transaction-status e)
+               (.call NonceTracker reset user)
                (continue (TxFailed transaction-status e)))
              (match status
                ((TxWanted pretx)
@@ -257,28 +260,28 @@
                 (match (with-result
                         (retry retry-window: 0.05 max-window: 30.0 max-retries: +inf.0
                           (fun (try-confirm)
-                            (def result (with-result (send-and-confirm-transaction
-                                                      (.@ key user) signed)))
+                            (def result (with-result (send-and-confirm-transaction user signed)))
                             (match result
                               ((some _) result)
-                              ((failure (? NonceTooLow?)) result)
-                              ((failure (? TransactionRejected?)) result)
-                              ((failure e) (raise e))))))
+                              ((failure e)
+                               (if (or (NonceTooLow? e)
+                                       (TransactionRejected? e)
+                                       (IntrinsicGasTooLow? e))
+                                 result
+                                 (raise e)))))))
                   ((some (some receipt))
                    (continue (TxConfirmed pretx signed receipt)))
                   ((some (failure (? NonceTooLow?)))
                    (continue (TxWanted pretx)))
-                  ((some (failure (? TransactionRejected? e)))
+                  ((some (failure e))
                    (invalidate status e))
                   ((failure e)
                    (invalidate status e))))
                (final
                 ;; TODO: should we return the tx with the status in the completion-post! ???
-                (let ((user (.@ key user))
-                      (txsn (.@ key txsn)))
-                  (.call UserTransactionsTracker remove-transaction user txsn))
+                (.call UserTransactionsTracker remove-transaction user txsn)
                 (completion-post! result final))))))
-        ['TransactionTracker (sexp<- Address (.@ key user)) (.@ key txsn)])))
+        ['TransactionTracker (sexp<- Address user) txsn])))
     {(result) (manager)})
 
   ;; Activate the transaction tracker (1) for the given key, (2) in the context of the given TX.
@@ -312,7 +315,7 @@
   make-default-state:
   (lambda (_user)
     {transaction-counter: 0
-     ongoing-transactions: (.method NatSet .empty)})
+     ongoing-transactions: (.@ NatSet .empty)})
 
   ;; Resume the earliest transaction.
   ;; If more are pending, it will automatically cascade onto the next ones when done,
@@ -322,7 +325,7 @@
   (lambda (user state)
     (without-tx
     (for-each/maybe (fun (for-txsn txsn) (.call TransactionTracker activate {(user) (txsn)}))
-                    (.method NatSet .min-elt (.@ state ongoing-transactions) null))))
+                    (.call NatSet .min-elt (.@ state ongoing-transactions) null))))
 
   ;; Remove a transaction, as a cleanup to call at the end of it when it's stable.
   ;; : Unit <- Address Nat TX
@@ -331,10 +334,10 @@
     (action user
             (fun (remove-transaction get-state set-state! tx)
               (def state (get-state))
-              (when (.method NatSet .has? (.@ state ongoing-transactions) txsn)
+              (when (.call NatSet .has? (.@ state ongoing-transactions) txsn)
                 (let (new-state
-                      (.method Lens .modify (slot-lens 'ongoing-transactions)
-                               (cut .method NatSet .remove <> txsn) state))
+                      (.call Lens .modify (slot-lens 'ongoing-transactions)
+                             (cut .call NatSet .remove <> txsn) state))
                   (set-state! new-state)
                   (resume-transactions user new-state))))))
 
@@ -357,13 +360,13 @@
        (def txsn (.@ state transaction-counter))
        (def key {(user) (txsn)})
        (def tracker (.call TransactionTracker make key (lambda _ transaction-status) tx))
-       (when (.method NatSet .empty? (.@ state ongoing-transactions))
+       (when (.call NatSet .empty? (.@ state ongoing-transactions))
          (.call TransactionTracker activate key))
        (def new-state
         (!> state
-            (cut .method Lens .modify
-                 (slot-lens 'ongoing-transactions) (cut .method NatSet .add <> txsn) <>)
-            (cut .method Lens .modify
+            (cut .call Lens .modify
+                 (slot-lens 'ongoing-transactions) (cut .call NatSet .add <> txsn) <>)
+            (cut .call Lens .modify
                  (slot-lens 'transaction-counter) 1+ <>)))
        (set-state! new-state)
        (values key tracker)))))

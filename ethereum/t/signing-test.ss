@@ -25,12 +25,13 @@
    ["Trent" trent-keys]
    [ "Bob" bob-keys]])
 
-(def (register-test-keypairs)
-  (for-each (cut apply register-keypair <>) test-keypairs))
+(def test-addresses (map (lambda (nkp) (keypair-address (cadr nkp))) test-keypairs))
+
+;; Register test keypairs
+(for-each (cut apply register-keypair <>) test-keypairs)
 
 (def signing-test
   (test-suite "Test suite for glow/ethereum/signing"
-    (register-test-keypairs)
     (test-case "check test users"
       (defrule (check-user name keys address pubkey)
         (let* ((data (format "some arbitrary string for ~a to sign" name))

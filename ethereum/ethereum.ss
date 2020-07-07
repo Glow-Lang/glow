@@ -3,7 +3,8 @@
 (import
   :std/sugar
   :clan/utils/maybe
-  :clan/poo/poo :clan/poo/io :clan/poo/brace (only-in :clan/poo/mop Type. define-type)
+  :clan/poo/poo :clan/poo/io :clan/poo/brace
+  (prefix-in :clan/poo/type poo.)
   ./types ./hex)
 
 ;; TODO: implement and use a "newtype"
@@ -14,10 +15,10 @@
 (define-type Address
   {(:: @ Bytes20)
    ethabi: "address"
-   methods: =>.+ {
-    .json<-: 0x<-address
-    .sexp<-: (lambda (x) `(address<-0x ,(0x<-address x)))
-  }})
+   .json<-: 0x<-address
+   .sexp<-: (lambda (x) `(address<-0x ,(0x<-address x)))
+  })
+(register-simple-eth-type Address)
 
 ;; TODO: mixin the prototype with a formula that caches the abi bytes4 selector.
 (define-type EthFunction
@@ -66,25 +67,25 @@
     ((CreateContract data) data)
     ((CallFunction _ data) data)))
 (define-type Operation
-  {(:: @ Type.)
+  {(:: @ [poo.methods.string&bytes&marshal<-json Type.])
    .element?: $Operation?
-   methods: =>.+ {(:: @m un/marshal<-json)
-     .sexp<-: (match <>
-                ((TransferTokens to) ['TransferTokens (sexp<- Address to)])
-                ((CreateContract data) ['CreateContract (sexp<- Bytes data)])
-                ((CallFunction to data) ['CallFunction (sexp<- Address to) (sexp<- Bytes data)]))
-     .json<-: (match <>
-                ((TransferTokens to) (hash ("to" (json<- Address to))))
-                ((CreateContract data) (hash ("data" (json<- Bytes data))))
-                ((CallFunction to data) (hash ("to" (json<- Address to)) ("data" (json<- Bytes data)))))
-     .<-json: (lambda (h)
-                (def to (map/maybe (cut <-json Address <>) (hash-ref h "to" null)))
-                (def data (map/maybe (cut <-json Bytes <>) (hash-ref h "data" null)))
-                (cond
-                 ((and to (eq? data null)) (TransferTokens to))
-                 ((and data (eq? to null)) (CreateContract data))
-                 (else (CallFunction to data))))
-     }})
+   .String: String
+   .sexp<-: (match <>
+              ((TransferTokens to) ['TransferTokens (sexp<- Address to)])
+              ((CreateContract data) ['CreateContract (sexp<- Bytes data)])
+              ((CallFunction to data) ['CallFunction (sexp<- Address to) (sexp<- Bytes data)]))
+   .json<-: (match <>
+              ((TransferTokens to) (hash ("to" (json<- Address to))))
+              ((CreateContract data) (hash ("data" (json<- Bytes data))))
+              ((CallFunction to data) (hash ("to" (json<- Address to)) ("data" (json<- Bytes data)))))
+   .<-json: (lambda (h)
+              (def to (map/maybe (.@ Address .<-json) (hash-ref h "to" null)))
+              (def data (map/maybe (.@ Bytes .<-json) (hash-ref h "data" null)))
+              (cond
+               ((and to (eq? data null)) (TransferTokens to))
+               ((and data (eq? to null)) (CreateContract data))
+               (else (CallFunction to data))))
+   })
 
 (define-type PreTransaction
   (Record

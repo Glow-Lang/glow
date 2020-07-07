@@ -1,17 +1,17 @@
 ;; Ethereum JSON-RPC API
 ;;
-;; The reference documentation is now at
-;;   https://github.com/ethereum/wiki/wiki/JSON-RPC
+;; The reference documentation for the Ethereum JSON RPC protocol is now at:
+;;   https://eth.wiki/json-rpc/API
+;; Geth extensions are documented here:
 ;;   https://geth.ethereum.org/docs/rpc/server
-;;
-;; See also in CL:
-;;   https://github.com/imnisen/web3.lisp
-;;   https://github.com/tsikov/ethi
+;; We support all non-deprecated methods in the standard protocol as of 2020-07-05,
+;; but only a few of the Geth extensions.
 ;;
 ;; TODO:
-;; - Make this work
-;; - More systematically lift entire namespaces, document which are left out, and
-;;   what version of the reference documents were used.
+;; - Resolve all the dark spots.
+;; - Systematically lift all the Geth extensions.
+;; - Add plenty of tests everywhere.
+;; - Support multiple eth-like networks from a same client.
 
 (export #t)
 
@@ -24,7 +24,7 @@
   :clan/poo/poo :clan/poo/brace :clan/poo/io
   (only-in :clan/poo/mop define-type)
   (only-in :clan/poo/number Real)
-  (only-in :clan/poo/type List Maybe Unit)
+  (only-in :clan/poo/type List Maybe Unit Or Map Json False)
   ./types ./signing ./ethereum ./config
   )
 
@@ -53,11 +53,32 @@
              (def params-type (Tuple argument-type ...))
              (def (fun-id timeout: (timeout #f) log: (log geth-rpc-logger) . a)
                  (ethereum-json-rpc method-name
-                                    (.@ result-type methods .<-json)
-                                    (.@ params-type methods .json<-) (list->vector a)
+                                    (.@ result-type .<-json)
+                                    (.@ params-type .json<-) (list->vector a)
                                     timeout: timeout log: log))))))))
 
 (define-ethereum-api web3 clientVersion String <-)
+(define-ethereum-api web3 sha3 Bytes32 <- Bytes) ;; keccak256
+
+;; "1": Ethereum Mainnet, "3": Ropsten Testnet, "4": Rinkeby Testnet, "42": Kovan Testnet...
+(define-ethereum-api net version String <-) ;; a decimal number
+(define-ethereum-api net listening Bool <-)
+(define-ethereum-api net peerCount Quantity <-)
+
+
+(define-ethereum-api eth protocolVersion String <-) ;; a decimal number
+
+(define-type SyncingStatus
+  (Record startingBlock: [Quantity]
+          currentBlock: [Quantity]
+          highestBlock: [Quantity]))
+(define-ethereum-api eth syncing (Or SyncingStatus False) <-)
+
+(define-ethereum-api eth coinbase Address <-)
+(define-ethereum-api eth mining Bool <-)
+(define-ethereum-api eth hashrate Quantity <-)
+
+
 
 (define-type BlockParameter
   (Union
@@ -73,13 +94,13 @@
 (define-type TransactionParameters
   (Record
    from: [Address]
-   to: [(Maybe Address) default: null]
-   gas: [(Maybe Quantity) default: null] ; in gas
-   gasPrice: [(Maybe Quantity) default: null] ; in wei/gas
-   value: [(Maybe Quantity) default: null] ; in wei
-   data: [(Maybe Bytes) default: null]
-   nonce: [(Maybe Quantity) default: null]
-   condition: [(Maybe TransactionCondition) default: null]))
+   to: [(Maybe Address) optional: #t default: null]
+   gas: [(Maybe Quantity) optional: #t default: null] ; in gas
+   gasPrice: [(Maybe Quantity) optional: #t default: null] ; in wei/gas
+   value: [(Maybe Quantity) optional: #t default: null] ; in wei
+   data: [(Maybe Bytes) optional: #t default: null]
+   nonce: [(Maybe Quantity) optional: #t default: null]
+   condition: [(Maybe TransactionCondition) optional: #t default: null]))
 
 (def ToData<-Operation
   (match <>
@@ -102,80 +123,59 @@
   (defrule (.th x ...) (begin (def x (.@ tx-header x)) ...)) (.th sender nonce gas gasPrice value)
   {(:: @ (TransactionParameters<-Operation sender operation value)) (gas) (gasPrice) (value) (nonce)})
 
-(define-type TransactionResult
-  (Record
-   hash: [Digest]
-   nonce: [Quantity]
-   blockHash: [(Maybe Digest) default: null]
-   blockNumber: [(Maybe Quantity) default: null]
-   transactionIndex: [(Maybe Quantity) default: null]
-   from: [(Maybe Address) default: null] ;; TODO: can it actually be null???
-   to: [(Maybe Address) default: null]
-   value: [Quantity] ; in wei
-   gasPrice: [Quantity] ; in wei/gas
-   gas: [Quantity] ; in gas
-   input: [Bytes]))
-
 (define-type TransactionInformation
   (Record
    hash: [Digest]
    nonce: [Quantity]
-   blockHash: [(Maybe Digest) default: null]
-   blockNumber: [(Maybe Quantity) default: null]
-   transactionIndex: [(Maybe Quantity) default: null]
-   from: [(Maybe Address) default: null]
-   to: [(Maybe Address) default: null]
+   blockHash: [(Maybe Digest) optional: #t default: null]
+   blockNumber: [(Maybe Quantity) optional: #t default: null]
+   transactionIndex: [(Maybe Quantity) optional: #t default: null]
+   from: [(Maybe Address) optional: #t default: null]
+   to: [(Maybe Address) optional: #t default: null]
    value: [Quantity]
    gasPrice: [Quantity]
    gas: [Quantity]
    input: [Bytes]
-   v: [(Maybe Quantity) default: null]
-   standard-v: [(Maybe Quantity) default: null]
-   r: [(Maybe UInt256) default: null]
-   s: [(Maybe UInt256) default: null]
-   raw: [(Maybe Data) default: null]
-   publicKey: [(Maybe PublicKey) default: null]
-   networkID: [(Maybe Quantity) default: null]
-   creates: [(Maybe Digest) default: null]
-   condition: [Json default: null])) ;; is this any JSON, or a TransactionCondition above??
-
-(define-type EthObject
-  (Record
-   fromBlock: [(Maybe BlockParameter)]
-   toBlock: [(Maybe BlockParameter)]
-   address: [(Maybe Address) default: null]
-   topics: [(Maybe (List Bytes32)) default: null]
-   blockhash: [(Maybe Digest) default: null]))
+   v: [(Maybe Quantity) optional: #t default: null]
+   standard-v: [(Maybe Quantity) optional: #t default: null]
+   r: [(Maybe UInt256) optional: #t default: null]
+   s: [(Maybe UInt256) optional: #t default: null]
+   raw: [(Maybe Data) optional: #t default: null]
+   publicKey: [(Maybe PublicKey) optional: #t default: null]
+   networkID: [(Maybe Quantity) optional: #t default: null]
+   creates: [(Maybe Digest) optional: #t default: null]
+   condition: [Json optional: #t default: null])) ;; is this any JSON, or a TransactionCondition above??
 
 (define-type SignTransactionResult
   (Record
    data: [Bytes]
    signed: [TransactionInformation]))
 
+(define-type Bloom Bytes256)
+
 (define-type LogObject
   (Record
    removed: [Bool]
-   logIndex: [(Maybe Quantity) default: null]
-   transactionIndex: [(Maybe Quantity) default: null]
-   transactionHash: [(Maybe Digest) default: null]
-   blockNumber: [(Maybe Quantity) default: null]
-   blockHash: [(Maybe Digest) default: null]
+   logIndex: [(Maybe Quantity) optional: #t default: null]
+   transactionIndex: [(Maybe Quantity) optional: #t default: null]
+   transactionHash: [(Maybe Digest) optional: #t default: null]
+   blockNumber: [(Maybe Quantity) optional: #t default: null]
+   blockHash: [(Maybe Digest) optional: #t default: null]
    address: [Address]
    data: [Bytes]
-   topics: [(List Digest)]))
-
-(define-type Bloom Bytes256)
+   topics: [(List Bytes32)]))
+(define-type LogObjectList (List LogObject))
 
 (define-type TransactionReceipt
   (Record
    blockHash: [Digest]
    blockNumber: [Quantity]
-   contractAddress: [(Maybe Address) default: null]
+   contractAddress: [(Maybe Address) optional: #t default: null]
    cumulativeGasUsed: [Quantity]
    from: [Address]
-   to: [(Maybe Address) default: null]
+   to: [(Maybe Address) optional: #t default: null]
    gasUsed: [Quantity]
-   logs: [(List LogObject)]
+   logs: [LogObjectList]
    logsBloom: [Bloom]
    status: [Quantity]
    transactionHash: [Digest]
@@ -188,8 +188,6 @@
     (error "receipt indicates transaction failed" transactionHash)
     {(transactionHash) (transactionIndex) (blockNumber) (blockHash)})) ;; Confirmation
 
-(define-type EthListLogObjects (List LogObject))
-
 ;; Returns a list of address owned by the client
 (define-ethereum-api eth accounts (List Address) <-)
 
@@ -197,11 +195,11 @@
 (define-type CallParameters
   (Record
    from: [Address]
-   to: [(Maybe Address) default: null]
-   gas: [(Maybe Quantity) default: null]
-   gasPrice: [(Maybe Quantity) default: null]
-   value: [(Maybe Quantity) default: null]
-   data: [(Maybe Bytes) default: null]))
+   to: [(Maybe Address) optional: #t default: null]
+   gas: [(Maybe Quantity) optional: #t default: null]
+   gasPrice: [(Maybe Quantity) optional: #t default: null]
+   value: [(Maybe Quantity) optional: #t default: null]
+   data: [(Maybe Bytes) optional: #t default: null]))
 
 (def (CallParameter<-Operation from operation)
   (defvalues (to data) (ToData<-Operation operation))
@@ -220,7 +218,15 @@
   (.th sender gas gasPrice value)
   {(:: @ (CallParameter<-Operation sender operation)) (gas) (gasPrice) (value)})
 
-;; TODO: Looks like the Geth page says it has extension for it?
+(define-type StateOverrideSet ;; contract data to override before executing the call
+  (Record
+   balance: [Quantity optional: #t]
+   nonce: [Quantity optional: #t]
+   code: [Bytes optional: #t]
+   state: [(Map Bytes32 <- Quantity) optional: #t] ;; keys are 0x quantity
+   stateDiff: [(Map Bytes32 <- Quantity) optional: #t])) ;; override individual slots in account storage
+
+;; TODO: Geth has an optional third parameter StateOverrideSet
 (define-ethereum-api eth call Data <- CallParameters BlockParameter)
 
 (define-ethereum-api eth chainId (Maybe UInt256) <-)
@@ -235,12 +241,12 @@
    nonce: [Quantity]
    gasPrice: [Quantity]
    gas: [Quantity]
-   to: [(Maybe Address) default: null]
+   to: [(Maybe Address) optional: #t default: null]
    value: [Quantity]
    input: [Bytes]
-   v: [(Maybe UInt256) default: null]
-   r: [(Maybe UInt256) default: null]
-   s: [(Maybe UInt256) default: null]
+   v: [(Maybe UInt256) optional: #t default: null]
+   r: [(Maybe UInt256) optional: #t default: null]
+   s: [(Maybe UInt256) optional: #t default: null]
    hash: [Digest]))
 
 (define-type SignedTransaction
@@ -253,7 +259,7 @@
   (.st tx)
   (defrule (.tx x ...) (begin (def x (.@ tx x)) ...))
   (.tx nonce gasPrice gas to value input v r s)
-  (let ((to (maybe-get to (.@ Address methods zero)))
+  (let ((to (maybe-get to (.@ Address .zero)))
         (data input)
         (v (v-of-chain-id v))
         (r (maybe-get r 0))
@@ -269,17 +275,41 @@
 ;; Returns the balance of the account of given address (and block)
 (define-ethereum-api eth getBalance Quantity <- Address BlockParameter)
 
+;; Returns the content of storage in given contract at given memory position, given block
+(define-ethereum-api eth getStorageAt Bytes32 <- Address Quantity BlockParameter)
+
 ;; Returns the code of given address (and block)
 (define-ethereum-api eth getCode Bytes <- Address BlockParameter)
 
-;;;; Returns a transaction (big object) by the hash code
-(define-ethereum-api eth getTransaction TransactionResult <- Digest)
-
-;; Returns a transaction (big object) by the hash code *)
+;; Returns a transaction by the hash code
 (define-ethereum-api eth getTransactionByHash TransactionInformation <- Digest)
+
+;; Returns a transaction by block hash and transaction index position
+(define-ethereum-api eth getTransactionByBlockHashAndIndex TransactionInformation <- Digest Quantity)
+
+;; Returns a transaction by block height and transaction index position
+(define-ethereum-api eth getTransactionByBlockNumberAndIndex TransactionInformation <- BlockParameter Quantity)
 
 ;; Returns the number of transaction at address (and transaction)
 (define-ethereum-api eth getTransactionCount Quantity <- Address BlockParameter)
+
+;; Returns the number of transactions in a block found by its hash code
+(define-ethereum-api eth getTransactionCountByHash Quantity <- Digest)
+
+;; Returns the number of transactions in a block found by its height
+(define-ethereum-api eth getTransactionCountByNumber Quantity <- BlockParameter)
+
+;; Returns the number of uncles in a block found by its hash
+(define-ethereum-api eth getUncleCountByBlockHash Quantity <- Digest)
+
+;; Returns the number of uncles in a block found by its height
+(define-ethereum-api eth getUncleCountByNumber Quantity <- BlockParameter)
+
+;; Returns uncle information
+(define-ethereum-api eth getUncleByBlockHashAndIndex BlockInformation <- Digest Quantity)
+(define-ethereum-api eth getUncleByBlockNumberAndIndex BlockInformation <- BlockParameter Quantity)
+
+
 
 ;; Returns a receipt of transaction by transaction hash (not available if transaction still pending)
 (define-ethereum-api eth getTransactionReceipt TransactionReceipt <- Digest)
@@ -287,20 +317,116 @@
 ;; Create new message call transaction or a contract creation for signed transaction
 (define-ethereum-api eth sendRawTransaction Digest <- Data)
 
-;; TODO: Check that it is coherent
-;; Get a list of matchings blocks
-(define-ethereum-api eth getLogs EthListLogObjects <- EthObject)
-
-;; NB: Not to be used in our code, it's too flaky wrt buyout attacks.
+;; NB: Not to be used in our code, it's too flaky wrt various attacks.
 ;; Creates new message call transaction or a contract creation if the datafield contains code.
 (define-ethereum-api eth sendTransaction Digest <- TransactionParameters)
 
-;; Computes an eth signature
+;; Computes an eth signature of (eth-sign-prefix message)
 (define-ethereum-api eth sign Data <- Address Data)
+(def (eth-sign-prefix message)
+  (format "\x19;Ethereum Signed Message:\n~a~a" (string-length message) message))
 
+;; TODO: Which of these is it?
 ;;(define-ethereum-api eth signTransaction SignTransactionResult <- TransactionParameters)
+;;(define-ethereum-api eth signTransaction Bytes <- TransactionParameters)
+
+
+(define-type BlockInformation
+  (Record number: [(Maybe Quantity)]
+          hash: [(or Digest null)]
+          parentHash: [Digest]
+          nonce: [(Maybe Bytes8)]
+          sha3Uncles: [Digest]
+          logsBloom: [Bloom]
+          transactionsRoot: [Digest]
+          stateRoot: [Digest]
+          receiptsRoot: [Digest]
+          miner: [Address]
+          difficulty: [Quantity]
+          totalDifficulty: [Quantity]
+          extraData: [Bytes]
+          size: [Quantity]
+          gasLimit: [Quantity]
+          gasUsed: [Quantity]
+          timestamp: [Quantity] ;; unix timestamp
+          transactions: [(Or (List TransactionInformation) (List Digest))]
+          gasUsed: [Quantity]
+          uncles: [(List Digest)]))
+
+;; boolean: true for full tx objects, false for txhashes only
+(define-ethereum-api eth getblockByHash (Maybe BlockInformation) <- Digest Bool)
+(define-ethereum-api eth getblockByNumber (Maybe BlockInformation) <- BlockParameter Bool)
 
 (define-ethereum-api eth blockNumber Quantity <-)
+
+(define-type newFilterOptions ;; for newFilter
+  (Record fromBlock: [BlockParameter optional: #t default: 'latest]
+          toBlock: [BlockParameter optional: #t default: 'latest]
+          address: [(Or Address (List Address) Unit) optional: #t default: null]
+          topics: [(Maybe (List (Maybe (Or Bytes32 (List Bytes32))))) optional: #t default: null]))
+(define-type getLogsFilterOptions ;; for getLogs
+  (Record fromBlock: [(Maybe BlockParameter) optional: #t default: 'latest]
+          toBlock: [(Maybe BlockParameter) optional: #t default: 'latest]
+          address: [(Or Address (List Address) Unit) optional: #t default: null]
+          topics: [(Maybe (List (Or Bytes32 Unit (List Bytes32)))) optional: #t default: null]
+          blockhash: [(Maybe Digest) optional: #t default: null]))
+
+(define-ethereum-api eth newFilter Quantity <- newFilterOptions)
+(define-ethereum-api eth newBlockFilter Quantity <-)
+(define-ethereum-api eth newPendingTransactionFilter Quantity <-)
+(define-ethereum-api eth uninstallFilter Bool <- Quantity)
+(define-ethereum-api eth getFilterChanges
+  (Or (List Digest) ;; for newBlockFilter (block hashes), newPendingTransactionFilter (tx hashes)
+      LogObjectList) ;; for newFilter
+  <- Quantity)
+(define-ethereum-api eth getFilterLogs
+  (Or (List Digest) ;; for newBlockFilter (block hashes), newPendingTransactionFilter (tx hashes)
+      LogObjectList) ;; for newFilter
+  <- Quantity)
+;; TODO: Check that it is coherent
+;; Get a list of matchings blocks
+(define-ethereum-api eth getLogs LogObjectList <- getLogsFilterOptions)
+
+;; returns: 1. current block header pow-hash, 2. seed hash used for the DAG,
+;; 3. boundary condition (“target”), 2^256 / difficulty.
+(define-ethereum-api eth getWork (Tuple Bytes32 Bytes32 Bytes32) <-)
+(define-ethereum-api eth submitWork Bool <- Bytes32 Bytes32 Bytes32)
+
+
+(define-ethereum-api shh version String <-)
+(define-type ShhMessageSent
+  (Record
+   from: [(Maybe Bytes60)]
+   to: [(Maybe Bytes60)]
+   topics: [(List Bytes)]
+   payload: [Bytes]
+   priority: [Quantity]
+   ttl: [Quantity])) ;; time to live in seconds.
+(define-ethereum-api shh post Bool <- ShhMessageSent)
+(define-ethereum-api shh newIdentity Bytes60 <-)
+(define-ethereum-api shh hasIdentity Bool <- Bytes60)
+(define-ethereum-api shh newGroup Bytes60 <-)
+(define-ethereum-api shh addToGroup Bool <- Bytes60)
+(define-type ShhFilter
+  (Record
+   to: [(Maybe Bytes60)]
+   topics: [(List (Or Bytes Unit (List Bytes)))]))
+(define-ethereum-api shh newFilter Quantity <- ShhFilter)
+(define-ethereum-api shh uninstallFilter Bool <- Quantity)
+(define-type ShhMessageReceived
+  (Record
+   hash: [Digest]
+   from: [(Maybe Bytes60)]
+   to: [(Maybe Bytes60)]
+   expiry: [Quantity] ;; Integer of the time in seconds when this message should expire (?).
+   ttl: [Quantity] ;; Integer of the time the message should float in the system in seconds (?).
+   sent: [Quantity] ;; Integer of the unix timestamp when the message was sent.
+   topics: [(List Bytes)] ;; Array of DATA topics the message contained.
+   payload: [Bytes] ;; The payload of the message.
+   workProved: [Quantity])) ;; Integer of the work this message required before it was send (?).
+(define-ethereum-api shh getFilterChanges (List ShhMessageReceived) <- Quantity)
+(define-ethereum-api shh getMessages (List ShhMessageReceived) <- Quantity)
+
 
 
 ;;;; Geth extensions, Personal Namespace https://geth.ethereum.org/docs/rpc/ns-personal
@@ -357,3 +483,6 @@
 
 ;; https://github.com/ethereum/go-ethereum/wiki/Management-APIs#txpool-content
 #;(define-ethereum-api txpool content TxPoolContent <-)
+
+;; https://geth.ethereum.org/docs/rpc/pubsub -- we need use websocket for that.
+;; eth_subscribe, eth_unsubscribe

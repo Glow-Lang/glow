@@ -5,7 +5,7 @@
 ;; This file defines the plumbing for encoding and decoding.
 ;; Our type descriptors are actually declared in ./types and ./ethereum
 ;; See also in Rust: https://github.com/openethereum/ethabi
-;; TODO: rename this file abi-encode, have a separate file later for parsing abi types (if needed)
+;; Finally, external representation of the abi is in abi-
 
 (export #t)
 
@@ -67,7 +67,7 @@
    types
    port
    separator: ","
-   display-element: (cut .call <> ethabi-display-type <>)))
+   display-element: (cut .call <> .ethabi-display-type <>)))
 
 ;; : Bytes32 <- AbiFunctionSignature
 (def (digest<-function-signature signature)
@@ -78,15 +78,16 @@
   (subu8vector (digest<-function-signature signature) 0 4))
 
 (def (ethabi-head-length types)
-  (reduce + 0 (map (cut .@ <> ethabi-head-length) types)))
+  (reduce + 0 (map (cut .@ <> .ethabi-head-length) types)))
 (def (ethabi-tail-length types xs)
-  (reduce + 0 (map (cut .method <> .ethabi-tail-length <>) types xs)))
+  (reduce + 0 (map (cut .call <> .ethabi-tail-length <>) types xs)))
 (def (ethabi-length types xs)
   (+ (ethabi-head-length types) (ethabi-tail-length types xs)))
 
 ;; : Bytes <- [Listof Type] [Listof Any] Bytes
 ;; types and xs are lists of the same length,
 ;; each x at index i corresponds to the type at index i.
+;; The prefix is typically (a) the 4-bytes identifying a function call, or (b) an ABI-following contract
 (def (ethabi-encode types xs (prefix #u8()))
   (def prefix-length (bytes-length prefix))
   (def head-length (ethabi-head-length types))
@@ -110,8 +111,8 @@
 ;; get-tail and set-tail! are a getter/setter pair for where the next tail goes.
 (def (ethabi-encode-into types xs bytes start head get-tail set-tail!)
   (for-each (lambda (type x)
-              (.method type .ethabi-encode-into x bytes start head get-tail set-tail!)
-              (inc! head (.@ type ethabi-head-length)))
+              (.call type .ethabi-encode-into x bytes start head get-tail set-tail!)
+              (inc! head (.@ type .ethabi-head-length)))
             types xs))
 
 ;; : [Listof Any] <- [Listof Type] Bytes Nat Nat
@@ -133,8 +134,8 @@
   (def head-end (get-tail))
   (begin0 (map-in-order
            (lambda (type)
-             (begin0 (.method type .ethabi-decode-from bytes start head get-tail set-tail!)
-               (inc! head (.@ type ethabi-head-length))))
+             (begin0 (.call type .ethabi-decode-from bytes start head get-tail set-tail!)
+               (inc! head (.@ type .ethabi-head-length))))
            types)
     (assert! (= head head-end))))
 

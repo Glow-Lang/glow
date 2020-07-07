@@ -89,10 +89,14 @@
   (segment-push! (Assembler-segment a) b))
 (def (&bytes a b)
   (segment-push-bytes! (Assembler-segment a) b))
-(def (&int a i (n-bits (integer-length i)))
-  (segment-push-bytes! (Assembler-segment a) (bytes<-nat i (n-bytes<-n-bits n-bits))))
 (def (&type a type x)
-  (&bytes a ((.@ type methods .bytes<-) x)))
+  (&bytes a ((.@ type .bytes<-) x)))
+(def (&int a i (n-bytes (n-bytes<-n-bits (integer-length i))))
+  (segment-push-bytes! (Assembler-segment a) (bytes<-nat i n-bytes)))
+(def (&push a i (n-bytes (max 1 (n-bytes<-n-bits (integer-length i)))))
+  (assert! (<= 1 n-bytes 32))
+  (&byte a (+ #x5F n-bytes))
+  (&int a i n-bytes))
 
 (def (current-offset a)
   (Segment-fill-pointer (Assembler-segment a)))
@@ -121,7 +125,7 @@
 ;; e.g. 32-bit fixup at address 10 and 8-bit fixup at address 12.
 (def (&fixup a n-bits expr)
   (def offset (Segment-fill-pointer (Assembler-segment a)))
-  (&int a 0 n-bits)
+  (&int a 0 (n-bytes<-n-bits n-bits))
   (hash-put! (Assembler-fixups a) offset (cons expr n-bits)))
 
 (def (&label a l)
@@ -319,14 +323,14 @@
 ;; NB: fixed size for now, even if the address starts with zeros,
 ;; because the current assembler cannot deal with dynamic sizes
 (def (&address a address)
-  (&int a (nat<-bytes address)))
+  (&push a (nat<-bytes address)))
 (def (&z a z)
   (cond
    ((and (> 0 z) (< (integer-length z) 240))
     (&z a (bitwise-not z))
     (NOT a))
    ((> 0 z)
-    (&z a ((.@ UInt256 methods normalize) z)))
+    (&z a ((.@ UInt256 .normalize) z)))
    ((= 0 z)
     (PUSH1 a) (&byte a 0))
    (else
@@ -337,7 +341,7 @@
 
 (def (&directive a directive)
   (cond
-   ((exact-integer? directive) (&int a directive))
+   ((exact-integer? directive) (&push a directive))
    ((bytes? directive) (&bytes a directive))
    ((procedure? directive) (directive a))
    ((pair? directive) (apply (car directive) a (cdr directive)))

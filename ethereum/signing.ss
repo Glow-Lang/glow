@@ -7,32 +7,27 @@
   ./types
   )
 
-(define-type SecretKey
-  {(:: @ Bytes32)
-   methods: =>.+ {
-  }})
+(define-type SecretKey Bytes32)
 
 ;; Should we store the pubkey as a foreign object, or as bytes to be parsed each time?
 (define-type PublicKey
-  {(:: @ Type.)
+  {(:: @ [methods.marshal<-bytes Type.])
    .element?: (lambda (x) (and (foreign? x) (equal? (foreign-tags x) '(secp256k1-pubkey*))))
-   methods: =>.+ {(:: methods [un/marshal<-bytes])
-     .bytes<-: bytes<-secp256k1-pubkey
-     .<-bytes: secp256k1-pubkey<-bytes
-     .json<-: (lambda (x) (json<- Bytes (.bytes<- x)))
-     .<-json: (lambda (x) (.<-bytes (<-json Bytes x)))
-  }})
+   .bytes<-: bytes<-secp256k1-pubkey
+   .<-bytes: secp256k1-pubkey<-bytes
+   .json<-: (lambda (x) (json<- Bytes (.bytes<- x)))
+   .<-json: (lambda (x) (.<-bytes (<-json Bytes x)))})
 
 (defstruct keypair (address public-key secret-key password) transparent: #t)
 
-(.def (Keypair @ Type.)
-  .element?: keypair?
-  methods: =>.+ {
+(define-type Keypair
+  {(:: @ Type.)
+    .element?: keypair?
     .json<-: (lambda (kp) (hash ("seckey" (json<- SecretKey (keypair-secret-key kp)))
                            ("password" (keypair-password kp))))
     .<-json: (lambda (h) (keypair<-secret-key (<-json SecretKey (hash-get h "seckey"))
-                                         (hash-get h "password")))
-  })
+                                         (hash-get h "password")))})
+
 #;(Record
    address: [Address]
    public-key: [PublicKey]
@@ -63,13 +58,11 @@
   (read-bytes compact port)
   (secp256k1-recoverable-signature<-bytes compact recid))
 
-(.def (Signature @ Type.)
+(.def (Signature @ [methods.bytes<-marshal Type.])
    sexp: 'Signature
-   methods: =>.+ {(:: methods [bytes<-un/marshal])
-     length-in-bytes: 65
-     .marshal: marshal-signature
-     .unmarshal: unmarshal-signature
-  })
+   .length-in-bytes: 65
+   .marshal: marshal-signature
+   .unmarshal: unmarshal-signature)
 
 (define-type Signed
   (Record payload: [Any] signature: [Signature]))

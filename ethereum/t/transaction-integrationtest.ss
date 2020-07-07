@@ -30,7 +30,7 @@
   ""))
 
 ;; Ensure Geth can issue transactions for all test accounts
-(for-each (lambda (nkp) (ensure-secret-key (cadr nkp))) test-keypairs)
+(for-each ensure-eth-signing-key test-addresses)
 
 (def transaction-integrationtest
   (test-suite "integration test for glow/ethereum/transaction"

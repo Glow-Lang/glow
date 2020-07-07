@@ -38,7 +38,7 @@
     ;; -- 0 length
 
     ;; Push args for CODECOPY; the DUP's for length and memory target are where the savings are
-    DUP2 #| length |# [pushlabel1 'runtime-start 10] DUP3 ;; memory target address: 0
+    DUP2 #| length |# [pushlabel1 'runtime-start] DUP3 ;; memory target address: 0
     ;; -- 0 start length 0 length
 
     ;; Initialize the contract by returning the memory array containing the runtime code
@@ -60,7 +60,7 @@
     ;; -- 0 length
 
     ;; Push args for CODECOPY; the DUP's for length and memory target are where the savings are
-    DUP2 #| length |# [pushlabel1 'runtime-start 47] DUP3 ;; memory target address: 0
+    DUP2 #| length |# [pushlabel1 'runtime-start] DUP3 ;; memory target address: 0
     ;; -- 0 start length 0 length
 
     ;; Initialize the contract by returning the memory array containing the runtime code

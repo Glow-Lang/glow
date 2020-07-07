@@ -5,33 +5,27 @@
   :std/error :std/sugar :std/text/hex
   :clan/utils/assert :clan/utils/failure :clan/utils/option
   :clan/net/json-rpc
-  :clan/poo/poo :clan/poo/io (only-in :clan/poo/mop .method) :clan/poo/brace
+  :clan/poo/poo :clan/poo/io :clan/poo/brace
   :clan/runtime/db
   ./hex ./ethereum ./config ./signing ./known-addresses ./types ./json-rpc ./nonce-tracker)
 
 (defstruct (TransactionRejected exception) (receipt))
 (defstruct (StillPending exception) ())
 (defstruct (ReplacementTransactionUnderpriced exception) ())
+(defstruct (IntrinsicGasTooLow exception) ())
 
-;; : Unit <- Keypair timeout:?(OrFalse Real) log:?(Fun Unit <- Json)
-(def (ensure-secret-key timeout: (timeout #f) log: (log #f) keypair)
-  (when log (log "ethereum-transaction: ensure-secret-key ~a" (0x<-address (keypair-address keypair))))
+;; : Unit <- Address timeout:?(OrFalse Real) log:?(Fun Unit <- Json)
+(def (ensure-eth-signing-key timeout: (timeout #f) log: (log #f) address)
+  (when log (log "ethereum-transaction: ensure-secret-key ~a" (0x<-address address)))
+  (def keypair (keypair<-address address))
+  (unless keypair
+    (error "No registered keypair for address" 'ensure-eth-signing-key address))
   (try
    (personal_importRawKey (hex-encode (keypair-secret-key keypair)) (keypair-password keypair)
                           timeout: timeout log: log)
    (catch (json-rpc-error? e)
-     (if (equal? (json-rpc-error-message e) "account already exists")
-       (keypair-address keypair)
+     (unless (equal? (json-rpc-error-message e) "account already exists")
        (raise e)))))
-
-;; : Unit <- Address timeout:?(OrFalse Real) log:?(Fun Unit <- Json)
-(def (ensure-eth-signing-address timeout: (timeout #f) log: (log #f) address)
-  (def keypair (keypair<-address address))
-  (unless keypair
-    (error "No registered keypair for address" 'ensure-eth-signing-address address))
-  (def actual-address (ensure-secret-key timeout: timeout log: log keypair))
-  (unless (equal? actual-address address)
-    (error "registered keypair has mismatched address" address actual-address)))
 
 ;; : Address <-
 (def (get-first-account) (car (personal_listAccounts)))
@@ -52,15 +46,36 @@
   (unless (successful-receipt? receipt)
     (raise (TransactionRejected receipt))))
 
+;; Count the number of confirmations for a transaction given by its hash.
+;; Return -1 if the transaction is (yet) unconfirmed, -2 if it is failed.
+;; : Integer <- TransactionReceipt
+(def (confirmations<-receipt receipt (block-number (eth_blockNumber)))
+  (cond
+   ((successful-receipt? receipt)
+    (- block-number (.@ receipt blockNumber)))
+   ((poo? receipt)
+    -2)
+   (else -1)))
+
+;; Count the number of confirmations for a transaction given by its hash.
+;; Return -1 if the transaction is yet unconfirmed.
+;; : Integer <- TxHash
+(def (confirmations<-transaction txHash)
+  (confirmations<-receipt (eth_getTransactionReceipt txHash)))
+
 ;; : Bool <- TransactionReceipt Quantity
-(def (receipt-sufficiently-confirmed? receipt block-number)
-  (>= block-number
-      (+ (.@ receipt blockNumber)
-         (.@ (current-ethereum-config) confirmationsWantedInBlocks))))
+(def (receipt-sufficiently-confirmed? receipt (block-number (eth_blockNumber)))
+  (>= (confirmations<-receipt receipt block-number)
+      (.@ (current-ethereum-config) confirmationsWantedInBlocks)))
+
+;; Get the number of the latest confirmed block
+;; : Quantity <-
+(def (confirmed-block-number (block-number (eth_blockNumber)))
+  (- block-number (.@ (current-ethereum-config) confirmationsWantedInBlocks)))
 
 ;; : Unit <- TransactionReceipt
-(def (check-receipt-sufficiently-confirmed receipt)
-  (unless (receipt-sufficiently-confirmed? receipt (eth_blockNumber))
+(def (check-receipt-sufficiently-confirmed receipt (block-number (eth_blockNumber)))
+  (unless (receipt-sufficiently-confirmed? receipt block-number)
     (raise (StillPending))))
 
 ;; Given a putative sender, some transaction data, and a confirmation,
@@ -78,7 +93,7 @@
     (error "Malformed request" "Transaction data digest does not match the provided confirmation"))
   (def receipt (eth_getTransactionReceipt hash))
   (check-transaction-receipt-status receipt)
-  (unless (receipt-sufficiently-confirmed? receipt (eth_blockNumber))
+  (unless (receipt-sufficiently-confirmed? receipt)
     (raise (StillPending)))
   (unless (and (equal? sender (.@ receipt from))
                (equal? recipient (.@ receipt to))
@@ -133,6 +148,8 @@
      hash)
     ((failure (json-rpc-error code: -32000 message: "replacement transaction underpriced"))
      (raise (ReplacementTransactionUnderpriced)))
+    ((failure (json-rpc-error code: -32000 message: "intrinsic gas too low"))
+     (raise (IntrinsicGasTooLow)))
     ((failure (json-rpc-error code: -32000 message:
                               (? (let (m (string-append "known transaction: " (hex-encode hash)))
                                    (cut equal? <> m)))))
