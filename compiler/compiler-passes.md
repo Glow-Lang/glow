@@ -103,6 +103,18 @@ with your own explicit representation of a continuation.
 Actually, a fun exercise might be to actually represent our code at that level as COBOL syntax,
 and boast that we have a COBOL backend.
 
+## Concurrency analysis
+
+If some variables can be modified by an unbounded number of steps before some participant can post
+(in particular if single or more steps by an unbounded number of participants), then
+these variables shall not be merklized. Example: currentBidder and currentBid in auction.
+
+An analysis phase will distinguish which variables can be merkleized or not.
+NB: on UTXO blockchains like BTC, ADA, NRV, everything is merkleized anyway,
+and we need another defense mechanism against runaway state, i.e. a state update auction by miners
+or people close to miners.
+
+
 ## End-point projection
 
 From an IR with consistent data representation,

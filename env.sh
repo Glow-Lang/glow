@@ -54,7 +54,7 @@ glo_tests () { glo_unit_tests ; glo_integration_tests ; }
 tf () { glo_tests ; }
 wcssd () {( cd ${GLOW_SRC} ; cat $(find $@ -type f -name '*.ss') | wc -l )}
 wcss () {
-    a=$(wcssd) u=$(wcssd clan time-series) t=$(wcssd tests)
+    a=$(wcssd) u=$(wcssd .) t=$(wcssd **/t/)
     echo "utils: $u"
     echo "tests: $t"
     echo "glow: $(($a-$u-$t))"
