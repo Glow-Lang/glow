@@ -12,7 +12,7 @@ pkgs: super: rec {
     gerbil = gerbil-unstable;
     gambit-params = gambit-support.unstable-params;
     gerbilInputs = [gerbilPackages-unstable.gerbil-utils];
-    version-path = "";
+    version-path = "config/version.ss";
     src = ./..;
     #src = fetchFromGitLab { owner = "mukn"; repo = "glow";
     #  rev = "d0ad110a22b622844a4b916326b221ed3bbe66c4";

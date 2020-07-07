@@ -1,7 +1,8 @@
 (import
   :gerbil/gambit/ports
   :std/format :std/iter :std/misc/process
-  :clan/utils/exit :clan/utils/ports
+  :clan/utils/exit :clan/utils/ports :clan/utils/version
+  :clan/version :crypto/version :glow/config/version
   :clan/t/test-support
   ;;:glow/compiler/syntax-context ;; important for the parsing to work (!)
   :glow/config/path
@@ -27,7 +28,7 @@
    (silent-exit
     (match args
       ([] (run-tests "."))
-      (["meta"] (println "meta all test process pass"))
+      (["meta"] (println "meta all test process pass show-version check_git_up_to_date"))
       (["all"] (run-tests "." test-files: (find-test-files ".")))
       (["integration"] (run-tests "." test-files: (find-test-files "." "-integrationtest.ss$")))
       (["test" . files] (run-tests "." test-files: files))
@@ -43,6 +44,8 @@
        (def pass-sym (string->symbol pass))
        (for (file files) (run-passes file pass: pass-sym))
        #t)
+      (["show-version"]
+       (show-version complete: #t))
       (["check_git_up_to_date"]
        (def branch (git-origin-branch))
        (run-process ["git" "fetch" "--depth" "1" (git-origin-repo) branch])
