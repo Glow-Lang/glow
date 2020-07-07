@@ -4,7 +4,7 @@
 # You can use this file as your M-x run-scheme interpreter
 # by putting a line such as the following one in your .emacs
 # then using e.g. gerbil-mode:
-# (setq scheme-program-name "/home/fricfrac/src/fricfrac/gerbil/my-gxi")
+# (setq scheme-program-name "/home/fare/src/fare/glow/ggxi")
 
 this=$0
 here=$(dirname "$this")
