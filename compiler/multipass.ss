@@ -126,6 +126,7 @@
                         (error "Can't run pass, output already exists" pass-name k)))
                outputs)
      (def results (values->list (apply fun (map (λ (k) (hash-get state k)) inputs))))
+     (def layer-fails [])
      (for ((layer-name outputs) (value results))
        (hash-put! state layer-name value)
        (def expected-output-file (format "~a.~a" basename layer-name))
@@ -140,7 +141,9 @@
                       expected-output-file)
              (unless success?
                (write/layer layer-name value (current-error-port)))
-             (error 'pass-output-failure pass-name basename layer-name)))))
+             (set! layer-fails (cons layer-name layer-fails))))))
+     (when (pair? layer-fails)
+       (error 'pass-output-failure pass-name basename (reverse layer-fails)))
      state)))
 
 ;; Path layer:  String Representation+AncillaryDataIn -> Representation+AncillaryDataOut

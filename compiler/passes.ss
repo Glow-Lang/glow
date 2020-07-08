@@ -12,6 +12,7 @@
   :glow/compiler/anf/anf
   :glow/compiler/checkpointify/checkpointify
   :glow/compiler/checkpointify/checkpoint-info-table
+  :glow/compiler/liveness/checkpoint-liveness
   )
 
 ;;; Layers, passes and strategies
@@ -56,6 +57,9 @@
 ;; CheckpointInfoTable
 (define-layer cpitable.sexp read-checkpoint-info-table write-checkpoint-info-table checkpoint-info-table=?)
 
+;; CheckpointLivenessTable
+(define-layer cpltable.sexp read-checkpoint-liveness-table write-checkpoint-liveness-table checkpoint-liveness-table=?)
+
 
 (define-layer safepointify.sexp read-sexp-module write-sexp-module stx-sexpr=?) ;; after safepoints added
 (define-layer bbepp.sexp read-sexp-module write-sexp-module stx-sexpr=?) ;; right Before BEPP
@@ -99,6 +103,9 @@
 ;; *Transaction-ification*: introduce suitable safe points between changes in participants
 (define-pass checkpointify (anf.sexp Unused) (checkpointify.sexp cpitable.sexp))
 
+;; *Checkpoint-Liveness*: determine which variables are publicly live at every checkpoint
+(define-pass checkpoint-liveness (cpitable.sexp) (cpltable.sexp))
+
 ;; *Message-extraction*: for each choice of transactions, extract a message type for that choice.
 ;; TODO: maybe merge with previous pass?
 ;; NB: how choosing the right-size type for each data object is blockchain-dependent
@@ -134,7 +141,7 @@
 ;;(define-pass javascript-extraction ".client.sexp" ".js")
 
 (define-strategy ethereum-direct-style
-  alpha-convert desugar typecheck method-resolve anf checkpointify) ;; ...
+  alpha-convert desugar typecheck method-resolve anf checkpointify checkpoint-liveness) ;; ...
 
 ;; Different layers and passes for State-Channel style:
 ;; the previous contract is virtualized, so that
