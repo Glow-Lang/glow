@@ -98,6 +98,7 @@
 (def (create-ci sym)
   (make-ci sym [] [] []))
 
+;; put-transition! : TI -> TI
 (def (put-transition! ti)
   (def from (ti-from ti))
   (when from
@@ -137,9 +138,10 @@
   (def ti (make-scope-ti))
   (def from (ti-from ti))
   (def to (ti-to ti))
-  (values (reverse (cons [#'@label to]
-                         (nth-value 0 (checkpointify-stmts body ti [[#'@label from]]))))
-                   from to))
+  (def revstmts (nth-value 0 (checkpointify-stmts body ti [[#'@label from]])))
+  (values (reverse (cons [#'@label to] revstmts))
+          from
+          to))
 
 ;; make-checkpoint : Symbol -> StmtStx
 (def (make-checkpoint (label 'pc))
@@ -147,20 +149,36 @@
   (def ci (new-ci sym))
   sym)
 
+;; should only be used for lambda, @make-interaction, and the overall prog
+;; should not be used for switch
 (def (make-scope-ti)
   (def initial-checkpoint (make-checkpoint 'begin))
   (def final-checkpoint (make-checkpoint 'end))
   (create-ti initial-checkpoint final-checkpoint #f))
 
-(def (make-intermediate-checkpoint ti (label 'cp))
+;; make-intermediate-checkpoint : [NEListof TI] Symbol -> (values StmtStx TI)
+;; ASSERT: the `ti-to` fields of all given `tis` should be the same.
+;; Names a new checkpoint cp which comes after all effects in the givin `tis`, but before the common `to`.
+;; Puts transition from each original `ti-from` to the new cp, containing information
+;; from the original `ti`.
+;; Produces 2 values:
+;;  * A statement `(@label cp)`, which should be placed after the merging of the statements from `tis`
+;;  * A TI which has cp as the `from`, and keeps the common `to` of the given `tis`
+(def (make-intermediate-checkpoint tis (label 'cp))
+  (def common-to (and (pair? tis) (ti-to (first tis))))
+  (for ((ti tis))
+    (unless (eq? common-to (ti-to ti))
+      (error 'make-intermediate-checkpoint "expected as tis to go to the same checkpoint")))
   (def cp (make-checkpoint label))
-  (put-transition!
-   (make-ti (ti-from ti) cp
-            (ti-participant ti) (ti-effects ti)
-            (ti-variables-introduced ti) (ti-variables-used ti) []))
+  (for ((ti tis))
+    (def ti2
+      (make-ti (ti-from ti) cp
+               (ti-participant ti) (ti-effects ti)
+               (ti-variables-introduced ti) (ti-variables-used ti) []))
+    (put-transition! ti2))
   (values [#'@label cp]
-          (make-ti cp (ti-to ti)
-                   (let (p (ti-participant ti)) (and (symbol? p) p))
+          (make-ti cp common-to
+                   (unify-participants/list (map ti-participant tis))
                    [] [] [] [])))
 
 ;; introduce-checkpoint : TI [Listof CpStmtStx] -> [Listof CpStmtStx] TI
@@ -174,7 +192,7 @@
 (def (statement-after-checkpoint stx ti acc ssi)
   ;; Ensure the participant-checkpoint is executed *BEFORE* the statement with a new participant,
   ;; which means cons it after since we accumulate in reverse order.
-  (defvalues (cpstx2 ti2) (make-intermediate-checkpoint ti))
+  (defvalues (cpstx2 ti2) (make-intermediate-checkpoint [ti]))
   (values (cons* stx cpstx2 acc) (merge-ssi ti2 ssi)))
 
 ;; For use in dead code, after a return (should not be syntactically possible)
@@ -223,6 +241,7 @@
    variables-used) ;; variables used by this statement
   transparent: #t)
 
+;; merge-ssi : TI SSI -> TI
 (def (merge-ssi ti ssi)
   (make-ti (ti-from ti) (ti-to ti)
            (unify-participants (ti-participant ti) (ssi-participant ssi))
@@ -359,7 +378,7 @@
        (if tail?
          (continue-expr #'expr ssi)
          (let-values (((cpstx ti2)
-                       (make-intermediate-checkpoint (merge-ssi ti ssi) 'return)))
+                       (make-intermediate-checkpoint [(merge-ssi ti ssi)] 'return)))
            (values (cons* cpstx stx acc) ti2)))))
     ;; TODO: mark closure variables as used that are visible in this scope.
     ((λ . _) (rewrite checkpointify-lambda))
@@ -384,19 +403,24 @@
 (def (checkpointify-switch stx ti acc)
   (syntax-case stx ()
     ((switch e cases ...)
-     (let* ((sti (make-scope-ti))
-            (sti2 (if (identifier? #'e) (merge-ssi sti (make-ssi #f [] [] (used<-arg #'e))) sti))
-            (cts (map (cut checkpointify-swcase <> sti2) (syntax->list #'(cases ...))))
-            (cs (map first cts))
-            (ts (map second cts))
-            (p (unify-participants/list (map ti-participant ts)))
-            (participant (and (not (participant-ambiguous? p)) p)))
-       (with-syntax (((scases ...) cs))
-         (values
-          (cons* [#'@label (ti-to sti)] (restx1 stx #'(switch e scases ...))
-                 [#'@label (ti-from sti)] acc)
-          (create-ti (ti-to sti) (ti-to ti) participant)))))))
+     (let-values (((label-begin ti2) (make-intermediate-checkpoint [ti] 'begin-switch)))
+      (let* ((ti3 (merge-ssi ti2 (make-ssi #f [] [] (used<-arg #'e))))
+             (cts (map (cut checkpointify-swcase <> ti3) (syntax->list #'(cases ...))))
+            ; cs : [Listof SwcaseStx]
+             (cs (map first cts))
+            ; ts : [Listof TI]
+            ; all have the same `ti-to` field, gotten from `ti2`, `(ti-to ti2)`
+             (ts (map second cts)))
+        (defvalues (label-end ti4) (make-intermediate-checkpoint ts 'end-switch)) ; already a list
+        (with-syntax (((scases ...) cs))
+          (values
+           (cons* label-end
+                  (restx1 stx #'(switch e scases ...))
+                  label-begin
+                  acc)
+           ti4)))))))
 
+;; checkpointify-swcase : SwcaseStx TI -> [List SwcaseStx TI]
 (def (checkpointify-swcase stx ti)
   (syntax-case stx ()
     ((pattern body ...)
