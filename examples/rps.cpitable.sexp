@@ -49,11 +49,11 @@
       (begin-switch3
        (ci 'begin-switch3
            (@list)
-           (@list (ti 'cp0
+           (@list (ti 'cp1
                       'begin-switch3
-                      '#t
-                      (@list (syntax (publish! A handA0)) (syntax (publish! A salt)) (syntax (deposit! B wagerAmount)) (syntax (publish! B handB0)))
-                      (@list '(outcome . #f) '(tmp18 . #f) '(tmp17 . #f) '(tmp16 . #f) '(handA0 . #f) '(salt . #f) '(handB0 . #f))
+                      'A
+                      (@list (syntax (publish! A handA0)) (syntax (publish! A salt)))
+                      (@list '(outcome . #f) '(tmp18 . #f) '(tmp17 . #f) '(tmp16 . #f) '(handA0 . #f) '(salt . #f))
                       (@list '(winner . #f)
                              '(handA0 . #f)
                              '(handB0 . #f)
@@ -66,29 +66,25 @@
                              '(handA0 . A)
                              '(A . #f)
                              '(salt . A)
-                             '(A . #f)
-                             '(B . #f)
-                             '(wagerAmount . #f)
-                             '(handB0 . B)
-                             '(B . #f))
+                             '(A . #f))
                       (@list)))
            (@list (ti 'begin-switch3
                       'end-switch3
-                      '#t
+                      #f
                       (@list (syntax (withdraw! B wagerAmount)) (syntax (withdraw! A wagerAmount)))
                       (@list)
                       (@list '(B . #f) '(wagerAmount . #f) '(A . #f) '(wagerAmount . #f) '(outcome . #f))
                       (@list))
                   (ti 'begin-switch3
                       'end-switch3
-                      '#t
+                      #f
                       (@list (syntax (withdraw! B tmp20)))
                       (@list '(tmp20 . #f))
                       (@list '(B . #f) '(tmp20 . #f) '(* . #f) '(wagerAmount . #f) '(outcome . #f))
                       (@list))
                   (ti 'begin-switch3
                       'end-switch3
-                      '#t
+                      #f
                       (@list (syntax (withdraw! A tmp19)))
                       (@list '(tmp19 . #f))
                       (@list '(A . #f) '(tmp19 . #f) '(* . #f) '(wagerAmount . #f) '(outcome . #f))
@@ -145,10 +141,28 @@
                           (@list '(A . #f) '(wagerAmount . #f) '(commitment . A) '(A . #f))
                           (@list)))
                (@list (ti 'cp0
+                          'cp1
+                          'B
+                          (@list (syntax (deposit! B wagerAmount))
+                                 (syntax (publish! B handB0)))
+                          (@list '(handB0 . #f))
+                          (@list '(B . #f) '(wagerAmount . #f) '(handB0 . B) '(B . #f))
+                          (@list)))))
+      (cp1 (ci 'cp1
+               (@list)
+               (@list (ti 'cp0
+                          'cp1
+                          'B
+                          (@list (syntax (deposit! B wagerAmount))
+                                 (syntax (publish! B handB0)))
+                          (@list '(handB0 . #f))
+                          (@list '(B . #f) '(wagerAmount . #f) '(handB0 . B) '(B . #f))
+                          (@list)))
+               (@list (ti 'cp1
                           'begin-switch3
-                          '#t
-                          (@list (syntax (publish! A handA0)) (syntax (publish! A salt)) (syntax (deposit! B wagerAmount)) (syntax (publish! B handB0)))
-                          (@list '(outcome . #f) '(tmp18 . #f) '(tmp17 . #f) '(tmp16 . #f) '(handA0 . #f) '(salt . #f) '(handB0 . #f))
+                          'A
+                          (@list (syntax (publish! A handA0)) (syntax (publish! A salt)))
+                          (@list '(outcome . #f) '(tmp18 . #f) '(tmp17 . #f) '(tmp16 . #f) '(handA0 . #f) '(salt . #f))
                           (@list '(winner . #f)
                                  '(handA0 . #f)
                                  '(handB0 . #f)
@@ -161,11 +175,7 @@
                                  '(handA0 . A)
                                  '(A . #f)
                                  '(salt . A)
-                                 '(A . #f)
-                                 '(B . #f)
-                                 '(wagerAmount . #f)
-                                 '(handB0 . B)
-                                 '(B . #f))
+                                 '(A . #f))
                           (@list)))))
       (end (ci 'end
                (@list)
@@ -195,26 +205,26 @@
            (@list)
            (@list (ti 'begin-switch3
                       'end-switch3
-                      '#t
+                      #f
                       (@list (syntax (withdraw! B wagerAmount)) (syntax (withdraw! A wagerAmount)))
                       (@list)
                       (@list '(B . #f) '(wagerAmount . #f) '(A . #f) '(wagerAmount . #f) '(outcome . #f))
                       (@list))
                   (ti 'begin-switch3
                       'end-switch3
-                      '#t
+                      #f
                       (@list (syntax (withdraw! B tmp20)))
                       (@list '(tmp20 . #f))
                       (@list '(B . #f) '(tmp20 . #f) '(* . #f) '(wagerAmount . #f) '(outcome . #f))
                       (@list))
                   (ti 'begin-switch3
                       'end-switch3
-                      '#t
+                      #f
                       (@list (syntax (withdraw! A tmp19)))
                       (@list '(tmp19 . #f))
                       (@list '(A . #f) '(tmp19 . #f) '(* . #f) '(wagerAmount . #f) '(outcome . #f))
                       (@list)))
-           (@list (ti 'end-switch3 'end7 '#t (@list) (@list) (@list '(outcome . #f)) (@list)))))
+           (@list (ti 'end-switch3 'end7 #f (@list) (@list) (@list '(outcome . #f)) (@list)))))
       (end0 (ci 'end0 (@list) (@list (ti 'begin0 'end0 #f (@list) (@list '(x . #f)) (@list '(x . #f) '(x . #f) '(tag . #f)) (@list))) (@list)))
       (end1 (ci 'end1
                 (@list)
@@ -266,4 +276,4 @@
                                   '(Outcome1 . #f))
                            (@list)))
                 (@list)))
-      (end7 (ci 'end7 (@list) (@list (ti 'end-switch3 'end7 '#t (@list) (@list) (@list '(outcome . #f)) (@list))) (@list))))
+      (end7 (ci 'end7 (@list) (@list (ti 'end-switch3 'end7 #f (@list) (@list) (@list '(outcome . #f)) (@list))) (@list))))

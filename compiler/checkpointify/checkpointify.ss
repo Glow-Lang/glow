@@ -177,9 +177,7 @@
                (ti-variables-introduced ti) (ti-variables-used ti) []))
     (put-transition! ti2))
   (values [#'@label cp]
-          (make-ti cp common-to
-                   (unify-participants/list (map ti-participant tis))
-                   [] [] [] [])))
+          (make-ti cp common-to #f [] [] [] [])))
 
 ;; introduce-checkpoint : TI [Listof CpStmtStx] -> [Listof CpStmtStx] TI
 (def (introduce-checkpoint ti acc)
@@ -270,7 +268,8 @@
 (def (checkpointify-single-stmt acc ti f . args)
   (defvalues (stx ssi) (apply f args))
   (def participant-before (ti-participant ti))
-  (def participant-after (unify-participants (ti-participant ti) (ssi-participant ssi)))
+  (assert! (not (participant-ambiguous? participant-before)))
+  (def participant-after (unify-participants participant-before (ssi-participant ssi)))
   ;;(DBG css: acc ti f args stx ssi participant-before participant-after)
   (if (equal? participant-before participant-after)
     (checkpointify-simple-stmt stx ti acc ssi)

@@ -105,6 +105,7 @@
                (@ B (def handB0 (@app tmp15 "Second player, pick your hand")))
                (publish! B handB0)
                (deposit! B wagerAmount)
+               (@label cp1)
                (publish! A salt)
                (publish! A handA0)
                (def tmp16 (@tuple salt handA0))

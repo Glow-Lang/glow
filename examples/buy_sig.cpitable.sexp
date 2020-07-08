@@ -28,7 +28,7 @@
                           (@list)))
                (@list (ti 'cp0
                           'end0
-                          '#t
+                          'Seller
                           (@list (syntax (withdraw! Seller price))
                                  (syntax (publish! Seller signature)))
                           (@list '(tmp . #f) '(signature . #f))
@@ -50,7 +50,7 @@
                 (@list)
                 (@list (ti 'cp0
                            'end0
-                           '#t
+                           'Seller
                            (@list (syntax (withdraw! Seller price))
                                   (syntax (publish! Seller signature)))
                            (@list '(tmp . #f) '(signature . #f))
