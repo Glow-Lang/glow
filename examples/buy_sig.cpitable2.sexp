@@ -4,11 +4,11 @@
             (@list)
             (@list (ti 'begin 'end #f (@list) (@list '(payForSignature . #f)) (@list) (@list)))))
       (begin0 (ci 'begin0
-                  (@list)
+                  (@list 'Buyer 'Seller 'price 'isValidSignature 'digest0)
                   (@list)
                   (@list (ti 'begin0 'cp #f (@list) (@list) (@list) (@list)))))
       (cp (ci 'cp
-              (@list)
+              (@list 'Buyer 'Seller 'price 'isValidSignature 'digest0)
               (@list (ti 'begin0 'cp #f (@list) (@list) (@list) (@list)))
               (@list (ti 'cp
                          'cp0
@@ -16,16 +16,16 @@
                          (@list (syntax (deposit! Buyer price)))
                          (@list)
                          (@list '(Buyer . #f) '(price . #f))
-                         (@list)))))
+                         (@list '(Buyer . #f))))))
       (cp0 (ci 'cp0
-               (@list)
+               (@list 'Seller 'price 'isValidSignature 'digest0)
                (@list (ti 'cp
                           'cp0
                           'Buyer
                           (@list (syntax (deposit! Buyer price)))
                           (@list)
                           (@list '(Buyer . #f) '(price . #f))
-                          (@list)))
+                          (@list '(Buyer . #f))))
                (@list (ti 'cp0
                           'end0
                           'Seller
@@ -41,7 +41,7 @@
                                  '(signature . #f)
                                  '(signature . Seller)
                                  '(Seller . #f))
-                          (@list)))))
+                          (@list '(Seller . #f) '(price . #f) '(isValidSignature . #f) '(digest0 . #f))))))
       (end (ci 'end
                (@list)
                (@list (ti 'begin 'end #f (@list) (@list '(payForSignature . #f)) (@list) (@list)))
@@ -63,5 +63,5 @@
                                   '(signature . #f)
                                   '(signature . Seller)
                                   '(Seller . #f))
-                           (@list)))
+                           (@list '(Seller . #f) '(price . #f) '(isValidSignature . #f) '(digest0 . #f))))
                 (@list))))
