@@ -56,6 +56,8 @@
 
 ;; CheckpointInfoTable
 (define-layer cpitable.sexp read-checkpoint-info-table write-checkpoint-info-table checkpoint-info-table=?)
+; 2 for after liveness
+(define-layer cpitable2.sexp read-checkpoint-info-table write-checkpoint-info-table checkpoint-info-table=?)
 
 ;; CheckpointLivenessTable
 (define-layer cpltable.sexp read-checkpoint-liveness-table write-checkpoint-liveness-table checkpoint-liveness-table=?)
@@ -104,7 +106,7 @@
 (define-pass checkpointify (anf.sexp Unused) (checkpointify.sexp cpitable.sexp))
 
 ;; *Checkpoint-Liveness*: determine which variables are publicly live at every checkpoint
-(define-pass checkpoint-liveness (cpitable.sexp) (cpltable.sexp))
+(define-pass checkpoint-liveness (cpitable.sexp) (cpitable2.sexp cpltable.sexp))
 
 ;; *Message-extraction*: for each choice of transactions, extract a message type for that choice.
 ;; TODO: maybe merge with previous pass?
