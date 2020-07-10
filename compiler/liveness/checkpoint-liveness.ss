@@ -22,7 +22,7 @@
 ;; --------------------------------------------------------
 ;; Checkpoint Liveness from Checkpoint and Transition Info
 
-;; checkpoint-liveness : CheckpointInfoTable -> CheckpointLivenessTable
+;; checkpoint-liveness : CheckpointInfoTable -> (values CheckpointInfoTable CheckpointLivenessTable)
 (def (checkpoint-liveness cpit)
   (def cps (hash-keys cpit))
   (def ends (filter (compose null? ci-outgoing-transitions (cut hash-ref cpit <>)) cps))
@@ -52,8 +52,12 @@
   (for ((k (hash-keys cpit)))
     (def cpi (hash-ref cpit k))
     (def ls (hash-ref cplt k))
-    (ci-variables-live-set! cpi ls))
-  cplt)
+    (ci-variables-live-set! cpi ls)
+    (for ((outti (ci-outgoing-transitions cpi)))
+      (def next-ls (hash-ref cplt (ti-to outti)))
+      (def elims (remove* next-ls ls))
+      (ti-variables-eliminated-set! outti (map (cut cons <> #f) elims))))
+  (values cpit cplt))
 
 ;; --------------------------------------------------------
 ;; Read, Write, and Equal for CheckpointLivenessTable
