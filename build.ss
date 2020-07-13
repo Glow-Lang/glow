@@ -45,11 +45,12 @@
         [exe: "main" bin: "glow"]]))
 
 (def (main . args)
-  (when (match args ([] #t) (["compile" . _] #t) (_ #f))
-    (update-version-from-git name: "Glow" path: "config/version.ss"))
   (defbuild-script ;; defines an inner "main"
     (build-spec)
     ;;verbose: 9
     debug: (debug?)
     optimize: (optimize?))
+  (when (match args ([] #t) (["compile" . _] #t) (_ #f))
+    ;; TODO: create a version.nix with git log -1 --pretty=%ad --date=short
+    (update-version-from-git name: "Glow" path: "version.ss"))
   (apply main args))

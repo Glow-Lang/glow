@@ -1,7 +1,9 @@
 # Build-generated files
 compiled/
 build-deps
-config/version.ss
+version.ss
+version.nix
+result
 
 # Runtime data
 run/
