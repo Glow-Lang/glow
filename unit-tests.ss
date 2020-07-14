@@ -2,10 +2,12 @@
 ;; To run tests, use: ./unit-tests.ss
 ;; You can even run tests without first building with ./build.ss !
 
-(import :utils/t/test-support)
-(init-test-environment!)
+(import :utils/t/test-support
+        :gerbil/expander
+        "config/path"
+        :utils/ports)
 
-gerbil/expander "config/path" :utils/ports)
+(init-test-environment!)
 
 (in-glow-src)
 (import-module ':glow/t/unit-tests #t #t)
