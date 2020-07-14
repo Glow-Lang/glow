@@ -2,14 +2,14 @@
 
 (import :std/format :std/iter
         :std/misc/list :std/srfi/1
-        :std/misc/repr :clan/utils/debug ;; DEBUG
+        :std/misc/repr :utils/debug ;; DEBUG
         <expander-runtime>
         (for-template :glow/compiler/syntax-context)
         :glow/compiler/syntax-context
         :glow/compiler/alpha-convert/fresh
         :glow/compiler/common
-        :clan/utils/base)
-(import :clan/utils/debug :std/misc/repr)
+        :utils/base)
+(import :utils/debug :std/misc/repr)
 
 ;; participantify: Introduce participant-checkpoints everywhere that might
 ;; require a change in participant, ending the immediate duties of one
@@ -171,4 +171,4 @@
      (nth-value 0 (participantify-body stx #'(@make-interaction iparams lparams ?out-type)
                                        #'(body ...) #f [])))))
 
-;;(import :clan/utils/debug) (trace! participantify participantify-stmts participantify-stmt participantify-prefixed-expr participantify-body participantify-make-interaction)
+;;(import :utils/debug) (trace! participantify participantify-stmts participantify-stmt participantify-prefixed-expr participantify-body participantify-make-interaction)

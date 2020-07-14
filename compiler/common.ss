@@ -4,7 +4,7 @@
         <expander-runtime> :gerbil/expander/common
         :std/misc/repr
         :std/format :std/iter :std/misc/list
-        :clan/utils/base :clan/utils/files :clan/utils/list
+        :utils/base :utils/files :utils/list
         :glow/compiler/syntax-context
         (for-template :glow/compiler/syntax-context))
 

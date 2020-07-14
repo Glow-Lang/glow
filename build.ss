@@ -9,7 +9,7 @@
 
 (import
   :std/build-script :std/format :std/misc/list :std/srfi/1
-  :clan/utils/filesystem :clan/utils/version
+  :utils/filesystem :utils/versioning
   "config/path")
 
 (current-directory (glow-src))
@@ -40,8 +40,7 @@
 (def (build-spec)
   (map normalize-spec
        [(files) ...
-        "t/common"
-        "all-glow"
+        "t/common" "version" "all-glow"
         [exe: "main" bin: "glow"]]))
 
 (def (main . args)

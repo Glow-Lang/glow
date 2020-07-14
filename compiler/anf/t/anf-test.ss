@@ -10,7 +10,7 @@
   :std/misc/string
   :std/sugar
   :std/test
-  :clan/utils/exception
+  :utils/exception
   :glow/compiler/common
   :glow/t/common
   :glow/compiler/alpha-convert/alpha-convert

@@ -16,9 +16,9 @@
         :std/iter
         :std/misc/list
         :std/misc/repr
-        :clan/pure/dict/assq
-        :clan/pure/dict/symdict
-        :clan/utils/debug ;; TODO: remove after debugging
+        :utils/pure/dict/assq
+        :utils/pure/dict/symdict
+        :utils/debug ;; TODO: remove after debugging
         :glow/compiler/syntax-context
         (for-template :glow/compiler/syntax-context)
         :glow/compiler/common

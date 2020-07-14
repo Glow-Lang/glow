@@ -3,7 +3,7 @@
 (import
   :gerbil/gambit/misc
   :gerbil/expander
-  :clan/utils/base :clan/utils/filesystem :clan/utils/path
+  :utils/base :utils/filesystem :utils/path
   :glow/config/path :glow/compiler/multipass)
 
 ;; examples-dir

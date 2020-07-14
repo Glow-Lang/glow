@@ -2,8 +2,8 @@
 
 (import
   :std/format :std/misc/list :std/sugar :std/test
-  :clan/utils/base :clan/utils/ports
-  :clan/t/test-support
+  :utils/base :utils/ports
+  :t/test-support
   :glow/compiler/multipass :glow/compiler/passes
   :glow/t/common)
 

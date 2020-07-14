@@ -4,8 +4,8 @@
         :std/format
         :std/misc/list
         :std/misc/repr
-        :clan/pure/dict/symdict
-        :clan/utils/debug
+        :utils/pure/dict/symdict
+        :utils/debug
         :glow/compiler/common
         ./variance)
 

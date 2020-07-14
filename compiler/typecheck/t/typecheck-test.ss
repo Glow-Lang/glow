@@ -12,8 +12,8 @@
         :std/misc/list
         :std/misc/repr
         :std/misc/string
-        :clan/pure/dict
-        :clan/utils/exception
+        :utils/pure/dict
+        :utils/exception
         :glow/t/common
         :glow/compiler/syntax-context
         :glow/compiler/multipass

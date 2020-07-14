@@ -20,7 +20,7 @@
 (import
   :std/format :std/iter :std/misc/ports :std/misc/string
   :std/srfi/1 :std/srfi/13 :std/sugar
-  :clan/utils/base :clan/utils/files :clan/utils/path
+  :utils/base :utils/files :utils/path
   :glow/compiler/common :glow/config/path)
 
 ;; A "layer" of language has a name, a reader and a writer.
@@ -88,7 +88,7 @@
 ;; If the element is in the list,
 ;; return all the list elements until and including its first occurrence
 ;; otherwise return #f
-;; TODO: move that to clan/utils/list ?
+;; TODO: move that to utils/list ?
 ;; A (Listof A) -> (Or (Listof A) '#f)
 (def (member/take x lis)
   (def rmember (member x (reverse lis)))

@@ -10,7 +10,7 @@
         :std/misc/repr
         :std/misc/hash
         <expander-runtime>
-        :clan/utils/base
+        :utils/base
         :glow/compiler/common
         :glow/compiler/checkpointify/checkpointify)
 

@@ -2,8 +2,8 @@
 
 (import
   :gerbil/gambit/system
-  :clan/utils/base :clan/utils/source :clan/utils/filesystem
-  :clan/utils/path :clan/utils/path-config)
+  :utils/base :utils/source :utils/filesystem
+  :utils/path :utils/path-config)
 
 (def build-time-glow-src (path-parent (path-normalized-directory (this-source-file))))
 (def (glow-src) (getenv "GLOW_SRC" build-time-glow-src))

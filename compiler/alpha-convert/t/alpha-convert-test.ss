@@ -14,8 +14,8 @@
   :std/misc/list
   :std/misc/repr
   :std/misc/string
-  :clan/pure/dict
-  :clan/utils/exception
+  :utils/pure/dict
+  :utils/exception
   <expander-runtime>
   :glow/compiler/common
   :glow/compiler/alpha-convert/alpha-convert

@@ -7,8 +7,8 @@
         :glow/compiler/syntax-context
         :glow/compiler/alpha-convert/fresh
         :glow/compiler/common
-        :clan/utils/base)
-(import :clan/utils/debug :std/misc/repr) ;; DEBUG
+        :utils/base)
+(import :utils/debug :std/misc/repr) ;; DEBUG
 
 ;; Forward-analysis of *static* flow through variables within each scope of the program.
 ;; Insert checkpoints in the program from the beginning onward, and for each checkpoint, establish:

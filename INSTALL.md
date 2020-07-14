@@ -83,6 +83,9 @@ just install them with `gxpkg`:
 ```
 DEPS=(github.com/fare/gerbil-utils
       github.com/fare/gerbil-crypto
+      github.com/fare/gerbil-poo
+      github.com/fare/gerbil-persist
+      github.com/fare/gerbil-ethereum
       github.com/drewc/js-syntax
       github.com/drewc/gerbil-swank
       github.com/drewc/drewc-r7rs-swank) ;
@@ -106,6 +109,9 @@ to adjust where you'll install those dependencies:
 ```
 DEPS=(github.com/fare/gerbil-utils
       github.com/fare/gerbil-crypto
+      github.com/fare/gerbil-poo
+      github.com/fare/gerbil-persist
+      github.com/fare/gerbil-ethereum
       github.com/drewc/js-syntax
       github.com/drewc/gerbil-swank
       github.com/drewc/drewc-r7rs-swank) ;

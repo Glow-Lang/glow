@@ -4,9 +4,12 @@ pkgs: super: rec {
   inherit (super) lib fetchFromGitLab fetchgit
      gerbil-unstable gambit-support gerbil-support gerbilPackages-unstable;
 
-  ver = if builtins.pathExists ./version.nix
-              then import ./version.nix
-              else { version = "0.0"; git-version = "0.0"; };
+  ver = if builtins.pathExists ./version.ss
+        then let m =
+          builtins.match "\\(import :utils/versioning\\)\n\\(register-software \"([-_.A-Za-z0-9]+)\" \"([-_.A-Za-z0-9]+)\"\\) ;; ([-0-9]+)\n"
+            (builtins.readFile ./version.ss); in
+            { version = builtins.elemAt m 2; git-version = builtins.elemAt m 1; }
+        else { version = "0.0"; git-version = "0.0"; };
 
   muknglow = gerbil-support.gerbilPackage {
     pname = "muknglow";

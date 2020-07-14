@@ -2,7 +2,7 @@
 
 (import :std/iter
         :std/format
-        :clan/pure/dict/symdict
+        :utils/pure/dict/symdict
         <expander-runtime>
         (for-template :glow/compiler/syntax-context)
         :glow/compiler/syntax-context

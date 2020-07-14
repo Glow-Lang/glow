@@ -29,38 +29,38 @@
   ;; :ecraven/gerbil-swank
 
   ;; Clan Utilities
-  :clan/net/json-rpc.net :clan/net/s3 :clan/net/simple-http-client :clan/net/websocket
-  :clan/utils/assert :clan/utils/base :clan/utils/basic-parsers :clan/utils/basic-printers
-  :clan/utils/call-limiter :clan/utils/concurrency :clan/utils/config
-  :clan/utils/date :clan/utils/debug :clan/utils/diceware
-  :clan/utils/error :clan/utils/exit
-  :clan/utils/failure :clan/utils/ffi :clan/utils/files :clan/utils/filesystem
-  :clan/utils/generator :clan/utils/hash
-  :clan/utils/json :clan/utils/list :clan/utils/logger
-  :clan/utils/maybe :clan/utils/memo :clan/utils/multicall :clan/utils/number :clan/utils/option
-  :clan/utils/path :clan/utils/path-config :clan/utils/peekable-iterator
-  :clan/utils/random
-  :clan/utils/source :clan/utils/simple-rpc-client :clan/utils/stateful-avl-map :clan/utils/string
-  :clan/utils/subprocess
-  :clan/utils/temporary-files
-  :clan/utils/vector :clan/utils/version :clan/utils/watch
-  :clan/runtime/db :clan/runtime/persist
-  :clan/pure/dict/intdict
+  :utils/net/json-rpc.net :utils/net/s3 :utils/net/simple-http-client :utils/net/websocket
+  :utils/assert :utils/base :utils/basic-parsers :utils/basic-printers
+  :utils/call-limiter :utils/concurrency :utils/config
+  :utils/timestamp :utils/debug :utils/diceware
+  :utils/error :utils/exit
+  :utils/failure :utils/ffi :utils/files :utils/filesystem
+  :utils/generator :utils/hash
+  :utils/json :utils/list :utils/logger
+  :utils/maybe :utils/memo :utils/multicall :utils/number :utils/option
+  :utils/path :utils/path-config :utils/peekable-iterator
+  :utils/random
+  :utils/source :utils/simple-rpc-client :utils/stateful-avl-map :utils/string
+  :utils/subprocess
+  :utils/temporary-files
+  :utils/vector :utils/versioning :utils/watch
+  :persist/db :persist/persist
+  :utils/pure/dict/intdict
 
   ;; POO
-  :clan/poo/poo :clan/poo/io
-  (prefix-in :clan/poo/mop poo.) (prefix-in :clan/poo/type poo.)
-  (only-in :clan/poo/mop
+  :poo/poo :poo/io
+  (prefix-in :poo/mop poo.) (prefix-in :poo/type poo.)
+  (only-in :poo/mop
            Type Type. Class Class. Slot Lens Function Fun
            .defgeneric .method proto validate element? slot-lens sexp<-)
-  (only-in :clan/poo/number Number Real JsInt IntSet)
+  (only-in :poo/number Number Real JsInt IntSet)
 
   ;; Versions for dependencies
-  :clan/version :crypto/version :ethereum/version
+  :utils/version :crypto/version :poo/version :persist/version :ethereum/version :glow/version
 
   ;; Glow
   (for-template :glow/compiler/syntax-context)
-  :glow/config/path :glow/config/version
+  :glow/config/path
   :glow/compiler/syntax-context
   :glow/compiler/passes :glow/compiler/multipass :glow/compiler/common
   :glow/compiler/alpha-convert/symbolnat :glow/compiler/alpha-convert/fresh
@@ -83,10 +83,10 @@
   ;:glow/compiler/anf/t/anf-test
 )
 
-(import :clan/poo/brace)
+(import :poo/brace)
 
 ;; COPY THE LINE BELOW to files you try to debug
-(import :clan/utils/debug)
+(import :utils/debug)
 
 ;;(extern namespace: #f add-load-path) (add-load-path (glow-src))
 

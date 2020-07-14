@@ -2,7 +2,7 @@
 
 (import :std/format :std/iter
         :std/misc/list :std/srfi/1
-        :std/misc/repr :clan/utils/debug ;; DEBUG
+        :std/misc/repr :utils/debug ;; DEBUG
         <expander-runtime>
         (for-template :glow/compiler/syntax-context)
         :glow/compiler/syntax-context
