@@ -3,7 +3,7 @@
 (import
   :std/format :std/misc/list :std/sugar :std/test
   :utils/base :utils/ports
-  :t/test-support
+  :utils/t/test-support
   :glow/compiler/multipass :glow/compiler/passes
   :glow/t/common)
 

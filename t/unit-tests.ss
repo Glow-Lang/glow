@@ -1,5 +1,8 @@
+(export main)
+
 (import
-  :utils/exit :utils/multicall
+  :std/iter
+  :utils/exit :utils/multicall :utils/versioning
 
   ;;:glow/compiler/syntax-context ;; important for the parsing to work (!)
   :glow/config/path
@@ -21,3 +24,9 @@
     (def pass-sym (string->symbol pass))
     (for (file files) (run-passes file pass: pass-sym))
     (silent-exit)))
+
+(register-entry-point "show-version"
+  (lambda ()
+    (show-version complete: #t)))
+
+(define main call-entry-point)
