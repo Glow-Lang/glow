@@ -12,15 +12,15 @@
         :std/misc/list
         :std/misc/repr
         :std/misc/string
-        :utils/pure/dict
-        :utils/exception
-        :glow/t/common
-        :glow/compiler/syntax-context
-        :glow/compiler/multipass
-        (for-template :glow/compiler/syntax-context)
-        :glow/compiler/alpha-convert/alpha-convert
-        :glow/compiler/desugar/desugar
-        :glow/compiler/typecheck/typecheck)
+        :clan/pure/dict
+        :clan/exception
+        :mukn/glow/t/common
+        :mukn/glow/compiler/syntax-context
+        :mukn/glow/compiler/multipass
+        (for-template :mukn/glow/compiler/syntax-context)
+        :mukn/glow/compiler/alpha-convert/alpha-convert
+        :mukn/glow/compiler/desugar/desugar
+        :mukn/glow/compiler/typecheck/typecheck)
 
 ;; Path -> Path
 (def (sexp-typedecl-version file)

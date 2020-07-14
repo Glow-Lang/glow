@@ -4,9 +4,9 @@
         <expander-runtime> :gerbil/expander/common
         :std/misc/repr
         :std/format :std/iter :std/misc/list
-        :utils/base :utils/files :utils/list
-        :glow/compiler/syntax-context
-        (for-template :glow/compiler/syntax-context))
+        :clan/base :clan/files :clan/list
+        :mukn/glow/compiler/syntax-context
+        (for-template :mukn/glow/compiler/syntax-context))
 
 ;; transpose : [Listof [Listof A]] -> [Listof [Listof A]]
 ;; Like transposing a matrix, n-ary cartesian product, or n-ary zip,

@@ -1,6 +1,6 @@
 (export #t)
 
-(import :glow/all-glow :utils/multicall)
+(import :mukn/glow/all-glow :clan/multicall)
 
 (def (main . args)
   (apply call-entry-point args))

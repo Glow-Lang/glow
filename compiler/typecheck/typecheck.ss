@@ -4,9 +4,9 @@
         write-type-env
         type-env=?
         (import:
-         :glow/compiler/common
-         :glow/compiler/typecheck/variance
-         :glow/compiler/typecheck/type))
+         :mukn/glow/compiler/common
+         :mukn/glow/compiler/typecheck/variance
+         :mukn/glow/compiler/typecheck/type))
 
 (import :gerbil/gambit/exact
         :gerbil/gambit/bytes
@@ -16,17 +16,17 @@
         :std/iter
         :std/misc/list
         :std/misc/repr
-        :utils/pure/dict/assq
-        :utils/pure/dict/symdict
-        :utils/debug ;; TODO: remove after debugging
-        :glow/compiler/syntax-context
-        (for-template :glow/compiler/syntax-context)
-        :glow/compiler/common
-        :glow/compiler/alpha-convert/env
-        :glow/compiler/alpha-convert/fresh
-        :glow/compiler/typecheck/variance
-        :glow/compiler/typecheck/type
-        :glow/compiler/typecheck/stx-prop)
+        :clan/pure/dict/assq
+        :clan/pure/dict/symdict
+        :clan/debug ;; TODO: remove after debugging
+        :mukn/glow/compiler/syntax-context
+        (for-template :mukn/glow/compiler/syntax-context)
+        :mukn/glow/compiler/common
+        :mukn/glow/compiler/alpha-convert/env
+        :mukn/glow/compiler/alpha-convert/fresh
+        :mukn/glow/compiler/typecheck/variance
+        :mukn/glow/compiler/typecheck/type
+        :mukn/glow/compiler/typecheck/stx-prop)
 
 ;; Typechecking glow-sexpr
 

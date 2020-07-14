@@ -3,12 +3,12 @@
 (import :std/format :std/iter
         :std/misc/list :std/srfi/1
         <expander-runtime>
-        (for-template :glow/compiler/syntax-context)
-        :glow/compiler/syntax-context
-        :glow/compiler/alpha-convert/fresh
-        :glow/compiler/common
-        :utils/base)
-(import :utils/debug :std/misc/repr) ;; DEBUG
+        (for-template :mukn/glow/compiler/syntax-context)
+        :mukn/glow/compiler/syntax-context
+        :mukn/glow/compiler/alpha-convert/fresh
+        :mukn/glow/compiler/common
+        :clan/base)
+(import :clan/debug :std/misc/repr) ;; DEBUG
 
 ;; Forward-analysis of *static* flow through variables within each scope of the program.
 ;; Insert checkpoints in the program from the beginning onward, and for each checkpoint, establish:

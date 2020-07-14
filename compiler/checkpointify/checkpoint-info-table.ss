@@ -8,18 +8,18 @@
         :std/misc/repr
         :std/misc/hash
         <expander-runtime>
-        :utils/base
-        :glow/compiler/common
-        :glow/compiler/checkpointify/checkpointify)
+        :clan/base
+        :mukn/glow/compiler/common
+        :mukn/glow/compiler/checkpointify/checkpointify)
 
 ;; type CheckpointInfoTable
-;; from :glow/compiler/checkpointify/checkpointify
+;; from :mukn/glow/compiler/checkpointify/checkpointify
 
 ;; type CheckpointInfo
-;; CI from :glow/compiler/checkpointify/checkpointify
+;; CI from :mukn/glow/compiler/checkpointify/checkpointify
 
 ;; type TransitionInfo
-;; TI from :glow/compiler/checkpointify/checkpointify
+;; TI from :mukn/glow/compiler/checkpointify/checkpointify
 
 ;; read-checkpoint-info-table : PathString -> CheckpointInfoTable
 (def (read-checkpoint-info-table file)

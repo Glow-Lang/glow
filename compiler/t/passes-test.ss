@@ -2,10 +2,10 @@
 
 (import
   :std/format :std/misc/list :std/sugar :std/test
-  :utils/base :utils/ports
-  :utils/t/test-support
-  :glow/compiler/multipass :glow/compiler/passes
-  :glow/t/common)
+  :clan/base :clan/ports
+  :clan/t/test-support
+  :mukn/glow/compiler/multipass :mukn/glow/compiler/passes
+  :mukn/glow/t/common)
 
 (def passes-test
   (test-suite "test suite for glow/compiler/passes"

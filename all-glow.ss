@@ -29,64 +29,62 @@
   ;; :ecraven/gerbil-swank
 
   ;; Clan Utilities
-  :utils/net/json-rpc.net :utils/net/s3 :utils/net/simple-http-client :utils/net/websocket
-  :utils/assert :utils/base :utils/basic-parsers :utils/basic-printers
-  :utils/call-limiter :utils/concurrency :utils/config
-  :utils/timestamp :utils/debug :utils/diceware
-  :utils/error :utils/exit
-  :utils/failure :utils/ffi :utils/files :utils/filesystem
-  :utils/generator :utils/hash
-  :utils/json :utils/list :utils/logger
-  :utils/maybe :utils/memo :utils/multicall :utils/number :utils/option
-  :utils/path :utils/path-config :utils/peekable-iterator
-  :utils/random
-  :utils/source :utils/simple-rpc-client :utils/stateful-avl-map :utils/string
-  :utils/subprocess
-  :utils/temporary-files
-  :utils/vector :utils/versioning :utils/watch
-  :persist/db :persist/persist
-  :utils/pure/dict/intdict
+  :clan/net/json-rpc.net :clan/net/s3 :clan/net/simple-http-client :clan/net/websocket
+  :clan/assert :clan/base :clan/basic-parsers :clan/basic-printers
+  :clan/call-limiter :clan/concurrency :clan/config
+  :clan/timestamp :clan/debug :clan/diceware
+  :clan/error :clan/exit
+  :clan/failure :clan/ffi :clan/files :clan/filesystem
+  :clan/generator :clan/hash
+  :clan/json :clan/list :clan/logger
+  :clan/maybe :clan/memo :clan/multicall :clan/number :clan/option
+  :clan/path :clan/path-config :clan/peekable-iterator
+  :clan/random
+  :clan/source :clan/simple-rpc-client :clan/stateful-avl-map :clan/string
+  :clan/subprocess
+  :clan/temporary-files
+  :clan/vector :clan/versioning :clan/watch
+  :clan/persist/db :clan/persist/persist
+  :clan/pure/dict/intdict
 
   ;; POO
-  :poo/poo :poo/io
-  (prefix-in :poo/mop poo.) (prefix-in :poo/type poo.)
-  (only-in :poo/mop
+  :clan/poo/poo :clan/poo/io
+  (prefix-in :clan/poo/mop poo.) (prefix-in :clan/poo/type poo.)
+  (only-in :clan/poo/mop
            Type Type. Class Class. Slot Lens Function Fun
            .defgeneric .method proto validate element? slot-lens sexp<-)
-  (only-in :poo/number Number Real JsInt IntSet)
-
-  ;; Versions for dependencies
-  :utils/version :crypto/version :poo/version :persist/version :ethereum/version :glow/version
+  (only-in :clan/poo/number Number Real JsInt IntSet)
 
   ;; Glow
-  (for-template :glow/compiler/syntax-context)
-  :glow/config/path
-  :glow/compiler/syntax-context
-  :glow/compiler/passes :glow/compiler/multipass :glow/compiler/common
-  :glow/compiler/alpha-convert/symbolnat :glow/compiler/alpha-convert/fresh
-  :glow/compiler/alpha-convert/alpha-convert
-  :glow/compiler/desugar/desugar
-  :glow/compiler/typecheck/typecheck
-  :glow/compiler/anf/anf
-  ;;:glow/compiler/checkpointify/checkpointify
-  :crypto/keccak :crypto/secp256k1
-  :ethereum/hex :ethereum/abi :ethereum/types :ethereum/ethereum
-  :ethereum/signing :ethereum/known-addresses
-  :ethereum/network-config :ethereum/json-rpc :ethereum/transaction
-  :ethereum/assembly :ethereum/contract-config :ethereum/contract-support
-  :ethereum/nonce-tracker :ethereum/tx-tracker :ethereum/batch-send
+  (for-template :mukn/glow/compiler/syntax-context)
+  :mukn/glow/version
+  :mukn/glow/config/path
+  :mukn/glow/compiler/syntax-context
+  :mukn/glow/compiler/passes :mukn/glow/compiler/multipass :mukn/glow/compiler/common
+  :mukn/glow/compiler/alpha-convert/symbolnat :mukn/glow/compiler/alpha-convert/fresh
+  :mukn/glow/compiler/alpha-convert/alpha-convert
+  :mukn/glow/compiler/desugar/desugar
+  :mukn/glow/compiler/typecheck/typecheck
+  :mukn/glow/compiler/anf/anf
+  ;;:mukn/glow/compiler/checkpointify/checkpointify
+  :clan/crypto/keccak :clan/crypto/secp256k1
+  :mukn/ethereum/hex :mukn/ethereum/abi :mukn/ethereum/types :mukn/ethereum/ethereum
+  :mukn/ethereum/signing :mukn/ethereum/known-addresses
+  :mukn/ethereum/network-config :mukn/ethereum/json-rpc :mukn/ethereum/transaction
+  :mukn/ethereum/assembly :mukn/ethereum/contract-config :mukn/ethereum/contract-support
+  :mukn/ethereum/nonce-tracker :mukn/ethereum/tx-tracker :mukn/ethereum/batch-send
 
   ;; Testing Glow
-  :glow/t/common
-  ;:glow/compiler/t/multipass-test
-  ;:glow/compiler/alpha-convert/t/alpha-convert-test
-  ;:glow/compiler/anf/t/anf-test
+  :mukn/glow/t/common
+  ;:mukn/glow/compiler/t/multipass-test
+  ;:mukn/glow/compiler/alpha-convert/t/alpha-convert-test
+  ;:mukn/glow/compiler/anf/t/anf-test
 )
 
-(import :poo/brace)
+(import :clan/poo/brace)
 
 ;; COPY THE LINE BELOW to files you try to debug
-(import :utils/debug)
+(import :clan/debug)
 
 ;;(extern namespace: #f add-load-path) (add-load-path (glow-src))
 

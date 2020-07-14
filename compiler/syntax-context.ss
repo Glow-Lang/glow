@@ -6,9 +6,9 @@
   (rename-in :gerbil/core (lambda λ))
   :gerbil/core
   :std/sugar
-  (only-in :poo/mop new)
-  ;;:utils/base
-  :glow/runtime/context
+  (only-in :clan/poo/mop new)
+  ;;:clan/base
+  :mukn/glow/runtime/context
   )
 
 (export

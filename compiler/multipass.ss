@@ -20,8 +20,8 @@
 (import
   :std/format :std/iter :std/misc/ports :std/misc/string
   :std/srfi/1 :std/srfi/13 :std/sugar
-  :utils/base :utils/files :utils/path
-  :glow/compiler/common :glow/config/path)
+  :clan/base :clan/files :clan/path
+  :mukn/glow/compiler/common :mukn/glow/config/path)
 
 ;; A "layer" of language has a name, a reader and a writer.
 ;; - The name, a symbol, is also the file extension of corresponding source files (e.g. 'glow => ".glow").

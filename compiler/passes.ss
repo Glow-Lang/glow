@@ -3,16 +3,16 @@
 (export #t)
 
 (import
-  :glow/compiler/multipass :glow/compiler/common
-  :glow/compiler/alpha-convert/alpha-convert
-  :glow/compiler/desugar/desugar
-  (only-in :glow/compiler/typecheck/typecheck
+  :mukn/glow/compiler/multipass :mukn/glow/compiler/common
+  :mukn/glow/compiler/alpha-convert/alpha-convert
+  :mukn/glow/compiler/desugar/desugar
+  (only-in :mukn/glow/compiler/typecheck/typecheck
     typecheck read-type-env-file write-type-env type-env=?)
-  (only-in :glow/compiler/method-resolve/method-resolve method-resolve)
-  :glow/compiler/anf/anf
-  :glow/compiler/checkpointify/checkpointify
-  :glow/compiler/checkpointify/checkpoint-info-table
-  :glow/compiler/liveness/checkpoint-liveness
+  (only-in :mukn/glow/compiler/method-resolve/method-resolve method-resolve)
+  :mukn/glow/compiler/anf/anf
+  :mukn/glow/compiler/checkpointify/checkpointify
+  :mukn/glow/compiler/checkpointify/checkpoint-info-table
+  :mukn/glow/compiler/liveness/checkpoint-liveness
   )
 
 ;;; Layers, passes and strategies

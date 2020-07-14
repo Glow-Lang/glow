@@ -6,7 +6,7 @@
 
 (import
   :std/test
-  :glow/t/common
+  :mukn/glow/t/common
   :gerbil/gambit/exceptions
   :gerbil/gambit/continuations
   :std/format
@@ -14,12 +14,12 @@
   :std/misc/list
   :std/misc/repr
   :std/misc/string
-  :utils/pure/dict
-  :utils/exception
+  :clan/pure/dict
+  :clan/exception
   <expander-runtime>
-  :glow/compiler/common
-  :glow/compiler/alpha-convert/alpha-convert
-  :glow/compiler/alpha-convert/t/stx-equal)
+  :mukn/glow/compiler/common
+  :mukn/glow/compiler/alpha-convert/alpha-convert
+  :mukn/glow/compiler/alpha-convert/t/stx-equal)
 
 ;; Path -> Path
 (def (sexp-alpha-version file)

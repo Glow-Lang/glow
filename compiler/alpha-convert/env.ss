@@ -6,7 +6,7 @@
         symbol-refer)
 
 (import
-  :utils/pure/dict/symdict)
+  :clan/pure/dict/symdict)
 
 ;; An Env is a [Symdictof Entry]
 ;; An Entry is an (entry Symbol), one of:

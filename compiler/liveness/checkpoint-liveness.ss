@@ -10,9 +10,9 @@
         :std/misc/repr
         :std/misc/hash
         <expander-runtime>
-        :utils/base
-        :glow/compiler/common
-        :glow/compiler/checkpointify/checkpointify)
+        :clan/base
+        :mukn/glow/compiler/common
+        :mukn/glow/compiler/checkpointify/checkpointify)
 
 ;; A CheckpointLivenessTable is a [Hashof CheckpointSymbol CheckpointLiveness]
 ;; A CheckpointLiveness is a [Listof Symbol]

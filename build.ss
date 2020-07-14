@@ -9,7 +9,7 @@
 
 (import
   :std/build-script :std/format :std/misc/list :std/srfi/1
-  :utils/filesystem :utils/versioning
+  :clan/filesystem :clan/versioning
   "config/path")
 
 (current-directory (glow-src))
@@ -50,6 +50,5 @@
     debug: (debug?)
     optimize: (optimize?))
   (when (match args ([] #t) (["compile" . _] #t) (_ #f))
-    ;; TODO: create a version.nix with git log -1 --pretty=%ad --date=short
-    (update-version-from-git name: "Glow" path: "version.ss"))
+    (update-version-from-git name: "Glow" deps: '("mukn/ethereum")))
   (apply main args))

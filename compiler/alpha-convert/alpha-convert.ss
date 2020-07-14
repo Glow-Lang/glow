@@ -2,14 +2,14 @@
 
 (import :std/iter
         :std/format
-        :utils/pure/dict/symdict
+        :clan/pure/dict/symdict
         <expander-runtime>
-        (for-template :glow/compiler/syntax-context)
-        :glow/compiler/syntax-context
-        :glow/compiler/common
-        :glow/compiler/alpha-convert/env
-        :glow/compiler/alpha-convert/at-prefix-normalize
-        :glow/compiler/alpha-convert/fresh)
+        (for-template :mukn/glow/compiler/syntax-context)
+        :mukn/glow/compiler/syntax-context
+        :mukn/glow/compiler/common
+        :mukn/glow/compiler/alpha-convert/env
+        :mukn/glow/compiler/alpha-convert/at-prefix-normalize
+        :mukn/glow/compiler/alpha-convert/fresh)
 
 ;; alpha-convert
 

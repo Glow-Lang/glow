@@ -2,12 +2,12 @@
 
 (import :std/format :std/iter
         :std/misc/list :std/srfi/1
-        :std/misc/repr :utils/debug ;; DEBUG
+        :std/misc/repr :clan/debug ;; DEBUG
         <expander-runtime>
-        (for-template :glow/compiler/syntax-context)
-        :glow/compiler/syntax-context
-        :glow/compiler/alpha-convert/fresh
-        :glow/compiler/common)
+        (for-template :mukn/glow/compiler/syntax-context)
+        :mukn/glow/compiler/syntax-context
+        :mukn/glow/compiler/alpha-convert/fresh
+        :mukn/glow/compiler/common)
 
 ;; Desugaring away these: @verifiably verify! @publicly defdata deftype and or
 ;; In the future, let users control desuraging of defdata and deftype with @deriving annotations (?)

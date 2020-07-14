@@ -1,9 +1,9 @@
 (export at-head? at-prefix-normalize)
 
 (import :std/format
-        :glow/compiler/common
-        (for-template :glow/compiler/syntax-context)
-        :glow/compiler/syntax-context)
+        :mukn/glow/compiler/common
+        (for-template :mukn/glow/compiler/syntax-context)
+        :mukn/glow/compiler/syntax-context)
 
 ;; At `@` annotations come in two forms:
 ;;  - head form `(@ name thing)` or `(@ (name args ...) thing)`

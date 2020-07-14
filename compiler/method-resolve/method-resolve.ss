@@ -7,12 +7,12 @@
         :std/misc/list
         :std/misc/repr
         :std/srfi/1
-        :glow/compiler/syntax-context
-        (for-template :glow/compiler/syntax-context)
-        :glow/compiler/alpha-convert/fresh
-        :glow/compiler/typecheck/type
-        :glow/compiler/typecheck/stx-prop
-        :glow/compiler/common)
+        :mukn/glow/compiler/syntax-context
+        (for-template :mukn/glow/compiler/syntax-context)
+        :mukn/glow/compiler/alpha-convert/fresh
+        :mukn/glow/compiler/typecheck/type
+        :mukn/glow/compiler/typecheck/stx-prop
+        :mukn/glow/compiler/common)
 
 ;; method-resolve : ModuleStx UnusedTable -> ModuleStx
 (def (method-resolve stx unused-table)

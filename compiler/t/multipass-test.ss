@@ -2,8 +2,8 @@
 
 (import
   :std/srfi/13 :std/test
-  :utils/assert
-  :glow/compiler/multipass :glow/compiler/passes)
+  :clan/assert
+  :mukn/glow/compiler/multipass :mukn/glow/compiler/passes)
 
 (def multipass-test
   (test-suite "test suite for glow/compiler/multipass"

@@ -4,9 +4,9 @@
         :std/format
         :std/misc/list
         :std/misc/repr
-        :utils/pure/dict/symdict
-        :utils/debug
-        :glow/compiler/common
+        :clan/pure/dict/symdict
+        :clan/debug
+        :mukn/glow/compiler/common
         ./variance)
 
 ;; A Type is one of:

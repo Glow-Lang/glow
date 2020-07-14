@@ -8,7 +8,7 @@ build:
   script:
     #- echo HOME=$HOME PWD=$PWD USER=$USER UID=$UID PATH=$PATH BASH_VERSION=$BASH_VERSION LC_CTYPE=$LC_CTYPE LC_ALL=$LC_ALL TERM=$TERM GERBIL_LOADPATH=$GERBIL_LOADPATH GERBIL_PATH=$GERBIL_PATH ; ls -l /proc/$$/fd
     - export GERBIL_PATH=$PWD/.build
-    - ./build.ss && ./unit-tests.ss show-version
+    - ./build.ss && ./unit-tests.ss version
   artifacts:
     paths:
        - .build

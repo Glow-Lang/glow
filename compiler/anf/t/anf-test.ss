@@ -10,14 +10,14 @@
   :std/misc/string
   :std/sugar
   :std/test
-  :utils/exception
-  :glow/compiler/common
-  :glow/t/common
-  :glow/compiler/alpha-convert/alpha-convert
-  :glow/compiler/desugar/desugar
-  :glow/compiler/typecheck/typecheck
-  :glow/compiler/method-resolve/method-resolve
-  :glow/compiler/anf/anf)
+  :clan/exception
+  :mukn/glow/compiler/common
+  :mukn/glow/t/common
+  :mukn/glow/compiler/alpha-convert/alpha-convert
+  :mukn/glow/compiler/desugar/desugar
+  :mukn/glow/compiler/typecheck/typecheck
+  :mukn/glow/compiler/method-resolve/method-resolve
+  :mukn/glow/compiler/anf/anf)
 
 ;; test-file : Path -> Void
 (def (test-file file)

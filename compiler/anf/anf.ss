@@ -2,12 +2,12 @@
 
 (import :std/iter :std/misc/hash :std/srfi/1 :std/sugar
         <expander-runtime>
-        (for-template :glow/compiler/syntax-context)
-        :glow/compiler/syntax-context
-        :utils/base
+        (for-template :mukn/glow/compiler/syntax-context)
+        :mukn/glow/compiler/syntax-context
+        :clan/base
         ../common
         ../alpha-convert/fresh)
-(import :std/misc/repr :utils/debug) ;; XXX DEBUG
+(import :std/misc/repr :clan/debug) ;; XXX DEBUG
 
 ;; Conversion to A-Normal Form https://en.wikipedia.org/wiki/A-normal_form
 ;; We assume that variables have already been alpha-converted, typed, etc.

@@ -8,8 +8,8 @@
   (rename-in :gerbil/core (lambda λ))
   :gerbil/core
   :std/sugar
-  (only-in :poo/mop new)
-  ;;:utils/base
+  (only-in :clan/poo/mop new)
+  ;;:clan/base
   )
 
 (defrule (dummies x ...) (begin (def (x) #f) ...))

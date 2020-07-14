@@ -2,7 +2,7 @@
 
 (import :std/pregexp
         :std/misc/list
-        :glow/compiler/common)
+        :mukn/glow/compiler/common)
 
 ;; symbol-split : Symbol -> (values Symbol (U #f Nat))
 (def (symbol-split sym)

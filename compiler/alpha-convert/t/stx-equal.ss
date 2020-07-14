@@ -1,7 +1,7 @@
 (export stx-deep-source=?/at-normalize)
 
-(import :glow/compiler/common
-        :glow/compiler/alpha-convert/at-prefix-normalize
+(import :mukn/glow/compiler/common
+        :mukn/glow/compiler/alpha-convert/at-prefix-normalize
         (for-template :gerbil/core))
 
 ;; Normalizes at-head and at-app
