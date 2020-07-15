@@ -19,4 +19,5 @@
 (define-entry-point (nix)
   "Build using nix-build"
   (create-version-file)
-  (run-process ["nix-build"]))
+  (run-process ["nix-build"])
+  (void))
