@@ -7,48 +7,16 @@
 ;;   gxpkg install github.com/fare/gerbil-utils
 ;; See HACKING.md for details.
 
-(import
-  :std/build-script :std/format :std/misc/list :std/srfi/1
-  :clan/filesystem :clan/versioning
-  "config/path")
+(import :std/misc/process :clan/building :clan/multicall)
 
-(current-directory (glow-src))
+(def (files) (cons "t/common.ss" (all-ss-files)))
 
-(def (files)
-  (append-map
-   (cut find-files <>
-        (lambda (x) (equal? (path-extension x) ".ss"))
-        recurse?: (lambda (x) (not (equal? (path-strip-directory x) "t"))))
-   ["config" "compiler" "runtime" "ethereum"]))
+(init-build-environment!
+ name: "Glow"
+ deps: '("clan" "clan/crypto" "clan/poo" "clan/persist" "mukn/ethereum")
+ spec: files)
 
-(def gsc-options/no-optimize '("-cc-options" "-O0" "-cc-options" "-U___SINGLE_HOST"))
-(def gsc-options/tcc '("-cc" "tcc" "-cc-options" "-shared"))
-
-(def (tcc?) (case (getenv "USE_TCC" #f) (("y" "Y" "yes" "YES" "1") #t) (else #f)))
-(def (optimize?) (case (getenv "USE_OPT" #f) (("n" "N" "no" "NO" "0") #f) (else #t)))
-(def (debug?) (case (getenv "USE_DBG" #f) (("src") 'src) (("env") 'env) (else #f)))
-
-(def gsc-options
-  (append (when/list (tcc?) gsc-options/tcc)
-          (when/list (not (optimize?)) gsc-options/no-optimize)))
-
-(def (normalize-spec x)
-  (match x
-    ((? string?) [gxc: x . gsc-options])
-    ([(? (cut member <> '(gxc: gsc: exe:))) . _] (append x gsc-options))))
-
-(def (build-spec)
-  (map normalize-spec
-       [(files) ...
-        "t/common" "version" "all-glow"
-        [exe: "main" bin: "glow"]]))
-
-(def (main . args)
-  (defbuild-script ;; defines an inner "main"
-    (build-spec)
-    ;;verbose: 9
-    debug: (debug?)
-    optimize: (optimize?))
-  (when (match args ([] #t) (["compile" . _] #t) (_ #f))
-    (update-version-from-git name: "Glow" deps: '("mukn/ethereum")))
-  (apply main args))
+(define-entry-point (nix)
+  "Build using nix-build"
+  (create-version-file)
+  (run-process ["nix-build"]))

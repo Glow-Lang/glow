@@ -2,7 +2,6 @@
 compiled/
 build-deps
 version.ss
-version.nix
 result
 
 # Runtime data

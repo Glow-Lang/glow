@@ -15,11 +15,11 @@ pkgs: super: rec {
     pname = "muknglow";
     version = ver.version;
     git-version = ver.git-version;
-    package = "glow";
+    gerbil-package = "glow";
     gerbil = gerbil-unstable;
     gambit-params = gambit-support.unstable-params;
     gerbilInputs = with gerbilPackages-unstable; [gerbil-utils gerbil-crypto gerbil-ethereum];
-    version-path = "config/version.ss";
+    version-path = "version";
     src = builtins.filterSource
       (path: type: let baseName = baseNameOf path; in
         ! (baseName == ".git" || baseName == "run" || baseName == "result" ||
