@@ -17,7 +17,8 @@
   :std/actor :std/coroutine
   :std/debug/heap :std/debug/memleak :std/debug/threads
   :std/error :std/format :std/getopt :std/iter :std/logger
-  :std/misc/bytes :std/misc/list :std/misc/ports :std/misc/process :std/misc/repr :std/misc/string
+  :std/misc/bytes :std/misc/deque :std/misc/hash :std/misc/list
+  :std/misc/ports :std/misc/process :std/misc/queue :std/misc/repr :std/misc/string
   :std/net/websocket
   :std/pregexp :std/sort
   :std/srfi/1 :std/srfi/13 (except-in :std/srfi/19 time) ;; :std/srfi/43
