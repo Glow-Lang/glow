@@ -1,5 +1,6 @@
 # You can symlink this overlay into your ~/.config/nixpkgs/overlays/
 # to make muknglow available to your nix-env -iA muknglow.
+# TODO: try src = builtins.fetchGit ./. and extracting version from THAT, and/or lib.commitIdFromGitRepo.
 pkgs: super: rec {
   inherit (super) lib fetchFromGitLab fetchgit
      gerbil-unstable gambit-support gerbil-support gerbilPackages-unstable;
