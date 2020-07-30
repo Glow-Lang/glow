@@ -82,10 +82,10 @@
     (&check-participant-or-timeout! must-act: Seller or-end-in-favor-of: Buyer)
 
     ;; TODO: we need to amend our read and storage for more than 32-bytes
-    (read-published-datum-to-mem Signature 65)
+    Signature 65 &read-published-data-to-mem
     ;; TODO: check signature by calling "precompiled contract" #1 ECREC
     Seller (&mloadat 20) digest0 (&mloadat 32) Signature &isValidSignature &require!
 
-    Seller (&mloadat 20) price (&mloadat 32) &withdraw!
+    price (&mloadat 32) Seller (&mloadat 20) &withdraw!
 
     &end-contract!)
