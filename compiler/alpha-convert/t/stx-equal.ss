@@ -6,8 +6,12 @@
 
 ;; Normalizes at-head and at-app
 (def (normalize stx)
-  (syntax-case stx (@app)
+  (syntax-case stx (@app @app-ctor @var-pat)
     ((@app . _)
+     (restx1 stx (stx-cdr stx)))
+    ((@app-ctor x) #'x)
+    ((@var-pat x) #'x)
+    ((@app-ctor . _)
      (restx1 stx (stx-cdr stx)))
     (_ (at-prefix-normalize stx))))
 
@@ -19,7 +23,7 @@
   (and (stx-shallow-source=? a b)
        (cond
          ((or (stx-leaf? a) (stx-leaf? b))
-          (and (stx-leaf? a) (stx-leaf? b)))
+          (and (stx-leaf? (normalize a)) (stx-leaf? (normalize b))))
          ((and (at-head? a) (at-head? b))
           (stx-sexpr=?/recur a b stx-deep-source=?/at-normalize))
          (else
