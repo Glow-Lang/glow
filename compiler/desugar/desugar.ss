@@ -69,7 +69,8 @@
            (if ofNat-cases
              (let ((of-x (mk-var 'x))
                    (x-to (mk-var 'x))
-                   (toNat-cases (map reverse ofNat-cases)))
+                   (toNat-cases (for/collect ((c ofNat-cases))
+                                  (with (([n d] c)) [['@app-ctor d] n]))))
                ;; TODO: use some magic sum-index internal, not switches
                [['toNat [#'λ [[x-to ': #'spec]] [': 'nat] [#'switch x-to . toNat-cases]]]
                 ['ofNat [#'λ [[of-x ': #'nat]] [': #'spec] [#'switch of-x . ofNat-cases]]]])

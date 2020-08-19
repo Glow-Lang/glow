@@ -12,9 +12,9 @@
                (λ ((x0 : Hand))
                   (: nat)
                   (switch x0
-                          (Rock (return 0))
-                          (Paper (return 1))
-                          (Scissors (return 2)))))
+                          ((@app-ctor Rock) (return 0))
+                          ((@app-ctor Paper) (return 1))
+                          ((@app-ctor Scissors) (return 2)))))
 (def tmp1
                (λ ((x1 : nat))
                   (: Hand)
@@ -37,9 +37,9 @@
                (λ ((x3 : Outcome))
                   (: nat)
                   (switch x3
-                          (B_Wins (return 0))
-                          (Draw (return 1))
-                          (A_Wins (return 2)))))
+                          ((@app-ctor B_Wins) (return 0))
+                          ((@app-ctor Draw) (return 1))
+                          ((@app-ctor A_Wins) (return 2)))))
 (def tmp4
                (λ ((x4 : nat))
                   (: Outcome)
@@ -85,8 +85,8 @@
       (require! tmp18)
       (def outcome (@app winner handA0 handB0))
       (switch outcome
-              (A_Wins (def tmp19 (@app * 2 wagerAmount)) (withdraw! A tmp19))
-              (B_Wins (def tmp20 (@app * 2 wagerAmount)) (withdraw! B tmp20))
-              (Draw (withdraw! A wagerAmount) (withdraw! B wagerAmount)))
+              ((@app-ctor A_Wins) (def tmp19 (@app * 2 wagerAmount)) (withdraw! A tmp19))
+              ((@app-ctor B_Wins) (def tmp20 (@app * 2 wagerAmount)) (withdraw! B tmp20))
+              ((@app-ctor Draw) (withdraw! A wagerAmount) (withdraw! B wagerAmount)))
       (return outcome)))
 (return (@tuple)))

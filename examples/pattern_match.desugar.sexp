@@ -8,9 +8,11 @@
 (def l () (@list 1 2))
 (switch l ((@list 0 1) "dore") ((@list 1 2) "remi") ((@list 3 6 0) "fatido") (_ "other"))
 (def p () (@tuple 1 2))
-(switch p ((@tuple a b0) (@app + a b0)))
+(switch p ((@tuple (@var-pat a) (@var-pat b0)) (@app + a b0)))
 (def v () (@record (x 3) (y 4)))
-(switch v ((@record (x x) (y y)) (@app sqrt (@app + (@app sqr x) (@app sqr y)))))
+(switch v
+  ((@record (x (@var-pat x)) (y (@var-pat y)))
+   (@app sqrt (@app + (@app sqr x) (@app sqr y)))))
 (defdata lcexpr
          (Var int)
          (Lam lcexpr)
@@ -24,10 +26,13 @@
            (@app Lam (@app App (@app Var 0) (@app Var 0)))))
 (def freevars
      ()
-     (λ ((e : lcexpr)) () (switch e ((Var x0) (@list x0)) (_ (@list 0 1 2 3 4 5 6 7 8 9)))))
+     (λ ((e : lcexpr)) ()
+       (switch e
+         ((@app-ctor Var (@var-pat x0)) (@list x0))
+         (_ (@list 0 1 2 3 4 5 6 7 8 9)))))
 (switch omega
-        ((App (Lam b1) a0) "beta")
-        ((Lam (App f (Var 0)))
+        ((@app-ctor App (@app-ctor Lam (@var-pat b1)) (@var-pat a0)) "beta")
+        ((@app-ctor Lam (@app-ctor App (@var-pat f) (@app-ctor Var 0)))
          (switch (@app not (@app member 0 (@app freevars f))) (#t "eta") (#f "not immediate")))
         (_ "not immediate"))
 (defdata ymn
@@ -36,11 +41,11 @@
          No
          with:
          (@record (input (λ (tag0) (: ymn) (def x2 (: ymn) (input ymn tag0)) x2))
-                  (toNat (λ ((x3 : ymn)) (: nat) (switch x3 (Yes 0) (Maybe 1) (No 2))))
+                  (toNat (λ ((x3 : ymn)) (: nat) (switch x3 ((@app-ctor Yes) 0) ((@app-ctor Maybe) 1) ((@app-ctor No) 2))))
                   (ofNat (λ ((x4 : nat)) (: ymn) (switch x4 (0 Yes) (1 Maybe) (2 No))))))
 (def ans () Maybe)
-(def possible () (λ ((a1 : ymn)) (: bool) (switch a1 ((@or-pat Yes Maybe) #t) (No #f))))
-(def definite () (λ ((a2 : ymn)) (: bool) (switch a2 (Yes #t) ((@or-pat No Maybe) #f))))
+(def possible () (λ ((a1 : ymn)) (: bool) (switch a1 ((@or-pat (@app-ctor Yes) (@app-ctor Maybe)) #t) ((@app-ctor No) #f))))
+(def definite () (λ ((a2 : ymn)) (: bool) (switch a2 ((@app-ctor Yes) #t) ((@or-pat (@app-ctor No) (@app-ctor Maybe)) #f))))
 (switch (@tuple (@app possible ans) (@app definite ans))
         ((@tuple #t #t) "yes")
         ((@tuple #t #f) "maybe")

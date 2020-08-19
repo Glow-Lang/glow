@@ -1,4 +1,4 @@
 (@module
 (def x
   (switch 1
-    (y y))))
+    ((@var-pat y) y))))
