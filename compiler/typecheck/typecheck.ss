@@ -1018,7 +1018,13 @@
      (tc-deposit-withdraw part env stx))
     ((withdraw! x e) (identifier? #'x)
      (tc-deposit-withdraw part env stx))
-    ((@app f a ...)
+    ((@app-ctor f a ...) (tc-expr-app part env stx))
+    ((@app f a ...) (tc-expr-app part env stx))))
+
+;; tc-expr-app : MPart Env Stx -> TypingScheme
+(def (tc-expr-app part env stx)
+  (syntax-case stx ()
+    ((_ f a ...)
      (let ((s (syntax-e (head-id #'f)))
            (ft (tc-expr part env #'f)))
        (match (typing-scheme-type ft)
@@ -1197,7 +1203,7 @@
 ;; tc-pat : MPart Env PatStx -> PatTypingScheme
 ;; Produces the most permissive type for the pattern
 (def (tc-pat part env stx)
-  (syntax-case stx (@ : ann @tuple @record @list @or-pat)
+  (syntax-case stx (@ : ann @tuple @record @list @or-pat @var-pat @app-ctor)
     ((@ _ _) (error 'tc-pat "TODO: deal with @"))
     ((ann pat type)
      (with ((t (parse-type part env covariant empty-symdict #'type))
@@ -1207,19 +1213,11 @@
        (pat-typing-scheme-bisubst bity (pat-typing-scheme nenv t ptys))))
     (blank (and (identifier? #'blank) (free-identifier=? #'blank #'_))
      (pat-typing-scheme empty-symdict ntype:top []))
-    (x (and (identifier? #'x) (not-bound-as-ctor? env (syntax-e #'x)))
+    ((@var-pat x) (identifier? #'x)
      ;; pattern variable, since it's not a constructor
      (let ((s (syntax-e #'x)))
        (def s2 (symbol-fresh s))
        (pat-typing-scheme empty-symdict (type:var s2) [(cons s (type:var s2))])))
-    (x (and (identifier? #'x) (bound-as-ctor? env (syntax-e #'x)))
-     (let ((s (syntax-e #'x)))
-       (def ent (symdict-ref env s))
-       (unless (mpart-can-use? part (entry-part ent))
-         (error s "access allowed only for" (entry-part ent)))
-       (match ent
-         ((entry:ctor _ (typing-scheme menv t))
-          (pat-typing-scheme menv t [])))))
     (lit (stx-atomic-literal? #'lit)
      (let ((t (tc-pat-literal #'lit))) ; t is the most permissive type for the literal
        (pat-typing-scheme empty-symdict t [])))
@@ -1249,7 +1247,7 @@
        (def nty (type:record (list->symdict (map cons s ntys))))
        (def ptys (pattys-append (map pat-typing-scheme-pattys pts)))
        (pat-typing-scheme nenv nty ptys)))
-    ((f a ...) (and (identifier? #'f) (bound-as-ctor? env (syntax-e #'f)))
+    ((@app-ctor f a ...) (and (identifier? #'f) (bound-as-ctor? env (syntax-e #'f)))
      (let ((s (syntax-e #'f)))
        (unless (symdict-has-key? env s)
          (error s "unbound pattern constructor"))
@@ -1266,7 +1264,13 @@
           (def ptys (pattys-append (map pat-typing-scheme-pattys pts)))
           ;; [in-ty <: nty] ...
           (def bity (biunify (map make-constraint:subtype in-tys ntys) empty-symdict))
-          (pat-typing-scheme-bisubst bity (pat-typing-scheme nenv2 out-ty ptys))))))))
+          (pat-typing-scheme-bisubst bity (pat-typing-scheme nenv2 out-ty ptys)))
+         ((entry:ctor _ (typing-scheme nenv t))
+          (unless (or (type:name? t) (type:app? t))
+            (error s "expected either a named datatype or an arrow type:" t))
+          (unless (stx-null? #'(a ...))
+            (error s "expected no arguments to data constructor"))
+          (pat-typing-scheme nenv t [])))))))
 
 ;; --------------------------------------------------------
 

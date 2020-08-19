@@ -25,8 +25,8 @@
 (def (sexp-alpha-version file)
   (string-append (string-trim-suffix ".sexp" file) ".alpha.sexp"))
 
-;; alpha-convert-display : [Listof Stmt] (Or [Listof Stmt] '#f) -> Bool
-;; Produces #t on success, can return #f or raise an exception on failure
+;; alpha-convert-display : [Listof Stmt] (Or [Listof Stmt] '#f) -> MaybeString
+;; Produces #f on success, can return string or raise an exception on failure
 (def (alpha-convert-display prog maybe-alpha)
   (defvalues (prog2 _unused-table env) (alpha-convert prog))
   (prn env)
@@ -37,21 +37,21 @@
            (printf ";; ✓ matches expected alpha output\n"))
           (else
            (printf ";; ✗ different from expected alpha output\n")
-           (set! failed #t))))
+           (set! failed "output mismatch"))))
   (cond
     ((stx-deep-source=?/at-normalize prog prog2)
      (printf ";; ✓ source locations preserved exactly\n"))
     (else
      (printf ";; ✗ source locations not preserved\n")
-     (set! failed #t)))
+     (set! failed "srcloc mismatch")))
   (defvalues (prog3 _unused-table3 env3) (alpha-convert prog2))
   (cond
     ((and (stx-deep-source=? prog2 prog3) (stx-sexpr=? prog2 prog3))
      (printf ";; ✓ idempotent, alpha-twice = alpha-once\n"))
     (else
      (printf ";; ✗ not idempotent, alpha-twice is different\n")
-     (set! failed #t)))
-  (not failed))
+     (set! failed "not idempotent")))
+  failed)
 
 (def (try-alpha-convert-files files)
   (def files-alpha (map sexp-alpha-version files))
@@ -63,7 +63,7 @@
       (displayln f)
       (with-catch/cont
        (lambda (e k) (display-exception-in-context e k) (push! f failed))
-       (lambda () (unless (alpha-convert-display p pa) (push! f failed))))
+       (lambda () (cond ((alpha-convert-display p pa) => (lambda (s) (push! [f s] failed))))))
       (newline))
     (unless (null? failed)
       (error 'alpha-convert-failed failed))))

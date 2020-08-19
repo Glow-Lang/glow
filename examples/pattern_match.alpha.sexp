@@ -25,11 +25,11 @@
   (_ "other"))
 
 (def p (@tuple 1 2))
-(switch p ((@tuple a b0) (@app + a b0)))
+(switch p ((@tuple (@var-pat a) (@var-pat b0)) (@app + a b0)))
 
 (def v (@record (x 3) (y 4)))
 (switch v
-  ((@record (x x) (y y))
+  ((@record (x (@var-pat x)) (y (@var-pat y)))
    (@app sqrt (@app + (@app sqr x) (@app sqr y)))))
 
 (defdata lcexpr
@@ -42,11 +42,11 @@
 (def freevars
   (λ ((e : lcexpr))
     (switch e
-      ((Var x0) (@list x0))
+      ((@app-ctor Var (@var-pat x0)) (@list x0))
       (_ (@list 0 1 2 3 4 5 6 7 8 9))))) ; TODO: fix when we add recursion
 (switch omega
-  ((App (Lam b1) a0) "beta")
-  ((Lam (App f (Var 0)))
+  ((@app-ctor App (@app-ctor Lam (@var-pat b1)) (@var-pat a0)) "beta")
+  ((@app-ctor Lam (@app-ctor App (@var-pat f) (@app-ctor Var 0)))
    (if (@app not (@app member 0 (@app freevars f)))
        "eta"
        "not immediate"))
@@ -57,13 +57,13 @@
 (def possible
   (λ ((a1 : ymn)) : bool
     (switch a1
-      ((@or-pat Yes Maybe) #t)
-      (No #f))))
+      ((@or-pat (@app-ctor Yes) (@app-ctor Maybe)) #t)
+      ((@app-ctor No) #f))))
 (def definite
   (λ ((a2 : ymn)) : bool
     (switch a2
-      (Yes #t)
-      ((@or-pat No Maybe) #f))))
+      ((@app-ctor Yes) #t)
+      ((@or-pat (@app-ctor No) (@app-ctor Maybe)) #f))))
 (switch (@tuple (@app possible ans) (@app definite ans))
   ((@tuple #t #t) "yes")
   ((@tuple #t #f) "maybe")

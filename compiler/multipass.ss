@@ -132,6 +132,8 @@
        (def expected-output-file (format "~a.~a" basename layer-name))
        (def layer (registered-layer layer-name))
        (when (file-exists? expected-output-file)
+         (unless (layer? layer)
+           (error "expected a registered layer:" layer-name layer))
          (let ((success? ((layer-comparer layer) value (read-file/layer layer-name expected-output-file)))
                (success-expected? (not (known-failure? expected-output-file))))
            (unless (eq? success? success-expected?)
@@ -162,7 +164,8 @@
   (for ((l last-layers))
     (def (write-last port)
       (write/layer l (hash-ref out l) port))
-    (when (layer-writer (registered-layer l))
+    (def rl (registered-layer l))
+    (when (and rl (layer-writer rl))
       (when show?
         (printf "~a.~a\n" basename l)
         (write-last (current-output-port)))

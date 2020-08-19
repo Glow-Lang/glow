@@ -29,6 +29,7 @@
 ;; keyword-syms : [Listof Sym]
 (def keyword-syms
   '(@ : quote ann @dot @dot/type @tuple @record @list @app
+    @app-ctor @or-pat @var-pat
     def deftype defdata
     if and or
     block splice switch λ
@@ -79,7 +80,7 @@
 (def (alpha-convert-expr env stx)
   ;; ace : ExprStx -> ExprStx
   (def (ace e) (alpha-convert-expr env e))
-  (syntax-case stx (@ ann @dot @dot/type @tuple @list @record if and or block splice == sign switch λ input digest require! assert! deposit! withdraw! @app)
+  (syntax-case stx (@ ann @dot @dot/type @tuple @list @record if and or block splice == sign switch λ input digest require! assert! deposit! withdraw! @app @app-ctor)
     ((@ _ _) (error 'alpha-convert-expr "TODO: deal with @"))
     ((ann expr type)
      (retail-stx stx [(ace #'expr) (alpha-convert-type env #'type)]))
@@ -120,6 +121,7 @@
      (retail-stx stx [(identifier-refer env #'x) (ace #'e)]))
     ((withdraw! x e) (identifier? #'x)
      (retail-stx stx [(identifier-refer env #'x) (ace #'e)]))
+    ((@app-ctor f a ...) (alpha-convert-keyword/sub-exprs env stx))
     ((@app f a ...) (alpha-convert-keyword/sub-exprs env stx))
     ((f a ...)
      (alpha-convert-keyword/sub-exprs env (intro-app stx)))))
@@ -138,6 +140,14 @@
   (unless (stx-pair? stx) (error 'intro-app "expected a function call"))
   (def f (stx-car stx))
   (restx1 stx (cons* (restx1 f '@app) f (stx-cdr stx))))
+
+;; intro-app-ctor : Stx -> Stx
+(def (intro-app-ctor stx)
+  (def f (if (stx-pair? stx) (stx-car stx) stx))
+  (restx1 stx (cons* (restx1 f '@app-ctor) f (if (stx-pair? stx) (stx-cdr stx) []))))
+
+;; intro-var-pat : Stx -> Stx
+(def (intro-var-pat stx) (restx1 stx [(restx1 stx '@var-pat) stx]))
 
 ;; Used by special forms with a variable number of arguments that are regular expressions,
 ;; like @list, @tuple, and, or.
@@ -380,7 +390,7 @@
 ;; alpha-convert-pat : Env PatStx -> (values Env PatStx)
 ;; the env result contains only the new symbols introduced by the pattern
 (def (alpha-convert-pat env stx)
-  (syntax-case stx (@ : ann @tuple @record @list @or-pat)
+  (syntax-case stx (@ : ann @tuple @record @list @or-pat @var-pat @app-ctor)
     ((@ _ _) (error 'alpha-convert-pat "TODO: deal with @"))
     ((ann pat type)
      (let-values (((env2 pat2) (alpha-convert-pat env #'pat)))
@@ -391,13 +401,11 @@
     (lit (stx-atomic-literal? #'lit)
      (values empty-symdict stx))
     (x (and (identifier? #'x) (bound-as-ctor? env (syntax-e #'x)))
-     (values empty-symdict (identifier-refer env #'x)))
+     (ac-pat-app-ctor env (intro-app-ctor stx)))
     (x (and (identifier? #'x) (not-bound-as-ctor? env (syntax-e #'x)))
-     ;; TODO: wrap pat vars in a `@var-pat` pattern
-     (with-syntax ((x2 (identifier-fresh #'x)))
-       (let ((s (syntax-e #'x)) (s2 (syntax-e #'x2)))
-         (values (symdict (s (entry-val s2)))
-                 #'x2))))
+     (ac-pat-var-pat env (intro-var-pat stx)))
+    ((@var-pat . _)
+     (ac-pat-var-pat env stx))
     ((@or-pat p ...)
      (let-values (((env2 ps2) (ac-pats-join env (syntax->list #'(p ...)))))
        (values env2 (retail-stx stx ps2))))
@@ -408,10 +416,27 @@
     ((@record (x p) ...) (stx-andmap identifier? #'(x ...))
      (let-values (((env2 ps2) (ac-pats-meet env (syntax->list #'(p ...)))))
        (values env2 (retail-stx stx (stx-map list #'(x ...) ps2)))))
+    ((@app-ctor f a ...)
+     (ac-pat-app-ctor env stx))
     ((f a ...) (and (identifier? #'f) (bound-as-ctor? env (syntax-e #'f)))
+     (ac-pat-app-ctor env (intro-app-ctor stx)))))
+
+;; ac-pat-var-pat : Env PatStx -> (values Env PatStx)
+(def (ac-pat-var-pat env stx)
+  (syntax-case stx ()
+    ((_ x) (identifier? #'x)
+     (with-syntax ((x2 (identifier-fresh #'x)))
+       (let ((s (syntax-e #'x)) (s2 (syntax-e #'x2)))
+         (values (symdict (s (entry-val s2)))
+                 (retail-stx stx [#'x2])))))))
+
+;; ac-pat-app-ctor : Env PatStx -> (values Env PatStx)
+(def (ac-pat-app-ctor env stx)
+  (syntax-case stx ()
+    ((_ f a ...) (and (identifier? #'f) (bound-as-ctor? env (syntax-e #'f)))
      (with-syntax ((f2 (identifier-refer env #'f)))
        (let-values (((env2 ps2) (ac-pats-meet env (syntax->list #'(a ...)))))
-         (values env2 (retail-stx stx ps2)))))))
+         (values env2 (retail-stx stx (cons #'f2 ps2))))))))
 
 ;; ac-pat-simple-seq : Env PatStx -> (values Env PatStx)
 ;; the env result contains only the new symbols introduced by the pattern
