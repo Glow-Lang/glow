@@ -1,3 +1,5 @@
+#!/usr/bin/env gxi
+
 (export #t)
 
 (import :mukn/glow/all-glow :clan/multicall)

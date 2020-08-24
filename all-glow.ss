@@ -46,7 +46,6 @@
   :clan/temporary-files
   :clan/vector :clan/versioning :clan/watch
   :clan/persist/db :clan/persist/persist
-  :clan/pure/dict/intdict
 
   ;; POO
   :clan/poo/poo :clan/poo/io
@@ -55,6 +54,7 @@
            Type Type. Class Class. Slot Lens Function Fun
            .defgeneric .method proto validate element? slot-lens sexp<-)
   (only-in :clan/poo/number Number Real JsInt IntSet)
+  :clan/poo/trie
 
   ;; Glow
   (for-template :mukn/glow/compiler/syntax-context)
