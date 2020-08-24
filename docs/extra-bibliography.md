@@ -60,6 +60,10 @@ Other non-Lisp types of interest?
 * [GitHub Workflows CI for Gerbil](https://github.com/belmarca/gerbil-fwd/blob/master/.github/workflows/main.yml)
 * For complex information propagation during type analysis, ekmett suggests Rete + propagators?
 
+### Blockchain 101
+
+* [A Beginner's Guide To Blockchain](https://blockchaingirls.org/beginners-guide)
+
 ### Proofs for Blockchain
 
 * Algorand proof of correctness and controversy:
@@ -71,6 +75,7 @@ Other non-Lisp types of interest?
 ### Proof Systems
 
 * [Lean](https://leanprover.github.io/theorem_proving_in_lean/)
+* CakeML, and [Ramana Kumar's thesis](https://www.cl.cam.ac.uk/techreports/UCAM-CL-TR-879.html)
 
 ### Issues with Solidity
 
@@ -87,7 +92,13 @@ Other non-Lisp types of interest?
 
 ### Complexity
 
+* Algorithmic Complexity 102: [user feedback is an instant O(1)]()
 * [How Complex Systems Fail](https://web.mit.edu/2.75/resources/random/How%20Complex%20Systems%20Fail.pdf)
+
+### Version Control
+
+* Git
+* [Fossil](https://fossil-scm.org/home/doc/trunk/www/index.wiki) by the SQLite author.
 
 ### Smart Contract Vulnerabilities
 
@@ -105,3 +116,7 @@ Other non-Lisp types of interest?
 
 * [Trezor](https://wiki.trezor.io/Developers_guide)
 
+### More...
+
+* Ledger
+* Substrate

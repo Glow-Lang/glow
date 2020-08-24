@@ -20,3 +20,7 @@ Watch particularly our rivals from
 [Scilla](https://scilla-lang.org/), etc.
 Drew suggests implementing it with [Quasar](https://quasar.dev/)?
 
+## Infrastructure
+
+Use Nix flakes to deploy.
+https://www.tweag.io/blog/2020-07-31-nixos-flakes/

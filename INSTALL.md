@@ -74,6 +74,20 @@ On Nix (recommended, but could skip to the last step as above), you could have u
 
     nix-env -f http://github.com/fare-patches/nixpkgs/archive/fare.tar.gz -iA gerbil-unstable
 
+Note that to avoid conflict with other versions of Gerbil, you may have to make sure that
+
+  1. The Nix version of Gerbil appears first in your `$PATH`,
+     which you can check with `which gxi`, though if you just changed your PATH,
+     you may also need to tell your shell with e.g. `hash -r` for BASH.
+
+  2. You don't have variables such as `GERBIL_HOME` or `GERBIL_GSI` defined
+     that interfere with Nix's Gerbil installation.
+
+In both cases, you may have to both edit your shell configuration
+(such as `~/.bash_profile`, `~/.profile`, `~/.bashrc` and/or
+ `~/.zsh_profile`, `~/.zshenv`, `~/.zshrc`, etc.) to add or remove the desired variable definitions,
+but also `export` or `unset` the variables in the current shell.
+
 ### Fourth, install Gerbil libraries
 
 You can now install the Gerbil libraries we use.
@@ -118,7 +132,7 @@ DEPS=(github.com/fare/gerbil-utils
 SRCDIR=.. ;
 (cd ${SRCDIR} &&
 for i in ${DEPS[@]} ; do
-  (gxpkg uninstall $i > /dev/null 2>&1 ;
+  (gxpkg unlink $i > /dev/null 2>&1 ;
    git clone https://$i &&
    cd $(basename $i) &&
    gxpkg link $i $PWD &&
