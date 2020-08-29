@@ -44,7 +44,7 @@
   :clan/source :clan/simple-rpc-client :clan/stateful-avl-map :clan/string
   :clan/subprocess
   :clan/temporary-files
-  :clan/vector :clan/versioning :clan/watch
+  :clan/vector :clan/versioning :clan/watch :clan/with-id
   :clan/persist/db :clan/persist/persist
 
   ;; POO
@@ -74,6 +74,8 @@
   :mukn/ethereum/network-config :mukn/ethereum/json-rpc :mukn/ethereum/transaction
   :mukn/ethereum/assembly :mukn/ethereum/contract-config :mukn/ethereum/contract-support
   :mukn/ethereum/nonce-tracker :mukn/ethereum/tx-tracker :mukn/ethereum/batch-send
+  :mukn/ethereum/assets
+
 
   ;; Testing Glow
   :mukn/glow/t/common

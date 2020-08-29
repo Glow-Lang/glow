@@ -24,3 +24,9 @@ Drew suggests implementing it with [Quasar](https://quasar.dev/)?
 
 Use Nix flakes to deploy.
 https://www.tweag.io/blog/2020-07-31-nixos-flakes/
+
+## Deal with forks
+
+Both forks as in rival blocks or 51% attacks that succeed, where only one fork is valid,
+but which may change, and forks as in a new network is started and both forks are valid,
+each in its own separate universe.

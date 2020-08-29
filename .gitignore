@@ -12,6 +12,7 @@ run/
 [#]*[#]
 
 # Scribble-generated files
+*.html
 manual-fonts.css
 manual-racket.css
 manual-racket.js
