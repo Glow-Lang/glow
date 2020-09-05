@@ -41,7 +41,7 @@
 
 ;; A pass has a name, a transformation function, and input and an output.
 ;; - The name, a symbol, identifies the pass.
-;; - The input and the output, each strings, are the names of layers defined as above.
+;; - The input and the output, each symbols, are the names of layers defined as above.
 ;; - The function takes a representation for the input, plus some optional ancillary data,
 ;;   and returns one or multiple values; the first of which is a representation for the output,
 ;;   and the rest is further ancillary data to pass to the next pass.
@@ -53,7 +53,7 @@
 (defrule (define-pass name inputs outputs) (register-pass 'name name 'inputs 'outputs))
 
 ;; A strategy has a name, and a list of passes.
-;; - The name, a string, names the strategy
+;; - The name, a symbol, names the strategy
 ;; - the list of passes, by name (symbol).
 ;; The *strategy* table maps the name to the list of passes.
 (def *strategies* (hash))
@@ -72,8 +72,8 @@
   ((layer-writer (registered-layer layer)) representation port))
 
 ;; Picks the longest matching known layer suffix for a given filename.
-;; Thus, for "foo.sexp", return ".sexp", but for "foo.alpha.sexp" return ".alpha.sexp".
-;; Path -> String
+;; Thus, for "foo.sexp", return ".sexp", but for "foo.alpha.sexp" return the symbol alpha.sexp.
+;; Path -> Symbol
 (def (identify-layer filename)
   (def layer #f) (def len -1)
   (for (k (hash-keys *layers*))
@@ -98,7 +98,7 @@
 ;; along the named strategy until the specified last-pass (or if false, all the subsequent passes).
 ;; This only works if the passes can infer any ancillary data as optional arguments.
 ;; At this time in practice, that only works with start-layer being the ".sexp" layer.
-;; String Symbol (Or Symbol '#f) -> (Listof Symbol)
+;; Symbol Symbol (Or Symbol '#f) -> (Listof Symbol)
 (def (relevant-passes start-layer strategy last-pass)
   (def strategy-passes
     (or (registered-strategy strategy) (error 'no-such-strategy strategy)))
@@ -166,9 +166,10 @@
       (write/layer l (hash-ref out l) port))
     (def rl (registered-layer l))
     (when (and rl (layer-writer rl))
-      (when show?
-        (printf "~a.~a\n" basename l)
-        (write-last (current-output-port)))
-      (when save?
-        (clobber-file (string-append basename l) write-last))))
+      (let (path (format "~a.~a" basename l))
+        (when show?
+          (displayln path)
+          (write-last (current-output-port)))
+        (when save?
+          (clobber-file path write-last)))))
   out)
