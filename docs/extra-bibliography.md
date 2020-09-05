@@ -23,10 +23,11 @@ Other non-Lisp types of interest?
 ### Compilers
 
 * [Jay McCarthy's course on compiler construction](https://jeapostrophe.github.io/courses/2019/spring/406/course/)
-* [Nanopass compilers](https://nanopass.org/documentation.html), and [this example](https://github.com/akeep/scheme-to-c/blob/master/c.ss)
-* [Urlang](https://github.com/soegaard/urlang), compiling from SEXP syntax with macros to JavaScript as a Racket #lang using a nanopass compiler.
+* [Nanopass compilers](https://nanopass.org/documentation.html), and [this example](https://github.com/akeep/scheme-to-c/blob/master/c.ss), [this course](https://iucompilercourse.github.io/IU-P423-P523-E313-E513-Fall-2020/) with [video lectures](https://iu.mediaspace.kaltura.com/media/Compiler+Course%2C+September+1%2C+2020/1_7o6702no)
+* [Urlang](https://github.com/soegaard/urlang), compiling from SEXP syntax with macros to JavaScript as a Racket `#lang` using a nanopass compiler.
 * Not to be confused with Chlipala's [Ur](http://www.impredicative.com/ur/) is a very different language, that supports metaprogramming using row types.
 * Daniel Patterson on [proving a compiler fully abstract](https://dbp.io/essays/2018-04-19-how-to-prove-a-compiler-fully-abstract.html)
+* Abstract Abstract Machines, Virtual Virtual Machines...
 
 ### Debugging
 
@@ -36,6 +37,9 @@ Other non-Lisp types of interest?
 
 * [Sagas](https://dl.acm.org/doi/10.1145/38713.38742).
   Daniel Yokomizo says there are plenty of papers, blogs, videos, implementations, etc., about Sagas.
+* [Spores](https://infoscience.epfl.ch/record/191239)
+* [nippy (de)serializing Clojure fns](https://tech.redplanetlabs.com/2020/01/06/serializing-and-deserializing-clojure-fns-with-nippy/)
+* prior art on serializing continuations in Scheme (Tube, Dreme, [ok](http://okmij.org/ftp/continuations/#shift-cgi), ...), Smalltalk (Seaside), and CL (uncommonweb, dwim.hu...)
 
 ### Structured Interactive Development
 
@@ -63,6 +67,7 @@ Other non-Lisp types of interest?
 ### Blockchain 101
 
 * [A Beginner's Guide To Blockchain](https://blockchaingirls.org/beginners-guide)
+* Adversariality: [Ethereum is a Dark Forest, by Dan Robinson and Georgios Konstantopoulos](https://medium.com/@danrobinson/ethereum-is-a-dark-forest-ecc5f0505dff)
 
 ### Proofs for Blockchain
 
@@ -103,6 +108,10 @@ Other non-Lisp types of interest?
 ### Smart Contract Vulnerabilities
 
 * [Smart Contract Weakness Classification and Test Cases](https://swcregistry.io/)
+
+### Machine Learning
+
+* [100 Must-Read NLP Papers](https://github.com/mhagiwara/100-nlp-papers)
 
 ## Blockchain Projects to Integrate With
 
