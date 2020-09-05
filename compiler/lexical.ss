@@ -4,15 +4,6 @@
         :drewc/smug 
         :std/srfi/13)
 
-;; LeftBrace
-;; RightBrace
-;; LeftBracket:std/srfi/13 :std/generic
-;; data
-;; type
-;; AtNotation
-;; Let
-;; =>
-
 (def SourceCharacter (item))
 
 (def (abr code) (.char=? (if (integer? code) (integer->char code) code)))
@@ -47,8 +38,9 @@
 (def LeftBracePunctuator (.list (return 'LeftBracePunctuator) #\{))
 (def LeftPrenPunctuator (.list (return 'LeftPrenPunctuator) #\())
 (def RightPrenPunctuator (.list (return 'RightPrenPunctuator) #\)))
-(def RightBracketPunctuator (.list (return 'RightBracketunctuator) #\]))
-(def LeftBracketPunctuator (.list (return 'LeftBracketunctuator) #\[))
+(def RightBracketPunctuator (.list (return 'RightBracketPunctuator) #\]))
+(def LeftBracketPunctuator (.list (return 'LeftBracketPunctuator) #\[))
+(def Annotation (.list (return 'Annotation) #\@))
 
 
 (def IdentifierName 
@@ -60,17 +52,17 @@
 (def DigitWithZero (sat (cut string-any <> "0123456789")))
 (def DigitsWithZero (many1 DigitWithZero))
 
-(def DigitIntergerLiteral 
+(def DigitIntegerLiteral 
     (.or   
         (.list #\0)
         (.let* ((d NonZeroDigit)
                 (ds (.or DigitsWithZero (return []))))
             [d . ds])))
 
-(def IntergerLiteral (.let* (n (.or DigitIntergerLiteral))
-                        (return `(IntergerLiteral, (list->string n)))))
+(def IntegerLiteral (.let* (n (.or DigitIntegerLiteral))
+                        (return `(IntegerLiteral, (list->string n)))))
 
-(def Operator
+(def Opertor
     (.let* (op (.or ">>" "<<" 
                     "==" "=>" "<=" "!=" "!" "=" "<" ">" 
                     "++" "+=" "+"
@@ -80,7 +72,7 @@
                     "/=" "/"
                     "||"
                     "&&" "&"))
-        (return `(Operator ,op))))
+        (return `(Opertor ,op))))
 
 
 (def Marker
@@ -89,9 +81,9 @@
 
 (def ReservedWord 
     (.let* ((rw (.or
-                    "data" "type" "let" "while" "publish!" "verify!" "if" "while"
-                    "true" "false" "else" "require!" "assert!" "deposit!" "switch"
-                    "withdraw!")))
+                    "data" "type" "let" "while" "publish" "verify" "if" "while"
+                    "true" "false" "else" "require" "assert" "deposit" "switch"
+                    "withdraw")))
         `(ReservedWord ,rw)))
 
 
@@ -103,7 +95,7 @@
         (return 'single-line-comment)))
 
 (def MultiCommentStringCharacter 
-    (.begin  SourceCharacter))
+    (.begin #t SourceCharacter))
 
 (def MultiCommentStringCharacters (many MultiCommentStringCharacter))
 
@@ -116,7 +108,7 @@
 
 
 (def DoubleStringCharacter 
-    (.or (.begin (.not (.or #\" LineTerminator)) SourceCharacter)))
+    (.begin (.not (.or #\" LineTerminator)) SourceCharacter))
 
 (def DoubleStringCharacters (many DoubleStringCharacter))
 
@@ -126,7 +118,7 @@
 
 
 (def SingleStringCharacter 
-    (.or (.begin (.not (.or #\' LineTerminator)) SourceCharacter)))
+    (.begin (.not (.or #\' LineTerminator)) SourceCharacter))
 
 (def SingleStringCharacters (many SingleStringCharacter))
 
@@ -134,16 +126,16 @@
     (.let* (cs (bracket #\' SingleStringCharacters #\'))
         `(SingleQuoteStringLiteral ,(list->string cs))))
 
-(def String (.let* (str (.or  SingleQuoteStringLiteral  DoubleQuoteStringLiteral)) `(String ,str)))
+(def StringLiteral (.let* (str (.or  SingleQuoteStringLiteral  DoubleQuoteStringLiteral)) `(StringLiteral ,str)))
 
 (def CommonToken
     (.or
         IdentifierName 
         ;; Numbers come first because ~.~ is a punctuator
-        IntergerLiteral
-        String    
+        IntegerLiteral
+        StringLiteral    
         Marker
-        Operator))
+        Opertor))
 
 (def TokenTemplate
     (.or 
@@ -156,7 +148,8 @@
         LeftPrenPunctuator
         RightPrenPunctuator
         RightBracketPunctuator
-        LeftBracketPunctuator))
+        LeftBracketPunctuator
+        Annotation))
 
 
 (def (lex-error c . args)
@@ -168,3 +161,47 @@
         (.let* (v (.or #!eof ITEM)) (if (eof-object? v) FAIL (lex-error v)))))
 
 (def (tokenize str) (run (many1 GlowToken) str))
+
+
+(def (production? p) (or (symbol? p) (and (pair? p) (symbol? (car p)))))
+(def (token-production t) (let (v (token-value t)) (and (production? v) v)))
+(def (production-type p) (and (production? p) (if (pair? p) (car p) p)))
+(def (production-value p) (and (production? p) (if (pair? p) (cadr p) p)))
+(def (token-production-type t)
+  (let (v (token-production t)) (and v (production-type v))))
+;;get token value
+(def (get-token-value (t #f))
+  (def (tpv tk)  
+    (let (v (token-production tk)) (and v (production-value v))))
+  (if t (tpv t) (.let* (t (item)) (return (get-token-value t)))))
+(def (match-token-type? p) (token-reader? p token-production-type))
+(def (match-token-value? p) (token-reader? p get-token-value))
+
+
+(defstruct lex-tokens (vector list) transparent: #t)
+(defmethod (input-item (ts lex-tokens)) (input-item (String 0 ts)))
+(defmethod (input-item-ref (t lex-tokens) (n <t>))
+  (input-item-ref (lex-tokens-vector t) n))
+
+(def (lexify thing (rem '(Comment WhiteSpace LineTerminator)))
+  (def tokens (if (list? thing) thing (tokenize thing)))
+  (let (v (filter (lambda (t) (let (pt (production-type (token-production t)))
+                           (not (member pt rem)))) tokens))
+    (lex-tokens (list->vector v) tokens)))
+(def (.lex-tokens)
+  (lambda (i) ((return (if (String? i) (String-thing i) i)) i)))
+
+(def (next-source-tokens)
+  (peek (.let* ((p (point))
+                (t (.begin (goto-char (1- p)) (item)))
+                (lts (.lex-tokens))
+                (l (lex-tokens-list lts))
+                (m (member t l)))
+          (if m (cdr m) #f))))
+
+(def BooleanLiteral
+  (.begin
+    (peek (match-token-type? 'IdentifierName))
+    (peek (.or (match-token-value? "true")
+               (match-token-value? "false")))
+    (item)))
