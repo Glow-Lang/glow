@@ -72,7 +72,7 @@
   :mukn/ethereum/hex :mukn/ethereum/abi :mukn/ethereum/types :mukn/ethereum/ethereum
   :mukn/ethereum/signing :mukn/ethereum/known-addresses
   :mukn/ethereum/network-config :mukn/ethereum/json-rpc :mukn/ethereum/transaction
-  :mukn/ethereum/assembly :mukn/ethereum/contract-config :mukn/ethereum/contract-support
+  :mukn/ethereum/assembly :mukn/ethereum/contract-config :mukn/ethereum/contract-runtime
   :mukn/ethereum/nonce-tracker :mukn/ethereum/tx-tracker :mukn/ethereum/batch-send
   :mukn/ethereum/assets
 
