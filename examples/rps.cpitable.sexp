@@ -49,7 +49,7 @@
       (begin-switch3
        (ci 'begin-switch3
            (@list)
-           (@list (ti 'cp1
+           (@list (ti 'cp0
                       'begin-switch3
                       'A
                       (@list (syntax (publish! A handA0)) (syntax (publish! A salt)))
@@ -120,45 +120,44 @@
                                     '(Hand1 . #f)
                                     '(Outcome1 . #f))
                              (@list)))))
-      (begin7 (ci 'begin7 (@list) (@list) (@list (ti 'begin7 'cp #f (@list) (@list) (@list) (@list)))))
-      (cp (ci 'cp
-              (@list)
-              (@list (ti 'begin7 'cp #f (@list) (@list) (@list) (@list)))
-              (@list (ti 'cp
-                         'cp0
-                         'A
-                         (@list (syntax (deposit! A wagerAmount)) (syntax (publish! A commitment)))
-                         (@list '(commitment . #f))
-                         (@list '(A . #f) '(wagerAmount . #f) '(commitment . A) '(A . #f))
-                         (@list)))))
-      (cp0 (ci 'cp0
+      (begin7 (ci 'begin7
+                  (@list)
+                  (@list)
+                  (@list (ti 'begin7
+                             'cp
+                             'A
+                             (@list (syntax (deposit! A wagerAmount)) (syntax (publish! A commitment)))
+                             (@list '(commitment . #f))
+                             (@list '(A . #f) '(wagerAmount . #f) '(commitment . A) '(A . #f))
+                             (@list)))))
+      (cp  (ci 'cp
                (@list)
-               (@list (ti 'cp
-                          'cp0
+               (@list (ti 'begin7
+                          'cp
                           'A
                           (@list (syntax (deposit! A wagerAmount)) (syntax (publish! A commitment)))
                           (@list '(commitment . #f))
                           (@list '(A . #f) '(wagerAmount . #f) '(commitment . A) '(A . #f))
                           (@list)))
-               (@list (ti 'cp0
-                          'cp1
+               (@list (ti 'cp
+                          'cp0
                           'B
                           (@list (syntax (deposit! B wagerAmount))
                                  (syntax (publish! B handB0)))
                           (@list '(handB0 . #f))
                           (@list '(B . #f) '(wagerAmount . #f) '(handB0 . B) '(B . #f))
                           (@list)))))
-      (cp1 (ci 'cp1
+      (cp0 (ci 'cp0
                (@list)
-               (@list (ti 'cp0
-                          'cp1
+               (@list (ti 'cp
+                          'cp0
                           'B
                           (@list (syntax (deposit! B wagerAmount))
                                  (syntax (publish! B handB0)))
                           (@list '(handB0 . #f))
                           (@list '(B . #f) '(wagerAmount . #f) '(handB0 . B) '(B . #f))
                           (@list)))
-               (@list (ti 'cp1
+               (@list (ti 'cp0
                           'begin-switch3
                           'A
                           (@list (syntax (publish! A handA0)) (syntax (publish! A salt)))

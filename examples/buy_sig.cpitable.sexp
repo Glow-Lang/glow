@@ -6,27 +6,23 @@
       (begin0 (ci 'begin0
                   (@list)
                   (@list)
-                  (@list (ti 'begin0 'cp #f (@list) (@list) (@list) (@list)))))
+                  (@list (ti 'begin0
+                             'cp
+                             'Buyer
+                             (@list (syntax (deposit! Buyer price)))
+                             (@list)
+                             (@list '(Buyer . #f) '(price . #f))
+                             (@list)))))
       (cp (ci 'cp
-              (@list)
-              (@list (ti 'begin0 'cp #f (@list) (@list) (@list) (@list)))
-              (@list (ti 'cp
-                         'cp0
-                         'Buyer
-                         (@list (syntax (deposit! Buyer price)))
-                         (@list)
-                         (@list '(Buyer . #f) '(price . #f))
-                         (@list)))))
-      (cp0 (ci 'cp0
                (@list)
-               (@list (ti 'cp
-                          'cp0
+               (@list (ti 'begin0
+                          'cp
                           'Buyer
                           (@list (syntax (deposit! Buyer price)))
                           (@list)
                           (@list '(Buyer . #f) '(price . #f))
                           (@list)))
-               (@list (ti 'cp0
+               (@list (ti 'cp
                           'end0
                           'Seller
                           (@list (syntax (withdraw! Seller price))
@@ -48,7 +44,7 @@
                (@list)))
       (end0 (ci 'end0
                 (@list)
-                (@list (ti 'cp0
+                (@list (ti 'cp
                            'end0
                            'Seller
                            (@list (syntax (withdraw! Seller price))

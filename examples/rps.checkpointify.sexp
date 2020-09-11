@@ -15,7 +15,7 @@
                  (: nat)
                  (begin1 end1)
                  (@label begin1)
-                 (@label begin-switch)
+                 (@label begin-switch) ; TODO: eliminate redundant label?
                  (switch x0
                          ((@app-ctor Rock) (return 0))
                          ((@app-ctor Paper) (return 1))
@@ -27,7 +27,7 @@
                  (: Hand)
                  (begin2 end2)
                  (@label begin2)
-                 (@label begin-switch0)
+                 (@label begin-switch0) ; TODO: eliminate redundant label?
                  (switch x1
                          (0 (return Rock))
                          (1 (return Paper))
@@ -50,7 +50,7 @@
                  (: nat)
                  (begin4 end4)
                  (@label begin4)
-                 (@label begin-switch1)
+                 (@label begin-switch1) ; TODO: eliminate redundant label?
                  (switch x3
                          ((@app-ctor B_Wins) (return 0))
                          ((@app-ctor Draw) (return 1))
@@ -62,7 +62,7 @@
                  (: Outcome)
                  (begin5 end5)
                  (@label begin5)
-                 (@label begin-switch2)
+                 (@label begin-switch2) ; TODO: eliminate redundant label?
                  (switch x4
                          (0 (return B_Wins))
                          (1 (return Draw))
@@ -92,7 +92,6 @@
                ()
                (begin7 end7)
                (@label begin7)
-               (@label cp)
                (@ A (def tmp13 (@dot Hand1 input)))
                (@ A (def handA0 (@app tmp13 "First player, pick your hand")))
                (@ A (def salt (@app randomUInt256)))
@@ -100,18 +99,18 @@
                (@ A (def commitment (digest tmp14)))
                (publish! A commitment)
                (deposit! A wagerAmount)
-               (@label cp0)
+               (@label cp)
                (@ B (def tmp15 (@dot Hand1 input)))
                (@ B (def handB0 (@app tmp15 "Second player, pick your hand")))
                (publish! B handB0)
                (deposit! B wagerAmount)
-               (@label cp1)
+               (@label cp0)
                (publish! A salt)
                (publish! A handA0)
                (def tmp16 (@tuple salt handA0))
                (def tmp17 (digest tmp16))
                (def tmp18 (== commitment tmp17))
-               (require! tmp18)
+               (require! tmp18) ; bolongs to A
                (def outcome (@app winner handA0 handB0))
                (@label begin-switch3)
                (switch outcome

@@ -10,8 +10,10 @@
                (begin2 end2)
                (@label begin2)
                (def tmp (@app < 0 x))
+               ; TODO: this require! should be for the caller,
+               ;       not necesarily A?
                (require! tmp)
-               (@label cp)
+               (@label cp) ; which means this could actually belong, depending?
                (@ A
                   (switch b
                           (#t (def tmp0 (@app f x)) (def y (@app g tmp0)))

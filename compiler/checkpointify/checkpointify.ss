@@ -271,9 +271,19 @@
   (assert! (not (participant-ambiguous? participant-before)))
   (def participant-after (unify-participants participant-before (ssi-participant ssi)))
   ;;(DBG css: acc ti f args stx ssi participant-before participant-after)
-  (if (equal? participant-before participant-after)
-    (checkpointify-simple-stmt stx ti acc ssi)
-    (statement-after-checkpoint stx ti acc ssi)))
+  ;; TODO: add require participant
+  (cond
+    ((equal? participant-before participant-after)
+     (checkpointify-simple-stmt stx ti acc ssi))
+    ((not participant-before)
+     ; before = #f, so after = (ssi-participant ssi), b/c #f is the identity of unify
+     ; Goal: retcon it to be (ssi-participant ssi) all along
+     ; the ssi will be merged into ti by merge-ssi, so the participants will be unified
+     ; and (ssi-participant ssi) will be the participant for the resulting ti
+     ; this explanation is the reason I'm not merging this case with the previous
+     (checkpointify-simple-stmt stx ti acc ssi))
+    (else
+     (statement-after-checkpoint stx ti acc ssi))))
 
 ;; Accumulate checkpoint statements for the current
 ;; participant-checkpoint-less statement,
