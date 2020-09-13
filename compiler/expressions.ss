@@ -1,5 +1,5 @@
-(import :drewc/smug "./lexical" ) 
-;;(import :drewc/smug :mukn/glow/compiler/lexical)
+;;(import :drewc/smug "./lexical" ) 
+(import :drewc/smug :mukn/glow/compiler/lexical)
 (export #t)
 
 (defstruct expression ())
@@ -47,7 +47,7 @@
 (def BracketExpression 
   (.begin (match-token-value? #\()
     (.let* (
-           (exp ArithmeticExpression )
+           (exp (sepby1 Expression  (match-token-value? #\,)))
             (_(match-token-value? #\) )))
           (return (bracket-expression exp)))))
 
@@ -138,8 +138,15 @@
 (def ArithmeticExpression (.begin #t ShiftExpression))
 
 
+(defstruct attribute (id id-exprs)  transparent: #t)
+
 (def Attribute
-  (.or Identifier Arguments))
+  (.or (.let* ((id Identifier) 
+        (_(match-token-value? #\( ) ) 
+        (id-exprs Expression) 
+        (_(match-token-value? #\) )) )
+              (attribute id id-exprs)) 
+              (.let* (id Identifier) (attribute id #f))))
 
 
 (defstruct (call-expression expression) (id arguments)  transparent: #t)
@@ -161,16 +168,17 @@
     (.let* ((exp ConditionalExpression))
           (return (assert-expression exp)))))
 
-(defstruct (deposit-expression expression) (exp) transparent: #t)
+(defstruct (deposit-expression expression) (id exp) transparent: #t)
 (def DepositExpression 
   (.begin (match-token-value? "deposit") (match-token-value? "!")
-    (.let* (exp ArithmeticExpression)
-          (return (deposit-expression exp)))))
+    (.let* ((id Identifier) (_(match-token-value? "->")) (exp Expression))
+          (return (deposit-expression id exp)))))
 
 (defstruct (withdraw-expression expression) (id exp) transparent: #t)
 (def WithdrawExpression 
   (.begin (match-token-value? "withdraw") (match-token-value? "!")
     (.let* ((id Identifier)
+            (_(match-token-value? "<-"))
             (exp ArithmeticExpression))
           (return (withdraw-expression id exp)))))
 
@@ -188,7 +196,7 @@
 (defstruct (compound-expression expression) (expressions) transparent: #t)
 (def CompoundExpression 
   (.begin (match-token-value? #\[) 
-    (.let*  ((ce (sepby1  ArithmeticExpression (match-token-value? #\,)))  
+    (.let*  ((ce (sepby1  Expression (match-token-value? #\,)))  
               (_(match-token-value? #\])))
       (return (compound-expression ce)))))
 
@@ -336,17 +344,17 @@
 
 ;
 
-(defstruct (publish-statement statement) (ids) transparent: #t)
+(defstruct (publish-statement statement) (id expr) transparent: #t)
 (def PublishStatement 
   (.begin (match-token-value? "publish") (match-token-value? "!")
-    (.let* ((ids (sepby1 Identifier (match-token-value? #\,))) (_(match-token-value? #\;)))
-        (return (publish-statement ids)))))
+    (.let* ( (id Identifier) (_(match-token-value? "->")) (expr Expression) )
+        (return (publish-statement id expr)))))
 
-(defstruct (verify-statement statement) (ids) transparent: #t)
+(defstruct (verify-statement statement) (id) transparent: #t)
 (def VerifyStatement 
   (.begin (match-token-value? "verify") (match-token-value? "!")
-    (.let* ((ids (sepby1 Identifier (match-token-value? #\,)) ) (_(match-token-value? #\;)))
-         (return (verify-statement ids)))))
+    (.let* (id Identifier )  
+         (return (verify-statement id )))))
 
 (def Typarams 
     (.begin #t (sepby1 Identifier (match-token-value? #\,))))
@@ -356,7 +364,7 @@
     (.begin (match-token-value? "type")
       (.let*  ((name Identifier) 
               (typarams (.or (bracket  (match-token-value? #\() Typarams (match-token-value? #\))) #f))
-              (_(match-token-value? #\=))  (typ Type)  (_(match-token-value? #\;)))
+              (_(match-token-value? #\=))  (typ Type) )
             (return (type-declaration name typarams typ)))))
 
 
@@ -370,10 +378,10 @@
 
 
 
-(def SubStatements (.or VerifyStatement  PublishStatement DataAssignmentStatement TypeDeclaration))
+(def SubStatement (.or VerifyStatement  PublishStatement DataAssignmentStatement TypeDeclaration))
 
 (defstruct (expression-statement statement) (expr) transparent: #t)
-(def ExpressionStatement (.let* ((exp Expression) (_(match-token-value? #\;))) 
+(def ExpressionStatement (.let* ((exp Expression) ) 
 	(return (expression-statement exp))))
 
 (defstruct (assignment-statement statement) (identifier type expr) transparent: #t)
@@ -383,8 +391,7 @@
         (name Identifier)
         (typ (.or (.begin (match-token-value? #\:) Type) #f))
         (_(match-token-value? #\=))
-        (expr Expression)
-        (_(match-token-value? #\;))) 
+        (expr Expression)) 
       (return (assignment-statement name typ expr)))))
 
 
@@ -392,14 +399,14 @@
 (def FunctionDeclaration 
   (.begin (match-token-value? "let")
     (.let* ((name Identifier)
-            (params  Params)
+            (_(match-token-value? #\=))
+            (params  Params)      
             (typ (.or (.begin (match-token-value? #\:) Type) #f))
             (_(match-token-value? "=>"))
-            (expr Expression)
-            (_(match-token-value? #\;))) 
+            (expr Expression))
           (return (function-declaration name  params typ expr)))))
 
-(def LetStatements (.or FunctionDeclaration  AssignmentStatement))
+(def LetStatement (.or FunctionDeclaration  AssignmentStatement))
 
 (def Params 
   (.let* ((_(match-token-value? #\())  
@@ -416,15 +423,16 @@
 (defstruct (annotationStatement statement) (attribute stat) transparent: #t)
 (def AnnotationStatement 
   (.begin (match-token-value? #\@)
-    (.let* ((attr Attribute) (stat  SubStatements))
+    (.let* ((attr Attribute) (stat  Statement))
         (return (annotationStatement attr stat)))))
 
 (def Statement 
   (.or  
-      LetStatements
-      SubStatements 
-      ExpressionStatement     
       AnnotationStatement
+      LetStatement
+      SubStatement
+      Expression    
+      
   ))
 
 
@@ -433,5 +441,6 @@
 
 (defstruct (body statement) (statements expr) transparent: #t)
 (def Body 
-    (.let* (statements FunctionStatementList) (expression? (.or Expression #f))
+    (.let* ((statements (many (.let* ((stat Statement) (_(match-token-value? #\;))) stat))) 
+            (expression? (.or Expression #f)))
         (return (body statements expression?))))
