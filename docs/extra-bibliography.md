@@ -28,6 +28,7 @@ Other non-Lisp types of interest?
 * Not to be confused with Chlipala's [Ur](http://www.impredicative.com/ur/) is a very different language, that supports metaprogramming using row types.
 * Daniel Patterson on [proving a compiler fully abstract](https://dbp.io/essays/2018-04-19-how-to-prove-a-compiler-fully-abstract.html)
 * Abstract Abstract Machines, Virtual Virtual Machines...
+* [Language Oriented Programming in Racket, a cultural anthropology](https://gumroad.com/l/lop-in-racket-cultural-anthro)
 
 ### Debugging
 
