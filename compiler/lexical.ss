@@ -1,7 +1,7 @@
 (export #t)
-(import 
+(import
         :std/generic
-        :drewc/smug 
+        :drewc/smug
         :std/srfi/13)
 
 (def SourceCharacter (item))
@@ -28,8 +28,8 @@
 (def %ws (.or <TAB> <VT> <FF> <SP> <NBSP> <ZWNBSP>))
 (def WhiteSpace (.begin %ws (skip %ws) (return 'WhiteSpace)))
 
-;; Line Terminator Code Points 
-(def <LF> (abr #x000A)) (def <CR> (abr #x000D)) 
+;; Line Terminator Code Points
+(def <LF> (abr #x000A)) (def <CR> (abr #x000D))
 (def <LS> (abr #x2028)) (def <PS> (abr #x2029))
 (def LineTerminator (.begin (.or <LF> <CR> <LS> <PS>) (return 'LineTerminator)))
 
@@ -43,17 +43,17 @@
 (def Annotation (.list (return 'Annotation) #\@))
 
 
-(def IdentifierName 
+(def IdentifierName
  (.let* ((s (sat char-alphabetic?))
          (ps (many (.or  (.let* (c (sat char-alphabetic?)) c)  (.let* (n (sat char-numeric?)) n) #\_ #\$ ))))
   `(IdentifierName ,(list->string (cons s ps)))))
 
-(def NonZeroDigit (sat (cut string-any <> "123456789"))) ;; 
+(def NonZeroDigit (sat (cut string-any <> "123456789"))) ;;
 (def DigitWithZero (sat (cut string-any <> "0123456789")))
 (def DigitsWithZero (many1 DigitWithZero))
 
-(def DigitIntegerLiteral 
-    (.or   
+(def DigitIntegerLiteral
+    (.or
         (.list #\0)
         (.let* ((d NonZeroDigit)
                 (ds (.or DigitsWithZero (return []))))
@@ -63,12 +63,12 @@
                         (return `(IntegerLiteral, (list->string n)))))
 
 (def Opertor
-    (.let* (op (.or ">>" "<<" 
-                    "==" "=>" "<="  "!=" "!" "="  "<-" "<" ">" 
+    (.let* (op (.or ">>" "<<"
+                    "==" "=>" "<="  "!=" "!" "="  "<-" "<" ">"
                     "++" "+=" "+"
                     "--" "-=" "->" "-"
                     "*=" "**" "*"
-                    "%=" "%" 
+                    "%=" "%"
                     "/=" "/"
                     "||"
                     "&&" "&"))
@@ -79,7 +79,7 @@
     (.let* (m (.or #\. #\; #\, #\_ #\~ #\? #\: #\| #\'))
         `(Marker ,m)))
 
-(def ReservedWord 
+(def ReservedWord
     (.let* ((rw (.or
                     "data" "type" "let" "while" "publish" "verify" "if" "while"
                     "true" "false" "else" "require" "assert" "deposit" "switch"
@@ -94,7 +94,7 @@
     (.let* ((_ "//") (cs (opt SingleLineCommentChars)))
         (return 'single-line-comment)))
 
-(def MultiCommentStringCharacter 
+(def MultiCommentStringCharacter
     (.begin #t SourceCharacter))
 
 (def MultiCommentStringCharacters (many MultiCommentStringCharacter))
@@ -103,26 +103,26 @@
     (.let* (cs (bracket "/*" MultiCommentStringCharacters "*/"))
         (return 'multi-line-comment)))
 
-(def Comment 
+(def Comment
     (.let* (c (.or SingleLineComment MultiComment)) `(Comment , c)))
 
 
-(def DoubleStringCharacter 
+(def DoubleStringCharacter
     (.begin (.not (.or #\" LineTerminator)) SourceCharacter))
 
 (def DoubleStringCharacters (many DoubleStringCharacter))
 
-(def DoubleQuoteStringLiteral 
+(def DoubleQuoteStringLiteral
     (.let* (cs (bracket #\" DoubleStringCharacters #\"))
         `(DoubleQuoteStringLiteral ,(list->string cs))))
 
 
-(def SingleStringCharacter 
+(def SingleStringCharacter
     (.begin (.not (.or #\' LineTerminator)) SourceCharacter))
 
 (def SingleStringCharacters (many SingleStringCharacter))
 
-(def SingleQuoteStringLiteral 
+(def SingleQuoteStringLiteral
     (.let* (cs (bracket #\' SingleStringCharacters #\'))
         `(SingleQuoteStringLiteral ,(list->string cs))))
 
@@ -130,19 +130,19 @@
 
 (def CommonToken
     (.or
-        IdentifierName 
+        IdentifierName
         ;; Numbers come first because ~.~ is a punctuator
         IntegerLiteral
-        StringLiteral    
+        StringLiteral
         Marker
         Opertor))
 
 (def TokenTemplate
-    (.or 
-        WhiteSpace 
-        LineTerminator 
+    (.or
+        WhiteSpace
+        LineTerminator
         Comment
-        CommonToken 
+        CommonToken
         RightBracePunctuator
         LeftBracePunctuator
         LeftPrenPunctuator
@@ -171,7 +171,7 @@
   (let (v (token-production t)) (and v (production-type v))))
 ;;get token value
 (def (get-token-value (t #f))
-  (def (tpv tk)  
+  (def (tpv tk)
     (let (v (token-production tk)) (and v (production-value v))))
   (if t (tpv t) (.let* (t (item)) (return (get-token-value t)))))
 (def (match-token-type? p) (token-reader? p token-production-type))
