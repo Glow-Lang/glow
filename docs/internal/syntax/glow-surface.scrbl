@@ -126,7 +126,7 @@ ReasonML.
    (BNF-seq if |(| @nonterm{expr} |)| |{| @nonterm{body} |}| else |{| @nonterm{body} |}|)
    (BNF-seq if |(| @nonterm{expr} |)| |{| @nonterm{body} |}|)
    (BNF-seq switch |(| @nonterm{expr} |)| |{| @nonterm{cases} |}|)
-   (BNF-seq @nonterm{id} |(| @nonterm{arg-exprs} |)| )
+   (BNF-seq @nonterm{expr} |(| @nonterm{arg-exprs} |)| )
    (BNF-seq require! @nonterm{expr})
    (BNF-seq assert! @nonterm{expr})
    (BNF-seq deposit! @nonterm{expr})

@@ -54,8 +54,8 @@
     ((bracket-expression exps) `(@tuple ,@(map expr->sexpr exps)))
     ; square brackets
     ((compound-expression exprs) `(@list ,@(map expr->sexpr exprs)))
-    ((call-expression id (arguments args))
-     (let ((f (expr->sexpr id)))
+    ((call-expression fn (arguments args))
+     (let ((f (expr->sexpr fn)))
        (if (and (symbol? f) (memq f keyword-syms))
            `(,f ,@(map expr->sexpr args))
            `(@app ,f ,@(map expr->sexpr args)))))
@@ -66,7 +66,7 @@
     ((annotated-expression attr expr) `(@ ,(attr->sexpr attr) ,(expr->sexpr expr)))
     ((dot-expression expr id) `(@dot ,(expr->sexpr expr) ,(id->sexpr id)))
     ((type-expression expr typ) `(ann ,(expr->sexpr expr) ,(type->sexpr typ)))
-    ((record-expr-entries entries)
+    ((record-expr entries)
      `(@record ,@(map (match <> ((record-expr-entry id exp) [(id->sexpr id) (expr->sexpr exp)])) entries)))
     ((block-expression body) `(block ,@(body->sexprs body)))
     ((body [] expr)          (expr->sexpr expr))
@@ -107,7 +107,7 @@
        (else `(def ,(id->sexpr id) ,(expr->sexpr expr)))))
     ((function-declaration id params type body)
      (cond
-       (type `(def ,(id->sexpr id) (λ ,(map param->sexpr params) : (,type->sexpr type) ,@(body->sexprs body))))
+       (type `(def ,(id->sexpr id) (λ ,(map param->sexpr params) : ,(type->sexpr type) ,@(body->sexprs body))))
        (else `(def ,(id->sexpr id) (λ ,(map param->sexpr params) ,@(body->sexprs body))))))
     ((annotationStatement attr stat) `(@ ,(attr->sexpr attr) ,(stat->sexpr stat)))))
 

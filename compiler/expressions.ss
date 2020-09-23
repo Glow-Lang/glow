@@ -1,5 +1,5 @@
 ;;(import :drewc/smug "./lexical" )
-(import :drewc/smug :mukn/glow/compiler/lexical)
+(import :drewc/smug :mukn/glow/compiler/lexical :std/iter)
 (export #t)
 
 (defstruct expression ())
@@ -49,9 +49,16 @@
             (_(match-token-value? #\) )))
           (return (bracket-expression exps)))))
 
-(def PrimaryExpression
-  (.begin #t (.or CallExpression  BracketExpression Identifier Literal)))
+(def TightExpression
+  (.begin #t (.or BracketExpression CompoundExpression RecordExpr BlockExpression Identifier Literal)))
 
+(def PrimaryExpression
+  ; CallExpression | DotExpression | TightExpression
+  (.let* ((a TightExpression)
+          (bs (many ArgumentsOrDot)))
+    (for/fold (a a) ((b bs))
+      (cond ((arguments? b) (call-expression a b))
+            (else           (dot-expression a b))))))
 
 (defstruct (arguments expression) (list) transparent: #t)
 (def Arguments
@@ -61,8 +68,10 @@
           (_(if (equal? empty? #f)  (match-token-value? #\)) )))
     (return (arguments args))))
 
-(def ArgumentList (.begin #t (sepby1 PrimaryExpression (match-token-value? #\,))))
+(def ArgumentList (.begin #t (sepby1 Expression (match-token-value? #\,))))
 
+(def ArgumentsOrDot
+  (.or Arguments (.begin (match-token-value? #\.) Identifier)))
 
 (defstruct (unary-expression expression) (op expression) transparent: #t)
 (def UnaryExpression
@@ -147,11 +156,7 @@
        (.let* (id Identifier) (attribute id #f))))
 
 
-(defstruct (call-expression expression) (id arguments)  transparent: #t)
-(def CallExpression
-    (.let* ((id Identifier)
-            (arguments Arguments))
-          (return (call-expression  id arguments))))
+(defstruct (call-expression expression) (function arguments)  transparent: #t)
 
 
 (defstruct (require-expression expression) (exp) transparent: #t)
@@ -187,9 +192,6 @@
       (return (annotated-expression attr exp)))))
 
 (defstruct (dot-expression expression) (expr id) transparent: #t)
-(def DotExpression
-  (.let* ((exp (.or CallExpression PrimaryExpression)) (_(match-token-value? #\.)) (id Identifier))
-      (return (dot-expression exp id))))
 
 (defstruct (compound-expression expression) (expressions) transparent: #t)
 (def CompoundExpression
@@ -256,13 +258,20 @@
           (sepby1 Variant (match-token-value? #\|))))
 
 
-(defstruct (record-expr-entries expression) (entries) transparent: #t)
+(defstruct (record-expr expression) (entries) transparent: #t)
 (defstruct (record-expr-entry expression) (id exp) transparent: #t)
+(def RecordExpr
+  (.begin (match-token-value? #\{)
+          (.let* ((records RecordExprEntries)
+                  (_(match-token-value? #\})))
+            (return (record-expr records)))))
 (def RecordExprEntries
     (.let* ((entries (sepby1 (.let* ((id Identifier)
-              (_(match-token-value? #\:)) (expr ConditionalExpression))
-                  (return (record-expr-entry id exp)) ) (match-token-value? #\,))))
-            (record-expr-entries entries)))
+                                     (_(match-token-value? #\:))
+                                     (expr ConditionalExpression))
+                               (return (record-expr-entry id exp)) )
+                             (match-token-value? #\,))))
+      entries))
 
 (defstruct pattern (pat attri)  transparent: #t)
 (def BasePattern
@@ -340,10 +349,9 @@
 
 
 (def Expression
-    (.or AnnotatedExpression TypeExpression DotExpression CompoundExpression
-        RecordExprEntries BlockExpression IfExpression SwitchExpression
-        CallExpression
-              RequireExpression  AssertExpression DepositExpression WithdrawExpression ArithmeticExpression))
+    (.or AnnotatedExpression TypeExpression PrimaryExpression
+         IfExpression SwitchExpression
+         RequireExpression  AssertExpression DepositExpression WithdrawExpression ArithmeticExpression))
 
 
 
