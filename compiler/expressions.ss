@@ -5,8 +5,6 @@
 (defstruct expression ())
 (defstruct statement ())
 
-(defstruct (identifiers expression) ())
-
 (def (parse-operator side op)
   (.or (.let* ((lhs side) (pop (match-token-value? op))
                (rhs side))
@@ -43,13 +41,13 @@
        (.let* (t (.begin (peek (match-token-type? 'IntegerLiteral)) (item)))
          (return (numeric-literal (get-token-value t))))))
 
-(defstruct (bracket-expression expression) (exp) transparent: #t)
+(defstruct (bracket-expression expression) (exps) transparent: #t)
 (def BracketExpression
   (.begin (match-token-value? #\()
     (.let* (
-           (exp (sepby1 Expression  (match-token-value? #\,)))
+           (exps (sepby1 Expression  (match-token-value? #\,)))
             (_(match-token-value? #\) )))
-          (return (bracket-expression exp)))))
+          (return (bracket-expression exps)))))
 
 (def PrimaryExpression
   (.begin #t (.or CallExpression  BracketExpression Identifier Literal)))
@@ -138,15 +136,15 @@
 (def ArithmeticExpression (.begin #t ShiftExpression))
 
 
-(defstruct attribute (id id-exprs)  transparent: #t)
+(defstruct attribute (id arguments)  transparent: #t)
 
 (def Attribute
   (.or (.let* ((id Identifier)
-        (_(match-token-value? #\( ) )
-        (id-exprs Expression)
-        (_(match-token-value? #\) )) )
-              (attribute id id-exprs))
-              (.let* (id Identifier) (attribute id #f))))
+               (_(match-token-value? #\( ) )
+               (arg-expr Expression) ; TODO: multiple Arguments
+               (_(match-token-value? #\) )) )
+         (attribute id [arg-expr]))
+       (.let* (id Identifier) (attribute id #f))))
 
 
 (defstruct (call-expression expression) (id arguments)  transparent: #t)
@@ -205,32 +203,36 @@
           (peek (match-token-value? (.not ReservedWord)))
           (.let* (t (item)) (get-token-value t))))
 
-(defstruct type (attr kind) transparent: #t)
+(defstruct type () transparent: #t)
+(defstruct (annotated-type type) (attr type) transparent: #t)
+(defstruct (type-name type) (id) transparent: #t)
+(defstruct (type-var type) (id) transparent: #t)
+(defstruct (type-tuple type) (args) transparent: #t)
+(defstruct (type-record type) (field-args) transparent: #t)
 (def BaseType
     (.or
-      (.let* (id IdentifierTokenName) (return (type #f id)))
+      (.let* (id IdentifierTokenName) (return (type-name id)))
       (.begin (match-token-value? #\')
-        (.let* ( (id IdentifierTokenName)) (return (type #t id))))))
+        (.let* ( (id IdentifierTokenName)) (return (type-var id))))))
 
 (def AnnotatedType
    (.begin (match-token-value? #\@)
-        (.let* ((attr Attribute) (typ BaseType)) (return (type attr typ)))))
+        (.let* ((attr Attribute) (typ BaseType)) (return (annotated-type attr typ)))))
 
 (def BracketedType
   (.begin (match-token-value? #\( )
-        (.let* ((typ (sepby1 BaseType  (match-token-value? #\,))) (_(match-token-value? #\))  ))
-                 (return (type #f typ)))))
-(def RecordedType
-      (.begin (match-token-value? #\{)
-        (.let* ((records  RecordTypeEntries)  (_(match-token-value? #\}))) (return (type #f records)))))
-
-(defstruct record-type (id typ) transparent: #t)
+        (.let* ((typs (sepby1 BaseType  (match-token-value? #\,))) (_(match-token-value? #\))  ))
+                 (return (type-tuple typs)))))
 (def RecordType
-    (.let* ((id Identifier) (_(match-token-value? #\:)) (typ Type)) (record-type id typ)))
+      (.begin (match-token-value? #\{)
+        (.let* ((entries  RecordTypeEntries)  (_(match-token-value? #\}))) (return (type-record entries)))))
+
+(def RecordTypeEntry
+    (.let* ((id Identifier) (_(match-token-value? #\:)) (typ Type)) (cons id typ)))
 
 (def RecordTypeEntries
-    (.let* (types (sepby1 RecordType (match-token-value? #\,)))
-        (return types)))
+    (.let* (entries (sepby1 RecordTypeEntry (match-token-value? #\,)))
+        (return entries)))
 
 (defstruct (type-expression expression) (expr typ) transparent: #t)
 (def TypeExpression
@@ -238,16 +240,20 @@
       (return (type-expression exp typ))))
 
 (def Type
-  (.or RecordedType BracketedType  AnnotatedType BaseType))
+  (.or RecordType BracketedType  AnnotatedType BaseType))
 
 (def Variant
   (.or
-    (.let* ((name Identifier) (_(match-token-value? #\())
-      (typs (sepby1 Type  (match-token-value? #\,)))
-      (_(match-token-value? #\))) )
-    typs) IdentifierTokenName))
+    (.let* ((name Identifier)
+            (_(match-token-value? #\( ))
+            (typs (sepby1 Type  (match-token-value? #\,)))
+            (_(match-token-value? #\) )) )
+      (cons name typs))
+    Identifier))
 
-(def Variants (.begin #t (sepby1 Variant (match-token-value? #\|))))
+(def Variants
+  (.begin (.or (match-token-value? #\|) #t)
+          (sepby1 Variant (match-token-value? #\|))))
 
 
 (defstruct (record-expr-entries expression) (entries) transparent: #t)
@@ -316,7 +322,7 @@
           (body-else (if (equal? e #f)  [] (bracket (match-token-value? #\{) Body (match-token-value? #\})))))
       (return (if-expression expr body-then body-else)))))
 
-(defstruct (switch expression) (expressions cases) transparent: #t)
+(defstruct (switch expression) (expression cases) transparent: #t)
 (def SwitchExpression
     (.begin (match-token-value? "switch") (match-token-value? #\()
       (.let* ((expr ArithmeticExpression)
@@ -431,16 +437,17 @@
       AnnotationStatement
       LetStatement
       SubStatement
-      Expression
+      ExpressionStatement
 
   ))
 
 
-(def StatementList (many1 Statement))
+(def StatementSemicolon (.let* ((stat Statement) (_(match-token-value? #\;))) stat))
+(def StatementList (many1 StatementSemicolon))
 (def FunctionStatementList (.or StatementList #f))
 
-(defstruct (body statement) (statements expr) transparent: #t)
+(defstruct (body expression) (statements expr) transparent: #t)
 (def Body
-    (.let* ((statements (many (.let* ((stat Statement) (_(match-token-value? #\;))) stat)))
+    (.let* ((statements (many StatementSemicolon))
             (expression? (.or Expression #f)))
         (return (body statements expression?))))

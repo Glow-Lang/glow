@@ -5,7 +5,7 @@
 // - "Diploma" or other affidavit
 
 @interaction([Buyer, Seller])
-let payForSignature = (digest : Digest, price : Assets) => {
+let payForSignature = (digest : Digest, price : nat) => {
   deposit! Buyer -> price;
 
   // This line is equivalent to the three below:
