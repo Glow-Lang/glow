@@ -25,13 +25,25 @@
   (match x
     ((identifier name) (string->symbol name))))
 
+;; op->sexpr : Op -> SExpr
+(def (op->sexpr x)
+  (def str
+    (cond ((string? x) x)
+          ((char? x) (string x))
+          (else (error 'op->sexpr "unknown operation:" x))))
+  (match str
+    ("%" 'mod)
+    ("&&" 'and)
+    ("||" 'or)
+    (_ (string->symbol str))))
+
 ;; lit->sexpr : Literal -> SExpr
 (def (lit->sexpr x)
   (match x
     ((null-literal value) ('TODO))
     ((boolean-literal value) ('TODO value))
-    ((numeric-literal value) ('TODO value))
-    ((string-literal value) ('TODO value))))
+    ((numeric-literal value) (string->number value))
+    ((string-literal ['DoubleQuoteStringLiteral str]) str)))
 
 ;; type->sexpr : Type -> SExpr
 (def (type->sexpr t)
@@ -48,8 +60,8 @@
   (match x
     ((identifier _) (id->sexpr x))
     ((literal _) (lit->sexpr x))
-    ((operator lhs op rhs) ('TODO))
-    ((unary-expression op expr) ('TODO))
+    ((operator lhs op rhs) `(,(op->sexpr op) ,(expr->sexpr lhs) ,(expr->sexpr rhs)))
+    ((unary-expression op expr) `(,(op->sexpr op) ,(expr->sexpr expr)))
     ; parens
     ((bracket-expression exps) `(@tuple ,@(map expr->sexpr exps)))
     ; square brackets
@@ -67,7 +79,7 @@
     ((dot-expression expr id) `(@dot ,(expr->sexpr expr) ,(id->sexpr id)))
     ((type-expression expr typ) `(ann ,(expr->sexpr expr) ,(type->sexpr typ)))
     ((record-expr entries)
-     `(@record ,@(map (match <> ((record-expr-entry id exp) [(id->sexpr id) (expr->sexpr exp)])) entries)))
+     `(@record ,@(map (match <> ([k . v] [(id->sexpr k) (expr->sexpr v)])) entries)))
     ((block-expression body) `(block ,@(body->sexprs body)))
     ((body [] expr)          (expr->sexpr expr))
     ((body _ _)              `(block ,@(body->sexprs x)))
@@ -90,8 +102,8 @@
 ;; stat->sexpr : Statement -> SExpr
 (def (stat->sexpr s)
   (match s
-    ((publish-statement id expr) `(publish! ,(id->sexpr id) ,(expr->sexpr expr)))
-    ((verify-statement id)       `(verify! ,(id->sexpr id)))
+    ((publish-statement p-id x-ids) `(publish! ,(id->sexpr p-id) ,@(map id->sexpr x-ids)))
+    ((verify-statement ids)       `(verify! ,@(map id->sexpr ids)))
     ((type-declaration id typarams typ)
      (cond
        (typarams `(deftype (,(id->sexpr id) ,@(map id->sexpr typarams)) ,(type->sexpr typ)))
@@ -131,4 +143,14 @@
 
 ;; pat->sexpr : Pat -> SExpr
 (def (pat->sexpr p)
-  (match p))
+  (match p
+    ((annotated-pattern attr pat) `(@ ,(attr->sexpr attr) ,(pat->sexpr pat)))
+    ((type-pattern pat typ) `(ann ,(pat->sexpr pat) ,(type->sexpr typ)))
+    ((pattern-id id) (id->sexpr id))
+    ((pattern-blank) '_)
+    ((pattern-lit lit) (lit->sexpr lit))
+    ((pattern-tuple args) `(@tuple ,@(map pat->sexpr args)))
+    ((pattern-or pats) `(@or-pat ,@(map pat->sexpr pats)))
+    ((pattern-list args) `(@list ,@(map pat->sexpr args)))
+    ((pattern-record entries)
+     `(@record ,@(map (match <> ([k . v] [(id->sexpr k) (expr->sexpr v)])) entries)))))
