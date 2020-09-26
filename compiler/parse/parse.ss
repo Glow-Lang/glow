@@ -1,7 +1,7 @@
 (export parse)
 (import :drewc/smug
-        :mukn/glow/compiler/lexical
-        :mukn/glow/compiler/expressions
+        :mukn/glow/compiler/parse/lexical
+        :mukn/glow/compiler/parse/expressions
         (only-in :mukn/glow/compiler/alpha-convert/alpha-convert keyword-syms))
 
 ;; parse : InputPort -> SExpr
