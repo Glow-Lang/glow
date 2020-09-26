@@ -4,6 +4,7 @@
 
 (import
   :mukn/glow/compiler/multipass :mukn/glow/compiler/common
+  :mukn/glow/compiler/parse/parse
   :mukn/glow/compiler/alpha-convert/alpha-convert
   :mukn/glow/compiler/desugar/desugar
   (only-in :mukn/glow/compiler/typecheck/typecheck
@@ -25,7 +26,8 @@
 ;; TODO: also represent source location somehow? and unused-table?
 
 ;; TODO: Our source layer, with its JavaScript-like, ReasonML-like syntax
-;;(define-layer ".glow" parse-glow pretty-print-glow)
+;; The "read" is open-input-file, since the `parse` pass takes an input port
+(define-layer glow open-input-file error error)
 
 ;; SEXP notation for Glow programs
 (define-layer sexp read-sexp-module write-sexp-module stx-sexpr=?)
@@ -72,8 +74,8 @@
 ;;; Passes
 
 ;; TODO: *Parsing*: transform the original source code into syntax objects.
-;; Port → (Listof Stmt)
-;;(define-pass identity (glow) (sexp))
+;; Port → ModuleStx
+(define-pass parse (glow) (sexp))
 
 ;; TODO: *Deriving-expansion*: macro-expand the deriving forms
 
@@ -143,7 +145,7 @@
 ;;(define-pass javascript-extraction ".client.sexp" ".js")
 
 (define-strategy ethereum-direct-style
-  alpha-convert desugar typecheck method-resolve anf checkpointify checkpoint-liveness) ;; ...
+  parse alpha-convert desugar typecheck method-resolve anf checkpointify checkpoint-liveness) ;; ...
 
 ;; Different layers and passes for State-Channel style:
 ;; the previous contract is virtualized, so that

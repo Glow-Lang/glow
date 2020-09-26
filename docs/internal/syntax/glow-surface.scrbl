@@ -34,6 +34,7 @@ ReasonML.
    [= @litchar{=}]
    [_ @litchar{_}]
    [=> @litchar{=>}]
+   [-> @litchar{->}]
    [<- @litchar{<-}]
    [: @litchar{:}]
    [type @litchar{type}]
@@ -71,7 +72,7 @@ ReasonML.
    (BNF-seq let @nonterm{id} = @nonterm{expr})
    (BNF-seq let @nonterm{id} : @nonterm{type} = @nonterm{expr})
    (BNF-seq let @nonterm{id} = @nonterm{expr})
-   (BNF-seq publish! @nonterm{ids})
+   (BNF-seq publish! @nonterm{id} -> @nonterm{ids})
    (BNF-seq verify! @nonterm{ids})
    @nonterm{expr}
    )
@@ -93,11 +94,6 @@ ReasonML.
    @nonterm{variant}
    @nonterm{id}
    (BNF-seq @nonterm{id} |(| @nonterm{arg-types} |)| )
-   )
-  (list
-   @nonterm{arg-types}
-   (BNF-seq)
-   (BNF-seq @nonterm{type} (kleenestar (BNF-group |,| @nonterm{type})))
    )
   (list
    @nonterm{params}
@@ -126,10 +122,10 @@ ReasonML.
    (BNF-seq if |(| @nonterm{expr} |)| |{| @nonterm{body} |}| else |{| @nonterm{body} |}|)
    (BNF-seq if |(| @nonterm{expr} |)| |{| @nonterm{body} |}|)
    (BNF-seq switch |(| @nonterm{expr} |)| |{| @nonterm{cases} |}|)
-   (BNF-seq @nonterm{id} |(| @nonterm{arg-exprs} |)| )
+   (BNF-seq @nonterm{expr} |(| @nonterm{arg-exprs} |)| )
    (BNF-seq require! @nonterm{expr})
    (BNF-seq assert! @nonterm{expr})
-   (BNF-seq deposit! @nonterm{expr})
+   (BNF-seq deposit! @nonterm{id} -> @nonterm{expr})
    (BNF-seq withdraw! @nonterm{id} <- @nonterm{expr}))
   (list
    @nonterm{arg-exprs}

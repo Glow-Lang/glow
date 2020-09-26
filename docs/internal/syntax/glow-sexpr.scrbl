@@ -25,7 +25,7 @@ syntax:
    (def id (λ (param ...) : type body))
    (def id expr)
    (def id : type expr)
-   (publish! id ...)
+   (publish! id id ...)
    (verify! id ...)
    expr]
   [tyvar
@@ -56,7 +56,7 @@ syntax:
    (id expr ...)
    (require! expr)
    (assert! expr)
-   (deposit! expr)
+   (deposit! id expr)
    (withdraw! id expr)]
   [pat
    (\@ attr pat)

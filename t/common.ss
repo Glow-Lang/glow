@@ -17,6 +17,10 @@
 (def (examples.sexp)
   (find-files (examples-dir) (λ (x) (equal? (identify-layer x) 'sexp))))
 
+;; examples.glow : -> [Listof Path]
+(def (examples.glow)
+  (find-files (examples-dir) (λ (x) (equal? (identify-layer x) 'glow))))
+
 (def (ppd x) (pretty-print (syntax->datum x)))
 (def (ppdc x) (ppd (car x)))
 
