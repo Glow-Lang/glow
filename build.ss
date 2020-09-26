@@ -8,7 +8,18 @@
 
 (import :std/misc/process :clan/building :clan/multicall)
 
-(def (files) (cons "t/common.ss" (all-gerbil-modules)))
+(def (remove-file files file) ;; TODO: handle foo vs foo.ss ?
+  (filter (match <>
+            ((? (cut equal? <> file)) #f)
+            ([gxc: (? (cut equal? <> file)) . _] #f)
+            (_ #t)) files))
+
+(def (add/options files file . options)
+  (cons (cons* gxc: file options) (remove-file files file)))
+
+(def (files)
+  (add/options (cons "t/common.ss" (all-gerbil-modules))
+               "compiler/parse/expressions" "-cc-options" "-O0 -U___SINGLE_HOST"))
 
 (init-build-environment!
  name: "Glow"
