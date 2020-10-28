@@ -951,6 +951,12 @@
 
 ;; tc-expr : MPart Env ExprStx -> TypingScheme
 (def (tc-expr part env stx)
+  (def ts (tc-expr* part env stx))
+  (set-has-typing-scheme stx ts)
+  ts)
+
+;; tc-expr* : MPart Env ExprStx -> TypingScheme
+(def (tc-expr* part env stx)
   ;; tce : ExprStx -> TypingScheme
   (def (tce e) (tc-expr part env e))
   ;; tce/bool : ExprStx -> TypingScheme

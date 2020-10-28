@@ -287,7 +287,7 @@
   ;; continue : (Args ... -> CpStmtStx SSI) Args ... -> [Listof CpStmtStx] TI
   (def (continue f . args) (apply checkpointify-single-stmt acc ti f stx args))
 
-  (syntax-case stx (@ deftype defdata publish! def ann return ignore! switch require! assert! deposit! withdraw!)
+  (syntax-case stx (@ deftype defdata publish! def return ignore! switch require! assert! deposit! withdraw!)
     ((@ p s) (identifier? #'p)
      ;; NOTE: publish! deposit! withdraw! effects are *NOT* allowed within @p,
      ;; so we can just cons stx at the head, after a checkpoint.
@@ -303,7 +303,6 @@
     ((defdata . _) (simple [] []))
     ((deftype . _) (simple [] []))
     ;; NB: after ANF, p e v below are guaranteed identifiers
-    ((ann v _) (simple [] (used<-arg #'v)))
     ((withdraw! p e) (simple [stx] (used<-args #'(p e))))
     ((require! v) (simple [] (used<-arg #'v)))
     ((assert! v) (simple [] (used<-arg #'v)))))
@@ -385,18 +384,18 @@
 
 (def (checkpointify-lambda stx)
   (syntax-case stx ()
-    ((l params ?out-type body ...)
+    ((l params body ...)
      (let-values (((body2 from to) (checkpointify-scope #'(body ...))))
        (with-syntax (((body2 ...) body2) (from from) (to to))
-         (values (restx1 stx #'(l params ?out-type (from to) body2 ...))
+         (values (restx1 stx #'(l params (from to) body2 ...))
                  [])))))) ;; TODO: extract the used variables from the last label of the function?
 
 (def (checkpointify-make-interaction stx)
   (syntax-case stx ()
-    ((@make-interaction iparams lparams ?out-type body ...)
+    ((@make-interaction iparams lparams body ...)
      (let-values (((body2 from to) (checkpointify-scope #'(body ...))))
        (with-syntax (((body2 ...) body2) (from from) (to to))
-         (values (restx1 stx #'(@make-interaction iparams lparams ?out-type (from to) body2 ...))
+         (values (restx1 stx #'(@make-interaction iparams lparams (from to) body2 ...))
                  [])))))) ;; TODO: extract the used variables from the last label of the function?
 
 (def (checkpointify-switch stx ti acc)

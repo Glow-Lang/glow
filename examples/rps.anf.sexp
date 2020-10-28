@@ -4,20 +4,16 @@
 
 (def tmp
                (λ (tag)
-                  (: Hand)
                   (def x (input Hand tag))
-                  (ann x Hand)
                   (return x)))
 (def tmp0
-               (λ ((x0 : Hand))
-                  (: nat)
+               (λ (x0)
                   (switch x0
                           ((@app-ctor Rock) (return 0))
                           ((@app-ctor Paper) (return 1))
                           ((@app-ctor Scissors) (return 2)))))
 (def tmp1
-               (λ ((x1 : nat))
-                  (: Hand)
+               (λ (x1)
                   (switch x1
                           (0 (return Rock))
                           (1 (return Paper))
@@ -29,20 +25,16 @@
 
 (def tmp2
                (λ (tag0)
-                  (: Outcome)
                   (def x2 (input Outcome tag0))
-                  (ann x2 Outcome)
                   (return x2)))
 (def tmp3
-               (λ ((x3 : Outcome))
-                  (: nat)
+               (λ (x3)
                   (switch x3
                           ((@app-ctor B_Wins) (return 0))
                           ((@app-ctor Draw) (return 1))
                           ((@app-ctor A_Wins) (return 2)))))
 (def tmp4
-               (λ ((x4 : nat))
-                  (: Outcome)
+               (λ (x4)
                   (switch x4
                           (0 (return B_Wins))
                           (1 (return Draw))
@@ -50,8 +42,7 @@
 (def Outcome1 (@record (input tmp2) (toNat tmp3) (ofNat tmp4)))
 
 (def winner
-     (λ ((handA : Hand) (handB : Hand))
-        (: Outcome)
+     (λ (handA handB)
         (def tmp5 (@dot Outcome1 ofNat))
         (def tmp6 (@dot Hand1 toNat))
         (def tmp7 (@app tmp6 handA))
@@ -65,7 +56,6 @@
      (@make-interaction
       ((@list A B))
       (wagerAmount)
-      ()
       (@ A (def tmp13 (@dot Hand1 input)))
       (@ A (def handA0 (@app tmp13 "First player, pick your hand")))
       (@ A (def salt (@app randomUInt256)))

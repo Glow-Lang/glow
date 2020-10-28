@@ -89,10 +89,10 @@
                       (@list '(tmp19 . #f))
                       (@list '(A . #f) '(tmp19 . #f) '(* . #f) '(wagerAmount . #f) '(outcome . #f))
                       (@list)))))
-      (begin0 (ci 'begin0 (@list) (@list) (@list (ti 'begin0 'end0 #f (@list) (@list '(x . #f)) (@list '(x . #f) '(x . #f) '(tag . #f)) (@list)))))
+      (begin0 (ci 'begin0 (@list) (@list) (@list (ti 'begin0 'end0 #f (@list) (@list '(x . #f)) (@list '(x . #f) '(tag . #f)) (@list)))))
       (begin1 (ci 'begin1 (@list) (@list) (@list (ti 'begin1 'begin-switch #f (@list) (@list) (@list) (@list)))))
       (begin2 (ci 'begin2 (@list) (@list) (@list (ti 'begin2 'begin-switch0 #f (@list) (@list) (@list) (@list)))))
-      (begin3 (ci 'begin3 (@list) (@list) (@list (ti 'begin3 'end3 #f (@list) (@list '(x2 . #f)) (@list '(x2 . #f) '(x2 . #f) '(tag0 . #f)) (@list)))))
+      (begin3 (ci 'begin3 (@list) (@list) (@list (ti 'begin3 'end3 #f (@list) (@list '(x2 . #f)) (@list '(x2 . #f) '(tag0 . #f)) (@list)))))
       (begin4 (ci 'begin4 (@list) (@list) (@list (ti 'begin4 'begin-switch1 #f (@list) (@list) (@list) (@list)))))
       (begin5 (ci 'begin5 (@list) (@list) (@list (ti 'begin5 'begin-switch2 #f (@list) (@list) (@list) (@list)))))
       (begin6 (ci 'begin6
@@ -225,7 +225,7 @@
                       (@list '(A . #f) '(tmp19 . #f) '(* . #f) '(wagerAmount . #f) '(outcome . #f))
                       (@list)))
            (@list (ti 'end-switch3 'end7 #f (@list) (@list) (@list '(outcome . #f)) (@list)))))
-      (end0 (ci 'end0 (@list) (@list (ti 'begin0 'end0 #f (@list) (@list '(x . #f)) (@list '(x . #f) '(x . #f) '(tag . #f)) (@list))) (@list)))
+      (end0 (ci 'end0 (@list) (@list (ti 'begin0 'end0 #f (@list) (@list '(x . #f)) (@list '(x . #f) '(tag . #f)) (@list))) (@list)))
       (end1 (ci 'end1
                 (@list)
                 (@list (ti 'begin-switch 'end1 #f (@list) (@list) (@list '(x0 . #f)) (@list))
@@ -238,7 +238,7 @@
                        (ti 'begin-switch0 'end2 #f (@list) (@list) (@list '(Paper . #f) '(x1 . #f)) (@list))
                        (ti 'begin-switch0 'end2 #f (@list) (@list) (@list '(Rock . #f) '(x1 . #f)) (@list)))
                 (@list)))
-      (end3 (ci 'end3 (@list) (@list (ti 'begin3 'end3 #f (@list) (@list '(x2 . #f)) (@list '(x2 . #f) '(x2 . #f) '(tag0 . #f)) (@list))) (@list)))
+      (end3 (ci 'end3 (@list) (@list (ti 'begin3 'end3 #f (@list) (@list '(x2 . #f)) (@list '(x2 . #f) '(tag0 . #f)) (@list))) (@list)))
       (end4 (ci 'end4
                 (@list)
                 (@list (ti 'begin-switch1 'end4 #f (@list) (@list) (@list '(x3 . #f)) (@list))
