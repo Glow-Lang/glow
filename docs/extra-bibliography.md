@@ -126,6 +126,18 @@ Other non-Lisp types of interest?
 
 * [Trezor](https://wiki.trezor.io/Developers_guide)
 
+### Cryptographic primitives
+
+* multisig: Schnorr signatures, BLS signatures
+  + Q: can we efficiently reshuffle a *same* key, such that the old committee
+    has no advantage with the new committee?
+
+* [Time-lock encryption](https://www.gwern.net/Self-decrypting-files)
+
+### Optimistic Roll-Up
+
+* [Optimism](https://medium.com/ethereum-optimism/optimism-cd9bea61a3ee)
+
 ### More...
 
 * Ledger
