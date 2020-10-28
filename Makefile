@@ -6,4 +6,8 @@ build:
 test:
 	./unit-tests.ss
 
-.DUMMY: all build test
+# Build using nix-build
+nix:
+	./build.ss nix
+
+.DUMMY: all build test nix
