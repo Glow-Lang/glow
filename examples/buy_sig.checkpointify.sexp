@@ -3,8 +3,7 @@
 (def payForSignature
      (@make-interaction
       ((@list Buyer Seller))
-      ((digest0 : Digest) (price : nat))
-      ()
+      (digest0 price)
       (begin0 end0)
       ;; Entry point for the interaction -- from here on user must be Buyer
       (@label begin0)

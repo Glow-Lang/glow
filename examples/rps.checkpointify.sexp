@@ -3,16 +3,13 @@
          (defdata Hand Rock Paper Scissors)
          (def tmp
               (λ (tag)
-                 (: Hand)
                  (begin0 end0)
                  (@label begin0)
                  (def x (input Hand tag))
-                 (ann x Hand)
                  (return x)
                  (@label end0)))
          (def tmp0
-              (λ ((x0 : Hand))
-                 (: nat)
+              (λ (x0)
                  (begin1 end1)
                  (@label begin1)
                  (@label begin-switch)
@@ -23,8 +20,7 @@
                  (@label end-switch)
                  (@label end1)))
          (def tmp1
-              (λ ((x1 : nat))
-                 (: Hand)
+              (λ (x1)
                  (begin2 end2)
                  (@label begin2)
                  (@label begin-switch0)
@@ -38,16 +34,13 @@
          (defdata Outcome B_Wins Draw A_Wins)
          (def tmp2
               (λ (tag0)
-                 (: Outcome)
                  (begin3 end3)
                  (@label begin3)
                  (def x2 (input Outcome tag0))
-                 (ann x2 Outcome)
                  (return x2)
                  (@label end3)))
          (def tmp3
-              (λ ((x3 : Outcome))
-                 (: nat)
+              (λ (x3)
                  (begin4 end4)
                  (@label begin4)
                  (@label begin-switch1)
@@ -58,8 +51,7 @@
                  (@label end-switch1)
                  (@label end4)))
          (def tmp4
-              (λ ((x4 : nat))
-                 (: Outcome)
+              (λ (x4)
                  (begin5 end5)
                  (@label begin5)
                  (@label begin-switch2)
@@ -71,8 +63,7 @@
                  (@label end5)))
          (def Outcome1 (@record (input tmp2) (toNat tmp3) (ofNat tmp4)))
          (def winner
-              (λ ((handA : Hand) (handB : Hand))
-                 (: Outcome)
+              (λ (handA handB)
                  (begin6 end6)
                  (@label begin6)
                  (def tmp5 (@dot Outcome1 ofNat))
@@ -89,7 +80,6 @@
               (@make-interaction
                ((@list A B))
                (wagerAmount)
-               ()
                (begin7 end7)
                (@label begin7)
                (@label cp)

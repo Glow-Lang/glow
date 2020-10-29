@@ -113,6 +113,9 @@
 (def (write-sexp-module module (port (current-output-port)))
   (fprintf port "~y" (syntax->datum module)))
 
+(def (write-syntax-list stxs (port (current-output-port)))
+  (for ((s (syntax->datum stxs))) (fprintf port "~y" s)))
+
 ;; Splice multiple statements if needed, otherwise just include a single one
 ;; spice-stmts : Stx [listof StmtStx] -> StmtStx
 (def (splice-stmts stx stmts)

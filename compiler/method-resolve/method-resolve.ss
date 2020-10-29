@@ -69,15 +69,15 @@
 (def (mr-stmt-def stx)
   (syntax-case stx ()
     ((d x mt expr)
-     [(retail-stx stx [#'x #'mt (mr-expr #'expr)])])))
+     [(retail-stx stx [#'x (mr-expr #'expr)])])))
 
 ;; mr-expr : ExprStx -> ExprStx
 (def (mr-expr stx)
   (syntax-case stx (ann @make-interaction @tuple @list @record @dot @dot/type block splice if switch λ == input require! assert! deposit! withdraw! digest sign @app)
     (x (trivial-expr? #'x) stx)
-    ((ann expr type) (retail-stx stx [(mr-expr #'expr) #'type]))
+    ((ann expr type) (mr-expr (track-has-typing-scheme stx #'expr)))
     ((@make-interaction parts params out-type body ...)
-     (retail-stx stx (cons* #'parts #'params #'out-type (mr-body (syntax->list #'(body ...))))))
+     (retail-stx stx (cons* #'parts (mr-params #'params) (mr-body (syntax->list #'(body ...))))))
     ((@tuple e ...) (mr-keyword/sub-exprs stx))
     ((@list e ...) (mr-keyword/sub-exprs stx))
     ((@record (x e) ...)
@@ -92,7 +92,7 @@
     ((switch e swcase ...)
      (retail-stx stx (cons (mr-expr #'e) (stx-map mr-switch-case #'(swcase ...)))))
     ((λ params out-type body ...)
-     (retail-stx stx (cons* #'params #'out-type (mr-body (syntax->list #'(body ...))))))
+     (retail-stx stx (cons* (mr-params #'params) (mr-body (syntax->list #'(body ...))))))
     ((== a b) (mr-keyword/sub-exprs stx))
     ((input type tag) (retail-stx stx [#'type (mr-expr #'tag)]))
     ((require! . _) (mr-keyword/sub-exprs stx))
@@ -102,6 +102,10 @@
     ((digest . _) (mr-keyword/sub-exprs stx))
     ((sign . _) (mr-keyword/sub-exprs stx))
     ((@app . _) (mr-keyword/sub-exprs stx))))
+
+;; mr-params : ParamsStx -> [StxListof Id]
+(def (mr-params stx)
+  (restx1 stx (stx-map head-id stx)))
 
 ;; mr-body : [Listof StmtStx] -> [Listof StmtStx]
 (def (mr-body body)

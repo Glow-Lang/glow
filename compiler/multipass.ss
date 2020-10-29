@@ -118,6 +118,9 @@
 (def (known-failure? x)
   (and (with-catch false (cut member (subpath? (path-normalize x) (glow-src)) known-failures)) #t))
 
+;; A Representation+AncillaryData is a [Hashof Symbol Any]
+;; where each key is the name of a layer as a symbol
+
 ;; Symbol String Representation+AncillaryDataIn -> Representation+AncillaryDataOut
 (def (run-pass pass-name basename state)
   (match (registered-pass pass-name)

@@ -1,11 +1,10 @@
 (@module
-(def f (λ (a1) () (return (@app + a1 1))))
-(def g (λ (a2) () (return (@app * a2 2))))
+(def f (λ (a1) (return (@app + a1 1))))
+(def g (λ (a2) (return (@app * a2 2))))
 (def inter
      (@make-interaction
       ((@list A B))
       (b x)
-      ()
       (def tmp (@app < 0 x))
       (require! tmp)
       (@ A

@@ -2,8 +2,7 @@
 (def payForSignature
      (@make-interaction
       ((@list Buyer Seller))
-      ((digest0 : Digest) (price : nat))
-      ()
+      (digest0 price)
       (deposit! Buyer price)
       (@ Seller (def signature (sign digest0)))
       (publish! Seller signature)

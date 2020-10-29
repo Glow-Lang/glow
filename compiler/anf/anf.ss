@@ -102,10 +102,7 @@
 ;; anf-def : StmtStx [Listof StmtStx] -> [Listof StmtStx]
 (def (anf-def stx acc)
   (syntax-case stx ()
-    ((d x (: type) expr)
-     (cons (restx1 stx #'(ann x type))
-           (anf-expr (restx1 stx #'(d x)) #'expr acc)))
-    ((d x () expr)
+    ((d x expr)
      (anf-expr (restx1 stx #'(d x)) #'expr acc))))
 
 ;; anf-arg-expr : ExprStx [Listof StmtStx] -> (values TrivialExprStx [ListofStmtStx])
@@ -170,12 +167,8 @@
 
 ;; anf-expr : KontStx ExprStx [Listof StmtStx] -> [Listof StmtStx]
 (def (anf-expr k stx acc)
-  (syntax-case stx (ann @make-interaction @tuple @list @record @dot block splice if switch λ == input require! assert! deposit! withdraw! digest sign @app)
+  (syntax-case stx (@make-interaction @tuple @list @record @dot block splice if switch λ == input require! assert! deposit! withdraw! digest sign @app)
     (x (trivial-expr? #'x) (anf-kontinue-expr k #'x acc))
-    ((ann expr type)
-     (let-values (((reduced-expr acc2) (anf-arg-expr #'expr acc)))
-       (anf-kontinue-expr k reduced-expr
-                          (cons (retail-stx stx [reduced-expr #'type]) acc2))))
     ((@make-interaction . _) (anf-make-interaction k stx acc))
     ((@tuple . _) (anf-k-multiarg-expr k stx acc))
     ((@list . _) (anf-k-multiarg-expr k stx acc))
@@ -226,14 +219,14 @@
 ;; anf-lambda : LambdaStx -> LambdaStx
 (def (anf-lambda stx)
   (syntax-case stx ()
-    ((l params ?out-type . body)
-     (retail-stx stx [#'params #'?out-type (anf-standalone-body #'(return) #'body) ...]))))
+    ((l params . body)
+     (retail-stx stx [#'params (anf-standalone-body #'(return) #'body) ...]))))
 
 ;; anf-make-interaction : StmtStx -> [Listof StmtStx]
 (def (anf-make-interaction k stx acc)
   (syntax-case stx ()
-    ((_ ip lp ot . body)
-     (anf-kontinue-expr k (retail-stx stx [#'ip #'lp #'ot (anf-standalone-body #'(return) #'body) ...])
+    ((_ ip lp . body)
+     (anf-kontinue-expr k (retail-stx stx [#'ip #'lp (anf-standalone-body #'(return) #'body) ...])
                         acc))))
 
 ;; anf : ModuleStx UnusedTable -> ModuleStx

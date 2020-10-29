@@ -1,9 +1,13 @@
 
 (export set-is-type
         get-is-type
-        track-is-type)
+        track-is-type
+        set-has-typing-scheme
+        get-has-typing-scheme
+        track-has-typing-scheme)
 
 (def is-type-table (make-hash-table-eq weak-keys: #t))
+(def has-typing-scheme-table (make-hash-table-eq weak-keys: #t))
 
 ;; set-is-type : Stx Type -> Stx
 (def (set-is-type stx t)
@@ -14,13 +18,23 @@
 (def (get-is-type stx) (hash-get is-type-table stx))
 
 ;; track-is-type : Stx Stx -> Stx
+;; Atteches the is-type of `old` onto `new`, returning `new`.
 (def (track-is-type old new)
   (def old-is-type (get-is-type old))
   (if old-is-type (set-is-type new old-is-type) new))
 
 ;; --------------------------------------------------------
-;; Not implemented, or not needed yet
 
-;; set-has-type : Stx Type -> Stx
-;; get-has-type : Stx -> MaybeType
-;; track-has-type : Stx Stx -> Stx
+;; set-has-typing-scheme : Stx TypingScheme -> Stx
+(def (set-has-typing-scheme stx ts)
+  (hash-put! has-typing-scheme-table stx ts)
+  stx)
+
+;; get-has-typing-scheme : Stx -> MaybeTypingScheme
+(def (get-has-typing-scheme stx) (hash-get has-typing-scheme-table stx))
+
+;; track-has-typing-scheme : Stx Stx -> Stx
+;; Atteches the has-type of `old` onto `new`, returning `new`.
+(def (track-has-typing-scheme old new)
+  (def old-has-typing-scheme (get-has-typing-scheme old))
+  (if old-has-typing-scheme (set-has-typing-scheme new old-has-typing-scheme) new))
