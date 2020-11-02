@@ -16,7 +16,6 @@
   :mukn/glow/compiler/checkpointify/checkpoint-info-table
   :mukn/glow/compiler/liveness/checkpoint-liveness
   :mukn/glow/compiler/project/project
-  :mukn/glow/compiler/project/project-1
   )
 
 ;;; Layers, passes and strategies
