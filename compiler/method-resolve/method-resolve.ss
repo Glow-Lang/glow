@@ -9,6 +9,8 @@
         :std/misc/repr
         :std/misc/hash
         :std/srfi/1
+        (only-in :gerbil/gambit/ports output-port-readtable output-port-readtable-set!)
+        (only-in :gerbil/gambit/readtables readtable-sharing-allowed?-set)
         :clan/base
         :clan/pure/dict/symdict
         :mukn/glow/compiler/syntax-context
@@ -125,8 +127,17 @@
 ;; mr-expr-make-interaciton : ExpnStx -> ExprStx
 (def (mr-expr-make-interaction stx)
   (syntax-case stx ()
-    ((_ parts params out-type body ...)
-     (retail-stx stx (cons* #'parts (mr-params #'params) (mr-body (syntax->list #'(body ...))))))))
+    ((_ ((@list p ...)) params out-type body ...)
+     (let ((xs (mr-params #'params)))
+       (def t (get/compute-has-type stx))
+       (def pxts (arg-types t))
+       (for-each set-has-type!
+                 (append (syntax->list #'(p ...))
+                         (syntax->list xs))
+                 pxts)
+       (def r (retail-stx stx (cons* #'((@list p ...)) xs (mr-body (syntax->list #'(body ...))))))
+       (set-has-type! r t)
+       r))))
 
 ;; mr-expr-lambda : ExprStx -> ExprStx
 (def (mr-expr-lambda stx)
@@ -235,6 +246,9 @@
 
 (def (write-type-table tbl (port (current-output-port)))
   (when tbl
+    (output-port-readtable-set!
+     port
+     (readtable-sharing-allowed?-set (output-port-readtable port) #f))
     (fprintf port "~y" (type-table->repr-sexpr tbl))))
 
 (def (type-table=? a b)
