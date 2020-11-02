@@ -81,9 +81,14 @@
        (set-has-type! #'x (get-has-type expr*))
        [(retail-stx stx [#'x expr*])]))))
 
+;; get/compute-has-type : ExprStx -> (U Type #f)
+(def (get/compute-has-type stx)
+  (or (get-has-type stx)
+      (resolve-type/scheme (get-has-typing-scheme stx))))
+
 ;; mr-expr : ExprStx -> ExprStx
 (def (mr-expr stx)
-  (def t (resolve-type/scheme (get-has-typing-scheme stx)))
+  (def t (get/compute-has-type stx))
   (def stx* (mr-expr* stx))
   (set-has-type! stx* t)
   stx*)
@@ -127,10 +132,13 @@
 (def (mr-expr-lambda stx)
   (syntax-case stx ()
     ((_ params out-type body ...)
-     (let ((xs (mr-params #'params))
-           (xts (arg-types (get-has-type stx))))
+     (let ((xs (mr-params #'params)))
+       (def t (get/compute-has-type stx))
+       (def xts (arg-types t))
        (for-each set-has-type! (syntax->list xs) xts)
-       (retail-stx stx (cons* xs (mr-body (syntax->list #'(body ...)))))))))
+       (def r (retail-stx stx (cons* xs (mr-body (syntax->list #'(body ...))))))
+       (set-has-type! r t)
+       r))))
 
 ;; mr-params : ParamsStx -> [StxListof Id]
 (def (mr-params stx)
