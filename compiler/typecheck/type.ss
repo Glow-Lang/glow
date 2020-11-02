@@ -315,6 +315,42 @@
 
 ;; --------------------------------------------------------
 
+(def (symdict-values d) (map cdr (symdict->list d)))
+
+;; typing-scheme-neg-pos-var-sets :
+;; TypingScheme -> (list [Listof [Listof Sym]] [Listof [Listof Sym]])
+(def (typing-scheme-neg-pos-var-sets ts)
+  (with* (((typing-scheme menv t) ts)
+          ([[nns nps] ...] (map type-neg-pos-var-sets (symdict-values menv)))
+          ([pn pp] (type-neg-pos-var-sets t)))
+    [(append (flatten1 nps) pn) (append (flatten1 nns) pp)]))
+
+;; type-neg-pos-var-sets :
+;; Type -> (list [Listof [Listof Sym]] [Listof [Listof Sym]])
+(def (type-neg-pos-var-sets t)
+  (match t
+    ((type:name _) [[] []])
+    ((type:name-subtype _ sup) (type-neg-pos-var-sets sup))
+    ((type:var x) [[] [[x]]])
+    ((type:tuple as)
+     (with (([[ns ps] ...] (map type-neg-pos-var-sets as)))
+       [(flatten1 ns) (flatten1 ps)]))
+    ((type:record fldtys)
+     (with (([[ns ps] ...] (map type-neg-pos-var-sets (symdict-values fldtys))))
+       [(flatten1 ns) (flatten1 ps)]))
+    (_ (error 'TODO))))
+
+;; typing-scheme-simplify : TypingScheme -> TypingScheme
+(def (typing-scheme-simplify ts)
+  ;; A flow edge goes from negative to positive.
+  ;; neg-sets : [Listof [Listof Sym]]
+  ;; pos-sets : [Listof [Listof Sym]]
+  (with (([neg-sets pos-sets]
+          (typing-scheme-neg-pos-var-sets ts)))
+   ts))
+
+;; --------------------------------------------------------
+
 (def (print-typing-scheme ts)
   (with (((typing-scheme menv t) ts))
     (display-separated

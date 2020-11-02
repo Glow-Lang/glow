@@ -4,7 +4,13 @@
         track-is-type
         set-has-typing-scheme
         get-has-typing-scheme
-        track-has-typing-scheme)
+        track-has-typing-scheme
+        make-has-type-table
+        current-has-type-table
+        set-has-type!
+        get-has-type)
+
+(import <expander-runtime>)
 
 (def is-type-table (make-hash-table-eq weak-keys: #t))
 (def has-typing-scheme-table (make-hash-table-eq weak-keys: #t))
@@ -38,3 +44,13 @@
 (def (track-has-typing-scheme old new)
   (def old-has-typing-scheme (get-has-typing-scheme old))
   (if old-has-typing-scheme (set-has-typing-scheme new old-has-typing-scheme) new))
+
+;; --------------------------------------------------------
+
+(def (make-has-type-table) (make-hash-table))
+(def current-has-type-table (make-parameter (make-has-type-table)))
+(def (set-has-type! e t)
+  (hash-put! (current-has-type-table) (syntax->datum e) t))
+(def (get-has-type e)
+  (hash-get (current-has-type-table) (syntax->datum e)))
+

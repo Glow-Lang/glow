@@ -1,12 +1,16 @@
-(export method-resolve)
+(export method-resolve read-type-table-file write-type-table type-table=?)
 
 (import :gerbil/gambit/exact
         :gerbil/gambit/bytes
+        :gerbil/gambit/exceptions
         :std/format
         :std/iter
         :std/misc/list
         :std/misc/repr
+        :std/misc/hash
         :std/srfi/1
+        :clan/base
+        :clan/pure/dict/symdict
         :mukn/glow/compiler/syntax-context
         (for-template :mukn/glow/compiler/syntax-context)
         :mukn/glow/compiler/alpha-convert/fresh
@@ -16,11 +20,15 @@
 
 ;; method-resolve : ModuleStx UnusedTable -> ModuleStx
 (def (method-resolve stx unused-table)
+  (def type-table (make-has-type-table))
   (parameterize ((current-unused-table unused-table)
+                 (current-has-type-table type-table)
                  (current-tysym-methods-table (make-tysym-methods-table)))
+
     (syntax-case stx (@module)
       ((@module stmts ...)
-       (retail-stx stx (mr-stmts (syntax->list #'(stmts ...))))))))
+       (values (retail-stx stx (mr-stmts (syntax->list #'(stmts ...))))
+               type-table)))))
 
 
 ;; A TysymMethodsTable is a [Hashof Symbol TysymMethodsEntry]
@@ -69,15 +77,22 @@
 (def (mr-stmt-def stx)
   (syntax-case stx ()
     ((d x mt expr)
-     [(retail-stx stx [#'x (mr-expr #'expr)])])))
+     (let ((expr* (mr-expr #'expr)))
+       (set-has-type! #'x (get-has-type expr*))
+       [(retail-stx stx [#'x expr*])]))))
 
 ;; mr-expr : ExprStx -> ExprStx
 (def (mr-expr stx)
+  (def t (resolve-type/scheme (get-has-typing-scheme stx)))
+  (def stx* (mr-expr* stx))
+  (set-has-type! stx* t)
+  stx*)
+(def (mr-expr* stx)
   (syntax-case stx (ann @make-interaction @tuple @list @record @dot @dot/type block splice if switch λ == input require! assert! deposit! withdraw! digest sign @app)
     (x (trivial-expr? #'x) stx)
     ((ann expr type) (mr-expr (track-has-typing-scheme stx #'expr)))
     ((@make-interaction parts params out-type body ...)
-     (retail-stx stx (cons* #'parts (mr-params #'params) (mr-body (syntax->list #'(body ...))))))
+     (mr-expr-make-interaction stx))
     ((@tuple e ...) (mr-keyword/sub-exprs stx))
     ((@list e ...) (mr-keyword/sub-exprs stx))
     ((@record (x e) ...)
@@ -91,8 +106,7 @@
     ((splice b ...) (retail-stx stx (mr-body (syntax->list #'(b ...)))))
     ((switch e swcase ...)
      (retail-stx stx (cons (mr-expr #'e) (stx-map mr-switch-case #'(swcase ...)))))
-    ((λ params out-type body ...)
-     (retail-stx stx (cons* (mr-params #'params) (mr-body (syntax->list #'(body ...))))))
+    ((λ params out-type body ...) (mr-expr-lambda stx))
     ((== a b) (mr-keyword/sub-exprs stx))
     ((input type tag) (retail-stx stx [#'type (mr-expr #'tag)]))
     ((require! . _) (mr-keyword/sub-exprs stx))
@@ -102,6 +116,21 @@
     ((digest . _) (mr-keyword/sub-exprs stx))
     ((sign . _) (mr-keyword/sub-exprs stx))
     ((@app . _) (mr-keyword/sub-exprs stx))))
+
+;; mr-expr-make-interaciton : ExpnStx -> ExprStx
+(def (mr-expr-make-interaction stx)
+  (syntax-case stx ()
+    ((_ parts params out-type body ...)
+     (retail-stx stx (cons* #'parts (mr-params #'params) (mr-body (syntax->list #'(body ...))))))))
+
+;; mr-expr-lambda : ExprStx -> ExprStx
+(def (mr-expr-lambda stx)
+  (syntax-case stx ()
+    ((_ params out-type body ...)
+     (let ((xs (mr-params #'params))
+           (xts (arg-types (get-has-type stx))))
+       (for-each set-has-type! (syntax->list xs) xts)
+       (retail-stx stx (cons* xs (mr-body (syntax->list #'(body ...)))))))))
 
 ;; mr-params : ParamsStx -> [StxListof Id]
 (def (mr-params stx)
@@ -131,3 +160,101 @@
 ;; mr-switch-case : SwCaseStx -> SwCaseStx
 (def (mr-switch-case stx)
   (retail-stx stx (mr-body (stx-cdr stx))))
+
+;; --------------------------------------------------------
+
+;; resolve-type/scheme : TypingScheme -> Type
+(def (resolve-type/scheme ts)
+  (match ts ;(typing-scheme-simplify ts)
+    ((typing-scheme (? symdict-empty?) t) t)
+    ((typing-scheme menv t)
+     (cond
+       ((andmap type:var? (symdict-values menv))
+        (type-subst (list->symdict
+                     (for/collect ((x (symdict-keys menv)))
+                       (cons (type:var-sym (symdict-ref menv x))
+                             (get-has-type x))))
+                    t))
+       ((null? (type-vars t)) t)
+       (else
+        (displayln "resolve-type/scheme: TODO")
+        (print-typing-scheme ts)
+        (newline)
+        t)))))
+
+;; arg-types : Type -> [Listof Type]
+(def (arg-types t)
+  (match t
+    ((type:arrow args _) args)
+    ((ntype:intersection [_ ... (type:arrow args _) . _]) args)
+    ((ptype:union [(type:arrow argss _) ...])
+     (apply map (compose types-meet list) argss))
+    (_ [])))
+
+(def (hash->repr-sexpr h k->s v->s)
+  (cons 'hash
+        (for/collect ((p (hash->list/sort h sexpr<?)))
+          (with (([k . v] p))
+            [(k->s k) (v->s v)]))))
+
+(def (repr-sexpr->hash s s->k s->v)
+  (match s
+    ((cons 'hash ents)
+     (def h (make-hash-table))
+     (for ((ent ents))
+       (with (([ks vs] ent))
+         (def k (s->k ks))
+         (def v (s->v vs))
+         (hash-put! h k v)))
+     h)))
+
+;; type-table->repr-sexpr
+(def (type-table->repr-sexpr tbl)
+  (and tbl (hash->repr-sexpr tbl identity
+             (lambda (t) (and t (type->repr-sexpr t))))))
+;; repr-sexpr->type-table
+(def (repr-sexpr->type-table s)
+  (and s (repr-sexpr->hash s identity
+           (lambda (t) (and t (repr-sexpr->type t))))))
+
+(def (read-type-table-file file)
+  (with-catch
+   (lambda (e) (display-exception e) #f)
+   (lambda ()
+     (match (read-syntax-from-file file)
+       ([s] (repr-sexpr->type-table (syntax->datum s)))
+       (_ (printf "read-type-table-file: expected a single symdict sexpr\n") #f)))))
+
+(def (write-type-table tbl (port (current-output-port)))
+  (when tbl
+    (fprintf port "~y" (type-table->repr-sexpr tbl))))
+
+(def (type-table=? a b)
+  (and a b (equal? (type-table->repr-sexpr a) (type-table->repr-sexpr b))))
+
+;; symbols < bools < real-numbers < strings < null < pairs < others
+(def (sexpr<? a b)
+  (cond
+    ((and (symbol? a) (symbol? b)) (symbol<? a b))
+    ((symbol? a) #t)
+    ((symbol? b) #f)
+    ((and (boolean? a) (boolean? b)) (and (not a) b))
+    ((boolean? a) #t)
+    ((boolean? b) #f)
+    ((and (real? a) (real? b)) (< a b))
+    ((real? a) #t)
+    ((real? b) #f)
+    ((and (string? a) (string? b)) (string<? a b))
+    ((string? a) #t)
+    ((string? b) #f)
+    ((and (null? a) (null? b)) #f)
+    ((null? a) #t)
+    ((null? b) #f)
+    ((and (pair? a) (pair? b))
+     (if (equal? (car a) (car b))
+         (sexpr<? (cdr a) (cdr b))
+         (sexpr<? (car a) (car b))))
+    ((pair? a) #t)
+    ((pair? b) #f)
+    (else (string<? (format "~s" a) (format "~s" b)))))
+
