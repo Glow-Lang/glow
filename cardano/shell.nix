@@ -2,13 +2,12 @@
 , addDemoScripts ? false
 }:
 let
-  pkgs = import ./pkgs.nix;
+  pkgs = import ../pkgs.nix;
 
-  nix-thunk-exe = pkgs.haskell.lib.doJailbreak (pkgs.nixThunkHaskellPackages.callCabal2nix "nix-thunk" (pkgs.thunkSource ./dep/nix-thunk) {});
-  cardano-node = import (pkgs.thunkSource ./dep/cardano-node) {};
-  cardano-wallet = import (pkgs.thunkSource ./dep/cardano-wallet) {};
+  cardano-node = import (pkgs.thunkSource ../dep/cardano-node) {};
+  cardano-wallet = import (pkgs.thunkSource ../dep/cardano-wallet) {};
   gerbil-cardano = import ./default.nix;
-  plutus = import (pkgs.thunkSource ./dep/plutus) { rev = "unknown"; };
+  plutus = import (pkgs.thunkSource ../dep/plutus) { rev = "unknown"; };
 
   start-testnet-node-script = pkgs.writeScriptBin "start-testnet-node" ''
     ${cardano-node.scripts.testnet.node}
@@ -28,7 +27,7 @@ in
       gerbil-cardano
     ];
     buildInputs = [
-      nix-thunk-exe
+      pkgs.thunkExe
     ] ++ node-scripts;
     shellHook = gerbil-cardano.postConfigure + "\n" + demo-scripts;
     GERBIL_APPLICATION_HOME = "./";

@@ -1,7 +1,7 @@
 let
-  pkgs = import ./pkgs.nix;
+  pkgs = import ../pkgs.nix;
   gerbil-cardano-hs = pkgs.skipDocs (pkgs.gerbilCardanoHaskellPackages.callCabal2nix "gerbil-cardano-hs" ./haskell {});
-  plutus = import (pkgs.thunkSource ./dep/plutus) {};
+  plutus = import (pkgs.thunkSource ../dep/plutus) {};
   plutus-scb = plutus.haskell.packages.plutus-scb.components.exes.plutus-scb;
   code-gen-script = pkgs.writeScript "codeGen" ''
     ${gerbil-cardano-hs}/bin/code-gen --output ./haskell-types

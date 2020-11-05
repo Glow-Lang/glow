@@ -1,5 +1,5 @@
 let
-  pkgs = import ../pkgs.nix;
+  pkgs = import ../../pkgs.nix;
   nix-thunk-exe = pkgs.ignoreVersionBounds (pkgs.nixThunkHaskellPackages.callCabal2nix "nix-thunk" (pkgs.thunkSource ../dep/nix-thunk) {});
   gerbil-cardano-hs = pkgs.skipDocs (pkgs.gerbilCardanoHaskellPackages.callCabal2nix "gerbil-cardano-hs" ./. {});
   plutus = import (pkgs.thunkSource ../dep/plutus) {};

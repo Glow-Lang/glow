@@ -197,4 +197,5 @@ in
     inherit ignoreVersionBounds;
     inherit addDevelopmentFlag;
     thunkSource = nix-thunk.thunkSource;
+    thunkExe = pkgs.haskell.lib.doJailbreak (pkgs.nixThunkHaskellPackages.callCabal2nix "nix-thunk" (nix-thunk.thunkSource ./dep/nix-thunk) {});
   }
