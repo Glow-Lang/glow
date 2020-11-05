@@ -1,0 +1,16 @@
+version.ss
+build-deps
+run/
+.build/
+result/
+state-node-testnet/
+wallet-database/
+scb-core.*
+haskell-types/
+dep/*/*
+!dep/*/default.nix
+!dep/*/thunk.nix
+!dep/*/github.json
+demo
+start-all-servers.sh
+start-second-scb.sh
