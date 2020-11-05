@@ -1,0 +1,8 @@
+{
+  "owner": "fare-patches",
+  "repo": "nixpkgs",
+  "branch": "master",
+  "private": false,
+  "rev": "2e2f94a50669895e31e0b022082d47b0b4850c07",
+  "sha256": "045fc7bqb57ijbxx5lam90vl8vcf3qndjzzr8hng48h4rkcaych7"
+}

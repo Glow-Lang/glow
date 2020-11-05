@@ -1,0 +1,6 @@
+;; Gerbil Cardano support
+(package: mukn/cardano
+ depend: ("github.com/fare/gerbil-utils"
+          "github.com/fare/gerbil-crypto"
+          "github.com/fare/gerbil-poo"
+          "github.com/fare/gerbil-persist"))

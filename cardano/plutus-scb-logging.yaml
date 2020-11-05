@@ -1,0 +1,33 @@
+rotation: null
+defaultBackends:
+- KatipBK
+- AggregationBK
+- EKGViewBK
+setupBackends:
+- KatipBK
+- AggregationBK
+- MonitoringBK
+- EKGViewBK
+hasPrometheus: null
+hasGraylog: null
+hasGUI: null
+traceForwardTo: null
+traceAcceptAt: null
+defaultScribes:
+- - StdoutSK
+  - stdout
+options:
+  mapSubtrace:
+    processAllContractOutboxes:
+      contents:
+      - MonotonicClock
+      - MemoryStats
+      subtrace: ObservableTraceSelf
+setupScribes:
+- scName: stdout
+  scRotation: null
+  scKind: StdoutSK
+  scFormat: ScText
+  scPrivacy: ScPublic
+hasEKG: 12790
+minSeverity: Info
