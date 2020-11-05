@@ -25,7 +25,7 @@ let
     sha256 = "0p5768l1gg5j869m5wfpzhfxlraz0c1vghm9r7h3fin64p3si61z";
   };
 
-  # for building gerbil-cardano-hs
+  # for building glow-cardano
   plutus-repo = nix-thunk.thunkSource ./dep/plutus;
   cardano-node-repo = nix-thunk.thunkSource ./dep/cardano-node;
   cardano-crypto-repo = nix-thunk.thunkSource ./dep/cardano-crypto;
