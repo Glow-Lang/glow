@@ -9,16 +9,12 @@
       (Hand1 (type:record
               (symdict ('toNat (type:arrow (@list (type:name 'Hand0)) (type:name-subtype 'nat (type:name 'int))))
                        ('ofNat (type:arrow (@list (type:name-subtype 'nat (type:name 'int))) (type:name 'Hand0)))
-                       ('input
-                        (type:arrow
-                         (@list (ntype:intersection (@list (type:var 'tag1) (type:name 'bytes))))
-                         (type:name 'Hand0))))))
+                       ('input (type:arrow (@list (type:name 'bytes)) (type:name 'Hand0))))))
       (Outcome1
        (type:record
         (symdict ('toNat (type:arrow (@list (type:name 'Outcome0)) (type:name-subtype 'nat (type:name 'int))))
                  ('ofNat (type:arrow (@list (type:name-subtype 'nat (type:name 'int))) (type:name 'Outcome0)))
-                 ('input
-                  (type:arrow (@list (ntype:intersection (@list (type:var 'tag2) (type:name 'bytes)))) (type:name 'Outcome0))))))
+                 ('input (type:arrow (@list (type:name 'bytes)) (type:name 'Outcome0))))))
       (Paper (type:name 'Hand0))
       (Rock (type:name 'Hand0))
       (Scissors (type:name 'Hand0))
@@ -33,30 +29,11 @@
       (outcome (type:name 'Outcome0))
       (randomUInt256 (type:arrow (@list) (type:name-subtype 'nat (type:name 'int))))
       (rockPaperScissors
-       (type:arrow
-        (@list (type:name 'Participant)
-               (type:name 'Participant)
-               (ntype:intersection
-                (@list (type:var 'wagerAmount0)
-                       (type:var 'wagerAmount1)
-                       (type:var 'wagerAmount2)
-                       (type:var 'wagerAmount3)
-                       (type:var 'wagerAmount4)
-                       (type:var 'wagerAmount5)
-                       (type:name 'int))))
-        (type:name 'Outcome0)))
+       (type:arrow (@list (type:name 'Participant) (type:name 'Participant) (type:name 'int)) (type:name 'Outcome0)))
       (salt (type:name-subtype 'nat (type:name 'int)))
-      (tag (ntype:intersection (@list (type:var 'tag1) (type:name 'bytes))))
-      (tag0 (ntype:intersection (@list (type:var 'tag2) (type:name 'bytes))))
-      (wagerAmount
-       (ntype:intersection
-        (@list (type:var 'wagerAmount0)
-               (type:var 'wagerAmount1)
-               (type:var 'wagerAmount2)
-               (type:var 'wagerAmount3)
-               (type:var 'wagerAmount4)
-               (type:var 'wagerAmount5)
-               (type:name 'int))))
+      (tag (type:name 'bytes))
+      (tag0 (type:name 'bytes))
+      (wagerAmount (type:name 'int))
       (winner (type:arrow (@list (type:name 'Hand0) (type:name 'Hand0)) (type:name 'Outcome0)))
       (x (type:name 'Hand0))
       (x0 (type:name 'Hand0))
@@ -86,8 +63,7 @@
       ((@app (@dot Outcome1 ofNat)
              (@app mod (@app + (@app (@dot Hand1 toNat) handA) (@app - 4 (@app (@dot Hand1 toNat) handB))) 3))
        (type:name 'Outcome0))
-      ((@dot Hand1 input)
-       (type:arrow (@list (ntype:intersection (@list (type:var 'tag1) (type:name 'bytes)))) (type:name 'Hand0)))
+      ((@dot Hand1 input) (type:arrow (@list (type:name 'bytes)) (type:name 'Hand0)))
       ((@dot Hand1 toNat) (type:arrow (@list (type:name 'Hand0)) (type:name-subtype 'nat (type:name 'int))))
       ((@dot Outcome1 ofNat) (type:arrow (@list (type:name-subtype 'nat (type:name 'int))) (type:name 'Outcome0)))
       ((@make-interaction
@@ -110,34 +86,21 @@
                 ((@app-ctor B_Wins) (withdraw! B (@app * 2 wagerAmount)))
                 ((@app-ctor Draw) (withdraw! A wagerAmount) (withdraw! B wagerAmount)))
         outcome)
-       (type:arrow
-        (@list (type:name 'Participant)
-               (type:name 'Participant)
-               (ntype:intersection
-                (@list (type:var 'wagerAmount0)
-                       (type:var 'wagerAmount1)
-                       (type:var 'wagerAmount2)
-                       (type:var 'wagerAmount3)
-                       (type:var 'wagerAmount4)
-                       (type:var 'wagerAmount5)
-                       (type:name 'int))))
-        (type:name 'Outcome0)))
+       (type:arrow (@list (type:name 'Participant) (type:name 'Participant) (type:name 'int)) (type:name 'Outcome0)))
       ((@record (input (λ (tag) (def x (input Hand tag)) x))
                 (toNat (λ (x0) (switch x0 ((@app-ctor Rock) 0) ((@app-ctor Paper) 1) ((@app-ctor Scissors) 2))))
                 (ofNat (λ (x1) (switch x1 (0 Rock) (1 Paper) (2 Scissors)))))
        (type:record
         (symdict ('toNat (type:arrow (@list (type:name 'Hand0)) (type:name-subtype 'nat (type:name 'int))))
                  ('ofNat (type:arrow (@list (type:name-subtype 'nat (type:name 'int))) (type:name 'Hand0)))
-                 ('input
-                  (type:arrow (@list (ntype:intersection (@list (type:var 'tag1) (type:name 'bytes)))) (type:name 'Hand0))))))
+                 ('input (type:arrow (@list (type:name 'bytes)) (type:name 'Hand0))))))
       ((@record (input (λ (tag0) (def x2 (input Outcome tag0)) x2))
                 (toNat (λ (x3) (switch x3 ((@app-ctor B_Wins) 0) ((@app-ctor Draw) 1) ((@app-ctor A_Wins) 2))))
                 (ofNat (λ (x4) (switch x4 (0 B_Wins) (1 Draw) (2 A_Wins)))))
        (type:record
         (symdict ('toNat (type:arrow (@list (type:name 'Outcome0)) (type:name-subtype 'nat (type:name 'int))))
                  ('ofNat (type:arrow (@list (type:name-subtype 'nat (type:name 'int))) (type:name 'Outcome0)))
-                 ('input
-                  (type:arrow (@list (ntype:intersection (@list (type:var 'tag2) (type:name 'bytes)))) (type:name 'Outcome0))))))
+                 ('input (type:arrow (@list (type:name 'bytes)) (type:name 'Outcome0))))))
       ((@tuple salt handA0) (type:tuple (@list (type:name-subtype 'nat (type:name 'int)) (type:name 'Hand0))))
       ((deposit! A wagerAmount) (type:tuple (@list)))
       ((deposit! B wagerAmount) (type:tuple (@list)))
@@ -162,10 +125,8 @@
           (@app (@dot Outcome1 ofNat)
                 (@app mod (@app + (@app (@dot Hand1 toNat) handA) (@app - 4 (@app (@dot Hand1 toNat) handB))) 3)))
        (type:arrow (@list (type:name 'Hand0) (type:name 'Hand0)) (type:name 'Outcome0)))
-      ((λ (tag) (def x (input Hand tag)) x)
-       (type:arrow (@list (ntype:intersection (@list (type:var 'tag1) (type:name 'bytes)))) (type:name 'Hand0)))
-      ((λ (tag0) (def x2 (input Outcome tag0)) x2)
-       (type:arrow (@list (ntype:intersection (@list (type:var 'tag2) (type:name 'bytes)))) (type:name 'Outcome0)))
+      ((λ (tag) (def x (input Hand tag)) x) (type:arrow (@list (type:name 'bytes)) (type:name 'Hand0)))
+      ((λ (tag0) (def x2 (input Outcome tag0)) x2) (type:arrow (@list (type:name 'bytes)) (type:name 'Outcome0)))
       ((λ (x0) (switch x0 ((@app-ctor Rock) 0) ((@app-ctor Paper) 1) ((@app-ctor Scissors) 2)))
        (type:arrow (@list (type:name 'Hand0)) (type:name-subtype 'nat (type:name 'int))))
       ((λ (x1) (switch x1 (0 Rock) (1 Paper) (2 Scissors)))

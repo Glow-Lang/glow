@@ -313,6 +313,15 @@
   (def (?sub t) (and t (type-subst tyvars t)))
   (map ?sub tvp))
 
+;; typing-scheme-subst : [Symdict Type] TypingScheme -> TypingScheme
+(def (typing-scheme-subst tyvars ts)
+  (with (((typing-scheme menv t) ts))
+    (typing-scheme
+     (list->symdict
+      (map (lambda (p) (cons (car p) (type-subst tyvars (cdr p))))
+           (symdict->list menv)))
+     (type-subst tyvars t))))
+
 ;; --------------------------------------------------------
 
 (def (symdict-values d) (map cdr (symdict->list d)))
@@ -338,7 +347,33 @@
     ((type:record fldtys)
      (with (([[ns ps] ...] (map type-neg-pos-var-sets (symdict-values fldtys))))
        [(flatten1 ns) (flatten1 ps)]))
-    (_ (error 'TODO))))
+    ((type:app f as)
+     (with (([fn fp] (type-neg-pos-var-sets f))
+            ([[ans aps] ...] (map tvp-neg-pos-var-sets as)))
+       [(append fn (flatten1 ans)) (append fp (flatten1 aps))]))
+    ((type:arrow as b)
+     (with (([[ans aps] ...] (map type-neg-pos-var-sets as))
+            ([bn bp] (type-neg-pos-var-sets b)))
+       [(append (flatten1 aps) bn) (append (flatten1 ans) bp)]))
+    ;; TODO: group vars directly at the same level of union/intersection together
+    ((ptype:union as)
+     (with (([[ns ps] ...] (map type-neg-pos-var-sets as)))
+       [(flatten1 ns) (flatten1 ps)]))
+    ((ntype:intersection as)
+     (with (([[ns ps] ...] (map type-neg-pos-var-sets as)))
+       [(flatten1 ns) (flatten1 ps)]))))
+
+;; tvp-neg-pos-var-sets :
+;; TypeVariancePair -> (list [Listof [Listof Sym]] [Listof [Listof Sym]])
+(def (tvp-neg-pos-var-sets tvp)
+  (with* (([n p] tvp)
+          ([nn np] (if n (type-neg-pos-var-sets n) []))
+          ([pn pp] (if p (type-neg-pos-var-sets p) [])))
+    [(append np pn) (append nn pp)]))
+
+;; flow-edge? : [Listof Sym] -> [[Listof Sym] -> Bool]
+(def ((flow-edge? neg) pos)
+  (ormap (cut member <> pos) neg))
 
 ;; typing-scheme-simplify : TypingScheme -> TypingScheme
 (def (typing-scheme-simplify ts)
@@ -347,7 +382,54 @@
   ;; pos-sets : [Listof [Listof Sym]]
   (with (([neg-sets pos-sets]
           (typing-scheme-neg-pos-var-sets ts)))
-   ts))
+    ;; edges :
+    ;; [Listof (cons [Listof Sym] [Listof [Listof Sym]])]
+    (def edges
+      (for/collect ((neg neg-sets))
+        (cons neg
+              (filter (flow-edge? neg) pos-sets))))
+    (def neg-alone (map car (filter (lambda (e) (null? (cdr e))) edges)))
+    (def pos-alone (filter (lambda (p) (not (member p (flatten1 edges)))) pos-sets))
+    ; subst every neg-alone with top, every pos-alone with bottom
+    (def nt
+      (for/fold (s empty-symdict) ((ns neg-alone))
+        (for/fold (s s) ((n ns))
+          (symdict-put s n ntype:top))))
+    (def ntpb
+      (for/fold (s nt) ((ps pos-alone))
+        (for/fold (s s) ((p ps))
+          (symdict-put s p ptype:bottom))))
+    (typing-scheme-subst ntpb ts)))
+
+;; typing-scheme-remove-alone :
+;; TypingScheme [Listof [Listof Sym]] [Listof [Listof Sym]] -> TyingScheme
+(def (typing-scheme-remove-alone ts neg-alone pos-alone)
+  (with (((typing-scheme menv t) ts))
+    (typing-scheme (list->symdict
+                    (for/collect ((p (symdict->list menv)))
+                      (with (([k . v] p))
+                        (cons k (type-remove-alone v pos-alone neg-alone)))))
+                   (type-remove-alone t neg-alone pos-alone))))
+
+;; type-remove-alone :
+;; Type [Listof [Listof Sym]] [Listof [Listof Sym]] -> Type
+(def (type-remove-alone t neg-alone pos-alone)
+  (match t
+    ((type:name _) t)
+    ((type:name-subtype n sup)
+     (type:name-subtype n (type-remove-alone sup neg-alone pos-alone)))
+    ((type:var x)
+     (cond ((member [x] pos-alone) t)
+           (else t)))
+    ((type:tuple as)
+     (type:tuple (map (cut type-remove-alone <> neg-alone pos-alone) as)))
+    ((type:record fldtys)
+     (type:record
+      (list->symdict
+       (for/collect ((p (symdict->list fldtys)))
+         (with (([k . v] p))
+           (cons k (type-remove-alone v neg-alone pos-alone)))))))
+    (_ (error 'TODO))))
 
 ;; --------------------------------------------------------
 

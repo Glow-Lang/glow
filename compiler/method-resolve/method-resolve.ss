@@ -184,7 +184,8 @@
 
 ;; resolve-type/scheme : TypingScheme -> Type
 (def (resolve-type/scheme ts)
-  (match ts ;(typing-scheme-simplify ts)
+  (def ts* (typing-scheme-simplify ts))
+  (match ts*
     ((typing-scheme (? symdict-empty?) t) t)
     ((typing-scheme menv t)
      (cond
@@ -197,7 +198,7 @@
        ((null? (type-vars t)) t)
        (else
         (displayln "resolve-type/scheme: TODO")
-        (print-typing-scheme ts)
+        (print-typing-scheme ts*)
         (newline)
         t)))))
 
