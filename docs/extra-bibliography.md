@@ -67,7 +67,7 @@ Other non-Lisp types of interest?
 
 ### Blockchain 101
 
-* [A Beginner's Guide To Blockchain](https://blockchaingirls.org/beginners-guide)
+* [A Beginner's Guide To Blockchain](https://blockchaingirls.org/beginners-guide) (also at [she256](https://she256.org/guide/))
 * Adversariality: [Ethereum is a Dark Forest, by Dan Robinson and Georgios Konstantopoulos](https://medium.com/@danrobinson/ethereum-is-a-dark-forest-ecc5f0505dff)
 
 ### Proofs for Blockchain

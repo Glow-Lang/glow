@@ -1,7 +1,7 @@
 #!/usr/bin/env gxi
 
 (import
-  :mukn/cardano/wallet)
+  :mukn/glow/cardano/wallet)
 
 (def (read-string name)
   (print (string-append name ": "))

@@ -1,7 +1,7 @@
 #!/usr/bin/env gxi
 
 (import
-  :mukn/cardano/smart-contract-backend)
+  :mukn/glow/cardano/smart-contract-backend)
 
 (def (server-thread)
   (make-thread
