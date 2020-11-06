@@ -401,36 +401,6 @@
           (symdict-put s p ptype:bottom))))
     (typing-scheme-subst ntpb ts)))
 
-;; typing-scheme-remove-alone :
-;; TypingScheme [Listof [Listof Sym]] [Listof [Listof Sym]] -> TyingScheme
-(def (typing-scheme-remove-alone ts neg-alone pos-alone)
-  (with (((typing-scheme menv t) ts))
-    (typing-scheme (list->symdict
-                    (for/collect ((p (symdict->list menv)))
-                      (with (([k . v] p))
-                        (cons k (type-remove-alone v pos-alone neg-alone)))))
-                   (type-remove-alone t neg-alone pos-alone))))
-
-;; type-remove-alone :
-;; Type [Listof [Listof Sym]] [Listof [Listof Sym]] -> Type
-(def (type-remove-alone t neg-alone pos-alone)
-  (match t
-    ((type:name _) t)
-    ((type:name-subtype n sup)
-     (type:name-subtype n (type-remove-alone sup neg-alone pos-alone)))
-    ((type:var x)
-     (cond ((member [x] pos-alone) t)
-           (else t)))
-    ((type:tuple as)
-     (type:tuple (map (cut type-remove-alone <> neg-alone pos-alone) as)))
-    ((type:record fldtys)
-     (type:record
-      (list->symdict
-       (for/collect ((p (symdict->list fldtys)))
-         (with (([k . v] p))
-           (cons k (type-remove-alone v neg-alone pos-alone)))))))
-    (_ (error 'TODO))))
-
 ;; --------------------------------------------------------
 
 (def (print-typing-scheme ts)
