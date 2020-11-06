@@ -227,6 +227,9 @@
 
 ;; --------------------------------------------------------
 
+;; type-closed? : Type -> Bool
+(def (type-closed? t) (null? (type-vars t)))
+
 ;; type-vars : Type -> [Listof Symbol]
 (def (type-vars t)
   (match t

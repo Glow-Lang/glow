@@ -188,10 +188,16 @@
   (match ts*
     ((typing-scheme (? symdict-empty?) t) t)
     ((typing-scheme menv t)
+     (def xs (symdict-keys menv))
+     (defvalues (var-xs other-xs)
+       (partition (lambda (x) (type:var? (symdict-ref menv x)))
+                  xs))
+     (def other-ts
+       (map (lambda (x) (symdict-ref menv x)) other-xs))
      (cond
-       ((andmap type:var? (symdict-values menv))
+       ((andmap type-closed? other-ts)
         (type-subst (list->symdict
-                     (for/collect ((x (symdict-keys menv)))
+                     (for/collect ((x var-xs))
                        (cons (type:var-sym (symdict-ref menv x))
                              (get-has-type x))))
                     t))
