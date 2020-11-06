@@ -170,6 +170,27 @@
     ((cons '@list l) (map s->v l))
     (_ (error 'repr-sexpr->list "expected `@list`"))))
 
+(defrules cond/compare (else)
+  ((_ (a b) (else body)) body)
+  ((_ (a b) (t? body) . others)
+   (cond ((and (t? a) (t? b)) body) ((t? a) #t) ((t? b) #f)
+         (else (cond/compare (a b) . others)))))
+
+;; symbols < bools < real-numbers < strings < null < pairs < others
+(def (sexpr<? a b)
+  (cond/compare
+   (a b)
+   (symbol? (symbol<? a b))
+   (boolean? (and (not a) b))
+   (real? (< a b))
+   (string? (string<? a b))
+   (null? #f)
+   (pair?
+    (or (sexpr<? (car a) (car b))
+        (and (equal? (car a) (car b))
+             (sexpr<? (cdr a) (cdr b)))))
+   (else (string<? (format "~s" a) (format "~s" b)))))
+
 ;; TODO: move this to std/misc/repr ?
 (defmethod {:pr AST}
   (λ (object (port (current-output-port)) (options (current-representation-options)))

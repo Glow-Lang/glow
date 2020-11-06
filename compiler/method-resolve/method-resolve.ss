@@ -124,7 +124,7 @@
     ((sign . _) (mr-keyword/sub-exprs stx))
     ((@app . _) (mr-keyword/sub-exprs stx))))
 
-;; mr-expr-make-interaciton : ExpnStx -> ExprStx
+;; mr-expr-make-interaction : ExprStx -> ExprStx
 (def (mr-expr-make-interaction stx)
   (syntax-case stx ()
     ((_ ((@list p ...)) params out-type body ...)
@@ -194,16 +194,19 @@
                   xs))
      (def other-ts
        (map (lambda (x) (symdict-ref menv x)) other-xs))
+     (def other-t-vars
+       (flatten1 (map type-vars other-ts)))
+     (def t-vars (type-vars t))
      (cond
-       ((andmap type-closed? other-ts)
+       ((andmap (lambda (v) (not (member v other-t-vars))) t-vars)
         (type-subst (list->symdict
                      (for/collect ((x var-xs))
                        (cons (type:var-sym (symdict-ref menv x))
                              (get-has-type x))))
                     t))
-       ((null? (type-vars t)) t)
        (else
-        (displayln "resolve-type/scheme: TODO")
+        (printf "resolve-type/scheme: TODO ~a\n"
+                (filter (cut member <> other-t-vars) t-vars))
         (print-typing-scheme ts*)
         (newline)
         t)))))
@@ -260,30 +263,3 @@
 
 (def (type-table=? a b)
   (and a b (equal? (type-table->repr-sexpr a) (type-table->repr-sexpr b))))
-
-;; symbols < bools < real-numbers < strings < null < pairs < others
-(def (sexpr<? a b)
-  (cond
-    ((and (symbol? a) (symbol? b)) (symbol<? a b))
-    ((symbol? a) #t)
-    ((symbol? b) #f)
-    ((and (boolean? a) (boolean? b)) (and (not a) b))
-    ((boolean? a) #t)
-    ((boolean? b) #f)
-    ((and (real? a) (real? b)) (< a b))
-    ((real? a) #t)
-    ((real? b) #f)
-    ((and (string? a) (string? b)) (string<? a b))
-    ((string? a) #t)
-    ((string? b) #f)
-    ((and (null? a) (null? b)) #f)
-    ((null? a) #t)
-    ((null? b) #f)
-    ((and (pair? a) (pair? b))
-     (if (equal? (car a) (car b))
-         (sexpr<? (cdr a) (cdr b))
-         (sexpr<? (car a) (car b))))
-    ((pair? a) #t)
-    ((pair? b) #f)
-    (else (string<? (format "~s" a) (format "~s" b)))))
-
