@@ -1,0 +1,111 @@
+cabal-version: 2.4
+
+name:           glow-cardano
+version:        0.1.0.0
+build-type:     Simple
+
+-- executable glow-contract
+--   main-is: ContractMain.hs
+--   hs-source-dirs: app
+--   build-depends:
+--       base
+--     , glow-cardano
+--     , plutus-scb
+
+executable code-gen
+  main-is: CodeGenMain.hs
+  hs-source-dirs: app
+  build-depends:
+      base
+    , glow-cardano
+    , directory
+    , optparse-applicative
+    , plutus-contract
+    , plutus-ledger
+    , plutus-scb
+  default-language: Haskell2010
+
+library
+  hs-source-dirs: lib
+  exposed-modules:
+    Client
+    CodeGen
+    Contract
+    Parser
+    Types
+    Util
+    ExampleContracts.DeadMansSwitch
+    ExampleContracts.DeadMansSwitchSM
+    ExampleContracts.Minimal
+  build-depends:
+      base
+    , aeson
+    , bytestring
+    , byteunits
+    , containers
+    , dependent-sum
+    , lens
+    , megaparsec
+    , memory
+    , mtl
+    , prettyprinter
+    , serialise
+    , sexpr-parser
+    , template-haskell
+    , th-abstraction
+    , text
+    , these
+    , utf8-string
+
+    -- CARDANO
+    , playground-common
+    , plutus-contract
+    , plutus-core
+    , plutus-ledger
+    , plutus-tx
+    , plutus-tx-plugin
+  default-language: Haskell2010
+  ghc-options:
+    -fno-ignore-interface-pragmas
+    -fno-omit-interface-pragmas
+    -fobject-code
+
+-- test-suite contract-tests
+--   type: exitcode-stdio-1.0
+--   main-is: Main.hs
+--   hs-source-dirs: test
+--   default-language: Haskell2010
+--   build-depends:
+--       base
+--     , glow-cardano
+--     , aeson
+--     , bytestring
+--     , cardano-crypto
+--     , cborg
+--     , containers
+--     , cryptonite
+--     , directory
+--     , freer-simple
+--     , hedgehog
+--     , http-client
+--     , memory
+--     , plutus-core
+--     , plutus-tx
+--     , plutus-contract
+--     , plutus-ledger
+--     , plutus-scb
+--     , prettyprinter
+--     , process
+--     , raw-strings-qq
+--     , servant
+--     , servant-client
+--     , tasty
+--     , tasty-hunit
+--     , tasty-hedgehog
+--     , tasty-golden
+--     , text
+--     , unordered-containers
+--   ghc-options:
+--     -fno-ignore-interface-pragmas
+--     -fno-omit-interface-pragmas
+--     -fobject-code
