@@ -367,8 +367,8 @@
 ;; TypeVariancePair -> (list [Listof [Listof Sym]] [Listof [Listof Sym]])
 (def (tvp-neg-pos-var-sets tvp)
   (with* (([n p] tvp)
-          ([nn np] (if n (type-neg-pos-var-sets n) []))
-          ([pn pp] (if p (type-neg-pos-var-sets p) [])))
+          ([nn np] (if n (type-neg-pos-var-sets n) [[] []]))
+          ([pn pp] (if p (type-neg-pos-var-sets p) [[] []])))
     [(append np pn) (append nn pp)]))
 
 ;; flow-edge? : [Listof Sym] -> [[Listof Sym] -> Bool]
