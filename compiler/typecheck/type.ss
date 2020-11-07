@@ -227,6 +227,9 @@
 
 ;; --------------------------------------------------------
 
+;; type-closed? : Type -> Bool
+(def (type-closed? t) (null? (type-vars t)))
+
 ;; type-vars : Type -> [Listof Symbol]
 (def (type-vars t)
   (match t
@@ -312,6 +315,94 @@
 (def (type-variance-pair-subst tyvars tvp)
   (def (?sub t) (and t (type-subst tyvars t)))
   (map ?sub tvp))
+
+;; typing-scheme-subst : [Symdict Type] TypingScheme -> TypingScheme
+(def (typing-scheme-subst tyvars ts)
+  (with (((typing-scheme menv t) ts))
+    (typing-scheme
+     (list->symdict
+      (map (lambda (p) (cons (car p) (type-subst tyvars (cdr p))))
+           (symdict->list menv)))
+     (type-subst tyvars t))))
+
+;; --------------------------------------------------------
+
+(def (symdict-values d) (map cdr (symdict->list d)))
+
+;; typing-scheme-neg-pos-var-sets :
+;; TypingScheme -> (list [Listof [Listof Sym]] [Listof [Listof Sym]])
+(def (typing-scheme-neg-pos-var-sets ts)
+  (with* (((typing-scheme menv t) ts)
+          ([[nns nps] ...] (map type-neg-pos-var-sets (symdict-values menv)))
+          ([pn pp] (type-neg-pos-var-sets t)))
+    [(append (flatten1 nps) pn) (append (flatten1 nns) pp)]))
+
+;; type-neg-pos-var-sets :
+;; Type -> (list [Listof [Listof Sym]] [Listof [Listof Sym]])
+(def (type-neg-pos-var-sets t)
+  (match t
+    ((type:name _) [[] []])
+    ((type:name-subtype _ sup) (type-neg-pos-var-sets sup))
+    ((type:var x) [[] [[x]]])
+    ((type:tuple as)
+     (with (([[ns ps] ...] (map type-neg-pos-var-sets as)))
+       [(flatten1 ns) (flatten1 ps)]))
+    ((type:record fldtys)
+     (with (([[ns ps] ...] (map type-neg-pos-var-sets (symdict-values fldtys))))
+       [(flatten1 ns) (flatten1 ps)]))
+    ((type:app f as)
+     (with (([fn fp] (type-neg-pos-var-sets f))
+            ([[ans aps] ...] (map tvp-neg-pos-var-sets as)))
+       [(append fn (flatten1 ans)) (append fp (flatten1 aps))]))
+    ((type:arrow as b)
+     (with (([[ans aps] ...] (map type-neg-pos-var-sets as))
+            ([bn bp] (type-neg-pos-var-sets b)))
+       [(append (flatten1 aps) bn) (append (flatten1 ans) bp)]))
+    ;; TODO: group vars directly at the same level of union/intersection together
+    ((ptype:union as)
+     (with (([[ns ps] ...] (map type-neg-pos-var-sets as)))
+       [(flatten1 ns) (flatten1 ps)]))
+    ((ntype:intersection as)
+     (with (([[ns ps] ...] (map type-neg-pos-var-sets as)))
+       [(flatten1 ns) (flatten1 ps)]))))
+
+;; tvp-neg-pos-var-sets :
+;; TypeVariancePair -> (list [Listof [Listof Sym]] [Listof [Listof Sym]])
+(def (tvp-neg-pos-var-sets tvp)
+  (with* (([n p] tvp)
+          ([nn np] (if n (type-neg-pos-var-sets n) [[] []]))
+          ([pn pp] (if p (type-neg-pos-var-sets p) [[] []])))
+    [(append np pn) (append nn pp)]))
+
+;; flow-edge? : [Listof Sym] -> [[Listof Sym] -> Bool]
+(def ((flow-edge? neg) pos)
+  (ormap (cut member <> pos) neg))
+
+;; typing-scheme-simplify : TypingScheme -> TypingScheme
+(def (typing-scheme-simplify ts)
+  ;; A flow edge goes from negative to positive.
+  ;; neg-sets : [Listof [Listof Sym]]
+  ;; pos-sets : [Listof [Listof Sym]]
+  (with (([neg-sets pos-sets]
+          (typing-scheme-neg-pos-var-sets ts)))
+    ;; edges :
+    ;; [Listof (cons [Listof Sym] [Listof [Listof Sym]])]
+    (def edges
+      (for/collect ((neg neg-sets))
+        (cons neg
+              (filter (flow-edge? neg) pos-sets))))
+    (def neg-alone (map car (filter (lambda (e) (null? (cdr e))) edges)))
+    (def pos-alone (filter (lambda (p) (not (member p (flatten1 edges)))) pos-sets))
+    ; subst every neg-alone with top, every pos-alone with bottom
+    (def nt
+      (for/fold (s empty-symdict) ((ns neg-alone))
+        (for/fold (s s) ((n ns))
+          (symdict-put s n ntype:top))))
+    (def ntpb
+      (for/fold (s nt) ((ps pos-alone))
+        (for/fold (s s) ((p ps))
+          (symdict-put s p ptype:bottom))))
+    (typing-scheme-subst ntpb ts)))
 
 ;; --------------------------------------------------------
 

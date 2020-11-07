@@ -31,7 +31,7 @@
        (defvalues (acprog unused-table alpha-env) (alpha-convert prog))
        (defvalues (desugprog) (desugar acprog unused-table))
        (defvalues (tcenv tinfo) (typecheck desugprog unused-table))
-       (defvalues (mereprog) (method-resolve desugprog unused-table))
+       (defvalues (mereprog typetable) (method-resolve desugprog unused-table))
        (defvalues (anfprog) (anf mereprog unused-table))
        (def expected-file (format "~a.anf.sexp" (string-trim-suffix ".sexp" file)))
        (ppd anfprog) (newline)

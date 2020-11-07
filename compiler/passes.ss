@@ -9,7 +9,8 @@
   :mukn/glow/compiler/desugar/desugar
   (only-in :mukn/glow/compiler/typecheck/typecheck
     typecheck read-type-env-file write-type-env type-env=?)
-  (only-in :mukn/glow/compiler/method-resolve/method-resolve method-resolve)
+  (only-in :mukn/glow/compiler/method-resolve/method-resolve
+    method-resolve read-type-table-file write-type-table type-table=?)
   :mukn/glow/compiler/anf/anf
   :mukn/glow/compiler/checkpointify/checkpointify
   :mukn/glow/compiler/checkpointify/checkpoint-info-table
@@ -47,6 +48,7 @@
 
 ;; Method-resolved Glow programs
 (define-layer mere.sexp read-sexp-module write-sexp-module stx-sexpr=?)
+(define-layer typetable.sexp read-type-table-file write-type-table type-table=?)
 
 ;; (Typed) Glow programs in A-Normal form
 ;; where all function call arguments are trivial (reference to constant or variable).
@@ -100,7 +102,7 @@
 (define-pass typecheck (desugar.sexp Unused) (typedecl.sexp TypeInfoTable))
 
 ;; *Method-resolve*: handle type methods, attached in `defdata with:` and accessed in `type.method`
-(define-pass method-resolve (desugar.sexp Unused) (mere.sexp))
+(define-pass method-resolve (desugar.sexp Unused) (mere.sexp typetable.sexp))
 
 ;; *A-normalization*: ensure all call arguments are trivial,
 ;; hence a well-defined sequence for all side-effects.
