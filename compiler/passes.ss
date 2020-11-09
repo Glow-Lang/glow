@@ -16,6 +16,7 @@
   :mukn/glow/compiler/checkpointify/checkpoint-info-table
   :mukn/glow/compiler/liveness/checkpoint-liveness
   :mukn/glow/compiler/project/project
+  :mukn/glow/compiler/project/project-1
   )
 
 ;;; Layers, passes and strategies
@@ -69,6 +70,8 @@
 
 ;; Projection
 (define-layer project.sexp read-sexp-module write-sexp-module stx-sexpr=?)
+(define-layer project-1.ss read-syntax-from-file write-syntax-list stx-sexpr=?)
+
 
 (define-layer safepointify.sexp read-sexp-module write-sexp-module stx-sexpr=?) ;; after safepoints added
 (define-layer bbepp.sexp read-sexp-module write-sexp-module stx-sexpr=?) ;; right Before BEPP
@@ -131,6 +134,7 @@
 
 ;; *Projection*: contract and participants in a single file
 (define-pass project (checkpointify.sexp Unused cpitable2.sexp) (project.sexp))
+(define-pass project-1 (project.sexp Unused cpitable2.sexp) (project-1.ss))
 
 ;; *Contract Projection*: extract a contract for every interaction
 ;;(define-pass contract-projection ".message.sexp" ".contract.sexp")
@@ -153,7 +157,7 @@
 ;;(define-pass javascript-extraction ".client.sexp" ".js")
 
 (define-strategy ethereum-direct-style
-  parse alpha-convert desugar typecheck method-resolve anf checkpointify checkpoint-liveness project) ;; ...
+  parse alpha-convert desugar typecheck method-resolve anf checkpointify checkpoint-liveness project project-1) ;; ...
 
 ;; Different layers and passes for State-Channel style:
 ;; the previous contract is virtualized, so that
