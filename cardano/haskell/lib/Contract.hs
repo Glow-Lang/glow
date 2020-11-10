@@ -91,7 +91,17 @@ transition cfg (SM.State (GlowDatum contract variableMap functionMap datatypeMap
         amount <- lookupVar amountRef _Integer
         addToValue $ mkValue amount
 
+      AddToDeposit amountRef -> do
+        amount <- lookupVar amountRef _Integer
+        addToValue $ mkValue amount
+
       ExpectWithdrawn addressRef amountRef -> do
+        pk <- lookupVar addressRef _PubKey
+        amount <- lookupVar amountRef _Integer
+        void $ addConstraint $ mustPayToPubKey (Ledger.pubKeyHash pk) (mkValue amount)
+        subtractFromValue $ mkValue amount
+
+      AddToWithdraw addressRef amountRef -> do
         pk <- lookupVar addressRef _PubKey
         amount <- lookupVar amountRef _Integer
         void $ addConstraint $ mustPayToPubKey (Ledger.pubKeyHash pk) (mkValue amount)
@@ -104,6 +114,13 @@ transition cfg (SM.State (GlowDatum contract variableMap functionMap datatypeMap
         return Unit
 
       Return _ ->
+        return Unit
+
+      Ignore expr -> do
+        void $ evaluateExpression expr
+        return Unit
+
+      DefineInteraction _ _ _ ->
         return Unit
 
     evaluateExpression :: (MonadState TransitionOutput m, MonadError String m) => Expression -> m Value
@@ -127,6 +144,8 @@ transition cfg (SM.State (GlowDatum contract variableMap functionMap datatypeMap
         argument <- lookupAnyVar argumentRef
         apply argName body argument
 
+      NoOp ->
+        return Unit
 
     apply :: (MonadState TransitionOutput m, MonadError String m) => ByteString -> [Statement] -> Value -> m Value
     apply argName body argument = do

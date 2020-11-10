@@ -24,6 +24,7 @@ import GHC.Generics
 
 import Language.Plutus.Contract
 import qualified Language.Plutus.Contract.StateMachine as SM
+import Language.PlutusTx.AssocMap (Map)
 import qualified Language.PlutusTx.AssocMap as Map
 import qualified Ledger as Ledger
 import Ledger.Typed.Tx
@@ -33,7 +34,7 @@ import Types
 
 data CreateParams = CreateParams
   { datatypes :: DatatypeMap
-  , participants :: [Ledger.PubKey]
+  , participants :: Map String Ledger.PubKey
   , arguments :: VariableMap
   , contract :: GlowContract
   , timeoutLength :: Integer

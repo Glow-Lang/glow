@@ -55,12 +55,16 @@ type GlowRedeemer = (ExecutionPoint, VariableMap)
 data Statement
   = Label ByteString
   | Declare ByteString
+  | DefineInteraction [ByteString] [ByteString] [(ByteString, [Statement])]
   | Define ByteString Expression
   | DefineFunction ByteString ByteString [Statement]
   | DefineDatatype ByteString [(ByteString, Integer)]
   | SetParticipant ValueRef
   | ExpectDeposited ValueRef
   | ExpectWithdrawn ValueRef ValueRef
+  | AddToDeposit ValueRef
+  | AddToWithdraw ValueRef ValueRef
+  | Ignore Expression
   | Require ValueRef
   | Return ValueRef
   deriving stock (Generic, P.Eq, Show)
@@ -70,6 +74,7 @@ data Expression
   = ExpectPublished ByteString
   | IsValidSignature ValueRef ValueRef ValueRef
   | Apply ByteString ValueRef
+  | NoOp
   deriving stock (Generic, P.Eq, Show)
   deriving anyclass (FromJSON, ToJSON)
 
