@@ -8,6 +8,9 @@
         :mukn/glow/compiler/syntax-context
         :mukn/glow/compiler/common
         :mukn/glow/compiler/alpha-convert/fresh
+        :mukn/glow/compiler/typecheck/stx-prop
+        :mukn/glow/compiler/typecheck/type
+        :mukn/glow/compiler/method-resolve/method-resolve
         :mukn/glow/compiler/checkpointify/checkpointify
         :clan/base)
 
@@ -82,7 +85,7 @@
 
 ;; translate-pure-expr : ExprStx -> SchemeStx
 (def (translate-pure-expr stx)
-  (syntax-case stx (ann @app @app-ctor @list @tuple @record λ @make-interaction)
+  (syntax-case stx (ann @app @app-ctor @list @tuple @record λ @make-interaction digest input)
     ((ann a _) (translate-pure-expr #'a))
     ((@app f a ...)
      (with-syntax (((f2 a2 ...) (stx-map translate-pure-expr #'(f a ...))))
@@ -105,6 +108,13 @@
                    ((b ...) (translate-pure-stmts #'(body ...))))
        #'(λ (x ...) b ...)))
     ((@make-interaction . _) (error '@make-interaction "used out of context, expected a pure-expr"))
+    ((digest a ...)
+     (with-syntax (((t ...) (stx-map expr-type-methods-expr #'(a ...))))
+       #'(digest [(cons t a) ...])))
+    ((input ty str)
+     (with-syntax ((t (expr-type-methods-expr stx))
+                   (s (translate-pure-expr #'str)))
+       #'(input t s)))
     (lit (stx-atomic-literal? #'lit) #'lit)
     (_ stx)))
 
@@ -113,3 +123,34 @@
   (map cadr
        (sort (stx-map syntax->list stx)
              (lambda (a b) (symbol<? (stx-e (car a)) (stx-e (car b)))))))
+
+;; --------------------------------------------------------
+
+;; expr-type-methods-expr : ExprStx -> SchemeStx
+;; Produces a Scheme expression that evaluates to a Poo object
+;; containing the methods for the type of the identifier, including un/marshaling
+(def (expr-type-methods-expr stx)
+  (def t (get-has-type stx))
+  (unless t
+    (error 'expr-type-methods-expr "missing type for" (syntax->datum stx)))
+  (type-methods-expr t))
+
+;; type-methods-expr : Type -> SchemeStx
+(def (type-methods-expr t)
+  (match t
+    ((type:name 'Signature) #'Signature)
+    ((type:name x) (get-tysym-methods-id x))
+    ((type:name-subtype x _) (get-tysym-methods-id x))
+    ((type:var _) (error 'type-methods-expr "type variables not supported" t))
+    ((type:app f as)
+     (cons* '%%app (type-methods-expr f) (map type-variance-pair-methods-expr as)))
+    ((type:tuple as)
+     (cons* #'Tuple (map type-methods-expr as)))
+    (_ (error 'type-methods-expr "unknown type" t))))
+
+;; type-variance-pair-methods-expr : TypeVariancePair -> SchemeStx
+(def (type-variance-pair-methods-expr tvp)
+  (match tvp
+    ([#f #f] #'#f)
+    ([_ t] (type-methods-expr t))
+    ([t #f] (type-methods-expr t))))

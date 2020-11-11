@@ -8,11 +8,15 @@
 
 (import :std/sugar
         :std/format
+        :std/iter
         :std/misc/list
         :std/misc/number
         :std/misc/channel
         :gerbil/gambit/threads
         :clan/concurrency
+        :clan/poo/poo
+        :clan/poo/io
+        :clan/persist/content-addressing
         :mukn/glow/compiler/syntax-context
         :mukn/ethereum/known-addresses
         :mukn/ethereum/signing)
@@ -229,6 +233,18 @@
   (hash-update! mat #f (cut + <> n) 0))
 
 ;; --------------------------------------------------------
+
+(def == equal?)
+
+(def (digest alst)
+  (def out (open-output-u8vector))
+  (for ((p alst))
+    (with (([t . v] p)) (marshal t v out)))
+  (digest<-bytes (get-output-u8vector out)))
+
+(def (input t s)
+  (printf "input ~s: ~a\n" (.@ t sexp) s)
+  (unmarshal t (current-input-port)))
 
 ;; isValidSignature : Address Digest Signature -> Bool
 (def (isValidSignature address digest signature)

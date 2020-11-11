@@ -1,4 +1,12 @@
-(export method-resolve read-type-table-file write-type-table type-table=?)
+(export method-resolve
+        read-type-table-file
+        write-type-table
+        type-table=?
+        current-tysym-methods-table
+        get-tysym-methods-id
+        read-tysym-methods-table-file
+        write-tysym-methods-table
+        tysym-methods-table=?)
 
 (import :gerbil/gambit/exact
         :gerbil/gambit/bytes
@@ -20,17 +28,19 @@
         :mukn/glow/compiler/typecheck/stx-prop
         :mukn/glow/compiler/common)
 
-;; method-resolve : ModuleStx UnusedTable -> ModuleStx
+;; method-resolve : ModuleStx UnusedTable -> (values ModuleStx TypeTable TysymMethodsTable)
 (def (method-resolve stx unused-table)
   (def type-table (make-has-type-table))
+  (def tysym-methods-table (make-tysym-methods-table))
   (parameterize ((current-unused-table unused-table)
                  (current-has-type-table type-table)
-                 (current-tysym-methods-table (make-tysym-methods-table)))
+                 (current-tysym-methods-table tysym-methods-table))
 
     (syntax-case stx (@module)
       ((@module stmts ...)
        (values (retail-stx stx (mr-stmts (syntax->list #'(stmts ...))))
-               type-table)))))
+               type-table
+               tysym-methods-table)))))
 
 
 ;; A TysymMethodsTable is a [Hashof Symbol TysymMethodsEntry]
@@ -252,7 +262,7 @@
    (lambda ()
      (match (read-syntax-from-file file)
        ([s] (repr-sexpr->type-table (syntax->datum s)))
-       (_ (printf "read-type-table-file: expected a single symdict sexpr\n") #f)))))
+       (_ (printf "read-type-table-file: expected a single hash sexpr\n") #f)))))
 
 (def (write-type-table tbl (port (current-output-port)))
   (when tbl
@@ -263,3 +273,31 @@
 
 (def (type-table=? a b)
   (and a b (equal? (type-table->repr-sexpr a) (type-table->repr-sexpr b))))
+
+;; tysym-methods-table->repr-sexpr
+(def (tysym-methods-table->repr-sexpr tbl)
+  (and tbl (hash->repr-sexpr tbl identity
+             (lambda (t) (and t (symbol->repr-sexpr (syntax->datum t)))))))
+;; repr-sexpr->tysym-methods-table
+(def (repr-sexpr->tysym-methods-table s)
+  (and s (repr-sexpr->hash s identity
+           (lambda (t) (and t (repr-sexpr->symbol t))))))
+
+(def (read-tysym-methods-table-file file)
+  (with-catch
+   (lambda (e) (display-exception e) #f)
+   (lambda ()
+     (match (read-syntax-from-file file)
+       ([s] (repr-sexpr->tysym-methods-table (syntax->datum s)))
+       (_ (printf "read-tysym-methods-table-file: expected a single hash sexpr\n") #f)))))
+
+(def (write-tysym-methods-table tbl (port (current-output-port)))
+  (when tbl
+    (output-port-readtable-set!
+     port
+     (readtable-sharing-allowed?-set (output-port-readtable port) #f))
+    (fprintf port "~y" (tysym-methods-table->repr-sexpr tbl))))
+
+(def (tysym-methods-table=? a b)
+  (and a b (equal? (tysym-methods-table->repr-sexpr a) (tysym-methods-table->repr-sexpr b))))
+

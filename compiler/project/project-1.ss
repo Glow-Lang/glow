@@ -8,17 +8,21 @@
         :mukn/glow/compiler/syntax-context
         :mukn/glow/compiler/common
         :mukn/glow/compiler/alpha-convert/fresh
+        :mukn/glow/compiler/typecheck/stx-prop
+        :mukn/glow/compiler/method-resolve/method-resolve
         :mukn/glow/compiler/checkpointify/checkpointify
         :clan/base
         :clan/pure/dict/assq
         ./translate-pure)
 
-;; project-1 : ModuleStx UnusedTable CheckpointInfoTable -> [Listof SchemeStx]
+;; project-1 : ModuleStx UnusedTable TypeTable TysymMethodsTable CheckpointInfoTable -> [Listof SchemeStx]
 ;; Expect:
 ;;   exactly 1 (def id (@make-interacation ((@list participant ...)) . _))
 ;;   any number of non-def-interaction staments
-(def (project-1 prog unused cpit)
-  (parameterize ((current-unused-table unused))
+(def (project-1 prog unused tytbl tymetbl cpit)
+  (parameterize ((current-unused-table unused)
+                 (current-has-type-table tytbl)
+                 (current-tysym-methods-table tymetbl))
    (syntax-case prog (@module)
      ((@module (begin end) stmt ...)
       (let ((stmts (syntax->list #'(stmt ...))))

@@ -11,18 +11,20 @@
         :mukn/glow/compiler/checkpointify/checkpointify
         :mukn/glow/compiler/typecheck/type
         :mukn/glow/compiler/typecheck/stx-prop
+        :mukn/glow/compiler/method-resolve/method-resolve
         :clan/base
         :clan/pure/dict/assq
         :clan/pure/dict/symdict
         ./translate-pure)
 
-;; project-2 : ModuleStx UnusedTable TypeTable CheckpointInfoTable -> [Listof SchemeStx]
+;; project-2 : ModuleStx UnusedTable TypeTable TysymMethodsTable CheckpointInfoTable -> [Listof SchemeStx]
 ;; Expect:
 ;;   exactly 1 (def id (@make-interacation ((@list participant ...)) . _))
 ;;   any number of non-def-interaction staments
-(def (project-2 prog unused tytbl cpit)
+(def (project-2 prog unused tytbl tymetbl cpit)
   (parameterize ((current-unused-table unused)
-                 (current-has-type-table tytbl))
+                 (current-has-type-table tytbl)
+                 (current-tysym-methods-table tymetbl))
    (syntax-case prog (@module)
      ((@module (begin end) stmt ...)
       (let ((stmts (syntax->list #'(stmt ...))))
@@ -175,14 +177,14 @@
 (def (translate-add-to-publish stx cpit this-p)
   (syntax-case stx ()
     ((_ sym x)
-     (with-syntax ((t (identifier-type-methods-expr #'x)))
+     (with-syntax ((t (expr-type-methods-expr #'x)))
        [#'(add-to-publish sym x t)]))))
 
 ;; translate-def-expect-published : StmtStx CpiTable MPart -> [Listof SchemeStx]
 (def (translate-def-expect-published stx cpit this-p)
   (syntax-case stx (def expect-published)
     ((def x (expect-published sym))
-     (with-syntax ((t (identifier-type-methods-expr #'x)))
+     (with-syntax ((t (expr-type-methods-expr #'x)))
        [#'(def x (expect-published sym t))]))))
 
 ;; translate-deposit : StmtStx CpiTable MPart -> [Listof SchemeStx]
@@ -232,18 +234,3 @@
      (restx stx
             (cons (translate-switch-pat #'pat)
                   (translate-body #'(body ...) cpit this-p))))))
-
-;; --------------------------------------------------------
-
-;; identifier-type-methods-expr : Identifier -> SchemeStx
-;; Produces a Scheme expression that evaluates to a Poo object
-;; containing the methods for the type of the identifier, including un/marshaling
-(def (identifier-type-methods-expr x)
-  (type-methods-expr (get-has-type x)))
-
-;; type-methods-expr : Type -> SchemeStx
-(def (type-methods-expr t)
-  (match t
-    ((type:name 'Signature) #'Signature)
-    ((type:name x) (error 'type-methods-expr "name" x))
-    (_ (error 'type-methods-expr "unknown type" t))))

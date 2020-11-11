@@ -22,10 +22,7 @@
 (defdata (pair 'a 'b)
          (Pair 'a 'b)
          with:
-         (@record (input (λ (tag2)
-                            (: (pair 'a 'b))
-                            (def x6 (: (pair 'a 'b)) (input (pair 'a 'b) tag2))
-                            x6))))
+         (@record))
 (def pair_tuple () (λ ((p : (pair 'a 'b))) (: (@tuple 'a 'b)) (switch p ((@app-ctor Pair (@var-pat a) (@var-pat b)) (@tuple a b)))))
 (def tuple_pair
      ()
@@ -34,18 +31,12 @@
          (Some 'a)
          None
          with:
-         (@record (input (λ (tag3)
-                            (: (option 'a))
-                            (def x7 (: (option 'a)) (input (option 'a) tag3))
-                            x7))))
+         (@record))
 (defdata (result 'a 'b)
          (Ok 'a)
          (Error 'b)
          with:
-         (@record (input (λ (tag4)
-                            (: (result 'a 'b))
-                            (def x8 (: (result 'a 'b)) (input (result 'a 'b) tag4))
-                            x8))))
+         (@record))
 (def option_result
      ()
      (λ ((o : (option 'a)))
@@ -55,15 +46,12 @@
          Zero
          (Succ natural)
          with:
-         (@record (input (λ (tag5) (: natural) (def x9 (: natural) (input natural tag5)) x9))))
+         (@record (input (λ (tag2) (: natural) (def x6 (: natural) (input natural tag2)) x6))))
 (defdata (conslist 'a)
          Empty
          (Cons 'a (conslist 'a))
          with:
-         (@record (input (λ (tag6)
-                            (: (conslist 'a))
-                            (def x10 (: (conslist 'a)) (input (conslist 'a) tag6))
-                            x10))))
+         (@record))
 (deftype (assocpairlist 'a 'b) (conslist (pair 'a 'b)))
 (defdata (lcexpr 'lit)
          (Lit 'lit)
@@ -71,14 +59,11 @@
          (Lam (lcexpr 'lit))
          (App (lcexpr 'lit) (lcexpr 'lit))
          with:
-         (@record (input (λ (tag7)
-                            (: (lcexpr 'lit))
-                            (def x11 (: (lcexpr 'lit)) (input (lcexpr 'lit) tag7))
-                            x11))))
+         (@record))
 (deftype lcintexpr (lcexpr int))
 (defdata nothing
          with:
-         (@record (input (λ (tag8) (: nothing) (def x12 (: nothing) (input nothing tag8)) x12))
-                  (toNat (λ ((x13 : nothing)) (: nat) (switch x13)))
-                  (ofNat (λ ((x14 : nat)) (: nothing) (switch x14)))))
+         (@record (input (λ (tag3) (: nothing) (def x7 (: nothing) (input nothing tag3)) x7))
+                  (toNat (λ ((x8 : nothing)) (: nat) (switch x8)))
+                  (ofNat (λ ((x9 : nat)) (: nothing) (switch x9)))))
 (deftype purelcexpr (lcexpr nothing)))

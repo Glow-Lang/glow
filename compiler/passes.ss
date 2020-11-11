@@ -10,7 +10,9 @@
   (only-in :mukn/glow/compiler/typecheck/typecheck
     typecheck read-type-env-file write-type-env type-env=?)
   (only-in :mukn/glow/compiler/method-resolve/method-resolve
-    method-resolve read-type-table-file write-type-table type-table=?)
+    method-resolve
+    read-type-table-file write-type-table type-table=?
+    read-tysym-methods-table-file write-tysym-methods-table tysym-methods-table=?)
   :mukn/glow/compiler/anf/anf
   :mukn/glow/compiler/checkpointify/checkpointify
   :mukn/glow/compiler/checkpointify/checkpoint-info-table
@@ -50,6 +52,7 @@
 ;; Method-resolved Glow programs
 (define-layer mere.sexp read-sexp-module write-sexp-module stx-sexpr=?)
 (define-layer typetable.sexp read-type-table-file write-type-table type-table=?)
+(define-layer tymetable.sexp read-tysym-methods-table-file write-tysym-methods-table tysym-methods-table=?)
 
 ;; (Typed) Glow programs in A-Normal form
 ;; where all function call arguments are trivial (reference to constant or variable).
@@ -105,12 +108,12 @@
 (define-pass typecheck (desugar.sexp Unused) (typedecl.sexp TypeInfoTable))
 
 ;; *Method-resolve*: handle type methods, attached in `defdata with:` and accessed in `type.method`
-(define-pass method-resolve (desugar.sexp Unused) (mere.sexp typetable.sexp))
+(define-pass method-resolve (desugar.sexp Unused) (mere.sexp typetable.sexp tymetable.sexp))
 
 ;; *A-normalization*: ensure all call arguments are trivial,
 ;; hence a well-defined sequence for all side-effects.
-;; ModuleStx Unused → ModuleStx
-(define-pass anf (mere.sexp Unused) (anf.sexp))
+;; ModuleStx Unused TypeTable → ModuleStx
+(define-pass anf (mere.sexp Unused typetable.sexp) (anf.sexp))
 
 ;; *Transaction-ification*: introduce suitable safe points between changes in participants
 (define-pass checkpointify (anf.sexp Unused) (checkpointify.sexp cpitable.sexp))
@@ -134,7 +137,7 @@
 
 ;; *Projection*: contract and participants in a single file
 (define-pass project (checkpointify.sexp Unused cpitable2.sexp) (project.sexp))
-(define-pass project-1 (project.sexp Unused cpitable2.sexp) (project-1.ss))
+(define-pass project-1 (project.sexp Unused typetable.sexp tymetable.sexp cpitable2.sexp) (project-1.ss))
 
 ;; *Contract Projection*: extract a contract for every interaction
 ;;(define-pass contract-projection ".message.sexp" ".contract.sexp")
