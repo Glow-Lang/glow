@@ -3,7 +3,11 @@
           :std/sugar
           :std/misc/channel
           :gerbil/gambit/threads
+          :clan/base
+          :clan/poo/poo
+          :clan/poo/type
           :clan/concurrency
+          :mukn/ethereum/types
           :mukn/ethereum/known-addresses))
 
 (import :std/sugar
@@ -13,11 +17,15 @@
         :std/misc/number
         :std/misc/channel
         :gerbil/gambit/threads
+        (only-in :std/crypto random-bytes bytes->BN)
+        :clan/base
         :clan/concurrency
         :clan/poo/poo
+        (only-in :clan/poo/type Sum define-sum-constructors)
         :clan/poo/io
         :clan/persist/content-addressing
         :mukn/glow/compiler/syntax-context
+        :mukn/ethereum/types
         :mukn/ethereum/known-addresses
         :mukn/ethereum/signing)
 
@@ -235,6 +243,11 @@
 ;; --------------------------------------------------------
 
 (def == equal?)
+
+(def mod modulo)
+
+(def (randomUInt256)
+  (bytes->BN (random-bytes 32)))
 
 (def (digest alst)
   (def out (open-output-u8vector))

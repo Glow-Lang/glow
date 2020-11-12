@@ -4,6 +4,7 @@
           :std/misc/channel
           :gerbil/gambit/threads
           :clan/concurrency
+          :mukn/ethereum/types
           :mukn/ethereum/known-addresses
           :mukn/ethereum/signing))
 
@@ -22,6 +23,7 @@
         :clan/poo/io
         :clan/persist/content-addressing
         :mukn/glow/compiler/syntax-context
+        :mukn/ethereum/types
         :mukn/ethereum/known-addresses
         :mukn/ethereum/signing)
 
