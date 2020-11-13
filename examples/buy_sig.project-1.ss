@@ -20,7 +20,7 @@ To run from gxi in the glow directory, assuming gerbil-etherum is in a sibling d
                      (def signature (expect-published 'signature))
                      (def tmp (%%app isValidSignature Seller digest0 signature))
                      (assert! tmp)
-                     (expect-withdrawn Seller price)
+                     (consensus:withdraw Seller price)
                      (vector))
                    (consensus:end-interaction))))))
 (def payForSignature-Buyer
@@ -35,7 +35,7 @@ To run from gxi in the glow directory, assuming gerbil-etherum is in a sibling d
                      (def signature (expect-published 'signature))
                      (def tmp (%%app isValidSignature Seller digest0 signature))
                      (assert! tmp)
-                     (expect-withdrawn Seller price)
+                     (participant:withdraw Seller price)
                      (vector))
                    (participant:end-interaction))))))
 (def payForSignature-Seller
@@ -51,7 +51,7 @@ To run from gxi in the glow directory, assuming gerbil-etherum is in a sibling d
                      (add-to-publish 'signature signature)
                      (def tmp (%%app isValidSignature Seller digest0 signature))
                      (assert! tmp)
-                     (add-to-withdraw Seller price)
+                     (participant:withdraw Seller price)
                      (vector))
                    (participant:end-interaction))))))
 (def ((payForSignature Buyer Seller) digest0 price)

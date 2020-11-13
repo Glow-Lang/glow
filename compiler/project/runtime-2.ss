@@ -143,6 +143,17 @@
     (else ; nothing was never anywhere
      (void))))
 
+;; participant:withdraw : Address Nat -> Void
+(def (participant:withdraw p n)
+  (def prg (current-in-progress-message))
+  (cond
+    (prg (add-to-withdraw p n))
+    (else (expect-withdrawn p n))))
+
+;; consensus:withdraw : Address Nat -> Void
+(def (consensus:withdraw p n)
+  (expect-withdrawn p n))
+
 ;; --------------------------------------------------------
 
 ;; participant-new-in-progress-message : -> Void

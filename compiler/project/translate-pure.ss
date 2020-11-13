@@ -67,11 +67,11 @@
   (syntax-case stx ()
     (name (identifier? #'name)
      (with-syntax ((tv tvname))
-       [#'(def name (tv (Tuple)))]))
+       [#'(def name (tv (vector)))]))
     ((name t ...)
      (with-syntax ((tv tvname)
                    ((field ...) (stx-map (compose identifier-fresh head-id) #'(t ...))))
-       [#'(def (name field ...) (tv (Tuple field ...)))]))))
+       [#'(def (name field ...) (tv (vector field ...)))]))))
 
 ;; translate-pure-switch-case : SwitchCaseStx -> SchemeStx
 (def (translate-pure-switch-case stx)
@@ -154,6 +154,8 @@
 (def (type-methods-expr t)
   (match t
     ((type:name 'Signature) #'Signature)
+    ((type:name 'int) #'Int)
+    ((type:name 'nat _) #'Nat)
     ((type:name x) (get-tysym-methods-id x))
     ((type:name-subtype x _) (get-tysym-methods-id x))
     ((type:var _) (error 'type-methods-expr "type variables not supported" t))

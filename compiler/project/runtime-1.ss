@@ -13,11 +13,14 @@
 (import :std/sugar
         :std/format
         :std/iter
+        :std/text/json
         :std/misc/list
         :std/misc/number
         :std/misc/channel
         :gerbil/gambit/threads
-        (only-in :std/crypto random-bytes bytes->BN)
+        ;; TODO: use more cryptographically-secure randomness
+        ;; from Gerbil :std/crypto or fare/gerbil-crypto
+        (only-in :gerbil/gambit/random random-integer)
         :clan/base
         :clan/concurrency
         :clan/poo/poo
@@ -135,6 +138,17 @@
     (else ; nothing was never anywhere
      (void))))
 
+;; participant:withdraw : Address Nat -> Void
+(def (participant:withdraw p n)
+  (def prg (current-in-progress-message))
+  (cond
+    (prg (add-to-withdraw p n))
+    (else (expect-withdrawn p n))))
+
+;; consensus:withdraw : Address Nat -> Void
+(def (consensus:withdraw p n)
+  (expect-withdrawn p n))
+
 ;; --------------------------------------------------------
 
 ;; participant-new-in-progress-message : -> Void
@@ -247,7 +261,7 @@
 (def mod modulo)
 
 (def (randomUInt256)
-  (bytes->BN (random-bytes 32)))
+  (random-integer (expt 2 256)))
 
 (def (digest alst)
   (def out (open-output-u8vector))
@@ -257,7 +271,7 @@
 
 (def (input t s)
   (printf "input ~s: ~a\n" (.@ t sexp) s)
-  (unmarshal t (current-input-port)))
+  (<-json t (read-json (current-input-port))))
 
 ;; isValidSignature : Address Digest Signature -> Bool
 (def (isValidSignature address digest signature)

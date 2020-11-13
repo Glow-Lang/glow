@@ -139,20 +139,21 @@
 (def (translate-stmt stx cpit this-p)
   (syntax-case stx (@ @label @make-interaction
                     consensus:set-participant participant:set-participant
-                    expect-published expect-deposited expect-withdrawn
-                    add-to-publish add-to-deposit add-to-withdraw
+                    consensus:withdraw participant:withdraw
+                    expect-published expect-deposited
+                    add-to-publish add-to-deposit
                     deftype defdata publish! def ann return ignore! switch require! assert! deposit! withdraw!)
     ;; TODO: ignore @label whether pure or not
     ((@label x) [])
     ((def _ (@make-interaction . _)) (translate-def-interaction stx cpit this-p))
     ((consensus:set-participant . _) [stx])
     ((participant:set-participant . _) [stx])
+    ((consensus:withdraw . _) [stx])
+    ((participant:withdraw . _) [stx])
     ((expect-published . _) [stx])
     ((expect-deposited . _) [stx])
-    ((expect-withdrawn . _) [stx])
     ((add-to-publish . _) [stx])
     ((add-to-deposit . _) [stx])
-    ((add-to-withdraw . _) [stx])
     ((require! v) (translate-require stx cpit this-p))
     ((assert! v) (translate-assert stx cpit this-p))
     ((switch c cases ...) (translate-switch stx cpit this-p))
@@ -187,14 +188,6 @@
       (cond
         ((eq? (stx-e #'p) this-p) #'(add-to-deposit p n))
         (else #'(expect-deposited p n)))])))
-
-;; translate-withdraw : StmtStx CpiTable MPart -> [Listof SchemeStx]
-(def (translate-withdraw stx cpit this-p)
-  (syntax-case stx ()
-    ((_ p n)
-     [(cond
-        ((eq? (stx-e #'p) this-p) #'(add-to-withdraw p n))
-        (else #'(expect-withdrawn p n)))])))
 
 ;; translate-require : StmtStx CpiTable MPart -> [Listof SchemeStx]
 (def (translate-require stx cpit this-p)

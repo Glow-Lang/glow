@@ -5,18 +5,17 @@ To run from gxi in the glow directory, assuming gerbil-etherum is in a sibling d
 > (add-load-path (path-normalize "../gerbil-ethereum"))
 > (import "examples/rps.project-1.ss" :mukn/ethereum/t/signing-test :clan/persist/content-addressing)
 > ((rockPaperScissors alice-address bob-address) 1)
-In thread A:
-*** ERROR IN std/misc/hash#hash-ensure-ref, -515899390@10.31 -- No such slot #<poo #39> sexp
-0  std/misc/hash#hash-ensure-ref -515899390@10:31  (_default834_)
-        _table832_ == '#<table #40>
-        _key833_ == 'sexp
-1  mukn/glow/compiler/project/runtime-1#input
-2  mukn/glow/examples/rps.project-1#tmp "examples/rps.project-1.ss"@27:26
-        #:x2787 = #!unbound
-        #:tag2785 = "First player, pick your hand"
-3  mukn/glow/examples/rps.project-1#tmp "examples/rps.project-1.ss"@27:10
-        #:tag2785 = "First player, pick your hand"
-*** ERROR IN ##thread-deadlock-action! -- Deadlock detected
+input Hand: First player, pick your hand
+{"tag": "Rock", "value": []}
+consensus confirmed message:
+(message #u8(197 78 134 223 251 135 185 115 110 46 53 221 133 199 117 53 143 28 49 206) [['commitment #u8(108 183 41 211 137 19 6 255 103 119 132 105 135 153 8 7 172 8 43 212 229 68 62 251 215 198 140 195 50 141 244 94) ...]] (hash-eq (#f 1) (,#u8(197 78 134 223 251 135 185 115 110 46 53 221 133 199 117 53 143 28 49 206) -1)))
+input Hand: Second player, pick your hand
+{"tag": "Rock", "value": []}
+consensus confirmed message:
+(message #u8(156 202 237 33 12 232 192 203 73 197 173 28 79 88 52 6 194 100 186 105) [['handB0 (begin0 #38 "#<poo #38>") ...]] (hash-eq (#f 1) (,#u8(156 202 237 33 12 232 192 203 73 197 173 28 79 88 52 6 194 100 186 105) -1)))
+consensus confirmed message:
+(message #u8(197 78 134 223 251 135 185 115 110 46 53 221 133 199 117 53 143 28 49 206) [['salt . 56629242293581729592309541621333941474639587972399064041584709740206414720407] ['handA0 (begin0 #39 "#<poo #39>") ...]] (hash-eq (#f -2) (,#u8(156 202 237 33 12 232 192 203 73 197 173 28 79 88 52 6 194 100 186 105) 1) (,#u8(197 78 134 223 251 135 185 115 110 46 53 221 133 199 117 53 143 28 49 206) 1)))
+done
 |#
 (export #t)
 (import :mukn/glow/compiler/project/runtime-1)
@@ -33,11 +32,11 @@ In thread A:
                ((Hand-Paper (vector)) 1)
                ((Hand-Scissors (vector)) 2))))
 (def tmp1 (λ (x1) (match x1 (0 Rock) (1 Paper) (2 Scissors))))
-(def Hand1 (.o (input tmp) (toNat tmp0) (ofNat tmp1)))
+(def Hand1 (.o (:: @ Hand) (input tmp) (toNat tmp0) (ofNat tmp1)))
 (define-type Outcome (Sum B_Wins: (Tuple) Draw: (Tuple) A_Wins: (Tuple)))
 (define-sum-constructors Outcome B_Wins Draw A_Wins)
-(def B_Wins (Outcome-B_Wins (Tuple)))
-(def Draw (Outcome-Draw (Tuple)))
+(def B_Wins (Outcome-B_Wins (vector)))
+(def Draw (Outcome-Draw (vector)))
 (def A_Wins (Outcome-A_Wins (Tuple)))
 (def tmp2 (λ (tag0) (def x2 (input Outcome1 tag0)) x2))
 (def tmp3
@@ -86,20 +85,20 @@ In thread A:
                      (def handA0 (expect-published 'handA0))
                      (def tmp16 (vector salt handA0))
                      (def tmp17
-                          (digest (@list (cons (Tuple #f Hand1) tmp16))))
+                          (digest (@list (cons (Tuple Nat Hand1) tmp16))))
                      (def tmp18 (== commitment tmp17))
                      (assert! tmp18)
                      (def outcome (%%app winner handA0 handB0))
                      (match outcome
                             ((Outcome-A_Wins (vector))
                              (def tmp19 (%%app * 2 wagerAmount))
-                             (expect-withdrawn A tmp19))
+                             (consensus:withdraw A tmp19))
                             ((Outcome-B_Wins (vector))
                              (def tmp20 (%%app * 2 wagerAmount))
-                             (expect-withdrawn B tmp20))
+                             (consensus:withdraw B tmp20))
                             ((Outcome-Draw (vector))
-                             (expect-withdrawn A wagerAmount)
-                             (expect-withdrawn B wagerAmount)))
+                             (consensus:withdraw A wagerAmount)
+                             (consensus:withdraw B wagerAmount)))
                      outcome)
                    (consensus:end-interaction))))))
 (def rockPaperScissors-A
@@ -119,7 +118,7 @@ In thread A:
                      (def tmp14 (vector salt handA0))
                      (participant:set-participant A)
                      (def commitment
-                          (digest (@list (cons (Tuple #f Hand1) tmp14))))
+                          (digest (@list (cons (Tuple Nat Hand1) tmp14))))
                      (participant:set-participant A)
                      (add-to-publish 'commitment commitment)
                      (participant:set-participant A)
@@ -136,20 +135,20 @@ In thread A:
                      (add-to-publish 'handA0 handA0)
                      (def tmp16 (vector salt handA0))
                      (def tmp17
-                          (digest (@list (cons (Tuple #f Hand1) tmp16))))
+                          (digest (@list (cons (Tuple Nat Hand1) tmp16))))
                      (def tmp18 (== commitment tmp17))
                      (assert! tmp18)
                      (def outcome (%%app winner handA0 handB0))
                      (match outcome
                             ((Outcome-A_Wins (vector))
                              (def tmp19 (%%app * 2 wagerAmount))
-                             (add-to-withdraw A tmp19))
+                             (participant:withdraw A tmp19))
                             ((Outcome-B_Wins (vector))
                              (def tmp20 (%%app * 2 wagerAmount))
-                             (expect-withdrawn B tmp20))
+                             (participant:withdraw B tmp20))
                             ((Outcome-Draw (vector))
-                             (add-to-withdraw A wagerAmount)
-                             (expect-withdrawn B wagerAmount)))
+                             (participant:withdraw A wagerAmount)
+                             (participant:withdraw B wagerAmount)))
                      outcome)
                    (participant:end-interaction))))))
 (def rockPaperScissors-B
@@ -182,20 +181,20 @@ In thread A:
                      (def handA0 (expect-published 'handA0))
                      (def tmp16 (vector salt handA0))
                      (def tmp17
-                          (digest (@list (cons (Tuple #f Hand1) tmp16))))
+                          (digest (@list (cons (Tuple Nat Hand1) tmp16))))
                      (def tmp18 (== commitment tmp17))
                      (assert! tmp18)
                      (def outcome (%%app winner handA0 handB0))
                      (match outcome
                             ((Outcome-A_Wins (vector))
                              (def tmp19 (%%app * 2 wagerAmount))
-                             (expect-withdrawn A tmp19))
+                             (participant:withdraw A tmp19))
                             ((Outcome-B_Wins (vector))
                              (def tmp20 (%%app * 2 wagerAmount))
-                             (add-to-withdraw B tmp20))
+                             (participant:withdraw B tmp20))
                             ((Outcome-Draw (vector))
-                             (expect-withdrawn A wagerAmount)
-                             (add-to-withdraw B wagerAmount)))
+                             (participant:withdraw A wagerAmount)
+                             (participant:withdraw B wagerAmount)))
                      outcome)
                    (participant:end-interaction))))))
 (def ((rockPaperScissors A B) wagerAmount)
