@@ -5,6 +5,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeOperators #-}
@@ -15,14 +16,17 @@ import Control.Lens (over, _1)
 import Control.Monad.State
 import Data.Aeson.Extras (tryDecode)
 import Data.Function
+import Data.List (lookup)
 import Data.String (fromString)
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.Text as Text
+import Data.Text.Prettyprint.Doc
 import Data.Void
+import System.Environment
 import Text.SExpression as SExpr
 import Text.Megaparsec hiding (Label, State)
 
-import Language.PlutusTx.Prelude (ByteString)
+import Language.PlutusTx.Prelude (ByteString, fromMaybe)
 import Language.PlutusTx.AssocMap (Map)
 import qualified Language.PlutusTx.AssocMap as Map
 import qualified Ledger.Crypto as Ledger
@@ -31,16 +35,144 @@ import Types
 
 type SExprString = String
 
-parseContract :: SExprString -> SExprString -> SExprString -> Either (ParseErrorBundle String Void) ([Statement], Map ByteString Value)
-parseContract headerStr bodyStr variableMapStr = do
-  headerSexpr <- parse (parseSExpr def) "header" headerStr
-  bodySexpr <- parse (parseSExpr def) "body" bodyStr
-  variableMapSexpr <- parse (parseSExpr def) "variable map" variableMapStr
-  let headerStatements = parseContractHeader headerSexpr
-  let datatypeMap = Map.empty
-  let bodyStatements = parseContractBody datatypeMap bodySexpr
-  let variableMap = parseVariableMap datatypeMap variableMapSexpr
-  pure (headerStatements <> bodyStatements, variableMap)
+pattern Builtin :: String -> [SExpr] -> SExpr
+pattern Builtin head tail = List (Atom head:tail)
+
+pattern Pair :: String -> String -> SExpr
+pattern Pair fst snd = List [Atom fst, Atom snd]
+
+parseCommand :: IO ()
+parseCommand = do
+  filePath:_ <- getArgs
+  contractSource <- readFile filePath
+  putStrLn $ case parse (parseSExpr def) filePath contractSource of
+    Right contractSexpr ->
+      let (participants, arguments, contract) = generateContract (parseModule contractSexpr)
+      in show $
+        "Participants:" <+> prettyList (show <$> participants) <> line <>
+        "Arguments:" <+> prettyList (show <$> arguments) <> line <>
+        "Contract:" <+> line <> prettyContract contract
+    Left err ->
+      errorBundlePretty err
+
+
+prettyContract :: GlowContract -> Doc ann
+prettyContract glowContract =
+  indent 2 $
+    vsep $ fmap (\(k, (stmts, maybeExit)) ->
+         "->" <+> viaShow k <> line
+      <> indent 4 (vsep (viaShow <$> stmts)) <> line
+      <> maybe "X" (\exit -> "<-" <+> viaShow exit) maybeExit
+      ) (Map.toList glowContract)
+
+
+parseModule :: SExpr -> [Statement]
+parseModule = \case
+  List (Atom "@module":Pair _startLabel _endLabel:statements) ->
+    parseStatement <$> statements
+  unknown ->
+    error $ "Invalid module format: " <> show unknown
+
+parseStatement :: SExpr -> Statement
+parseStatement = \case
+  Builtin "@label" [Atom name] ->
+    Label $ BSC.pack name
+
+  Builtin "deftype" [Atom _name, _typeDefinition] ->
+    error "monomorphic type not supported"
+
+  Builtin "deftype" [List (Atom _name:_typeVariables), _typeDefinition] ->
+    error "polymorphic type not supported"
+
+  Builtin "defdata" [Atom _name, _datatypeDefinition] ->
+    error "monomorphic datatype not supported"
+
+  Builtin "defdata" [List (Atom _name:_typeVariables), _datatypeDefinition] ->
+    error "polymorphic datatype not supported"
+
+  Builtin "def"
+    [ Atom _contractName
+    , Builtin "@make-interaction"
+      ( List [ Builtin "@list" participantNames]
+      : List argumentNames
+      : Pair _startLabel _endLabel
+      : participantInteractions
+      )
+    ] ->
+    DefineInteraction
+      (BSC.pack . parseName <$> participantNames)
+      (BSC.pack . parseName <$> argumentNames)
+      (parseParticipantInteraction <$> participantInteractions)
+
+  Builtin "def" [Atom variableName, Builtin "λ" (Atom argName:body)] ->
+    DefineFunction (BSC.pack variableName) (BSC.pack argName) (parseStatement <$> body)
+
+  Builtin "def" [Atom variableName, sexpr] ->
+    Define (BSC.pack variableName) (parseExpression sexpr)
+
+  Builtin "ignore!" [sexpr] ->
+    Ignore (parseExpression sexpr)
+
+  Builtin "return" [List [Atom typeName]] ->
+    Return $ var typeName
+
+  Builtin "consensus:set-participant" [roleName] ->
+    SetParticipant (var $ parseName roleName)
+
+  Builtin "participant:set-participant" [_roleName] ->
+    Require $ Explicit (Boolean True)
+
+  Builtin "expect-deposited" [Atom amountName] ->
+    ExpectDeposited (var amountName)
+
+  Builtin "expect-withdrawn" [Atom roleName, Atom amountName] ->
+    ExpectWithdrawn (var roleName) (var amountName)
+
+  Builtin "add-to-publish" _ ->
+    Require $ Explicit (Boolean True)
+
+  Builtin "add-to-deposit" [Atom amountName] ->
+    AddToDeposit (var amountName)
+
+  Builtin "add-to-withdraw" [Atom roleName, Atom amountName] ->
+    AddToWithdraw (var roleName) (var amountName)
+
+  Builtin "require!" [Atom variableName] ->
+    Require $ var variableName
+
+  Builtin "assert!" [Atom variableName] ->
+    Require $ var variableName
+
+  Builtin "switch" (Atom _argumentExpression:_patterns) ->
+    error "switch statements are not supported"
+
+  unknown ->
+    error $ "Unknown statement in contract body: " <> show unknown
+
+parseExpression :: SExpr -> Expression
+parseExpression = \case
+  Builtin "expect-published" [variableName] ->
+    ExpectPublished (BSC.pack $ parseName variableName)
+
+  Builtin "@app" [Atom "isValidSignature", Atom roleName, Atom digestVariableName, Atom signatureVariableName] ->
+    IsValidSignature (var roleName) (var digestVariableName) (var signatureVariableName)
+
+  Builtin "sign" [Atom _variableName] ->
+    NoOp
+
+  unknown ->
+    error $ "Unknown expression in contract body: " <> show unknown
+
+parseParticipantInteraction :: SExpr -> (ByteString, [Statement])
+parseParticipantInteraction = \case
+  Builtin participantName statements ->
+    (BSC.pack participantName, parseStatement <$> statements)
+
+  List (Bool False:statements) ->
+    (BSC.pack "consensus", parseStatement <$> statements)
+
+  unknown ->
+    error $ "Invalid participant interaction expression: " <> show unknown
 
 parseContractHeader :: SExpr -> [Statement]
 parseContractHeader = \case
@@ -77,71 +209,13 @@ parseContractHeader = \case
         error $ "Invalid constructor expression: " <> show unknown
 
 
-parseContractBody :: DatatypeMap -> SExpr -> [Statement]
-parseContractBody datatypes = \case
+parseContractBody :: SExpr -> [Statement]
+parseContractBody = \case
   List (Atom "@body":content) ->
-    join $ parseStatement <$> content
+    parseStatement <$> content
 
   unknown ->
     error $ "Unknown body format: " <> show unknown
-
-  where
-    parseStatement = \case
-      List [Atom "@label", Atom name] ->
-        [Label $ BSC.pack name]
-
-      List [Atom "consensus:set-participant", roleName] ->
-        [SetParticipant (var $ parseName roleName)]
-
-      List [Atom "expect-deposited", Atom amountName] ->
-        [ExpectDeposited (var amountName)]
-
-      List [Atom "expect-withdrawn", Atom roleName, Atom amountName] ->
-        [ExpectWithdrawn (var roleName) (var amountName)]
-
-      List [Atom "def", Atom variableName, List [Atom "λ", List [Atom argName], body]] ->
-        case parseContractBody datatypes body of
-          statements ->
-            [DefineFunction (BSC.pack variableName) (BSC.pack argName) statements]
-          --unknown ->
-          --  error $ "Invalid right hand side of definition: " <> show unknown
-
-      List [Atom "def", Atom variableName, sexpr] ->
-        case parseExpression sexpr of
-          [expression] ->
-            [Define (BSC.pack variableName) expression]
-          unknown ->
-            error $ "Invalid right hand side of definition: " <> show unknown
-
-      List [Atom "require!", Atom variableName] ->
-        [Require $ var variableName]
-
-      List [Atom "return", List [Atom typeName]] ->
-        [Return $ var typeName]
-
-      unknown ->
-        error $ "Unknown statement in contract body: " <> show unknown
-
-    parseExpression = \case
-      List [Atom "expect-published", variableName] ->
-        [ExpectPublished (BSC.pack $ parseName variableName)]
-
-      List [Atom "@app", Atom "isValidSignature", Atom roleName, Atom digestVariableName, Atom signatureVariableName] ->
-        [IsValidSignature (var roleName) (var digestVariableName) (var signatureVariableName)]
-
-      unknown ->
-        error $ "Unknown expression in contract body: " <> show unknown
-
-
-    parseName = \case
-      Atom name ->
-        name
-      List [Atom "quote", Atom name] ->
-        name
-      unknown ->
-        error $ "Invalid name expression: " <> show unknown
-
-    var = Variable . BSC.pack
 
 parseInputs :: DatatypeMap -> SExprString -> Either (ParseErrorBundle String Void) (Map ByteString Value)
 parseInputs datatypes variableMapStr = do
@@ -193,15 +267,34 @@ parseVariableMap _datatypes = \case
     parseDatatype cons _rawVal =
       error $ "Unknown constructor: " <> cons
 
-generateContract :: [Statement] -> GlowContract
+
+data ParseContext
+  = Header
+  | Body
+
+generateContract :: [Statement] -> ([ByteString], [ByteString], GlowContract)
 generateContract statements =
-  let (_, _, contract) = execState (traverse processStatement statements) (Nothing, "begin", Map.singleton "begin" ([], Nothing))
-  in contract
+  let initialState = (Nothing, "begin0", Map.empty)
+      (parameters, (_, _, contract)) = runState (traverse processHeaderStatement statements) initialState
+      (participants, arguments) = fromMaybe ([], []) $ msum parameters
+  in (participants, arguments, contract)
   where
-    processStatement stmt = do
-      case stmt of
-        SetParticipant newParticipant -> setParticipant newParticipant
-        _ -> addStatement stmt
+    processHeaderStatement = \case
+      DefineInteraction participants arguments interactions ->
+        case Data.List.lookup "consensus" interactions of
+          Just consensusStatements -> do
+            void $ traverse processBodyStatement consensusStatements
+            pure $ Just (participants, arguments)
+          Nothing ->
+            error "Contract is missing consensus code."
+      _ ->
+        pure Nothing
+
+    processBodyStatement = \case
+      SetParticipant newParticipant ->
+        setParticipant newParticipant
+      stmt ->
+        addStatement stmt
 
     setParticipant :: ValueRef -> State (Maybe ValueRef, ExecutionPoint, Map ExecutionPoint ([Statement], Maybe ExecutionPoint)) ()
     setParticipant newParticipant =
@@ -215,19 +308,34 @@ generateContract statements =
                   Label lastLabel ->
                     let newContract = contract
                           & Map.insert curLabel (init stmts, Just lastLabel)
-                          & Map.insert lastLabel ([Label lastLabel, SetParticipant newParticipant], Nothing)
+                          & Map.insert lastLabel ([SetParticipant newParticipant], Nothing)
                     in (Just newParticipant, lastLabel, newContract)
                   _ ->
                     error "Change of participant with no preceding label."
-              _ ->
-                error "Invalid transition state."
+              Just (_, Just _) ->
+                error "Invalid transition state"
+              Nothing ->
+                (Just newParticipant, curLabel, contract & Map.insert curLabel ([SetParticipant newParticipant], Nothing))
+
 
     addStatement :: Statement -> State (Maybe ValueRef, ExecutionPoint, Map ExecutionPoint ([Statement], Maybe ExecutionPoint)) ()
     addStatement stmt =
       modify $ \(curParticipant, curLabel, contract) ->
-        (curParticipant, curLabel, case Map.lookup curLabel contract of
-          Just (stmts, exitPoints) ->
-            Map.insert curLabel (stmts <> [stmt], exitPoints) contract
-          _ ->
-            error $ "Invalid current label: " <> BSC.unpack curLabel)
+        let newContract = case Map.lookup curLabel contract of
+              Just (stmts, exitPoints) ->
+                Map.insert curLabel (stmts <> [stmt], exitPoints) contract
+              Nothing ->
+                contract
+        in (curParticipant, curLabel, newContract)
 
+var :: String -> ValueRef
+var = Variable . BSC.pack
+
+parseName :: SExpr -> String
+parseName = \case
+  Atom name ->
+    name
+  List [Atom "quote", Atom name] ->
+    name
+  unknown ->
+    error $ "Invalid name expression: " <> show unknown
