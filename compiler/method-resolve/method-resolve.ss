@@ -6,7 +6,13 @@
         get-tysym-methods-id
         read-tysym-methods-table-file
         write-tysym-methods-table
-        tysym-methods-table=?)
+        tysym-methods-table=?
+        current-methods-id-back-table
+        get-methods-id-back
+        read-methods-id-back-table-file
+        write-methods-id-back-table
+        methods-id-back-table=?)
+
 
 (import :gerbil/gambit/exact
         :gerbil/gambit/bytes
@@ -28,19 +34,22 @@
         :mukn/glow/compiler/typecheck/stx-prop
         :mukn/glow/compiler/common)
 
-;; method-resolve : ModuleStx UnusedTable -> (values ModuleStx TypeTable TysymMethodsTable)
+;; method-resolve : ModuleStx UnusedTable -> (values ModuleStx TypeTable TysymMethodsTable MethodsIdBackTable)
 (def (method-resolve stx unused-table)
   (def type-table (make-has-type-table))
   (def tysym-methods-table (make-tysym-methods-table))
+  (def methods-id-back-table (make-methods-id-back-table))
   (parameterize ((current-unused-table unused-table)
                  (current-has-type-table type-table)
-                 (current-tysym-methods-table tysym-methods-table))
+                 (current-tysym-methods-table tysym-methods-table)
+                 (current-methods-id-back-table methods-id-back-table))
 
     (syntax-case stx (@module)
       ((@module stmts ...)
        (values (retail-stx stx (mr-stmts (syntax->list #'(stmts ...))))
                type-table
-               tysym-methods-table)))))
+               tysym-methods-table
+               methods-id-back-table)))))
 
 
 ;; A TysymMethodsTable is a [Hashof Symbol TysymMethodsEntry]
@@ -49,6 +58,10 @@
 (def current-tysym-methods-table (make-parameter (make-tysym-methods-table)))
 (defstruct entry:tysym-methods (sym syms) transparent: #t)
 
+;; A MethodsIdBackTable is a [Hashof Symbol Symbol]
+(def (make-methods-id-back-table) (make-hash-table-eq))
+(def current-methods-id-back-table (make-parameter (make-methods-id-back-table)))
+
 ;; set-tysym-methods-id! : Symbol Identifier -> Void
 (def (set-tysym-methods-id! sym id)
   (hash-put! (current-tysym-methods-table) sym id))
@@ -56,6 +69,14 @@
 ;; get-tysym-methods-id : Symbol -> MaybeIdentifier
 (def (get-tysym-methods-id sym)
   (hash-get (current-tysym-methods-table) sym))
+
+;; set-methods-id-back! : Identifier Identifier -> Void
+(def (set-methods-id-back! m t)
+  (hash-put! (current-methods-id-back-table) (syntax->datum m) (syntax->datum t)))
+
+;; get-methods-id-back : Identifier -> (U Symbol #f)
+(def (get-methods-id-back m)
+  (hash-get (current-methods-id-back-table) (syntax->datum m)))
 
 ;; mr-stmts : [Listof StmtStx] -> [Listof StmtStx]
 (def (mr-stmts stmts) (append-map mr-stmt stmts))
@@ -82,6 +103,7 @@
        (def t (get-is-type #'id))
        (assert! (type:name? t) ["internal error: expected type:name, given" t])
        (set-tysym-methods-id! (type:name-sym t) #'methods-id)
+       (set-methods-id-back! #'methods-id #'id)
        (cons (retail-stx stx (cons #'spec (syntax->list #'(variant ...))))
              (mr-stmt #'(def methods-id () rtvalue)))))))
 
@@ -300,4 +322,29 @@
 
 (def (tysym-methods-table=? a b)
   (and a b (equal? (tysym-methods-table->repr-sexpr a) (tysym-methods-table->repr-sexpr b))))
+
+;; methods-id-back-table->repr-sexpr
+(def (methods-id-back-table->repr-sexpr tbl)
+  (and tbl (hash->repr-sexpr tbl identity symbol->repr-sexpr)))
+;; repr-sexpr->methods-id-back-table
+(def (repr-sexpr->methods-id-back-table s)
+  (and s (repr-sexpr->hash s identity repr-sexpr->symbol)))
+
+(def (read-methods-id-back-table-file file)
+  (with-catch
+   (lambda (e) (display-exception e) #f)
+   (lambda ()
+     (match (read-syntax-from-file file)
+       ([s] (repr-sexpr->methods-id-back-table (syntax->datum s)))
+       (_ (printf "read-methods-id-back-table-file: expected a single hash sexpr\n") #f)))))
+
+(def (write-methods-id-back-table tbl (port (current-output-port)))
+  (when tbl
+    (output-port-readtable-set!
+     port
+     (readtable-sharing-allowed?-set (output-port-readtable port) #f))
+    (fprintf port "~y" (methods-id-back-table->repr-sexpr tbl))))
+
+(def (methods-id-back-table=? a b)
+  (and a b (equal? (methods-id-back-table->repr-sexpr a) (methods-id-back-table->repr-sexpr b))))
 

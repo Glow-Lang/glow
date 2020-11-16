@@ -15,14 +15,15 @@
         :clan/pure/dict/assq
         ./translate-pure)
 
-;; project-1 : ModuleStx UnusedTable TypeTable TysymMethodsTable CheckpointInfoTable -> [Listof SchemeStx]
+;; project-1 : ModuleStx UnusedTable TypeTable TysymMethodsTable MethodsIdBackTable CheckpointInfoTable -> [Listof SchemeStx]
 ;; Expect:
 ;;   exactly 1 (def id (@make-interacation ((@list participant ...)) . _))
 ;;   any number of non-def-interaction staments
-(def (project-1 prog unused tytbl tymetbl cpit)
+(def (project-1 prog unused tytbl tymetbl mebatbl cpit)
   (parameterize ((current-unused-table unused)
                  (current-has-type-table tytbl)
-                 (current-tysym-methods-table tymetbl))
+                 (current-tysym-methods-table tymetbl)
+                 (current-methods-id-back-table mebatbl))
    (syntax-case prog (@module)
      ((@module (begin end) stmt ...)
       (let ((stmts (syntax->list #'(stmt ...))))

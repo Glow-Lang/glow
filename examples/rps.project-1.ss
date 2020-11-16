@@ -46,7 +46,7 @@ done
                ((Outcome-Draw (vector)) 1)
                ((Outcome-A_Wins (vector)) 2))))
 (def tmp4 (λ (x4) (match x4 (0 B_Wins) (1 Draw) (2 A_Wins))))
-(def Outcome1 (.o (input tmp2) (toNat tmp3) (ofNat tmp4)))
+(def Outcome1 (.o (:: @ Outcome) (input tmp2) (toNat tmp3) (ofNat tmp4)))
 (def winner
      (λ (handA handB)
         (def tmp5 (.@ Outcome1 ofNat))

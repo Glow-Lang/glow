@@ -12,7 +12,8 @@
   (only-in :mukn/glow/compiler/method-resolve/method-resolve
     method-resolve
     read-type-table-file write-type-table type-table=?
-    read-tysym-methods-table-file write-tysym-methods-table tysym-methods-table=?)
+    read-tysym-methods-table-file write-tysym-methods-table tysym-methods-table=?
+    read-methods-id-back-table-file write-methods-id-back-table methods-id-back-table=?)
   :mukn/glow/compiler/anf/anf
   :mukn/glow/compiler/checkpointify/checkpointify
   :mukn/glow/compiler/checkpointify/checkpoint-info-table
@@ -53,6 +54,7 @@
 (define-layer mere.sexp read-sexp-module write-sexp-module stx-sexpr=?)
 (define-layer typetable.sexp read-type-table-file write-type-table type-table=?)
 (define-layer tymetable.sexp read-tysym-methods-table-file write-tysym-methods-table tysym-methods-table=?)
+(define-layer mebatable.sexp read-methods-id-back-table-file write-methods-id-back-table methods-id-back-table=?)
 
 ;; (Typed) Glow programs in A-Normal form
 ;; where all function call arguments are trivial (reference to constant or variable).
@@ -108,7 +110,7 @@
 (define-pass typecheck (desugar.sexp Unused) (typedecl.sexp TypeInfoTable))
 
 ;; *Method-resolve*: handle type methods, attached in `defdata with:` and accessed in `type.method`
-(define-pass method-resolve (desugar.sexp Unused) (mere.sexp typetable.sexp tymetable.sexp))
+(define-pass method-resolve (desugar.sexp Unused) (mere.sexp typetable.sexp tymetable.sexp mebatable.sexp))
 
 ;; *A-normalization*: ensure all call arguments are trivial,
 ;; hence a well-defined sequence for all side-effects.
@@ -137,7 +139,7 @@
 
 ;; *Projection*: contract and participants in a single file
 (define-pass project (checkpointify.sexp Unused cpitable2.sexp) (project.sexp))
-(define-pass project-1 (project.sexp Unused typetable.sexp tymetable.sexp cpitable2.sexp) (project-1.ss))
+(define-pass project-1 (project.sexp Unused typetable.sexp tymetable.sexp mebatable.sexp cpitable2.sexp) (project-1.ss))
 
 ;; *Contract Projection*: extract a contract for every interaction
 ;;(define-pass contract-projection ".message.sexp" ".contract.sexp")

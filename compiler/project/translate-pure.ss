@@ -29,7 +29,7 @@
   (syntax-case stx (@ @label deftype defdata def ann return ignore! switch)
     ;; TODO: ignore @label whether pure or not
     ((@label _) [])
-    ((def v e) [(restx1 stx ['def #'v (translate-pure-expr #'e)])])
+    ((def v e) (translate-def stx))
     ((ignore! e) [(restx1 stx ['void (translate-pure-expr #'e)])])
     ((return e)
      ;; TODO: make sure this isn't meant to be an effect like a continuation-call, just to show tail-position
@@ -39,6 +39,18 @@
     ((ann v _) (translate-pure-expr #'v))
     ((switch c cases ...)
      [(restx1 stx (cons* 'match (translate-pure-expr #'c) (stx-map translate-pure-switch-case #'(cases ...))))])))
+
+;; translate-def : StmtStx -> [Listof SchemeStx]
+(def (translate-def stx)
+  (syntax-case stx ()
+    ((_ v e)
+     (let ((t (get-methods-id-back #'v)))
+       (cond
+         (t (syntax-case (translate-pure-expr #'e) (.o)
+              ((.o stuff ...)
+               (with-syntax ((x t))
+                 [(restx1 stx ['def #'v #'(.o (:: @ x) stuff ...)])]))))
+         (else [(restx1 stx ['def #'v (translate-pure-expr #'e)])]))))))
 
 ;; translate-defdata : StmtStx -> [Listof SchemeStx]
 (def (translate-defdata stx)
