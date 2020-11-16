@@ -21,9 +21,9 @@ done
 (import :mukn/glow/compiler/project/runtime-1)
 (define-type Hand (Sum Rock: (Tuple) Paper: (Tuple) Scissors: (Tuple)))
 (define-sum-constructors Hand Rock Paper Scissors)
-(def Rock (Hand-Rock (Tuple)))
-(def Paper (Hand-Paper (Tuple)))
-(def Scissors (Hand-Scissors (Tuple)))
+(def Rock (Hand-Rock (vector)))
+(def Paper (Hand-Paper (vector)))
+(def Scissors (Hand-Scissors (vector)))
 (def tmp (λ (tag) (def x (input Hand1 tag)) x))
 (def tmp0
      (λ (x0)
@@ -37,7 +37,7 @@ done
 (define-sum-constructors Outcome B_Wins Draw A_Wins)
 (def B_Wins (Outcome-B_Wins (vector)))
 (def Draw (Outcome-Draw (vector)))
-(def A_Wins (Outcome-A_Wins (Tuple)))
+(def A_Wins (Outcome-A_Wins (vector)))
 (def tmp2 (λ (tag0) (def x2 (input Outcome1 tag0)) x2))
 (def tmp3
      (λ (x3)
