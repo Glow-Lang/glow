@@ -39,28 +39,29 @@
     (def program-x (@ self program))
     (match (hash-get (hash-get (@ self program-x interactions) participant) 'begin0)
       ((code-block statements exits)
-        {initialize self participant}
+        ;{initialize self participant}
         (map (lambda (statement) {interpret-statement self statement}) statements))
       (#f
         (error (string-append participant " missing"))))))
 
 (defmethod {initialize Interpreter}
   (lambda (self participant)
-    (begin
-      (def timeoutInBlocks #f)
-      (def initial-block #f)
-        ;(+ (eth_blockNumber) timeoutInBlocks))
-      (def initial-state
-        (digest-product-f
-          (append
-            [(payForSignature--cp0 UInt16) (initial-block Block)]
-            (@ self participants))
-            (@ self arguments)))
-      (def contract-bytes
-        (stateful-contract-init initial-state payForSignature--contract-runtime))
-      (def pretx
-        (create-contract participant contract-bytes))
-      (save-transaction% pretx))))
+    (def timeoutInBlocks
+      (.@ (current-ethereum-network) timeoutInBlocks))
+    (def initial-block
+      (+ (eth_blockNumber) timeoutInBlocks))
+    (+ (eth_blockNumber) timeoutInBlocks))
+    (def initial-state
+      (digest-product-f
+        (append
+          [] ;[(payForSignature--cp0 UInt16) (initial-block Block)]
+          (@ self participants)
+          (@ self arguments)))
+    (def contract-bytes
+     (stateful-contract-init initial-state payForSignature--contract-runtime))
+    (def pretx
+      (create-contract participant contract-bytes))
+    (save-transaction% pretx)))
 
 (def (digest-product-f fields)
   (digest<-marshal (lambda (port)
