@@ -51,7 +51,7 @@ To run from gxi in the glow directory, assuming gerbil-etherum is in a sibling d
                      (add-to-publish 'signature signature Signature)
                      (def tmp (%%app isValidSignature Seller digest0 signature))
                      (assert! tmp)
-                     (add-to-withdraw Seller price)
+                     (participant:withdraw Seller price)
                      (vector))
                    (participant:end-interaction))))))
 (def ((payForSignature Buyer Seller) digest0 price)
@@ -63,16 +63,19 @@ To run from gxi in the glow directory, assuming gerbil-etherum is in a sibling d
           (spawn/name/params
            'consensus
            (lambda ()
-             (parameterize ((current-address #f)) ((payForSignature-consensus participant->consensus consensus->participants Buyer Seller) digest0 price)))))
+             (parameterize ((current-address #f))
+               ((payForSignature-consensus participant->consensus consensus->participants Buyer Seller) digest0 price)))))
      (def participant-threads
           (@list (spawn/name/params
                   'Buyer
                   (lambda ()
-                    (parameterize ((current-address Buyer)) ((payForSignature-Buyer consensus->Buyer participant->consensus Buyer Seller) digest0 price))))
+                    (parameterize ((current-address Buyer))
+                      ((payForSignature-Buyer consensus->Buyer participant->consensus Buyer Seller) digest0 price))))
                  (spawn/name/params
                   'Seller
                   (lambda ()
-                    (parameterize ((current-address Seller)) ((payForSignature-Seller consensus->Seller participant->consensus Buyer Seller) digest0 price))))))
+                    (parameterize ((current-address Seller))
+                      ((payForSignature-Seller consensus->Seller participant->consensus Buyer Seller) digest0 price))))))
      (for-each thread-join! (cons consensus-thread participant-threads))
      (channel-close consensus->Buyer)
      (channel-close consensus->Seller)
