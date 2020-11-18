@@ -166,6 +166,7 @@
 (def (type-methods-expr t)
   (match t
     ((type:name 'Signature) #'Signature)
+    ((type:name 'Digest) #'Bytes32)
     ((type:name 'int) #'Int)
     ((type:name-subtype 'nat _) #'Nat)
     ((type:name x) (get-tysym-methods-id x))

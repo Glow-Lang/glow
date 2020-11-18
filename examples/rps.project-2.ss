@@ -7,12 +7,17 @@ To run from gxi in the glow directory, assuming gerbil-etherum is in a sibling d
 > ((rockPaperScissors alice-address bob-address) 1)
 input Hand: First player, pick your hand
 {"tag": "Rock", "value": []}
-In thread A:
-*** ERROR IN clan/poo/poo#.ref__% -- No poo #f
-0  clan/poo/poo#.ref__%
-1  clan/poo/io#bytes<-
-2  mukn/glow/compiler/project/runtime-2#add-to-publish
-3  #<procedure #40>                         "examples/rps.project-2.ss"@99:22        (mukn/glow/compiler/project/runtime-2#add...
+consensus confirmed message:
+...
+input Hand: Second player, pick your hand
+{"tag": "Rock", "value": []}
+consensus confirmed message:
+(message #u8(156 202 237 33 12 232 192 203 73 197 173 28 79 88 52 6 194 100 186 105)
+         ((handB0 . #u8(0)))
+         ((#f . 1) (#u8(156 202 237 33 12 232 192 203 73 197 173 28 79 88 52 6 194 100 186 105) . -1)))
+consensus confirmed message:
+...
+done
 |#
 (export #t)
 (import :mukn/glow/compiler/project/runtime-2)
@@ -56,7 +61,7 @@ In thread A:
                      (consensus:set-participant A)
                      (consensus:set-participant A)
                      (consensus:set-participant A)
-                     (def commitment (expect-published 'commitment #f))
+                     (def commitment (expect-published 'commitment Bytes32))
                      (consensus:set-participant A)
                      (expect-deposited wagerAmount)
                      (consensus:set-participant B)
@@ -96,7 +101,7 @@ In thread A:
                      (participant:set-participant A)
                      (def commitment (digest (@list (cons (Tuple Nat Hand1) tmp14))))
                      (participant:set-participant A)
-                     (add-to-publish 'commitment commitment #f)
+                     (add-to-publish 'commitment commitment Bytes32)
                      (participant:set-participant A)
                      (add-to-deposit wagerAmount)
                      (participant:set-participant B)
@@ -131,7 +136,7 @@ In thread A:
                      (participant:set-participant A)
                      (participant:set-participant A)
                      (participant:set-participant A)
-                     (def commitment (expect-published 'commitment #f))
+                     (def commitment (expect-published 'commitment Bytes32))
                      (participant:set-participant A)
                      (expect-deposited wagerAmount)
                      (participant:set-participant B)
