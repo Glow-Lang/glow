@@ -19,12 +19,13 @@
                 (expect-withdrawn Seller price)
                 (return (@tuple))
                 (@label end0))
-               (Buyer (@label begin0)
-                      (@label cp)
+               (Buyer (@label begin0) ;; safe point
+                      (@label cp) ;; redundant safe point, seller waits but buyer doesn't
                       (participant:set-participant Buyer)
-                      (add-to-deposit price)
-                      (@label cp0)
+                      (add-to-deposit price) ;; modifies buffer or fails
+                      (@label cp0) ;; safe point, buyers waits and seller starts
                       (participant:set-participant Seller)
+                      ;; flush buffer, contract initialization (no contract receipt), check cpitable2 for live public variables at checkpoint
                       (participant:set-participant Seller)
                       (def signature (expect-published 'signature))
                       (def tmp (@app isValidSignature Seller digest0 signature))

@@ -3,6 +3,7 @@ compiled/
 build-deps
 version.ss
 result
+.build
 
 # Runtime data
 run/
