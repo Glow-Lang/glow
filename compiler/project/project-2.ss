@@ -17,14 +17,15 @@
         :clan/pure/dict/symdict
         ./translate-pure)
 
-;; project-2 : ModuleStx UnusedTable TypeTable TysymMethodsTable CheckpointInfoTable -> [Listof SchemeStx]
+;; project-2 : ModuleStx UnusedTable TypeTable TysymMethodsTable MethodsIdBackTable CheckpointInfoTable -> [Listof SchemeStx]
 ;; Expect:
 ;;   exactly 1 (def id (@make-interacation ((@list participant ...)) . _))
 ;;   any number of non-def-interaction staments
-(def (project-2 prog unused tytbl tymetbl cpit)
+(def (project-2 prog unused tytbl tymetbl mebatbl cpit)
   (parameterize ((current-unused-table unused)
                  (current-has-type-table tytbl)
-                 (current-tysym-methods-table tymetbl))
+                 (current-tysym-methods-table tymetbl)
+                 (current-methods-id-back-table mebatbl))
    (syntax-case prog (@module)
      ((@module (begin end) stmt ...)
       (let ((stmts (syntax->list #'(stmt ...))))

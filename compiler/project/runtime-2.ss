@@ -3,6 +3,9 @@
           :std/sugar
           :std/misc/channel
           :gerbil/gambit/threads
+          :clan/base
+          :clan/poo/poo
+          :clan/poo/type
           :clan/concurrency
           :mukn/ethereum/types
           :mukn/ethereum/known-addresses
@@ -11,17 +14,23 @@
 (import :std/sugar
         :std/format
         :std/iter
+        :std/text/json
         :std/misc/list
         :std/misc/number
         :std/misc/channel
         :gerbil/gambit/threads
         (only-in :gerbil/gambit/ports output-port-readtable output-port-readtable-set!)
         (only-in :gerbil/gambit/readtables readtable-sharing-allowed?-set)
+        ;; TODO: use more cryptographically-secure randomness
+        ;; from Gerbil :std/crypto or fare/gerbil-crypto
+        (only-in :gerbil/gambit/random random-integer)
+        :clan/base
         :clan/pure/dict/assq
         :clan/concurrency
         :clan/poo/poo
         :clan/poo/io
         :clan/persist/content-addressing
+        (only-in :clan/poo/type Sum define-sum-constructors)
         :mukn/glow/compiler/syntax-context
         :mukn/ethereum/types
         :mukn/ethereum/known-addresses
@@ -274,6 +283,11 @@
 
 (def == equal?)
 
+(def mod modulo)
+
+(def (randomUInt256)
+  (random-integer (expt 2 256)))
+
 (def (digest alst)
   (def out (open-output-u8vector))
   (for ((p alst))
@@ -282,7 +296,7 @@
 
 (def (input t s)
   (printf "input ~s: ~a\n" (.@ t sexp) s)
-  (unmarshal t (current-input-port)))
+  (<-json t (read-json (current-input-port))))
 
 ;; isValidSignature : Address Digest Signature -> Bool
 (def (isValidSignature address digest signature)

@@ -20,6 +20,7 @@
   :mukn/glow/compiler/liveness/checkpoint-liveness
   :mukn/glow/compiler/project/project
   :mukn/glow/compiler/project/project-1
+  (only-in :mukn/glow/compiler/project/project-2 project-2)
   )
 
 ;;; Layers, passes and strategies
@@ -76,6 +77,7 @@
 ;; Projection
 (define-layer project.sexp read-sexp-module write-sexp-module stx-sexpr=?)
 (define-layer project-1.ss read-syntax-from-file write-syntax-list stx-sexpr=?)
+(define-layer project-2.ss read-syntax-from-file write-syntax-list stx-sexpr=?)
 
 
 (define-layer safepointify.sexp read-sexp-module write-sexp-module stx-sexpr=?) ;; after safepoints added
@@ -140,6 +142,7 @@
 ;; *Projection*: contract and participants in a single file
 (define-pass project (checkpointify.sexp Unused cpitable2.sexp) (project.sexp))
 (define-pass project-1 (project.sexp Unused typetable.sexp tymetable.sexp mebatable.sexp cpitable2.sexp) (project-1.ss))
+(define-pass project-2 (project.sexp Unused typetable.sexp tymetable.sexp mebatable.sexp cpitable2.sexp) (project-2.ss))
 
 ;; *Contract Projection*: extract a contract for every interaction
 ;;(define-pass contract-projection ".message.sexp" ".contract.sexp")
@@ -162,7 +165,7 @@
 ;;(define-pass javascript-extraction ".client.sexp" ".js")
 
 (define-strategy ethereum-direct-style
-  parse alpha-convert desugar typecheck method-resolve anf checkpointify checkpoint-liveness project project-1) ;; ...
+  parse alpha-convert desugar typecheck method-resolve anf checkpointify checkpoint-liveness project project-1 project-2) ;; ...
 
 ;; Different layers and passes for State-Channel style:
 ;; the previous contract is virtualized, so that

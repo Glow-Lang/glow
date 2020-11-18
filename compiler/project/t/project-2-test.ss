@@ -38,9 +38,10 @@
   (def unused (hash-ref state 'Unused))
   (def tytbl (hash-ref state 'typetable.sexp))
   (def tymetbl (hash-ref state 'tymetable.sexp))
+  (def mebatbl (hash-ref state 'mebatable.sexp))
   (def cpit (hash-ref state 'cpitable2.sexp))
   (def projs (project modstx unused cpit))
-  (def scmstx (project-2 projs unused tytbl tymetbl cpit))
+  (def scmstx (project-2 projs unused tytbl tymetbl mebatbl cpit))
   (for ((s scmstx))
     (printf "~y" (syntax->datum s)))
   #t)
@@ -65,12 +66,12 @@
 (def project-2-test
   (test-suite "test suite for glow/compiler/project"
     (test-case "testing example glow files"
-      ;(try-project-2-all)
-      (try-project-2-files
-        (for/collect
-          ((s (examples.glow)
-              when (or (pregexp-match "buy_sig.glow" s))))
-          s))
+      (try-project-2-all)
+      ; (try-project-2-files
+      ;   (for/collect
+      ;     ((s (examples.glow)
+      ;         when (or (pregexp-match "buy_sig.glow" s))))
+      ;     s))
       (void))))
 
 (def (main . args)
