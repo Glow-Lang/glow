@@ -19,7 +19,7 @@
         :std/misc/number
         :std/misc/channel
         :gerbil/gambit/threads
-        (only-in :gerbil/gambit/ports output-port-readtable output-port-readtable-set!)
+        (only-in :gerbil/gambit/ports output-port-readtable output-port-readtable-set! read-u8)
         (only-in :gerbil/gambit/readtables readtable-sharing-allowed?-set)
         ;; TODO: use more cryptographically-secure randomness
         ;; from Gerbil :std/crypto or fare/gerbil-crypto
@@ -41,31 +41,50 @@
 (def (assq-values a) (map cdr a))
 
 ;; A Message is a:
-;;   (list 'message Address [Listof (cons Sym Bytes)] [Assqof (U #f Address) Int])
+;;   (list 'message Address Bytes [Assqof (U #f Address) Int])
 (def (message sender published asset-transfers)
   ['message sender published asset-transfers])
 (def message-sender cadr)
 (def message-published caddr)
-(def message-published-set! set-caddr!)
 (def message-asset-transfers cadddr)
 (def message-asset-transfers-set! set-cadddr!)
-;; An InProgressMessage has the `published` field reversed
-;; message-copy : Message -> Message
-(def (message-copy m)
+
+;; A MessageOut is a:
+;;   (list 'message Address OutputPort [Assqof (U #f Address) Int])
+;; A MessageIn is a:
+;;   (list 'message Address InputPort [Assqof (U #f Address) Int])
+
+;; open-message-out : Address -> MessageOut
+(def (open-message-out sender)
+  (message sender (open-output-u8vector) []))
+
+;; get-output-message : MessageOut -> Message
+(def (get-output-message m)
+  (def published-out (message-published m))
+  (def published-bytes (get-output-u8vector published-out))
+  (close-output-port published-out)
+  (message (message-sender m) published-bytes (message-asset-transfers m)))
+
+;; open-message-in : Message -> MessageIn
+(def (open-message-in m)
   (message (message-sender m)
-           (message-published m)
-           (message-asset-transfers m)))
-;; finalize-message : InProgressMessage -> Message
-(def (finalize-message m)
-  (message (message-sender m)
-           (reverse (message-published m))
+           (open-input-u8vector (message-published m))
            (message-asset-transfers m)))
 
-;; current-receiving-message : [Parameterof Message]
+;; close-message-in : MessageIn -> Void
+(def (close-message-in m)
+  (unless (eof-object? (read-u8 (message-published m)))
+    (error 'close-message-in "published not eof:" (message-published m)))
+  (close-input-port (message-published m))
+  (unless (andmap zero? (assq-values (message-asset-transfers m)))
+    (error 'close-message-in "asset-transfers:" (message-asset-transfers m))))
+
+;; current-receiving-message : [Parameterof MessageIn]
+;; current-received-message : [Parameterof Message]
 (def current-receiving-message (make-thread-parameter #f))
 (def current-received-message (make-thread-parameter #f))
 
-;; current-in-progress-message : [Parameterof InProgressMessage]
+;; current-in-progress-message : [Parameterof MessageOut]
 (def current-in-progress-message (make-thread-parameter #f))
 
 ;; --------------------------------------------------------
@@ -170,16 +189,16 @@
 (def (participant-new-in-progress-message)
   (awhen (msg (current-in-progress-message))
     (error 'participant-new-in-progress-message "expected current-in-progress-message #f, given" msg))
-  (current-in-progress-message (message (current-address) [] [])))
+  (current-in-progress-message (open-message-out (current-address))))
 
 ;; participant-send-in-progress-message : Channel Channel -> Void
 ;; Used by the participant sending a message to the consesus
 (def (participant-send-in-progress-message participant->consensus consensus->participant)
-  (def msg (finalize-message (current-in-progress-message)))
+  (def msg (get-output-message (current-in-progress-message)))
   (channel-put participant->consensus msg)
   (current-in-progress-message #f)
   (participant-expect-message consensus->participant)
-  (assert! (equal? msg (current-receiving-message)))
+  (assert! (equal? msg (current-received-message)))
   (current-receiving-message #f))
 
 ;; consensus-receive-message : [Listof MPart] Channel -> Void
@@ -191,17 +210,14 @@
   (unless (or (member sender nexts) (member #f nexts))
     (error "sender " sender " does not match nexts " nexts))
   (current-received-message msg)
-  (current-receiving-message (message-copy msg)))
+  (current-receiving-message (open-message-in msg)))
 
 ;; consensus-done-processing-message : [Listof Channel] -> Void
 ;; Used by the consensus after the transition to the next checkpoint
 (def (consensus-done-processing-message consensus->participants)
   ;; TODO: Save the frame, using the set of live variables
   (awhen (msg (current-receiving-message))
-    (unless (null? (message-published msg))
-      (error 'consensus-done-processing-message "published:" (message-published msg)))
-    (unless (andmap zero? (assq-values (message-asset-transfers msg)))
-      (error 'consensus-done-processing-message "asset-transfers:" (message-asset-transfers msg)))
+    (close-message-in msg)
     ; async send to each participant
     (let ((orig-msg (current-received-message)))
       (define p (current-output-port))
@@ -218,32 +234,27 @@
 (def (participant-expect-message consensus->participant)
   (awhen (msg (current-receiving-message))
     (error 'participant-expect-message "should be no previous receiving-message" msg))
-  (current-receiving-message (channel-get consensus->participant)))
+  (def msg (channel-get consensus->participant))
+  (current-received-message msg)
+  (current-receiving-message (open-message-in msg)))
 
 ;; participant-done-processing-message : -> Void
 (def (participant-done-processing-message)
   (awhen (msg (current-receiving-message))
-    (unless (null? (message-published msg))
-      (error 'participant-done-processing-message "published:" (message-published msg)))
-    (unless (andmap zero? (assq-values (message-asset-transfers msg)))
-      (error 'participant-done-processing-message "asset-transfers:" (message-asset-transfers msg)))
+    (close-message-in msg)
     (current-receiving-message #f)))
 
 ;; --------------------------------------------------------
 
 ;; add-to-publish : Sym Any TypeMethods -> Void
 (def (add-to-publish x v t)
-  (def msg (current-in-progress-message))
-  (def ent (cons x (bytes<- t v)))
-  (push! ent (message-published msg)))
+  ;; ignore x, by order not by name
+  (marshal t v (message-published (current-in-progress-message))))
 
 ;; expect-published : Sym TypeMethods -> Any
 (def (expect-published x t)
-  (def msg (current-receiving-message))
-  (def p (pop! (message-published msg)))
-  (unless (and (pair? p) (eq? (car p) x))
-    (error 'expect-published x p msg))
-  (<-bytes t (cdr p)))
+  ;; ignore x, by order not by name
+  (unmarshal t (message-published (current-receiving-message))))
 
 ;; add-to-deposit : Nat -> Void
 (def (add-to-deposit n)
