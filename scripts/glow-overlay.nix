@@ -12,6 +12,15 @@ pkgs: super: rec {
             { version = builtins.elemAt m 2; git-version = builtins.elemAt m 1; }
         else { version = "0.0"; git-version = "0.0"; };
 
+
+  gerbil-poo-override = gerbilPackages-unstable.gerbil-poo.overrideAttrs (old: {
+    src = pkgs.thunkSource ../dep/gerbil-poo;
+  });
+
+  gerbil-ethereum-override = gerbilPackages-unstable.gerbil-ethereum.overrideAttrs (old: {
+    src = pkgs.thunkSource ../dep/gerbil-ethereum;
+  });
+
   muknglow = gerbil-support.gerbilPackage {
     pname = "muknglow";
     version = ver.version;
@@ -20,11 +29,11 @@ pkgs: super: rec {
     gerbil = gerbil-unstable;
     gambit-params = gambit-support.unstable-params;
     gerbilInputs = with gerbilPackages-unstable;
-      [gerbil-utils gerbil-crypto gerbil-poo gerbil-persist gerbil-ethereum smug-gerbil];
+      [gerbil-utils gerbil-crypto gerbil-poo-override gerbil-persist gerbil-ethereum-override smug-gerbil];
     version-path = "version";
     src = builtins.filterSource
       (path: type: let baseName = baseNameOf path; in
-        ! (baseName == ".git" || baseName == "run" || baseName == "result" ||
+        ! (baseName == ".git" || baseName == "run" || baseName == "result" || baseName == "dep" ||
            baseName == "BLAH" || lib.hasSuffix "~" baseName))
       ./..;
 
