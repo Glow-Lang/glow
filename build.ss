@@ -18,7 +18,9 @@
   (cons (cons* gxc: file options) (remove-file files file)))
 
 (def (files)
-  (add/options (cons "t/common.ss" (all-gerbil-modules))
+  (def modules (all-gerbil-modules))
+  (def filtered-modules (filter (lambda (module-name) (not (string-prefix? "dep" module-name))) modules))
+  (add/options (cons "t/common.ss" filtered-modules)
                "compiler/parse/expressions" "-cc-options" "-O0 -U___SINGLE_HOST"))
 
 (init-build-environment!
