@@ -202,11 +202,13 @@ done
      (def consensus->B (make-channel #f))
      (def consensus->participants (@list consensus->A consensus->B))
      (def participant->consensus (make-channel #f))
+     (def balances (get-balances [A B]))
      (def consensus-thread
           (spawn/name/params
            'consensus
            (lambda ()
-             (parameterize ((current-address #f))
+             (parameterize ((current-address #f)
+                            (current-balances balances))
                ((rockPaperScissors-consensus
                  participant->consensus
                  consensus->participants
@@ -217,7 +219,8 @@ done
           (@list (spawn/name/params
                   'A
                   (lambda ()
-                    (parameterize ((current-address A))
+                    (parameterize ((current-address A)
+                                   (current-balances balances))
                       ((rockPaperScissors-A
                         consensus->A
                         participant->consensus
@@ -227,7 +230,8 @@ done
                  (spawn/name/params
                   'B
                   (lambda ()
-                    (parameterize ((current-address B))
+                    (parameterize ((current-address B)
+                                   (current-balances balances))
                       ((rockPaperScissors-B
                         consensus->B
                         participant->consensus

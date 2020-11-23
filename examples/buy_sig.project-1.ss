@@ -59,11 +59,13 @@ To run from gxi in the glow directory, assuming gerbil-etherum is in a sibling d
      (def consensus->Seller (make-channel #f))
      (def consensus->participants (@list consensus->Buyer consensus->Seller))
      (def participant->consensus (make-channel #f))
+     (def balances (get-balances [Buyer Seller]))
      (def consensus-thread
           (spawn/name/params
            'consensus
            (lambda ()
-             (parameterize ((current-address #f))
+             (parameterize ((current-address #f)
+                            (current-balances balances))
                ((payForSignature-consensus
                  participant->consensus
                  consensus->participants
@@ -75,7 +77,8 @@ To run from gxi in the glow directory, assuming gerbil-etherum is in a sibling d
           (@list (spawn/name/params
                   'Buyer
                   (lambda ()
-                    (parameterize ((current-address Buyer))
+                    (parameterize ((current-address Buyer)
+                                   (current-balances balances))
                       ((payForSignature-Buyer
                         consensus->Buyer
                         participant->consensus
@@ -86,7 +89,8 @@ To run from gxi in the glow directory, assuming gerbil-etherum is in a sibling d
                  (spawn/name/params
                   'Seller
                   (lambda ()
-                    (parameterize ((current-address Seller))
+                    (parameterize ((current-address Seller)
+                                   (current-balances balances))
                       ((payForSignature-Seller
                         consensus->Seller
                         participant->consensus
