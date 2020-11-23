@@ -8,7 +8,9 @@ in
     inputsFrom = [
       glow
     ];
-    buildInputs = ethereumPkgs;
+    buildInputs = [
+      pkgs.thunkExe
+    ] ++  ethereumPkgs;
     shellHook = glow.postConfigure;
     GERBIL_APPLICATION_HOME = "./";
   }
