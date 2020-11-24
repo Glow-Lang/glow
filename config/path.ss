@@ -5,6 +5,9 @@
   :clan/base :clan/source :clan/filesystem
   :clan/path :clan/path-config)
 
+(set! application-source-envvar "GLOW_SRC")
+(set! application-home-envvar "GLOW_HOME")
+
 (def build-time-glow-src (path-parent (path-normalized-directory (this-source-file))))
 (def (glow-src) (getenv "GLOW_SRC" build-time-glow-src))
 (def (glow-home) (or (getenv "GLOW_HOME" #f) (glow-src)))
