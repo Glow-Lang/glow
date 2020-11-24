@@ -20,7 +20,7 @@
   :mukn/glow/compiler/liveness/checkpoint-liveness
   :mukn/glow/compiler/project/project
   :mukn/glow/compiler/project/project-1
-  (only-in :mukn/glow/compiler/project/project-2 project-2)
+  :mukn/glow/compiler/project/project-2
   )
 
 ;;; Layers, passes and strategies

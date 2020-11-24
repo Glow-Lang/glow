@@ -1,4 +1,4 @@
-(export #t)
+(export project-2)
 
 (import :std/format :std/iter :std/stxutil
         :std/misc/list :std/sort :std/srfi/1
@@ -33,6 +33,9 @@
           #'(export #t)
           #'(import :mukn/glow/compiler/project/runtime-2)
           (translate-body stmts cpit #f)))))))
+
+;; TODO: factor out common stx-def-interaction functions
+;;       between project-1 and project-2
 
 ;; stx-def-interaction? : Stx -> Bool
 ;; stx-not-def-interaction? : Stx -> Bool

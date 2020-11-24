@@ -61,6 +61,7 @@
        (def (mk-var x)
          (restx stx (symbol-fresh x)))
        (def input
+         ;; TODO: support input for types with type-parameters
          (if (identifier? #'spec)
            (let ((x (mk-var 'x))
                  (tag (mk-var 'tag)))

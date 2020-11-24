@@ -53,12 +53,14 @@
 
 
 ;; A TysymMethodsTable is a [Hashof Symbol TysymMethodsEntry]
+;; maps the symbols in type:name to symbols for runtime method-dictionaries
 ;; A TysymMethodsEntry is a (entry:tysym-methods Symbol [MaybeSymdictof Symbol])
 (def (make-tysym-methods-table) (make-hash-table-eq))
 (def current-tysym-methods-table (make-parameter (make-tysym-methods-table)))
 (defstruct entry:tysym-methods (sym syms) transparent: #t)
 
 ;; A MethodsIdBackTable is a [Hashof Symbol Symbol]
+;; maps the symbols for runtime method-dictionaries to symbols for types
 (def (make-methods-id-back-table) (make-hash-table-eq))
 (def current-methods-id-back-table (make-parameter (make-methods-id-back-table)))
 
@@ -279,6 +281,7 @@
            (lambda (t) (and t (repr-sexpr->type t))))))
 
 (def (read-type-table-file file)
+  ;; TODO: move error handling to `run-pass` or `run-passes` in multipass.ss
   (with-catch
    (lambda (e) (display-exception e) #f)
    (lambda ()
@@ -306,6 +309,7 @@
            (lambda (t) (and t (repr-sexpr->symbol t))))))
 
 (def (read-tysym-methods-table-file file)
+  ;; TODO: move error handling to `run-pass` or `run-passes` in multipass.ss
   (with-catch
    (lambda (e) (display-exception e) #f)
    (lambda ()
@@ -331,6 +335,7 @@
   (and s (repr-sexpr->hash s identity repr-sexpr->symbol)))
 
 (def (read-methods-id-back-table-file file)
+  ;; TODO: move error handling to `run-pass` or `run-passes` in multipass.ss
   (with-catch
    (lambda (e) (display-exception e) #f)
    (lambda ()
