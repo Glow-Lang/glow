@@ -31,6 +31,7 @@
         :clan/poo/io
         :clan/persist/content-addressing
         (only-in :clan/poo/type Sum define-sum-constructors)
+        :clan/pure/dict/dicteq
         :mukn/glow/compiler/syntax-context
         :mukn/ethereum/types
         :mukn/ethereum/known-addresses
@@ -78,6 +79,9 @@
   (close-input-port (message-published m))
   (unless (andmap zero? (assq-values (message-asset-transfers m)))
     (error 'close-message-in "asset-transfers:" (message-asset-transfers m))))
+
+;; current-balances : [Parameterof [Dicteqof Address Int]]
+(def current-balances (make-thread-parameter #f))
 
 ;; current-receiving-message : [Parameterof MessageIn]
 ;; current-received-message : [Parameterof Message]
@@ -195,8 +199,11 @@
 ;; Used by the participant sending a message to the consesus
 (def (participant-send-in-progress-message participant->consensus consensus->participant)
   (def msg (get-output-message (current-in-progress-message)))
+  ;; calculate updated balances, but don't set current-balances yet
+  (update-balances (current-balances) (message-asset-transfers msg))
   (channel-put participant->consensus msg)
   (current-in-progress-message #f)
+  ;; this will set current-balances to the updated balances
   (participant-expect-message consensus->participant)
   (assert! (equal? msg (current-received-message)))
   (current-receiving-message #f))
@@ -218,8 +225,9 @@
   ;; TODO: Save the frame, using the set of live variables
   (awhen (msg (current-receiving-message))
     (close-message-in msg)
-    ; async send to each participant
+    ; update balances and async send to each participant
     (let ((orig-msg (current-received-message)))
+      (update-current-balances (message-asset-transfers orig-msg))
       (define p (current-output-port))
       (output-port-readtable-set!
         p
@@ -235,6 +243,7 @@
   (awhen (msg (current-receiving-message))
     (error 'participant-expect-message "should be no previous receiving-message" msg))
   (def msg (channel-get consensus->participant))
+  (update-current-balances (message-asset-transfers msg))
   (current-received-message msg)
   (current-receiving-message (open-message-in msg)))
 
@@ -289,6 +298,32 @@
   (def mat2 (assq-update mat p  (cut - <> n) 0))
   (def mat3 (assq-update mat2 #f (cut + <> n) 0))
   (set! (message-asset-transfers msg) mat3))
+
+;; --------------------------------------------------------
+
+;; get-balance : Address -> Nat
+(def (get-balance p)
+  ; TODO: (eth_getBalance p 'pending) from :mukn/ethereum/json-rpc
+  1)
+
+;; get-balances : [Listof Address] -> [Dicteqof Address Nat]
+(def (get-balances ps)
+  (list->dicteq
+   (for/collect ((p ps))
+     (cons p (get-balance p)))))
+
+;; update-balances : [Assqof Address Int] -> [Dicteqof Address Nat]
+(def (update-balances before transfers)
+  (for/fold (bal before) ((p transfers))
+    (with (([k . v0] p))
+      (def v1 (+ (dicteq-ref bal k (lambda () 0)) v0))
+      (unless (<= 0 v1)
+        (error 'update-balances "balance cannot go below 0" k v1))
+      (dicteq-put bal k v1))))
+
+;; update-current-balances : [Hashof Address Int] -> Void
+(def (update-current-balances transfers)
+  (current-balances (update-balances (current-balances) transfers)))
 
 ;; --------------------------------------------------------
 

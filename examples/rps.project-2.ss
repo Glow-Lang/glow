@@ -177,22 +177,26 @@ done
      (def consensus->B (make-channel #f))
      (def consensus->participants (@list consensus->A consensus->B))
      (def participant->consensus (make-channel #f))
+     (def balances (get-balances [A B]))
      (def consensus-thread
           (spawn/name/params
            'consensus
            (lambda ()
-             (parameterize ((current-address #f))
+             (parameterize ((current-address #f)
+                            (current-balances balances))
                ((rockPaperScissors-consensus0 participant->consensus consensus->participants A B) wagerAmount)))))
      (def participant-threads
           (@list (spawn/name/params
                   'A
                   (lambda ()
-                    (parameterize ((current-address A))
+                    (parameterize ((current-address A)
+                                   (current-balances balances))
                       ((rockPaperScissors-A0 consensus->A participant->consensus A B) wagerAmount))))
                  (spawn/name/params
                   'B
                   (lambda ()
-                    (parameterize ((current-address B))
+                    (parameterize ((current-address B)
+                                   (current-balances balances))
                       ((rockPaperScissors-B0 consensus->B participant->consensus A B) wagerAmount))))))
      (for-each thread-join! (cons consensus-thread participant-threads))
      (channel-close consensus->A)

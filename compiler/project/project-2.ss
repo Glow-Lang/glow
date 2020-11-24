@@ -117,15 +117,19 @@
         (def consensus->participants [consensus->participant ...])
         ;; participant->consensus : Channel
         (def participant->consensus (make-channel #f))
+        ;; balances : [Dicteqof Address Nat]
+        (def balances (get-balances [p ...]))
         (def consensus-thread
           (spawn/name/params 'consensus
             (lambda ()
-              (parameterize ((current-address #f))
+              (parameterize ((current-address #f)
+                             (current-balances balances))
                 ((name-consensus participant->consensus consensus->participants p ...) x ...)))))
         (def participant-threads
           [(spawn/name/params 'p
             (lambda ()
-              (parameterize ((current-address p))
+              (parameterize ((current-address p)
+                             (current-balances balances))
                 ((name-participant consensus->participant participant->consensus p ...) x ...))))
            ...])
         (for-each thread-join! (cons consensus-thread participant-threads))
