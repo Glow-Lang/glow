@@ -10,12 +10,17 @@
   (only-in :mukn/glow/compiler/typecheck/typecheck
     typecheck read-type-env-file write-type-env type-env=?)
   (only-in :mukn/glow/compiler/method-resolve/method-resolve
-    method-resolve read-type-table-file write-type-table type-table=?)
+    method-resolve
+    read-type-table-file write-type-table type-table=?
+    read-tysym-methods-table-file write-tysym-methods-table tysym-methods-table=?
+    read-methods-id-back-table-file write-methods-id-back-table methods-id-back-table=?)
   :mukn/glow/compiler/anf/anf
   :mukn/glow/compiler/checkpointify/checkpointify
   :mukn/glow/compiler/checkpointify/checkpoint-info-table
   :mukn/glow/compiler/liveness/checkpoint-liveness
   :mukn/glow/compiler/project/project
+  :mukn/glow/compiler/project/project-1
+  :mukn/glow/compiler/project/project-2
   )
 
 ;;; Layers, passes and strategies
@@ -49,6 +54,8 @@
 ;; Method-resolved Glow programs
 (define-layer mere.sexp read-sexp-module write-sexp-module stx-sexpr=?)
 (define-layer typetable.sexp read-type-table-file write-type-table type-table=?)
+(define-layer tymetable.sexp read-tysym-methods-table-file write-tysym-methods-table tysym-methods-table=?)
+(define-layer mebatable.sexp read-methods-id-back-table-file write-methods-id-back-table methods-id-back-table=?)
 
 ;; (Typed) Glow programs in A-Normal form
 ;; where all function call arguments are trivial (reference to constant or variable).
@@ -69,6 +76,9 @@
 
 ;; Projection
 (define-layer project.sexp read-sexp-module write-sexp-module stx-sexpr=?)
+(define-layer project-1.ss read-syntax-from-file write-syntax-list stx-sexpr=?)
+(define-layer project-2.ss read-syntax-from-file write-syntax-list stx-sexpr=?)
+
 
 (define-layer safepointify.sexp read-sexp-module write-sexp-module stx-sexpr=?) ;; after safepoints added
 (define-layer bbepp.sexp read-sexp-module write-sexp-module stx-sexpr=?) ;; right Before BEPP
@@ -102,12 +112,12 @@
 (define-pass typecheck (desugar.sexp Unused) (typedecl.sexp TypeInfoTable))
 
 ;; *Method-resolve*: handle type methods, attached in `defdata with:` and accessed in `type.method`
-(define-pass method-resolve (desugar.sexp Unused) (mere.sexp typetable.sexp))
+(define-pass method-resolve (desugar.sexp Unused) (mere.sexp typetable.sexp tymetable.sexp mebatable.sexp))
 
 ;; *A-normalization*: ensure all call arguments are trivial,
 ;; hence a well-defined sequence for all side-effects.
-;; ModuleStx Unused → ModuleStx
-(define-pass anf (mere.sexp Unused) (anf.sexp))
+;; ModuleStx Unused TypeTable → ModuleStx
+(define-pass anf (mere.sexp Unused typetable.sexp) (anf.sexp))
 
 ;; *Transaction-ification*: introduce suitable safe points between changes in participants
 (define-pass checkpointify (anf.sexp Unused) (checkpointify.sexp cpitable.sexp))
@@ -131,6 +141,8 @@
 
 ;; *Projection*: contract and participants in a single file
 (define-pass project (checkpointify.sexp Unused cpitable2.sexp) (project.sexp))
+(define-pass project-1 (project.sexp Unused typetable.sexp tymetable.sexp mebatable.sexp cpitable2.sexp) (project-1.ss))
+(define-pass project-2 (project.sexp Unused typetable.sexp tymetable.sexp mebatable.sexp cpitable2.sexp) (project-2.ss))
 
 ;; *Contract Projection*: extract a contract for every interaction
 ;;(define-pass contract-projection ".message.sexp" ".contract.sexp")
@@ -153,7 +165,7 @@
 ;;(define-pass javascript-extraction ".client.sexp" ".js")
 
 (define-strategy ethereum-direct-style
-  parse alpha-convert desugar typecheck method-resolve anf checkpointify checkpoint-liveness project) ;; ...
+  parse alpha-convert desugar typecheck method-resolve anf checkpointify checkpoint-liveness project project-1 project-2) ;; ...
 
 ;; Different layers and passes for State-Channel style:
 ;; the previous contract is virtualized, so that
