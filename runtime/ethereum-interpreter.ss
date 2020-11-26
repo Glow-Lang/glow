@@ -15,43 +15,10 @@
 
 (defalias λ lambda)
 
-; INIT
-;; A: requesting initialization parameters from the end-user based on spec produced by compiler
-;; A: parsing the user inputs from command line
-;; A: aggregate and present the parameters to user as json
-
-;; J: producing the on-chain contract with initialization parameters
-
-; EXECUTION
-;; J: applying end-user inputs to a transaction <- not until RPS
-;; J: applying published values to a transaction
-;; J: constructing the activation frame and posting transaction
-
-;; J:replacing variable names (per code block) with numbers representing offsets in on-chain memory
-
-; PERSISTENCE
-;; F: have post transaction handle persistent continuations
-
-(def (initialize Buyer Seller)
-  (ensure-db-connection (run-path "testdb"))
-  (load-ethereum-networks "./etc/ethereum_networks.json")
-  (ensure-ethereum-network "pet")
-  (register-keypair
-    "Buyer"
-    (keypair ;; KLUGE: Fake public and secret key data. We only use the address via Geth.
-      Buyer
-      (<-json PublicKey "0x020000000000000000000000000000000000000000000000000000000000000001")
-      (<-json SecretKey "0x0000000000000000000000000000000000000000000000000000000000000001")
-      ""))
-  (register-keypair
-    "Seller"
-    (keypair ;; KLUGE: Fake public and secret key data. We only use the address via Geth.
-      Seller
-      (<-json PublicKey "0x020000000000000000000000000000000000000000000000000000000000000001")
-      (<-json SecretKey "0x0000000000000000000000000000000000000000000000000000000000000001")
-      ""))
-  (ensure-eth-signing-key Buyer)
-  (ensure-eth-signing-key Seller))
+(def (run)
+  (def buy-sig (generate-buy-sig))
+  {initialize buy-sig}
+  {execute buy-sig 'Buyer})
 
 (def (generate-buy-sig)
   (def program
@@ -64,40 +31,10 @@
     (hash
       (digest0 [(string->bytes "abcdefghijklmnopqrstuvwxyz012345") Digest])
       (price [10000000 Ether])))
-
   (make-Interpreter
     program: program
     participants: participants
     arguments: arguments))
-
-(def (run)
-  (def buy-sig (generate-buy-sig))
-  {initialize buy-sig}
-  {execute buy-sig 'Buyer})
-
-  ;(displayln "BUYER")
-  ;(def buy-sig (payForSignature/Buyer #f Buyer Seller digest0 price))
-  ;(displayln "SELLER")
-  ;(payForSignature/Seller #f Buyer Seller digest0 price message-file))
-
-; PROGRAM
-(def (parse-project-output file-path)
-  (def project-output-file (open-file file-path))
-  (def project-output (read project-output-file))
-  (extract-program project-output))
-
-(defclass Program (name arguments interactions)
-  transparent: #t)
-
-(defmethod {:init! Program}
-  (λ (self (n "") (as []) (is #f))
-    (set! (@ self name) n)
-    (set! (@ self arguments) as)
-    (set! (@ self interactions) (if is is (make-hash-table)))))
-
-(defmethod {get-interaction Program}
-  (λ (self participant)
-    (hash-get (@ self interactions) participant)))
 
 ; INTERPRETER
 (defclass Interpreter (program participants arguments variable-addresses params-end)
@@ -242,14 +179,14 @@
 
 (defmethod {interpret-consensus-statement Interpreter}
   (λ (self statement)
-    (def find-other-participant
-      (λ (participant)
-        (find (λ (p) (not (equal? p participant))) (hash-keys (@ self participants)))))
+    (def find-other-participant (λ (participant)
+      (find (λ (p) (not (equal? p participant))) (hash-keys (@ self participants)))))
     (displayln statement)
     (match statement
       (['set-participant new-participant]
         (def other-participant
           (find-other-participant new-participant))
+        ; TODO: support more than two participants
         [(&check-participant-or-timeout!
           must-act: (&mloadat {lookup-variable-address self new-participant} (param-length Address))
           or-end-in-favor-of: (&mloadat {lookup-variable-address self other-participant} (param-length Address)))])
@@ -278,18 +215,28 @@
 (def (digest-product fields)
   (digest<-marshal (λ (port)
     (map (λ (field)
-      (match field ([value type]
-        (marshal type value port)))) fields))))
+      (match field
+        ([value type]
+          (marshal type value port)))) fields))))
 
-(defmethod {interpret-off-chain-statement Interpreter}
-  (λ (self statement)
-    (match statement
-      (['set-participant new-participant]
-        (&check-participant-or-timeout!))
-      (['add-to-deposit amount]
-        (displayln amount))
-      (['expect-deposited amount]
-        (displayln amount)))))
+; PARSER
+(def (parse-project-output file-path)
+  (def project-output-file (open-file file-path))
+  (def project-output (read project-output-file))
+  (extract-program project-output))
+
+(defclass Program (name arguments interactions)
+  transparent: #t)
+
+(defmethod {:init! Program}
+  (λ (self (n "") (as []) (is #f))
+    (set! (@ self name) n)
+    (set! (@ self arguments) as)
+    (set! (@ self interactions) (if is is (make-hash-table)))))
+
+(defmethod {get-interaction Program}
+  (λ (self participant)
+    (hash-get (@ self interactions) participant)))
 
 (defclass ParseContext (current-participant current-label code)
   constructor: :init!
