@@ -75,10 +75,8 @@
     {generate-parameter-addresses self}
     (defvalues (contract-runtime-bytes contract-runtime-labels)
       {generate-consensus-runtime self})
-    (def checkpoint-label
-      {make-checkpoint-label self})
     (def checkpoint-location
-      (hash-get contract-runtime-labels checkpoint-label))
+      (hash-get contract-runtime-labels {make-checkpoint-label self}))
     (def initial-state-fields
       (flatten1
        [[[checkpoint-location UInt16]]
@@ -123,7 +121,13 @@
 (defmethod {generate-parameter-addresses Interpreter}
   (λ (self)
     (def frame-variables (make-hash-table))
-    (def start 0)
+    ;; Initial offset computed by global registers, see :mukn/ethereum/contract-runtime
+    (def start (+
+      32 ;; The free memory pointer.
+      32 ;; Pointer within CALLDATA to yet unread published information.
+      32 ;; Pointer to new information within CALLDATA (everything before was seen).
+      32 ;; Required deposit so far.
+      ))
     (map (λ (participant)
       (match participant
         ([variable . value]
