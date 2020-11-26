@@ -1,4 +1,4 @@
-{ ethereum ? false }:
+{ ethereum ? true }:
 let
   pkgs = import ./pkgs.nix;
   glow = import ./default.nix;
