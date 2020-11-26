@@ -1,5 +1,5 @@
 # You can symlink this overlay into your ~/.config/nixpkgs/overlays/
-# to make muknglow available to your nix-env -iA muknglow.
+# to make glow-lang available to your nix-env -iA glow-lang.
 # TODO: try src = builtins.fetchGit ./. and extracting version from THAT, and/or lib.commitIdFromGitRepo.
 pkgs: super: rec {
   inherit (super) lib fetchFromGitLab fetchgit
@@ -12,15 +12,17 @@ pkgs: super: rec {
             { version = builtins.elemAt m 2; git-version = builtins.elemAt m 1; }
         else { version = "0.0"; git-version = "0.0"; };
 
-  muknglow = gerbil-support.gerbilPackage {
-    pname = "muknglow";
+  glow-lang = gerbil-support.gerbilPackage {
+    pname = "glow-lang";
     version = ver.version;
     git-version = ver.git-version;
     gerbil-package = "mukn/glow";
     gerbil = gerbil-unstable;
+    buildInputs = [];
     gambit-params = gambit-support.unstable-params;
+    softwareName = "Glow";
     gerbilInputs = with gerbilPackages-unstable;
-      [gerbil-utils gerbil-crypto gerbil-poo gerbil-persist gerbil-ethereum smug-gerbil];
+      [gerbil-utils gerbil-crypto gerbil-poo gerbil-persist gerbil-libp2p gerbil-ethereum smug-gerbil];
     version-path = "version";
     src = builtins.filterSource
       (path: type: let baseName = baseNameOf path; in
@@ -29,11 +31,11 @@ pkgs: super: rec {
       ./..;
 
     #src = fetchFromGitLab { owner = "mukn"; repo = "glow";
-    #  rev = "d0ad110a22b622844a4b916326b221ed3bbe66c4";
-    #  sha256 = "1xyslg5maz60wxrc4jqndx8czfi8b2b9f0n0rsm00000000giddf"; };
+    #  rev = "dbf1a33e67e5ea97456f3c1ee9bf22c994623306";
+    #  sha256 = "106zp5131rq9ry8c2axxf5wfjg4sm2q99laqnzd5g5hk5bimi2az"; };
     meta = {
-      description = "Decentralized Application Language";
-      homepage    = "https://gitlab.com/mukn/glow";
+      description = "Glow: language for safe Decentralized Applications (DApps)";
+      homepage    = "https://glow-lang.org";
       license     = lib.licenses.asl20;
       platforms   = lib.platforms.unix;
       maintainers = with lib.maintainers; [ fare ];
