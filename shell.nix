@@ -2,7 +2,7 @@
 let
   pkgs = import ./pkgs.nix;
   glow = import ./default.nix;
-  ethereumPkgs = if ethereum then [ pkgs.go-ethereum ] else [];
+  ethereumPkgs = if ethereum then [ pkgs.go-ethereum pkgs.solc ] else [];
 in
   pkgs.mkShell {
     inputsFrom = [
