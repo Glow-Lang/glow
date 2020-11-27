@@ -5,6 +5,31 @@ data Outcome = | B_Wins | Draw | A_Wins;
 let winner = (handA : Hand, handB : Hand) : Outcome => {
     Outcome.ofNat((Hand.toNat(handA) + (4 - Hand.toNat(handB))) % 3) };
 
+/* The somewhat magic formula above is equivalent to the tedious definition below:
+let winner = (handA : Hand, handB : Hand) : Outcome => {
+  switch (handA) {
+  case Rock:
+    switch(handB) {
+    case Rock: return Draw;
+    case Paper: return B_Wins;
+    case Scissors: return A_Wins;
+  }
+  case Paper:
+    switch(handB) {
+    case Rock: return A_Wins;
+    case Paper: return Draw;
+    case Scissors: return B_Wins;
+  }
+  case Scissors:
+    switch(handB) {
+    case Rock: return B_Wins;
+    case Paper: return A_Wins;
+    case Scissors: return Draw;
+    }
+  }
+}
+*/
+
 
 @interaction([A, B])
 let rockPaperScissors = (wagerAmount) => {
