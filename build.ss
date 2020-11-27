@@ -19,10 +19,11 @@
 
 (def (files)
   (add/options (cons "t/common.ss" (all-gerbil-modules))
-               "compiler/parse/expressions" "-cc-options" "-O0 -U___SINGLE_HOST"))
+               "compiler/parse/expressions" "-cc-options" "-U___SINGLE_HOST"))
 
 (init-build-environment!
  name: "Glow"
+ ;; NB: missing versions for drewc/smug-gerbil and vyzo/libp2p
  deps: '("clan" "clan/crypto" "clan/poo" "clan/persist" "mukn/ethereum")
  spec: files)
 
