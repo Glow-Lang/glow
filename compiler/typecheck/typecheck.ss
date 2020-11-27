@@ -271,6 +271,7 @@
 (def (repr-sexpr->type-env s) (repr-sexpr->symdict s repr-sexpr->env-entry))
 
 (def (read-type-env-file file)
+  ;; TODO: move error handling to `run-pass` or `run-passes` in multipass.ss
   (with-catch
    (lambda (e) (display-exception e) #f)
    (lambda ()

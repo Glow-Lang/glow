@@ -98,8 +98,8 @@
   (syntax-case stx ()
     ((_ p n)
      (cond
-       ((eq? (stx-e #'p) this-p) [#'(add-to-withdraw p n)])
-       (else [#'(expect-withdrawn p n)])))))
+       (this-p [#'(participant:withdraw p n)])
+       (else [#'(consensus:withdraw p n)])))))
 
 ;; project-require : StmtStx CpiTable MPart -> [Listof StmtStx]
 (def (project-require stx cpit this-p)

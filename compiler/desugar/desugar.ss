@@ -61,9 +61,12 @@
        (def (mk-var x)
          (restx stx (symbol-fresh x)))
        (def input
-         (let ((x (mk-var 'x))
-               (tag (mk-var 'tag)))
-           (restx stx [#'λ [tag] [': #'spec] [#'def x [': #'spec] [#'input #'spec tag]] x])))
+         ;; TODO: support input for types with type-parameters
+         (if (identifier? #'spec)
+           (let ((x (mk-var 'x))
+                 (tag (mk-var 'tag)))
+             [['input (restx stx [#'λ [tag] [': #'spec] [#'def x [': #'spec] [#'input #'spec tag]] x])]])
+           []))
        (def toofNat
          (let ((ofNat-cases (nat-to-variants #'(variant ...))))
            (if ofNat-cases
@@ -76,7 +79,7 @@
                 ['ofNat [#'λ [[of-x ': #'nat]] [': #'spec] [#'switch of-x . ofNat-cases]]]])
              '())))
        (def spec-name (stx-e (if (identifier? #'spec) #'spec (stx-car #'spec))))
-       (def rtvalue `(@record (input ,input) ,@toofNat))
+       (def rtvalue `(@record ,@input ,@toofNat))
        (retail-stx stx `(,#'spec ,@(syntax->list #'(variant ...)) with: ,rtvalue))))))
 
 (def (desugar-publish! stx)

@@ -4,6 +4,7 @@
         <expander-runtime>
         (for-template :mukn/glow/compiler/syntax-context)
         :mukn/glow/compiler/syntax-context
+        :mukn/glow/compiler/typecheck/stx-prop
         :clan/base
         ../common
         ../alpha-convert/fresh)
@@ -48,7 +49,10 @@
 ;; This table is used to allocate a fresh identifier *after* an expression is otherwise expanded
 (def current-tmp (make-parameter (hash)))
 (def (tmp-var tag) (hash-ensure-ref (current-tmp) tag (cut identifier-fresh 'tmp)))
-(def (deftmp tag expr) (with-syntax ((v (tmp-var tag)) (e expr)) (restx1 tag #'(def v e))))
+(def (deftmp tag expr)
+  (with-syntax ((v (tmp-var tag)) (e expr))
+    (set-has-type! #'v (get-has-type #'e))
+    (restx1 tag #'(def v e))))
 
 (def (anf-kontinue-expr k x acc)
   (def ke (syntax-case k (ignore! return new def)
@@ -115,7 +119,9 @@
 ;; anf-tmpify : ExprStx [Listof StmtStx] -> (values IdentifierStx [ListofStmtStx])
 (def (anf-tmpify expr stmts)
   (def stmts2 (anf-stmt (restx1 expr [#'new expr]) expr stmts))
-  (values (tmp-var expr) stmts2))
+  (def t (tmp-var expr))
+  (set-has-type! t (get-has-type expr))
+  (values t stmts2))
 
 ;; anf-arg-exprs : [Listof ExprStx] [Listof StmtStx] -> [Listof TrivialExprStx] [Listof StmtStx]
 ;; reduces a list of ExprStx and accumulate statements to the (reversed) list of StmtStx
@@ -156,6 +162,7 @@
     ((return)
      (with-syntax ((t (identifier-fresh #'tmp))
                    (e expr))
+       (set-has-type! #'t (get-has-type #'e))
        (cons* #'(return t) #'(def t e) acc)))
     ((x ...) (anf-kontinue-expr k expr acc))))
 
@@ -229,9 +236,10 @@
      (anf-kontinue-expr k (retail-stx stx [#'ip #'lp (anf-standalone-body #'(return) #'body) ...])
                         acc))))
 
-;; anf : ModuleStx UnusedTable -> ModuleStx
-(def (anf module unused-table)
+;; anf : ModuleStx UnusedTable TypeTable -> ModuleStx
+(def (anf module unused-table tytbl)
   (parameterize ((current-unused-table unused-table)
+                 (current-has-type-table tytbl)
                  (current-tmp (hash)))
     (syntax-case module (@module)
       ((@module stmts ...)

@@ -13,8 +13,9 @@ following grammar:
               \@module
               \@label def \@make-interaction λ deftype defdata
               consensus:set-participant participant:set-participant
-              expect-published expect-deposited expect-withdrawn
-              add-to-publish add-to-deposit add-to-withdraw
+              consensus:withdraw participant:withdraw
+              expect-published expect-deposited
+              add-to-publish add-to-deposit
               require! assert! ignore! return
               quote
               ann \@app \@dot \@list \@tuple \@record block switch
@@ -38,11 +39,11 @@ following grammar:
    (return expr)
    (consensus:set-participant id)
    (participant:set-participant id)
+   (consensus:withdraw id arg-expr)
+   (participant:withdraw id arg-expr)
    (expect-deposited arg-expr)
-   (expect-withdrawn id arg-expr)
    (add-to-publish 'id arg-expr)
    (add-to-deposit arg-expr)
-   (add-to-withdraw id arg-expr)
    (require! arg-expr)
    (assert! arg-expr)
    (switch arg-expr (pat body) ...)]

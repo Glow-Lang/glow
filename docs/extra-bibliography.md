@@ -141,4 +141,7 @@ Other non-Lisp types of interest?
 ### More...
 
 * Ledger
-* Substrate
+* COSMOS
+* Polkadot and its Substrate framework
+* Blockly from IOHK
+* [Kleros](https://kleros.io)

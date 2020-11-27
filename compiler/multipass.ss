@@ -122,6 +122,8 @@
 ;; where each key is the name of a layer as a symbol
 
 ;; Symbol String Representation+AncillaryDataIn -> Representation+AncillaryDataOut
+;; TODO: error handling for layer read/write/compare
+;; TODO: mode for overriding, mode for just-running-without-comparing, mode for warnings, etc.
 (def (run-pass pass-name basename state)
   (match (registered-pass pass-name)
     ((pass fun inputs outputs)

@@ -1,1 +1,1 @@
-(pkgs: (import ./scripts/glow-overlay.nix (pkgs) (pkgs)).muknglow) (import ./pkgs.nix)
+(pkgs: (import ./scripts/glow-overlay.nix (pkgs) (pkgs)).glow-lang) (import ./pkgs.nix)

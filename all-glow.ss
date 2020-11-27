@@ -30,7 +30,7 @@
   ;; :ecraven/gerbil-swank
 
   ;; Clan Utilities
-  :clan/net/json-rpc.net :clan/net/s3 :clan/net/simple-http-client :clan/net/websocket
+  :clan/net/json-rpc :clan/net/s3 :clan/net/simple-http-client :clan/net/websocket
   :clan/assert :clan/base :clan/basic-parsers :clan/basic-printers
   :clan/call-limiter :clan/concurrency :clan/config
   :clan/timestamp :clan/debug :clan/diceware

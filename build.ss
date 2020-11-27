@@ -6,7 +6,7 @@
 ;;     gxpkg install github.com/fare/gerbil-ethereum
 ;; See HACKING.md for details.
 
-(import :std/misc/process :clan/building :clan/multicall)
+(import :std/misc/process :clan/base :clan/building :clan/multicall)
 
 (def (remove-file files file) ;; TODO: handle foo vs foo.ss ?
   (filter (match <>
@@ -18,13 +18,14 @@
   (cons (cons* gxc: file options) (remove-file files file)))
 
 (def (files)
-  (def modules (all-gerbil-modules))
-  (def filtered-modules (filter (lambda (module-name) (not (string-prefix? "dep" module-name))) modules))
-  (add/options (cons "t/common.ss" filtered-modules)
-               "compiler/parse/expressions" "-cc-options" "-O0 -U___SINGLE_HOST"))
+  (!> (all-gerbil-modules)
+      (cut filter (lambda (module-name) (not (string-prefix? "dep" module-name))) <>)
+      (cut cons* [exe: "main.ss" bin: "glow"] "t/common.ss" <>)
+      (cut add/options <> "compiler/parse/expressions" "-cc-options" "-U___SINGLE_HOST")))
 
 (init-build-environment!
  name: "Glow"
+ ;; NB: missing versions for drewc/smug-gerbil and vyzo/libp2p
  deps: '("clan" "clan/crypto" "clan/poo" "clan/persist" "mukn/ethereum")
  spec: files)
 

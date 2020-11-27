@@ -176,6 +176,20 @@ Required Features:
 - FFI to new cryptographic primitives
 - Trusted operators.
 
+### Arbitration
+
+2-out-of-3 contract, or otherwise (consensus-or-arbitration),
+with semi-automated off-chain rules for arbitration, e.g. for an oracle
+where humans are only used for the non-clear-cut cases,
+and/or after extra escrow for appeal.
+This is a good contract for shopping of physical goods.
+
+### Buy-sig with Arbitration
+
+This is a good contract for renting temporary space (AirBnB on the blockchain),
+since it fully automates the consensual case, while leaving
+an arbitration procedure for the conflictual case.
+
 ### Generalized State Channels
 
 Required Features:

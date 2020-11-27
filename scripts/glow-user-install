@@ -1,0 +1,36 @@
+#!/bin/sh -e
+## Easy Installation script for Glow users. See https://glow-lang.org
+## This script is for people who want to use Glow, but not modify it.
+
+{ # Prevent execution if this script was only partially downloaded
+
+# 0. Small prelude
+panic() {
+    echo "$0:" "$@" >&2
+    exit 1
+}
+umask 0022
+
+require_util() {
+    command -v "$1" > /dev/null 2>&1 ||
+        panic "You do not have '$1' installed, which I need $2"
+}
+
+# 1. Make sure Nix is installed, if not installed yet.
+require_util curl "to download nix-env"
+if ! command -v nix-env > /dev/null 2>&1 ; then
+    echo "Installing Nix..."
+    curl -L https://nixos.org/nix/install > nix-install.tmp
+    sh nix-install.tmp --daemon
+    rm nix-install.tmp
+fi
+
+# 2. Install Glow, and matching versions of a few other things along with it,
+# from the very same version of nixpkgs used by MuKn.
+# This ensures that the build is deterministic:
+# if it builds for us, it will build identically for you.
+echo "Using Nix to install Glow, and with it gerbil, geth and solc..."
+nix-env -f https://github.com/fare-patches/nixpkgs/archive/fare.tar.gz -iA \
+        glow-lang gerbil-unstable go-ethereum solc
+
+} # End of wrapping
