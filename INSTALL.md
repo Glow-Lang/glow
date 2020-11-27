@@ -50,6 +50,10 @@ From a checkout of this repository, you can just use:
 
     sh scripts/glow-user-install
 
+Note that if Nix wasn't installed yet, you might have
+to restart your shell and/or to logout and login,
+so that the Nix-enabled `$PATH` be defined, and other environment variables with it.
+
 ## Simplified Installation for Implementers
 
 If you mean not just to use Glow, but also
@@ -73,6 +77,8 @@ Or you can use `nix-shell` to enter an environment in which to build and hack by
 
 You don't need the further sections in this file, but
 you need to read the [HACKING.md](HACKING.md) file for how to hack.
+
+TODO: document how to convince Nix to parallelize the build, and to enable cachix servers.
 
 ## Manual installation via Nix
 

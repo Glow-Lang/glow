@@ -6,7 +6,7 @@
 ;;     gxpkg install github.com/fare/gerbil-ethereum
 ;; See HACKING.md for details.
 
-(import :std/misc/process :clan/building :clan/multicall)
+(import :std/misc/process :clan/base :clan/building :clan/multicall)
 
 (def (remove-file files file) ;; TODO: handle foo vs foo.ss ?
   (filter (match <>
@@ -18,8 +18,9 @@
   (cons (cons* gxc: file options) (remove-file files file)))
 
 (def (files)
-  (add/options (cons "t/common.ss" (all-gerbil-modules))
-               "compiler/parse/expressions" "-cc-options" "-U___SINGLE_HOST"))
+  (!> (all-gerbil-modules)
+      (cut cons* [exe: "main.ss" bin: "glow"] "t/common.ss" <>)
+      (cut add/options <> "compiler/parse/expressions" "-cc-options" "-U___SINGLE_HOST")))
 
 (init-build-environment!
  name: "Glow"
