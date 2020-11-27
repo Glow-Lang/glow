@@ -11,6 +11,6 @@ in
     buildInputs = [
       pkgs.thunkExe
     ] ++  ethereumPkgs;
-    shellHook = glow.postConfigure;
+    shellHook = glow.postConfigure + "GERBIL_LOADPATH=$GERBIL_LOADPATH:${pkgs.gerbilPackages-unstable.gerbil-ethereum.src}";
     GERBIL_APPLICATION_HOME = "./";
   }
