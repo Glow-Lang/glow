@@ -32,7 +32,6 @@
 (displayln "funding test accounts ...")
 (ensure-addresses-prefunded (get-first-account))
 
-
 (def program
   (parse-project-output "./examples/buy_sig.project.sexp"))
 (def participants
