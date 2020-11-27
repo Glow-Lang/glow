@@ -14,7 +14,7 @@
   :mukn/ethereum/known-addresses :mukn/ethereum/contract-config)
 
 ; INTERPRETER
-(defclass Interpreter (program participants arguments variable-addresses params-end)
+(defclass Interpreter (program participants arguments variable-offsets params-end)
   transparent: #t)
 
 (defmethod {initialize Interpreter}
@@ -95,17 +95,16 @@
       (def argument-length (param-length type))
       (hash-put! frame-variables
         variable (post-increment! start argument-length)))
-    (set! (@ self variable-addresses) frame-variables)
+    (set! (@ self variable-offsets) frame-variables)
     (set! (@ self params-end) start)))
 
 (defmethod {lookup-variable-offset Interpreter}
   (λ (self variable-name)
-    (match (hash-get (@ self variable-addresses) variable-name)
-      (#f
-        (error "no address for variable: " variable-name))
-      (address
-        (displayln "found address for: " variable-name " at: " address)
-        address))))
+    (def offset
+      (hash-get (@ self variable-offsets) variable-name))
+    (if offset
+      offset
+      (error "no address for variable: " variable-name))))
 
 (defmethod {add-local-variable Interpreter}
   (λ (self variable-name)
@@ -114,7 +113,7 @@
       (if (eq? variable-name 'signature) Signature Bool))
     (def argument-length
       (param-length type))
-    (hash-put! (@ self variable-addresses)
+    (hash-put! (@ self variable-offsets)
       variable-name (post-increment! (@ self params-end) argument-length))))
 
 (defmethod {generate-consensus-code Interpreter}
