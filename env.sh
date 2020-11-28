@@ -23,7 +23,9 @@ GERBIL_PACKAGE=gerbil-unstable
 #   gxpkg link github.com/fare/gerbil-utils $srcdir/gerbil-utils
 #
 # Then you can use this, which assumes the clan utilities were installed via gxpkg:
-. "${HOME}/.gerbil/pkg/github.com/fare/gerbil-utils/gerbil-nix-env.sh"
+. "${GERBIL_PATH:-${HOME}/.gerbil}/pkg/github.com/fare/gerbil-utils/gerbil-nix-env.sh"
+
+GERBIL_LOADPATH="${GERBIL_LOADPATH}:${GERBIL_PATH:-${HOME}/.gerbil}/pkg/github.com/fare/gerbil-ethereum"
 
 
 # Manage the git submodule
