@@ -19,7 +19,11 @@
 
 (defmethod {initialize Interpreter}
   (λ (self)
+    (ensure-db-connection (run-path "testdb"))
+    (load-ethereum-networks "./etc/ethereum_networks.json")
+    (ensure-ethereum-network "pet")
     (for ((values name address) (in-hash (@ self participants)))
+      (displayln name address)
       (register-keypair
         (symbol->string name)
         (keypair ;; KLUGE: Fake public and secret key data. We only use the address via Geth.
@@ -29,13 +33,8 @@
           ""))
       (ensure-eth-signing-key address))))
 
-(defmethod {execute Interpreter}
-  (λ (self participant)
-    (def timeoutInBlocks
-      (.@ (current-ethereum-network) timeoutInBlocks))
-    (def initial-block
-      (+ (eth_blockNumber) timeoutInBlocks))
-    {compute-parameter-offsets self}
+(defmethod {create-deployment-pretransaction Interpreter}
+  (λ (self initial-block)
     (defvalues (contract-runtime-bytes contract-runtime-labels)
       {generate-consensus-runtime self})
     (def checkpoint-location
@@ -50,21 +49,44 @@
       (digest-product initial-state-fields))
     (def contract-bytes
       (stateful-contract-init initial-state contract-runtime-bytes))
+    (create-contract (hash-get (@ self participants) 'Buyer) contract-bytes)))
+
+(defmethod {execute-buyer Interpreter}
+  (λ (self)
     (displayln "creating contract ...")
-    (def pretx
-      (create-contract (hash-get (@ self participants) participant) contract-bytes))
-    (displayln pretx)
-    (displayln "posting transaction ...")
-    (def receipt
-      (post-transaction pretx))
+    (def timeoutInBlocks (.@ (current-ethereum-network) timeoutInBlocks))
+    (def initial-block (+ (eth_blockNumber) timeoutInBlocks))
+    (def pretx {create-deployment-pretransaction self initial-block})
+    (displayln "deploying contract ...")
+    (def receipt (post-transaction pretx))
     (displayln "generating contract config ...")
-    (def contract-config
-      (contract-config<-creation-receipt receipt))
+    (def contract-config (contract-config<-creation-receipt receipt))
     (displayln "verifying contract config ...")
-    (verify-contract-config contract-config pretx)))
+    (verify-contract-config contract-config pretx)
+    (displayln "handing off to seller ...")
+    {execute-seller self initial-block contract-config}))
+
+(defmethod {execute-seller Interpreter}
+  (λ (self initial-block contract-config)
+    (displayln "creating contract ...")
+    (def pretx {create-deployment-pretransaction self initial-block})
+    (displayln "verifying contract config ...")
+    (verify-contract-config contract-config pretx)
+    (displayln "generating signature ...")
+    (def Seller (hash-get (@ self participants) 'Seller))
+    (def digest0 (hash-get (@ self arguments) 'digest0))
+    (def signature (make-message-signature (secret-key<-address Seller) digest0))
+    (displayln "publishing signature ...")
+    {send-message self (marshal Signature signature)}))
+
+(defmethod {send-message Interpreter}
+  (λ (self message)
+    (void)))
+
 
 (defmethod {generate-consensus-runtime Interpreter}
   (λ (self)
+    {compute-parameter-offsets self}
     (parameterize ((brk-start (box params-start@)))
       (assemble
         (&begin
@@ -78,9 +100,10 @@
 ; TODO: increment counter of checkpoints
 (defmethod {make-checkpoint-label Interpreter}
   (λ (self)
+    (def checkpoint-number 0)
     (string->symbol (string-append
       (symbol->string (@ (@ self program) name))
-      "--cp0"))))
+      (string-append "--cp" (number->string checkpoint-number))))))
 
 (defmethod {compute-parameter-offsets Interpreter}
   (λ (self)
@@ -106,6 +129,12 @@
       offset
       (error "no address for variable: " variable-name))))
 
+(defmethod {load-variable Interpreter}
+  (λ (self variable-name variable-type)
+    (&mloadat
+      {lookup-variable-offset self variable-name}
+      (param-length variable-type))))
+
 (defmethod {add-local-variable Interpreter}
   (λ (self variable-name)
     ; TODO: look this up in the type table
@@ -129,35 +158,40 @@
         (flatten1 (map (λ (statement)
           {interpret-consensus-statement self statement}) cp0-statements))))))
 
+(defmethod {find-other-participant Interpreter}
+  (lambda (self participant)
+    (find
+      (λ (p) (not (equal? p participant)))
+      (hash-keys (@ self participants)))))
+
+
 (defmethod {interpret-consensus-statement Interpreter}
   (λ (self statement)
-    (def find-other-participant (λ (participant)
-      (find (λ (p) (not (equal? p participant))) (hash-keys (@ self participants)))))
     (displayln statement)
     (match statement
       (['set-participant new-participant]
         (def other-participant
-          (find-other-participant new-participant))
+          {find-other-participant self new-participant})
         ; TODO: support more than two participants
         [(&check-participant-or-timeout!
-          must-act: (&mloadat {lookup-variable-offset self new-participant} (param-length Address))
-          or-end-in-favor-of: (&mloadat {lookup-variable-offset self other-participant} (param-length Address)))])
+          must-act: {load-variable self new-participant Address}
+          or-end-in-favor-of: {load-variable self other-participant Address})])
       (['def variable-name expression]
         {add-local-variable self variable-name}
         (match expression
           (['expect-published published-variable-name]
             [{lookup-variable-offset self variable-name} &read-published-data-to-mem])
           (['@app 'isValidSignature participant digest signature]
-            [(&mloadat {lookup-variable-offset self participant} (param-length Address))
-             (&mloadat {lookup-variable-offset self digest} (param-length Digest))
+            [{load-variable self participant Address}
+             {load-variable self digest Digest}
              ; signatures are passed by reference, not by value
              {lookup-variable-offset self signature}
              &isValidSignature])))
       (['require! variable-name]
-        [(&mloadat {lookup-variable-offset self variable-name} (param-length Bool)) &require!])
+        [{load-variable self variable-name Bool} &require!])
       (['expect-withdrawn participant amount]
-        [(&mloadat {lookup-variable-offset self participant} (param-length Address))
-         (&mloadat {lookup-variable-offset self amount} (param-length Ether))
+        [{load-variable self participant Address}
+         {load-variable self amount Ether}
          &withdraw!])
       (['@label 'end0]
         [&end-contract!])
@@ -261,3 +295,20 @@
       (else
         {add-statement parse-context statement}))))
   (@ parse-context code))
+
+
+; TESTING
+(def program
+  (parse-project-output "./examples/buy_sig.project.sexp"))
+(def participants
+  (hash
+    (Buyer #u8(197 78 134 223 251 135 185 115 110 46 53 221 133 199 117 53 143 28 49 206))
+    (Seller #u8(244 116 8 20 61 50 126 75 198 168 126 244 167 10 78 10 240 155 154 28))))
+(def arguments
+  (hash
+    (digest0 [(string->bytes "abcdefghijklmnopqrstuvwxyz012345") Digest])
+    (price [10000000 Ether])))
+(def interpreter (make-Interpreter
+  program: program
+  participants: participants
+  arguments: arguments))
