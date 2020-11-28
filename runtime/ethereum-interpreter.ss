@@ -77,12 +77,11 @@
     (def digest0 (hash-get (@ self arguments) 'digest0))
     (def signature (make-message-signature (secret-key<-address Seller) digest0))
     (displayln "publishing signature ...")
-    {send-message self (marshal Signature signature)}))
+    {send-message self signature}))
 
 (defmethod {send-message Interpreter}
   (λ (self message)
     (void)))
-
 
 (defmethod {generate-consensus-runtime Interpreter}
   (λ (self)
@@ -159,23 +158,20 @@
           {interpret-consensus-statement self statement}) cp0-statements))))))
 
 (defmethod {find-other-participant Interpreter}
-  (lambda (self participant)
+  (λ (self participant)
     (find
       (λ (p) (not (equal? p participant)))
       (hash-keys (@ self participants)))))
 
-
 (defmethod {interpret-consensus-statement Interpreter}
   (λ (self statement)
-    (displayln statement)
     (match statement
       (['set-participant new-participant]
-        (def other-participant
-          {find-other-participant self new-participant})
-        ; TODO: support more than two participants
-        [(&check-participant-or-timeout!
-          must-act: {load-variable self new-participant Address}
-          or-end-in-favor-of: {load-variable self other-participant Address})])
+        (let (other-participant {find-other-participant self new-participant})
+          ; TODO: support more than two participants
+          [(&check-participant-or-timeout!
+            must-act: {load-variable self new-participant Address}
+            or-end-in-favor-of: {load-variable self other-participant Address})]))
       (['def variable-name expression]
         {add-local-variable self variable-name}
         (match expression

@@ -1,16 +1,18 @@
 { ethereum ? true }:
 let
   pkgs = import ./pkgs.nix;
-  glow = import ./default.nix;
-  ethereumPkgs = if ethereum then [ pkgs.go-ethereum pkgs.solc ] else [];
+  lib = pkgs.lib;
+  glow-lang = import ./default.nix;
 in
   pkgs.mkShell {
     inputsFrom = [
-      glow
+      glow-lang
     ];
-    buildInputs = [
-      pkgs.thunkExe
-    ] ++  ethereumPkgs;
-    shellHook = glow.postConfigure + "GERBIL_LOADPATH=$GERBIL_LOADPATH:${pkgs.gerbilPackages-unstable.gerbil-ethereum.src}";
+    buildInputs = lib.optional ethereum pkgs.go-ethereum;
+    shellHook = ''
+      ${glow-lang.postConfigure}
+      ${lib.optionalString ethereum
+        ''GERBIL_LOADPATH="$GERBIL_LOADPATH:${pkgs.gerbilPackages-unstable.gerbil-ethereum.src}"''}
+    '';
     GERBIL_APPLICATION_HOME = "./";
   }

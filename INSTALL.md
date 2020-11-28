@@ -3,7 +3,7 @@
 Instructions for compiling and installing Glow, testing and running it.
 
 Long story short, to try Glow, you can just use the following one-liner,
-and skip reading the rest of this file:
+and skip reading the rest of this file (except the warnings and prerequisites):
 
     curl -L https://glow-lang.org/install/glow-user-install | sh
 
@@ -15,9 +15,15 @@ and skip reading the rest of this file:
    If it builds for us, it should build identically for you.
 
 2. Installing Glow for the first time may require recompiling a lot of code,
-   which may take an hour.
+   which may take an hour or more (which we'll address in the future — see below).
 
-3. Installing Glow, or any software, requires that you trust the authors and their infrastructure.
+3. If you were not using Nix yet, your existing shells will have the wrong `$PATH` variable.
+   You'll need to re-start new shells or have them re-read their configuration
+   so they have the new `PATH` that includes `~/.nix-profile/bin`.
+   For instance, you may close and re-open your terminal windows,
+   or type the command `exec $SHELL`, or `. ~/.profile`, etc.
+
+4. Installing Glow, or any software, requires that you trust the authors and their infrastructure.
    To minimize the need for trust, and minimize the opportunity for damage
    from applications that do breach your trust,
    we recommend you use isolated virtual machines for each application.
@@ -27,11 +33,11 @@ and skip reading the rest of this file:
 
 *In the future*, we will improve the installation as follows:
 
-4. We will support JavaScript as a target platform,
+5. We will support JavaScript as a target platform,
    and distribute pre-compiled portable "binaries" for that platform.
    This will allow Glow to run on Windows, iOS, Android, and on any web browser.
 
-5. We will also provide some [cachix](https://cachix.org/) server for our Nix packages,
+6. We will also provide some cache server for our Nix packages (e.g. via [cachix](https://cachix.org/))
    so you can install without recompilation.
 
 But for now, be prepared for the initial installation to take a lot of time,
@@ -78,7 +84,7 @@ Or you can use `nix-shell` to enter an environment in which to build and hack by
 You don't need the further sections in this file, but
 you need to read the [HACKING.md](HACKING.md) file for how to hack.
 
-TODO: document how to convince Nix to parallelize the build, and to enable cachix servers.
+TODO: document how to convince Nix to parallelize the build, and to enable cache servers.
 
 ## Manual installation via Nix
 
