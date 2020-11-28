@@ -36,8 +36,8 @@
   (parse-project-output "./examples/buy_sig.project.sexp"))
 (def participants
   (hash
-    (Buyer (car test-addresses))
-    (Seller (car (cdr test-addresses)))))
+      (Buyer #u8(197 78 134 223 251 135 185 115 110 46 53 221 133 199 117 53 143 28 49 206))
+      (Seller #u8(244 116 8 20 61 50 126 75 198 168 126 244 167 10 78 10 240 155 154 28))))
 (def arguments
   (hash
     (digest0 [(string->bytes "abcdefghijklmnopqrstuvwxyz012345") Digest])
