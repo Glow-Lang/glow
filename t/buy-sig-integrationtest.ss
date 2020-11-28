@@ -54,5 +54,6 @@
   (test-suite "integration test for ethereum/buy-sig"
     (test-case "buy sig works"
       {initialize interpreter}
-      {execute interpreter 'Buyer})))
+      ;{execute interpreter 'Buyer}
+      )))
 
