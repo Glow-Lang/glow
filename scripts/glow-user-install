@@ -25,12 +25,22 @@ if ! command -v nix-env > /dev/null 2>&1 ; then
     rm nix-install.tmp
 fi
 
-# 2. Install Glow, and matching versions of a few other things along with it,
+# 2. Make sure we're using the binaries from Nix.
+# If somehow the nix install doesn't do that for your shell,
+# you may have to add lines to your shell configuration files to achieve the same effect:
+PATH="$HOME/.nix-profile/bin:$PATH"
+
+# 3. Install and configure the cachix client, so you can download the Glow packages
+# instead of having your computer take an hour to rebuild them.
+nix-env -iA cachix -f https://cachix.org/api/v1/install
+cachix use mukn
+
+# 4. Install Glow, and matching versions of a few other things along with it,
 # from the very same version of nixpkgs used by MuKn.
 # This ensures that the build is deterministic:
 # if it builds for us, it will build identically for you.
 echo "Using Nix to install Glow, and with it gerbil, geth and solc..."
 nix-env -f https://github.com/fare-patches/nixpkgs/archive/fare.tar.gz -iA \
-        glow-lang gerbil-unstable go-ethereum solc
+        glow-lang gerbil-unstable gerbilPackages-unstable go-ethereum solc
 
 } # End of wrapping

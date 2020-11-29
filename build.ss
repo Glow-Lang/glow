@@ -34,3 +34,11 @@
   (create-version-file)
   (run-process ["nix-build"])
   (void))
+
+(def glow-packages
+  [(map (cut string-append <> "-unstable") '("gambit" "gerbil")) ...
+   (map (cut string-append "gerbilPackages-unstable." <>)
+        '("gerbil-utils" "gerbil-poo" "gerbil-crypto" "gerbil-persist" "gerbil-ethereum"
+          "gerbil-libp2p" "smug-gerbil")) ...
+   "glow-lang"])
+

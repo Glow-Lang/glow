@@ -1,51 +1,71 @@
 # Installing Glow
 
-Instructions for compiling and installing Glow, testing and running it.
+Instructions for installing, testing and running *Glow*.
 
-Long story short, to try Glow, you can just use the following one-liner,
+Long story short, to try *Glow*, you can just use the following one-liner,
 and skip reading the rest of this file (except the warnings and prerequisites):
 
     curl -L https://glow-lang.org/install/glow-user-install | sh
 
 ## Warnings and Prerequisites
 
-1. At this time Glow only runs on Linux or macOS (on any supported architecture).
-   On these platforms, we use the [Nix](https://nixos.org/nix/) package manager
-   for its deterministically reproducible builds, and its support for distributed computing:
-   If it builds for us, it should build identically for you.
+1. We use the [Nix](https://nixos.org/nix/) package manager
+   for its deterministically reproducible builds:
+   if it builds and run for us, it should build and run identically for you.
+   *Glow* should work on all supported architectures supported by Nix.
 
-2. Installing Glow for the first time may require recompiling a lot of code,
-   which may take an hour or more (which we'll address in the future — see below).
-
-3. If you were not using Nix yet, your existing shells will have the wrong `$PATH` variable.
-   You'll need to re-start new shells or have them re-read their configuration
-   so they have the new `PATH` that includes `~/.nix-profile/bin`.
+2. The first step of our script above makes sure that Nix is installed.
+   If that wasn't the case yet, any shell started before that step was complete
+   (including the one running the installation, and any previous one)
+   will have the wrong `$PATH` variable.
+   To use nix and our software, you will need to either re-start new shells
+   or have them re-read their configuration, so they have the new `PATH`
+   that includes `~/.nix-profile/bin`.
    For instance, you may close and re-open your terminal windows,
-   or type the command `exec $SHELL`, or `. ~/.profile`, etc.
+   or type the command `exec $SHELL`, or `. ~/.profile`, or
+   `PATH="$HOME/.nix-profile/bin:$PATH"`, etc.
 
-4. Installing Glow, or any software, requires that you trust the authors and their infrastructure.
+3. Our developers so far have are testing Glow on Linux and macOS on x86_64.
+   Hopefully it should all work on the Window Subsystem for Linux (WSL),
+   and on other architectures (such as arm64). But we haven't been testing it yet
+   (try [this recipe](https://nathan.gs/2019/04/12/nix-on-windows/)
+   if you have trouble with Nix on WSL).
+
+3. We are using [cachix](https://cachix.org/) to distribute pre-compiled binaries
+   for all our packages. But this only works if you are using one of the architectures
+   our developers use, which are `x86_64-linux` and `x86_64-darwin`.
+   This *should* also work on WSL on x86_64, but we haven't tried.
+
+4. If you're not using one of the above architectures, then the installation will build
+   not only *Glow*, but also, at least the first around, a lot of its dependencies.
+   This may take a long time (hours?) and consume a lot of memory.
+   Make sure you have at least 16MB of RAM+swap. Also, if you have a lot of cores,
+   you might reduce the memory pressure somewhat by passing the argument `--cores 1` or such
+   to `nix-env` in the second step of the script:
+
+        nix-env --cores 1 -f https://github.com/fare-patches/nixpkgs/archive/fare.tar.gz \
+            -iA glow-lang gerbil-unstable go-ethereum solc
+
+5. Installing *Glow*, or any software, requires that you trust the authors and their infrastructure.
    To minimize the need for trust, and minimize the opportunity for damage
    from applications that do breach your trust,
    we recommend you use isolated virtual machines for each application.
    For this and for extra security, you might want to start using
-   @a[href: "https://www.qubes-os.org/"]{Qubes OS}
+   [Qubes OS](https://www.qubes-os.org/)
    before you start using your laptop to manipulate real assets.
 
 *In the future*, we will improve the installation as follows:
 
-5. We will support JavaScript as a target platform,
+1. We will support JavaScript as a target platform,
    and distribute pre-compiled portable "binaries" for that platform.
-   This will allow Glow to run on Windows, iOS, Android, and on any web browser.
-
-6. We will also provide some cache server for our Nix packages (e.g. via [cachix](https://cachix.org/))
-   so you can install without recompilation.
+   This will allow *Glow* to run on Windows, iOS, Android, and on any web browser.
 
 But for now, be prepared for the initial installation to take a lot of time,
 so run it in the background and do something else while your machine compiles a lot of code.
 
 ## Simplified Installation for Users
 
-If you mean to use Glow (as a developer or end-user),
+If you mean to use *Glow* (as a developer or end-user),
 but not modify the language implementation itself (compiler, runtime, libraries),
 then the following command will do everything,
 and you don't need the further sections of this file:
@@ -62,7 +82,7 @@ so that the Nix-enabled `$PATH` be defined, and other environment variables with
 
 ## Simplified Installation for Implementers
 
-If you mean not just to use Glow, but also
+If you mean not just to use *Glow*, but also
 to modify its implementation (compiler, runtime, libraries),
 then the following command will do everything:
 
@@ -99,11 +119,11 @@ In the meantime, you can build your own with:
 
     docker build -t mukn/glow -f scripts/Dockerfile .
 
-## Installing Glow the Hard Way
+## Installing *Glow* the Hard Way
 
 If you don't use either Linux or macOS, and can't use Docker,
-or if you insist on not using Nix, then you will have to build and install Glow the hard way:
-installing GCC, on top of it Gambit Scheme, on top of it Gerbil Scheme, on top of it Glow.
+or if you insist on not using Nix, then you will have to build and install *Glow* the hard way:
+installing GCC, on top of it Gambit Scheme, on top of it Gerbil Scheme, on top of it *Glow*.
 
 You might be able to use [homebrew](https://brew.sh/) on macOS,
 or your Linux distribution's package management tools
@@ -212,7 +232,7 @@ for i in ${DEPS[@]} ; do
 done)
 ```
 
-### Last but not least, build Glow
+### Last but not least, build *Glow*
 
 After you have installed dependencies as above, you should be all ready to go.
 You can build a binary with:
@@ -227,9 +247,9 @@ You might also or instead use option `-g` use extra debugging information.
 
     ./build.ss compile -t --O
 
-## Testing Glow
+## Testing *Glow*
 
-Once you have built and installed Glow, you should be all ready to go.
+Once you have built and installed *Glow*, you should be all ready to go.
 You can run all our unit tests with:
 
     ./unit-tests.ss
@@ -248,7 +268,7 @@ each time you restart `geth`, shortly *before* said restart
 (since `geth` may also be storing its data there).
 
 Note that assuming all dependencies are present and built,
-you shouldn't need to build Glow as above to test it.
+you shouldn't need to build *Glow* as above to test it.
 
 ## Run it
 
@@ -256,16 +276,21 @@ Once you built the software with `./build.ss`, you can run it with `./glow`.
 
 ## Install it
 
-If you use Nix, it will have already installed Glow.
+If you use Nix, it will have already installed *Glow*.
 
 Otherwise, you can copy the `./glow` binary anywhere on your machine.
 HOWEVER, note that at the time being, the binary relies
 not only on your Gambit and Gerbil installations,
 but also on the compiled file in `~/.gerbil/lib/`
-and so only works for the with Unix user.
+and so only works for the Unix user who compiled it.
 
 Now, you can export the `GERBIL_PATH` environment variable
-on the user who compiles Glow and/or on the other users who use it
+to point to some place other than your `~/.gerbil`
+for the user who compiles *Glow*,
+and point the `GERBIL_LOADPATH` environment variable at the `$THAT_GERBIL_PATH/lib`
+for the other users who want to use it.
+where Gerbil will compile file and look for compiled files.
+
 to specify where the compiled files should be stored.
 You may need to either copy the compiled files or re-build them
-for the dependencies as well as for Glow itself, if you change the `GERBIL_PATH`.
+for the dependencies as well as for *Glow* itself, if you change the `GERBIL_PATH`.
