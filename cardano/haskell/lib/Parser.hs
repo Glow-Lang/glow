@@ -16,7 +16,6 @@ import Control.Lens (over, _1)
 import Control.Monad.State
 import Data.Aeson.Extras (tryDecode)
 import Data.Function
-import Data.List (lookup)
 import Data.String (fromString)
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.Text as Text
@@ -25,8 +24,9 @@ import Data.Void
 import System.Environment
 import Text.SExpression as SExpr
 import Text.Megaparsec hiding (Label, State)
+--import Debug.Trace
 
-import Language.PlutusTx.Prelude (ByteString, fromMaybe)
+import Language.PlutusTx.Prelude (ByteString)
 import Language.PlutusTx.AssocMap (Map)
 import qualified Language.PlutusTx.AssocMap as Map
 import qualified Ledger.Crypto as Ledger
@@ -47,11 +47,12 @@ parseCommand = do
   contractSource <- readFile filePath
   putStrLn $ case parse (parseSExpr def) filePath contractSource of
     Right contractSexpr ->
-      let (participants, arguments, contract) = generateContract (parseModule contractSexpr)
+      let program = extractPrograms (parseModule contractSexpr)
       in show $
-        "Participants:" <+> prettyList (show <$> participants) <> line <>
-        "Arguments:" <+> prettyList (show <$> arguments) <> line <>
-        "Contract:" <+> line <> prettyContract contract
+        "Participants:" <+> prettyList (show <$> _participants program) <> line <>
+        "Arguments:" <+> prettyList (show <$> _arguments program) <> line <> line <>
+        "Consensus program:" <+> line <> prettyContract (_consensusProgram program) <> line <>
+        vsep (fmap (\(participant, contract) -> pretty (BSC.unpack participant) <> " program:" <+> line <> prettyContract contract) (Map.toList $ _participantPrograms program))
     Left err ->
       errorBundlePretty err
 
@@ -59,11 +60,11 @@ parseCommand = do
 prettyContract :: GlowContract -> Doc ann
 prettyContract glowContract =
   indent 2 $
-    vsep $ fmap (\(k, (stmts, maybeExit)) ->
-         "->" <+> viaShow k <> line
-      <> indent 4 (vsep (viaShow <$> stmts)) <> line
-      <> maybe "X" (\exit -> "<-" <+> viaShow exit) maybeExit
-      ) (Map.toList glowContract)
+    vsep $ (\(k, (stmts, maybeExit)) ->
+      "->" <+> viaShow k <> line <>
+      indent 4 (vsep (viaShow <$> stmts)) <> line <>
+      maybe "" (\exit -> "<-" <+> viaShow exit) maybeExit
+      ) <$> Map.toList glowContract
 
 
 parseModule :: SExpr -> [Statement]
@@ -96,13 +97,13 @@ parseStatement = \case
       ( List [ Builtin "@list" participantNames]
       : List argumentNames
       : Pair _startLabel _endLabel
-      : participantInteractions
+      : interactions
       )
     ] ->
     DefineInteraction
       (BSC.pack . parseName <$> participantNames)
       (BSC.pack . parseName <$> argumentNames)
-      (parseParticipantInteraction <$> participantInteractions)
+      (parseInteraction <$> interactions)
 
   Builtin "def" [Atom variableName, Builtin "λ" (Atom argName:body)] ->
     DefineFunction (BSC.pack variableName) (BSC.pack argName) (parseStatement <$> body)
@@ -119,8 +120,8 @@ parseStatement = \case
   Builtin "consensus:set-participant" [roleName] ->
     SetParticipant (var $ parseName roleName)
 
-  Builtin "participant:set-participant" [_roleName] ->
-    Require $ Explicit (Boolean True)
+  Builtin "participant:set-participant" [roleName] ->
+    SetParticipant (var $ parseName roleName)
 
   Builtin "expect-deposited" [Atom amountName] ->
     ExpectDeposited (var amountName)
@@ -163,8 +164,8 @@ parseExpression = \case
   unknown ->
     error $ "Unknown expression in contract body: " <> show unknown
 
-parseParticipantInteraction :: SExpr -> (ByteString, [Statement])
-parseParticipantInteraction = \case
+parseInteraction :: SExpr -> (ByteString, [Statement])
+parseInteraction = \case
   Builtin participantName statements ->
     (BSC.pack participantName, parseStatement <$> statements)
 
@@ -268,27 +269,43 @@ parseVariableMap _datatypes = \case
       error $ "Unknown constructor: " <> cons
 
 
-data ParseContext
-  = Header
-  | Body
+data GlowProgram = GlowProgram
+  { _participants :: [ByteString]
+  , _arguments :: [ByteString]
+  , _consensusProgram :: GlowContract
+  , _participantPrograms :: Map ByteString GlowContract
+  }
 
-generateContract :: [Statement] -> ([ByteString], [ByteString], GlowContract)
-generateContract statements =
-  let initialState = (Nothing, "begin0", Map.empty)
-      (parameters, (_, _, contract)) = runState (traverse processHeaderStatement statements) initialState
-      (participants, arguments) = fromMaybe ([], []) $ msum parameters
-  in (participants, arguments, contract)
+extractPrograms :: [Statement] -> GlowProgram
+extractPrograms statements =
+  execState (traverse processHeaderStatement statements) initialState
   where
+    initialState = GlowProgram
+      { _participants = []
+      , _arguments = []
+      , _consensusProgram = Map.empty
+      , _participantPrograms = Map.empty
+      }
+
     processHeaderStatement = \case
-      DefineInteraction participants arguments interactions ->
-        case Data.List.lookup "consensus" interactions of
-          Just consensusStatements -> do
-            void $ traverse processBodyStatement consensusStatements
-            pure $ Just (participants, arguments)
-          Nothing ->
-            error "Contract is missing consensus code."
+      DefineInteraction participants arguments interactions -> do
+        modify $ \program -> program { _participants = participants, _arguments = arguments }
+        let consensusProgram = processProgram "consensus" interactions
+        let participantPrograms = (\participant -> processProgram participant interactions) <$> participants
+        modify $ \program -> program
+          { _consensusProgram = snd consensusProgram
+          , _participantPrograms = Map.fromList participantPrograms
+          }
       _ ->
-        pure Nothing
+        pure ()
+
+    processProgram name interactions =
+      case lookup name interactions of
+        Just consensusStatements ->
+          let (_, _, result) = execState (traverse processBodyStatement consensusStatements) (Nothing, "begin0", Map.empty)
+          in (name, result)
+        Nothing ->
+          error $ "Contract is missing " <> BSC.unpack name <> " code."
 
     processBodyStatement = \case
       SetParticipant newParticipant ->
@@ -327,6 +344,7 @@ generateContract statements =
               Nothing ->
                 contract
         in (curParticipant, curLabel, newContract)
+
 
 var :: String -> ValueRef
 var = Variable . BSC.pack

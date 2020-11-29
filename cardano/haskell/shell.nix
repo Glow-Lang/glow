@@ -9,7 +9,6 @@ in
       glow-cardano.env
     ];
     buildInputs = [
-      glow-cardano
       plutus-scb
       pkgs.thunkExe
       pkgs.haskellPackages.hoogle

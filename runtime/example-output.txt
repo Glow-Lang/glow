@@ -1,0 +1,59 @@
+(Program
+
+  name: 'payForSignature
+
+  arguments: ['digest0 'price]
+
+  interactions:
+    (hash
+      (#f
+        (hash
+          (begin0
+            (code-block
+              [['set-participant 'Buyer]
+              ['expect-deposited 'price]]
+              'cp0))
+          (cp0
+            (code-block
+              [['set-participant 'Seller]
+              ['def 'signature ['expect-published ['quote 'signature]]]
+              ['def 'tmp ['@app 'isValidSignature 'Seller 'digest0 'signature]]
+              ['require! 'tmp]
+              ['expect-withdrawn 'Seller 'price]
+              ['return ['@tuple]]
+              ['@label 'end0]]
+              #f))))
+      (Buyer
+        (hash
+          (begin0
+            (code-block
+              [['set-participant 'Buyer]
+              ['add-to-deposit 'price]]
+              'cp0))
+          (cp0
+            (code-block
+              [['set-participant 'Seller]
+              ['def 'signature ['expect-published ['quote 'signature]]]
+              ['def 'tmp ['@app 'isValidSignature 'Seller 'digest0 'signature]]
+              ['require! 'tmp]
+              ['expect-withdrawn 'Seller 'price]
+              ['return ['@tuple]]
+              ['@label 'end0]]
+              #f))))
+      (Seller
+        (hash
+          (begin0
+            (code-block
+              [['set-participant 'Buyer]
+              ['expect-deposited 'price]]
+              'cp0))
+          (cp0
+            (code-block
+              [['set-participant 'Seller]
+              ['def 'signature ['sign 'digest0]] ['add-to-publish ['quote 'signature] 'signature]
+              ['def 'tmp ['@app 'isValidSignature 'Seller 'digest0 'signature]]
+              ['require! 'tmp]
+              ['add-to-withdraw 'Seller 'price]
+              ['return ['@tuple]]
+              ['@label 'end0]]
+              #f))))))

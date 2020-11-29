@@ -123,11 +123,6 @@
        "--config" config-file
        "--log-config" log-config-file])))
 
-; (call-with-output-to-file)
-; gerbil/gambit/ports
-; (open-file)
-; std/misc/port
-
 (def (run-plutus-scb-command cmd)
   (run-process (cons "plutus-scb" cmd)
     stdout-redirection: #f
@@ -148,8 +143,3 @@
   (match a-list
     ([a b rest ...] (cons [a . b] (make-pairs rest)))
     (else [])))
-
-
-; (def (post-transaction transaction)
-;   (let (data (json-object->string transaction))
-;     (node-post "/mempool" data)))

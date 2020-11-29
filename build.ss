@@ -19,6 +19,7 @@
 
 (def (files)
   (!> (all-gerbil-modules)
+      (cut filter (lambda (module-name) (not (string-prefix? "dep" module-name))) <>)
       (cut cons* [exe: "main.ss" bin: "glow"] "t/common.ss" <>)
       (cut add/options <> "compiler/parse/expressions" "-cc-options" "-U___SINGLE_HOST")))
 
