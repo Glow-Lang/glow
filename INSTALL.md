@@ -5,7 +5,7 @@ Instructions for installing, testing and running *Glow*.
 Long story short, to try *Glow*, you can just use the following one-liner,
 and skip reading the rest of this file (except the warnings and prerequisites):
 
-    curl -L https://glow-lang.org/install/glow-user-install | sh
+    curl -L https://glow-lang.org/install/glow-install | sh
 
 ## Warnings and Prerequisites
 
@@ -70,11 +70,11 @@ but not modify the language implementation itself (compiler, runtime, libraries)
 then the following command will do everything,
 and you don't need the further sections of this file:
 
-    curl -L https://glow-lang.org/install/glow-user-install | sh
+    curl -L https://glow-lang.org/install/glow-install | sh
 
 From a checkout of this repository, you can just use:
 
-    sh scripts/glow-user-install
+    sh scripts/glow-install
 
 Note that if Nix wasn't installed yet, you might have
 to restart your shell and/or to logout and login,
@@ -82,20 +82,14 @@ so that the Nix-enabled `$PATH` be defined, and other environment variables with
 
 ## Simplified Installation for Implementers
 
-If you mean not just to use *Glow*, but also
-to modify its implementation (compiler, runtime, libraries),
-then the following command will do everything:
+First use, the installation script as above, or, if you're distrusting (as you should be),
+audit it, trace the steps one by one, execute them manually, all in a sandbox, etc.
 
-    curl -L https://glow-lang.org/install/glow-implementer-install | sh
+Then, you can checkout the code of *Glow* (if you haven't already) with
 
-From a checkout of this repository, you can just use the below,
-then `rm -rf glow` to remove the second redundant checkout of `glow` it will download:
+    git clone https://gitlab.com/mukn/glow
 
-    sh scripts/glow-implementer-install
-
-Once you have thus installed all the prerequisites,
-you can `cd glow` to enter the downloaded git checkout,
-at which point you can build the software with:
+Now you can `cd glow` and build the software deterministically with:
 
     nix-build
 
@@ -103,8 +97,6 @@ Or you can use `nix-shell` to enter an environment in which to build and hack by
 
 You don't need the further sections in this file, but
 you need to read the [HACKING.md](HACKING.md) file for how to hack.
-
-TODO: document how to convince Nix to parallelize the build, and to enable cache servers.
 
 ## Manual installation via Nix
 
@@ -122,8 +114,10 @@ In the meantime, you can build your own with:
 ## Installing *Glow* the Hard Way
 
 If you don't use either Linux or macOS, and can't use Docker,
-or if you insist on not using Nix, then you will have to build and install *Glow* the hard way:
-installing GCC, on top of it Gambit Scheme, on top of it Gerbil Scheme, on top of it *Glow*.
+or if you insist on not using Nix, or on reproducing every step manually for audit purposes,
+then you will have to build and install *Glow* the Hard Way:
+installing GCC, on top of it Gambit Scheme, on top of it Gerbil Scheme,
+on top of it a bunch of libraries, and finally, *Glow*.
 
 You might be able to use [homebrew](https://brew.sh/) on macOS,
 or your Linux distribution's package management tools
@@ -194,7 +188,8 @@ DEPS=(github.com/fare/gerbil-utils
       github.com/fare/gerbil-ethereum
       github.com/drewc/js-syntax
       github.com/drewc/gerbil-swank
-      github.com/drewc/drewc-r7rs-swank) ;
+      github.com/drewc/drewc-r7rs-swank
+      github.com/drewc/smug-gerbil) ;
 for i in ${DEPS[@]} ; do
   gxpkg install $i &&
   gxpkg build $i
@@ -206,6 +201,11 @@ a gerbil-friendlier fork of [r7rs-swank](https://github.com/ecraven/r7rs-swank),
 the latter containing still-unmerged patches
 (see also [r7rs-swank PR #10](https://github.com/ecraven/r7rs-swank/pull/10)
 for a similar patch to it, from [my fork](github.com/fare-patches/r7rs-swank)).
+
+Also note that as of the current writing, `smug-gerbil` has a dependency
+on some extensions to Gerbil's build system, and that the standard one may fail to build
+the top-level `smug` module, that you can build manually with: `gxc -O smug.ss`.
+This step is done correctly by the Nix build.
 
 If at some point you need to hack some or all of our dependencies,
 you can reinstall them the following way,
@@ -220,7 +220,8 @@ DEPS=(github.com/fare/gerbil-utils
       github.com/fare/gerbil-ethereum
       github.com/drewc/js-syntax
       github.com/drewc/gerbil-swank
-      github.com/drewc/drewc-r7rs-swank) ;
+      github.com/drewc/drewc-r7rs-swank
+      github.com/drewc/smug-gerbil) ;
 SRCDIR=.. ;
 (cd ${SRCDIR} &&
 for i in ${DEPS[@]} ; do

@@ -40,23 +40,29 @@ cachix use mukn
 # from the very same version of nixpkgs used by MuKn.
 # This ensures that the build is deterministic:
 # if it builds for us, it will build identically for you.
+#
+# NB: We use racket's scribble as implementers of Glow for part of our documentation;
+# it is only necessary if you are going to modify or rebuild Glow yourself;
+# it shouldn't be necessary for regular users, unless you decide to use the same tool as we do.
+# Similarly, solc is only for testing, or, in the future, for interfacing with other contracts;
+# and go-ethereum is for testing and/or otherwise running your own ethereum node.
 echo "Using Nix to install Glow, and with it gerbil, geth, solc, racket..."
 nix-env -f https://github.com/fare-patches/nixpkgs/archive/fare.tar.gz -iA \
         glow-lang gerbil-unstable gerbilPackages-unstable go-ethereum solc racket
-# NB: We use racket's scribble for part of our documentation
 
 # 5. Install nix-thunk. See https://github.com/obsidiansystems/nix-thunk
-# You will need to use nix-thunk if you build the nix way and need to modify a dependency.
+# NB: We use nix-thunk as implementers of Glow to manage our dependencies in a reproducible way;
+# it is only necessary if you are going to modify or rebuild Glow yourself;
+# it shouldn't be necessary for regular users, unless you decide to use the same tool as we do.
 echo "Using Nix to install nix-thunk"
 nix-env -f https://github.com/obsidiansystems/nix-thunk/archive/master.tar.gz -iA command
 
-# 6. Download source code so you can modify it.
-# This command creates a checkout in the current directory.
-# You can move it to a different place.
-# If you also need to modify a library that Glow depends on, use nix-thunk as above,
-# and/or clone the repository for the dependency in the parent directory, and configure,
-# as explained in INSTALL.md.
-echo "Checking out the Glow repository"
-git clone https://gitlab.com/mukn/glow.git
+# 6. (Commented out---do it yourself manually) Download source code so you can modify it.
+# These commands, if uncommented, checkout the glow repository under the current directory.
+# You can move it to any place you desire.
+# If you need local modifications to its dependencies, use nix-thunk (above)
+# to manage that deterministically. See INSTALL.md in the repository for details.
+: echo "Checking out the Glow repository"
+: git clone https://gitlab.com/mukn/glow.git
 
 } # End of wrapping
