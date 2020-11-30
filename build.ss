@@ -20,7 +20,7 @@
 (def (files)
   (!> (all-gerbil-modules)
       (cut filter (lambda (module-name) (not (string-prefix? "dep" module-name))) <>)
-      (cut cons* [exe: "main.ss" bin: "glow"] "t/common.ss" <>)
+      (cut cons* [static-exe: "main.ss" bin: "glow"] "t/common.ss" <>)
       (cut add/options <> "compiler/parse/expressions" "-cc-options" "-U___SINGLE_HOST")))
 
 (init-build-environment!
@@ -29,6 +29,7 @@
  deps: '("clan" "clan/crypto" "clan/poo" "clan/persist" "mukn/ethereum")
  spec: files)
 
+;; TODO: create version files for all overridden dependencies, too
 (define-entry-point (nix)
   "Build using nix-build"
   (create-version-file)
