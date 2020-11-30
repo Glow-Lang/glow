@@ -1,7 +1,7 @@
 (export #t)
 
 (import :gerbil/gambit/bytes :gerbil/gambit/hash
-        <expander-runtime> :gerbil/expander/common
+        <expander-runtime>
         :std/misc/repr
         :std/format :std/iter :std/misc/list
         :clan/base :clan/files :clan/list
@@ -192,9 +192,11 @@
    (else (string<? (format "~s" a) (format "~s" b)))))
 
 ;; TODO: move this to std/misc/repr ?
+#|
 (defmethod {:pr AST}
   (λ (object (port (current-output-port)) (options (current-representation-options)))
     (def (d x) (display x port))
     (def (w x) (write x port))
     (d "(begin0 #") (d (object->serial-number object)) (d " #'") (w (syntax->datum object)) (d ")"))
   rebind: #t) ;; make this idempotent
+|#
