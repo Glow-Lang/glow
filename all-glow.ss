@@ -59,7 +59,7 @@
   ;; Glow
   (for-template :mukn/glow/compiler/syntax-context)
   :mukn/glow/version
-  :mukn/glow/config/path
+  :mukn/glow/path-config
   :mukn/glow/compiler/syntax-context
   :mukn/glow/compiler/passes :mukn/glow/compiler/multipass :mukn/glow/compiler/common
   :mukn/glow/compiler/alpha-convert/symbolnat :mukn/glow/compiler/alpha-convert/fresh

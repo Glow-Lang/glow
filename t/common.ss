@@ -5,7 +5,7 @@
   :gerbil/expander
   :std/iter
   :clan/base :clan/exit :clan/filesystem :clan/multicall :clan/path
-  :mukn/glow/config/path
+  :mukn/glow/path-config
   :mukn/glow/compiler/multipass
   :mukn/glow/compiler/passes)
 

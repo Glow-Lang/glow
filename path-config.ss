@@ -5,6 +5,9 @@
   :clan/base :clan/source :clan/filesystem
   :clan/path :clan/path-config)
 
+;; TODO: nix: use ${pkgs.gerbilPackages-unstable.glow-lang.src} ?
+;; TODO: no nix: use gxpkg's ${GERBIL_PATH:-$HOME/.gerbil}/pkg/gitlab.com/mukn/glow ?
+
 (set! application-source-envvar "GLOW_SRC")
 (set! application-home-envvar "GLOW_HOME")
 
@@ -13,7 +16,6 @@
 (def (glow-home) (or (getenv "GLOW_HOME" #f) (glow-src)))
 (set! source-directory glow-src)
 (set! home-directory glow-home)
-(set! config-directory (lambda () (path-expand "etc" (home-directory))))
 
 (def (in-glow-src)
   (current-directory (glow-src))
