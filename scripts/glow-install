@@ -21,9 +21,9 @@ require_util() {
 require_util curl "to download nix-env"
 if ! command -v nix-env > /dev/null 2>&1 ; then
     echo "Installing Nix..."
-    curl -L https://nixos.org/nix/install > nix-install.tmp
-    sh nix-install.tmp --daemon
-    rm nix-install.tmp
+    curl -L https://nixos.org/nix/install | sh
+    ### For multiuser install, replace the above line with:
+    # curl -L https://nixos.org/nix/install > nix-install.tmp && sh nix-install.tmp --daemon && rm nix-install.tmp
 fi
 
 # 2. Make sure we're using the binaries from Nix.
