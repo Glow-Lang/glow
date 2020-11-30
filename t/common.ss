@@ -11,7 +11,7 @@
 
 ;; examples-dir
 (def (examples-dir)
-  (shorten-path (path-expand "examples" (glow-src))))
+  (path-simplify (path-expand "examples" (glow-src))))
 
 ;; examples.sexp : -> [Listof Path]
 (def (examples.sexp)
