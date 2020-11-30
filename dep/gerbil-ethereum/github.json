@@ -1,8 +1,8 @@
 {
   "owner": "fare",
   "repo": "gerbil-ethereum",
-  "branch": "fix-path-config",
+  "branch": "master",
   "private": false,
-  "rev": "2f5ffac0c7bae95b7fb0b65c05618af6ac45aa1d",
-  "sha256": "18bbnzxnmx3n2z8iri5h6afmlvb99ixmnchcljn0l8briggnpcgd"
+  "rev": "a66c310bb04a16e9bfccf86e4df7a2d6c828de4a",
+  "sha256": "18smipbj1lapjsfcgwwjnsilkdbkgchpdsf90fdgnz0xgzbxrqf7"
 }
