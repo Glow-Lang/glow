@@ -8,7 +8,7 @@
   :mukn/ethereum/known-addresses :mukn/ethereum/signing :mukn/ethereum/hex :mukn/ethereum/transaction
   :mukn/ethereum/t/signing-test
   :mukn/ethereum/t/transaction-integrationtest
-  :mukn/ethereum/t/batch-send-integrationtest
+  ; :mukn/ethereum/t/batch-send-integrationtest
   ../runtime/ethereum-interpreter
   )
 

@@ -11,7 +11,7 @@
 (set! application-source-envvar "GLOW_SRC")
 (set! application-home-envvar "GLOW_HOME")
 
-(def build-time-glow-src (path-parent (path-normalized-directory (this-source-file))))
+(def build-time-glow-src (path-normalized-directory (this-source-file)))
 (def (glow-src) (getenv "GLOW_SRC" build-time-glow-src))
 (def (glow-home) (or (getenv "GLOW_HOME" #f) (glow-src)))
 (set! source-directory glow-src)

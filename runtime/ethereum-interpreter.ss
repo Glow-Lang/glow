@@ -8,6 +8,7 @@
   :clan/poo/io :clan/poo/poo
   :clan/path-config :clan/syntax
   :clan/base
+  :gerbil/gambit/bytes
   :mukn/ethereum/assembly :mukn/ethereum/types :mukn/ethereum/ethereum :mukn/ethereum/network-config
   :mukn/ethereum/transaction :mukn/ethereum/tx-tracker :mukn/ethereum/json-rpc
   :mukn/ethereum/contract-runtime :mukn/ethereum/signing :mukn/ethereum/assets
@@ -17,22 +18,28 @@
 (defclass Interpreter (program participants arguments variable-offsets params-end)
   transparent: #t)
 
-(defmethod {create-deployment-pretransaction Interpreter}
+(defmethod {create-frame-variables Interpreter}
   (λ (self initial-block)
-    (defvalues (contract-runtime-bytes contract-runtime-labels)
+    (defvalues (_ contract-runtime-labels)
       {generate-consensus-runtime self})
     (def checkpoint-location
       (hash-get contract-runtime-labels {make-checkpoint-label self}))
-    (def initial-state-fields
-      (flatten1
+    (flatten1
        [[[checkpoint-location UInt16]]
         [[initial-block Block]]
         (map (λ (participant) [participant Address]) (hash-values (@ self participants)))
-        (hash-values (@ self arguments))]))
+        (hash-values (@ self arguments))])))
+
+(defmethod {create-contract-pretransaction Interpreter}
+  (λ (self initial-block)
+    (defvalues (contract-runtime-bytes contract-runtime-labels)
+      {generate-consensus-runtime self})
     (def initial-state
-      (digest-product initial-state-fields))
+      {create-frame-variables initial-block})
+    (def initial-state-digest
+      (digest-product initial-state))
     (def contract-bytes
-      (stateful-contract-init initial-state contract-runtime-bytes))
+      (stateful-contract-init initial-state-digest contract-runtime-bytes))
     (create-contract (hash-get (@ self participants) 'Buyer) contract-bytes)))
 
 (defmethod {execute-buyer Interpreter}
@@ -40,7 +47,7 @@
     (displayln "creating contract ...")
     (def timeoutInBlocks (.@ (current-ethereum-network) timeoutInBlocks))
     (def initial-block (+ (eth_blockNumber) timeoutInBlocks))
-    (def pretx {create-deployment-pretransaction self initial-block})
+    (def pretx {create-contract-pretransaction self initial-block})
     (displayln "deploying contract ...")
     (def receipt (post-transaction pretx))
     (displayln "generating contract config ...")
@@ -48,25 +55,55 @@
     (displayln "verifying contract config ...")
     (verify-contract-config contract-config pretx)
     (displayln "handing off to seller ...")
-    {execute-seller self initial-block contract-config}))
+    (displayln "initial block: " initial-block)
+    (displayln "contract config: " contract-config)))
+
+(def (read-value name)
+  (print (string-append name ": "))
+  (read-line))
 
 (defmethod {execute-seller Interpreter}
-  (λ (self initial-block contract-config)
+  (λ (self)
+    (def initial-block (read-value "initial block"))
+    (def contract-config (read-value "contract config"))
     (displayln "creating contract ...")
-    (def pretx {create-deployment-pretransaction self initial-block})
+    (def pretx {create-contract-pretransaction self initial-block})
     (displayln "verifying contract config ...")
     (verify-contract-config contract-config pretx)
     (displayln "generating signature ...")
     (def Seller (hash-get (@ self participants) 'Seller))
-    (def digest0 (hash-get (@ self arguments) 'digest0))
-    (def signature #f)
-      ; (make-message-signature (secret-key<-address Seller) digest0))
+    (def digest0 (car (hash-get (@ self arguments) 'digest0)))
+    (def signature (make-message-signature (secret-key<-address Seller) digest0))
     (displayln "publishing signature ...")
-    {send-message self signature}))
+    {send-message self signature initial-block}))
 
+;; A call frame, with all the data required to restart computation,
+;; prepended by a 2-byte frame length. The frame starts with the pc
+;; and the last-action-block, then contains the values of frame-specific
+;; variables. So far, all values are stored as a fixed number of bytes
+;; depending on their type, with no padding.)
 (defmethod {send-message Interpreter}
-  (λ (self message)
+  (λ (self message initial-block)
+    (def frame-variables
+      {create-frame-variables self initial-block})
+    (def frame-variables-digest
+      (digest-product frame-variables))
+    (def frame-size
+      (bytes-length frame-variables-digest))
+    (def frame-digest
+      (digest-product (cons [frame-size UInt16] initial-state)))
     (void)))
+
+(def (digest-product fields)
+  (def digesting (current-content-addressing))
+  (digest<-marshal
+    (λ (port)
+      (map (λ (field)
+        (match field
+          ([value type]
+            (marshal type value port)))) fields))
+    digesting))
+
 
 (defmethod {generate-consensus-runtime Interpreter}
   (λ (self)
@@ -179,13 +216,6 @@
       (else
         (displayln "ignoring: " statement)))))
 
-(def (digest-product fields)
-  (digest<-marshal (λ (port)
-    (map (λ (field)
-      (match field
-        ([value type]
-          (marshal type value port)))) fields))))
-
 ; PARSER
 (def (parse-project-output file-path)
   (def project-output-file (open-file file-path))
@@ -276,20 +306,3 @@
       (else
         {add-statement parse-context statement}))))
   (@ parse-context code))
-
-
-; TESTING
-(def program
-  (parse-project-output "./examples/buy_sig.project.sexp"))
-(def participants
-  (hash
-    (Buyer #u8(197 78 134 223 251 135 185 115 110 46 53 221 133 199 117 53 143 28 49 206))
-    (Seller #u8(244 116 8 20 61 50 126 75 198 168 126 244 167 10 78 10 240 155 154 28))))
-(def arguments
-  (hash
-    (digest0 [(string->bytes "abcdefghijklmnopqrstuvwxyz012345") Digest])
-    (price [10000000 Ether])))
-(def interpreter (make-Interpreter
-  program: program
-  participants: participants
-  arguments: arguments))
