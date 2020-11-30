@@ -5,17 +5,23 @@ variables:
 
 build:
   stage: build
-  script:
+  before_script:
     #- echo HOME=$HOME PWD=$PWD USER=$USER UID=$UID PATH=$PATH BASH_VERSION=$BASH_VERSION LC_CTYPE=$LC_CTYPE LC_ALL=$LC_ALL TERM=$TERM GERBIL_LOADPATH=$GERBIL_LOADPATH GERBIL_PATH=$GERBIL_PATH ; ls -l /proc/$$/fd
+    - cachix authtoken $CACHIX_AUTH_TOKEN && cachix use mukn
+    - nix path-info --all > /tmp/store-path-pre-build
+  script:
     - export GERBIL_PATH=$PWD/.build
-    - ./build.ss && ./unit-tests.ss version
+    - ./build.ss nix
+  after_script:
+    - ./unit-tests.ss version
+    - ./unit-tests.ss check-git-up-to-date
+    - bash -c "comm -13 <(sort /tmp/store-path-pre-build | grep -v '\.drv$') <(nix path-info --all | grep -v '\.drv$' | sort) | cachix push mukn"
   artifacts:
     paths:
        - .build
 
 test:
   stage: test
+
   script:
     - export GERBIL_PATH=$PWD/.build
-    - ./unit-tests.ss
-    - ./unit-tests.ss check-git-up-to-date
