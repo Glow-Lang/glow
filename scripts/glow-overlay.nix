@@ -3,13 +3,15 @@
 pkgs: super:
 let inherit (super) lib fetchFromGitLab fetchgit gerbil-support;
     inherit (lib) lists;
+    inherit (lib.attrsets) updateAttrByPath;
     inherit (gerbil-support) overrideGerbilPackage gerbilFilterSource;
     maybeOverrideDep = name:
       let path = ../dep + "/" + name; in
       overrideGerbilPackage name
-      (_: pkgs.thunkSource path) (builtins.fromJSON (builtins.readFile ./github.json)); in
-  lists.foldr (f: x: f x) pkgs [
+      (_: super.thunkSource path) (builtins.fromJSON (builtins.readFile ./github.json)); in
+  lists.foldr (f: x: f x) super [
     (maybeOverrideDep "gerbil-utils")
     (maybeOverrideDep "gerbil-poo")
     (maybeOverrideDep "gerbil-ethereum")
-    (overrideGerbilPackage "glow-lang" (_: gerbilFilterSource ./..))]
+    (overrideGerbilPackage "glow-lang" (_: gerbilFilterSource ./..) {})
+    (p: updateAttrByPath ["glow-lang"] p.gerbilPackages-unstable.glow-lang p)]
