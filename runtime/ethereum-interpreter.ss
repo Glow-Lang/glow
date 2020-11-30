@@ -17,22 +17,6 @@
 (defclass Interpreter (program participants arguments variable-offsets params-end)
   transparent: #t)
 
-(defmethod {initialize Interpreter}
-  (λ (self)
-    (ensure-db-connection (run-path "testdb"))
-    (load-ethereum-networks "./etc/ethereum_networks.json")
-    (ensure-ethereum-network "pet")
-    (for ((values name address) (in-hash (@ self participants)))
-      (displayln name address)
-      (register-keypair
-        (symbol->string name)
-        (keypair ;; KLUGE: Fake public and secret key data. We only use the address via Geth.
-          address
-          (<-json PublicKey "0x020000000000000000000000000000000000000000000000000000000000000001")
-          (<-json SecretKey "0x0000000000000000000000000000000000000000000000000000000000000001")
-          ""))
-      (ensure-eth-signing-key address))))
-
 (defmethod {create-deployment-pretransaction Interpreter}
   (λ (self initial-block)
     (defvalues (contract-runtime-bytes contract-runtime-labels)
@@ -75,7 +59,8 @@
     (displayln "generating signature ...")
     (def Seller (hash-get (@ self participants) 'Seller))
     (def digest0 (hash-get (@ self arguments) 'digest0))
-    (def signature (make-message-signature (secret-key<-address Seller) digest0))
+    (def signature #f)
+      ; (make-message-signature (secret-key<-address Seller) digest0))
     (displayln "publishing signature ...")
     {send-message self signature}))
 

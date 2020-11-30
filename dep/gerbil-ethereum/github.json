@@ -1,8 +1,8 @@
 {
-  "owner": "fare",
+  "owner": "JBetz",
   "repo": "gerbil-ethereum",
-  "branch": "master",
+  "branch": "fix-path-config",
   "private": false,
-  "rev": "6b30686b5ffe8f7852516cb263951faf2d509c68",
-  "sha256": "1bcxhm4pg3jkrjxwir7cdkjprv2hf6jw4x5i6rddkr4k1l45pv43"
+  "rev": "2f5ffac0c7bae95b7fb0b65c05618af6ac45aa1d",
+  "sha256": "18bbnzxnmx3n2z8iri5h6afmlvb99ixmnchcljn0l8briggnpcgd"
 }
