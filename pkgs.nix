@@ -98,8 +98,34 @@ let
     ] ++ old.configureFlags;
   });
 
+  inherit (pkgs.lib) POP;
+  inherit (pkgs.gerbil-support) path-src overrideSrcIfShaDiff gerbilFilterSource;
+
+  maybeOverrideDep = name: super:
+    let path = ./dep + "/${name}";
+        json = builtins.fromJSON (builtins.readFile "${path}/github.json");
+        git-version = pkgs.lib.sublist 0 7 json.rev;
+        version = "local-${git-version}";
+        pre-src = path-src (nix-thunk.thunkSource path)
+                  // json // { inherit version git-version; }; in
+    { ${name} = overrideSrcIfShaDiff name pre-src super.${name}; };
+
   config = {
     packageOverrides = pkgs: rec {
+
+      inherit skipTests skipDocs ignoreVersionBounds addDevelopmentFlag;
+      thunkSource = nix-thunk.thunkSource;
+      thunkExe = pkgs.haskell.lib.doJailbreak (nixThunkHaskellPackages.callCabal2nix "nix-thunk" (nix-thunk.thunkSource ./dep/nix-thunk) {});
+
+      gerbil-support =
+        POP.extendPop pkgs.gerbil-support (_: super: {
+          prePackages-unstable = POP.extendPop super.prePackages-unstable (_: super:
+            maybeOverrideDep "gerbil-utils" super //
+            maybeOverrideDep "gerbil-poo" super //
+            maybeOverrideDep "gerbil-persist" super //
+            maybeOverrideDep "gerbil-ethereum" super //
+            { "glow-lang" = POP.kxPop super.glow-lang
+              { pre-src = path-src (gerbilFilterSource ./.);};});});
 
       nixThunkHaskellPackages = pkgs.haskell.packages.ghc865.override rec {
         overrides = new: old: rec {
@@ -191,11 +217,4 @@ let
     allowBroken = true;
   };
 in
-  pkgs // {
-    inherit skipTests;
-    inherit skipDocs;
-    inherit ignoreVersionBounds;
-    inherit addDevelopmentFlag;
-    thunkSource = nix-thunk.thunkSource;
-    thunkExe = pkgs.haskell.lib.doJailbreak (pkgs.nixThunkHaskellPackages.callCabal2nix "nix-thunk" (nix-thunk.thunkSource ./dep/nix-thunk) {});
-  }
+  pkgs
