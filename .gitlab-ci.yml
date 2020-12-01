@@ -7,6 +7,8 @@ build:
   stage: build
   before_script:
     #- echo HOME=$HOME PWD=$PWD USER=$USER UID=$UID PATH=$PATH BASH_VERSION=$BASH_VERSION LC_CTYPE=$LC_CTYPE LC_ALL=$LC_ALL TERM=$TERM GERBIL_LOADPATH=$GERBIL_LOADPATH GERBIL_PATH=$GERBIL_PATH ; ls -l /proc/$$/fd
+    ### NB: here we trust developers who have keys to be honest.
+    ### When going to production, we will have to be less trusting and only let trusted machines build.
     - cachix authtoken $CACHIX_AUTH_TOKEN && cachix use mukn
     - nix path-info --all > /tmp/store-path-pre-build
   script:
@@ -16,9 +18,10 @@ build:
     - ./unit-tests.ss version
     - cachix authtoken $CACHIX_AUTH_TOKEN && cachix use mukn
     - bash -c "comm -13 <(sort /tmp/store-path-pre-build | grep -v '\.drv$') <(nix path-info --all | grep -v '\.drv$' | sort) | cachix push mukn"
-  artifacts:
-    paths:
-       - .build
+  ## No need for artifacts, we build and test with nix!
+  #artifacts:
+  #  paths:
+  #     - .build
 
 test:
   stage: test
