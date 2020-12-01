@@ -36,7 +36,8 @@
         :mukn/glow/compiler/syntax-context
         :mukn/ethereum/types
         :mukn/ethereum/known-addresses
-        :mukn/ethereum/signing)
+        :mukn/ethereum/signing
+        (only-in :mukn/glow/runtime/ethereum-interpreter make-Interpreter))
 
 (def (set-caddr!  p v) (set-car! (cddr  p) v))
 (def (set-cadddr! p v) (set-car! (cdddr p) v))
@@ -366,6 +367,7 @@
     (def interaction-entry (hash-ref tbl interaction-name))
     (def interaction-participants (hash-ref interaction-entry 'participants))
     (def interaction-parameter-types (hash-ref interaction-entry 'parameters))
+    (def interaction-project-sexp (hash-ref interaction-entry 'project-sexp))
     (def interaction-procedures (hash-ref interaction-entry 'procedures))
     (def consensus-procedure (hash-ref interaction-procedures #f))
     (def consensus->participants
@@ -386,6 +388,17 @@
        (lambda ()
          (parameterize ((current-address #f)
                         (current-balances balances))
+           (def interpreter
+             (make-Interpreter
+              program: interaction-project-sexp
+              participants: (list->hash-table (map cons interaction-participants addresses))
+              arguments:
+              (list->hash-table
+               (map cons
+                    (map car interaction-parameter-types)
+                    (map list arguments (map cdr interaction-parameter-types))))))
+           {execute interpreter}
+           ;; TODO: get messages to and from the execution of the interpreter through the channels
            (apply (apply consensus-procedure participant->consensus consensus->participants addresses) arguments)))))
     (def participant-threads
       (for/collect ((p interaction-participants)
