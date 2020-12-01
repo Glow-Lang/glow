@@ -15,6 +15,7 @@
         :std/format
         :std/iter
         :std/text/json
+        :std/text/hex
         :std/misc/list
         :std/misc/number
         :std/misc/channel
@@ -324,6 +325,109 @@
 ;; update-current-balances : [Hashof Address Int] -> Void
 (def (update-current-balances transfers)
   (current-balances (update-balances (current-balances) transfers)))
+
+;; --------------------------------------------------------
+
+;; An InteractionTable is a:
+;;   [Hashof Symbol InteractionEntry]
+;; An InteractionEntry is a:
+;;   [Hash 'participants [Listof Symbol]
+;;         'parameters [Listof (cons Symbol Type)]
+;;         'procedures InteractionProcedureTable]
+;; An InteractionProcedureTable is a:
+;;   [Hashof (U Symbol #f) [Address ... Any ... -> Any]]
+
+;; An AgreementHandshakeJson is one of:
+;;  - ["agreement" JSON]
+;;  - ["handshake" JSON]
+
+;; A RoleJson is a ["role" String]
+
+;; interaction-handshake : InteractionTable AgreementHandshakeJson -> HandshakeJson
+(def (interaction-handshake tbl ahj)
+  (match ahj
+    (["agreement" g] ["handshake" (hash-merge g (hash (confirmation (hash))))])
+    (["handshake" _] ahj)
+    (["role" s]
+     (error 'input-interaction "expected agreement or handshake, given role"))))
+
+;; TODO: check the consensus blockchain for a transaction matching the confirmation
+(def (handshake-confirmed? h) #t)
+
+;; run-interaction-handshake-role : InteractionTable HandshakeJson RoleJson -> Any
+(def (run-interaction-handshake-role tbl hj rj)
+  (with ((["handshake" h] hj) (["role" r] rj))
+    (unless (handshake-confirmed? hj)
+      (error "handshake not confirmed" hj))
+    (def interaction-name (string->symbol (hash-ref h 'interaction)))
+    (def participant-name-addresses (hash-ref h 'participants))
+    (def parameter-name-values (hash-ref h 'parameters))
+    (def options (hash-ref h 'options))
+    (def interaction-entry (hash-ref tbl interaction-name))
+    (def interaction-participants (hash-ref interaction-entry 'participants))
+    (def interaction-parameter-types (hash-ref interaction-entry 'parameters))
+    (def interaction-procedures (hash-ref interaction-entry 'procedures))
+    (def consensus-procedure (hash-ref interaction-procedures #f))
+    (def consensus->participants
+      (for/collect ((p interaction-participants))
+        (make-channel #f)))
+    (def participant->consensus (make-channel #f))
+    (def addresses
+      (for/collect ((p interaction-participants))
+        (<-json Bytes20 (hash-ref participant-name-addresses p))))
+    (def arguments
+      (for/collect ((xt interaction-parameter-types))
+        (with (([x . t] xt))
+          (<-json t (hash-ref parameter-name-values x)))))
+    (def balances (get-balances addresses))
+    (def consensus-thread
+      (spawn/name/params
+       'consensus
+       (lambda ()
+         (parameterize ((current-address #f)
+                        (current-balances balances))
+           (apply (apply consensus-procedure participant->consensus consensus->participants addresses) arguments)))))
+    (def participant-threads
+      (for/collect ((p interaction-participants)
+                    (a addresses)
+                    (consensus->a consensus->participants))
+        (def a-proc (hash-ref interaction-procedures p))
+        (spawn/name/params
+         p
+         (lambda ()
+           (parameterize ((current-address a)
+                          (current-balances balances))
+             (apply (apply a-proc consensus->a participant->consensus addresses) arguments))))))
+    (for-each thread-join! (cons consensus-thread participant-threads))
+    (for-each channel-close consensus->participants)
+    (channel-close participant->consensus)
+    'done))
+
+;; input-run-interaction : InteractionTable -> Any
+(def (input-run-interaction tbl)
+  (displayln "enter JSON agreement or handshake:")
+  (def j (read-json))
+  (match j
+    (["agreement" _]
+     (def hj (interaction-handshake tbl j))
+     (displayln "copy and send the following JSON handshake to other participants:")
+     (write-json hj)
+     (newline)
+     (input-run-interaction-handshake tbl hj))
+    (["handshake" _]
+     (input-run-interaction-handshake tbl j))
+    (["role" _]
+     (error 'input-interaction "expected agreement or handshake, given role"))))
+
+;; input-run-interaction-handshake : InteractionTable HandshakeJson -> Any
+(def (input-run-interaction-handshake tbl hj)
+  (displayln "enter JSON role:")
+  (def j (read-json))
+  (match j
+    (["role" _]
+     (run-interaction-handshake-role tbl hj j))
+    (_
+     (error 'input-interaction "expected role"))))
 
 ;; --------------------------------------------------------
 
