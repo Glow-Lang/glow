@@ -1,8 +1,8 @@
 {
   "owner": "JBetz",
   "repo": "gerbil-ethereum",
-  "branch": "fix-path-config",
+  "branch": "debugging-buy-sig-runtime",
   "private": false,
-  "rev": "2f5ffac0c7bae95b7fb0b65c05618af6ac45aa1d",
-  "sha256": "18bbnzxnmx3n2z8iri5h6afmlvb99ixmnchcljn0l8briggnpcgd"
+  "rev": "55767ee4487226c1c75b4ce0563598cbcd6762b5",
+  "sha256": "0hgjmgs8bndz0hkx7mgy0d6bv3s028p5mx8gi3wkaqazj091ag9h"
 }

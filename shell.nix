@@ -21,4 +21,5 @@ in
         ''GERBIL_LOADPATH="$GERBIL_LOADPATH:${gerbil-ethereum-local.src}"''}
     '';
     GERBIL_APPLICATION_HOME = "./";
+    GERBIL_APPLICATION_SOURCE = "./";
   }

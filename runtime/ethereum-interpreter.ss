@@ -7,7 +7,7 @@
   :clan/persist/content-addressing :clan/persist/db
   :clan/poo/io :clan/poo/poo
   :clan/path-config :clan/syntax
-  :clan/base
+  :clan/base :clan/ports
   :gerbil/gambit/bytes
   :mukn/ethereum/assembly :mukn/ethereum/types :mukn/ethereum/ethereum :mukn/ethereum/network-config
   :mukn/ethereum/transaction :mukn/ethereum/tx-tracker :mukn/ethereum/json-rpc
@@ -35,7 +35,7 @@
     (defvalues (contract-runtime-bytes contract-runtime-labels)
       {generate-consensus-runtime self})
     (def initial-state
-      {create-frame-variables initial-block})
+      {create-frame-variables self initial-block})
     (def initial-state-digest
       (digest-product initial-state))
     (def contract-bytes
@@ -47,63 +47,94 @@
     (displayln "creating contract ...")
     (def timeoutInBlocks (.@ (current-ethereum-network) timeoutInBlocks))
     (def initial-block (+ (eth_blockNumber) timeoutInBlocks))
+    (displayln "timeoutInBlocks: " timeoutInBlocks)
+    (displayln "initial-block: " initial-block)
     (def pretx {create-contract-pretransaction self initial-block})
     (displayln "deploying contract ...")
     (def receipt (post-transaction pretx))
     (displayln "generating contract config ...")
     (def contract-config (contract-config<-creation-receipt receipt))
+    (displayln "contract address: " (.call Address .json<- (.@ contract-config contract-address)))
+    (displayln "creation hash: " (.call Address .json<- (.@ contract-config creation-hash)))
     (displayln "verifying contract config ...")
     (verify-contract-config contract-config pretx)
     (displayln "handing off to seller ...")
     (displayln "initial block: " initial-block)
-    (displayln "contract config: " contract-config)))
+    (displayln "contract config: " contract-config)
+    {execute-seller self initial-block contract-config}))
 
 (def (read-value name)
   (print (string-append name ": "))
   (read-line))
 
 (defmethod {execute-seller Interpreter}
-  (λ (self)
-    (def initial-block (read-value "initial block"))
-    (def contract-config (read-value "contract config"))
+  (λ (self initial-block contract-config)
+    ;(def initial-block (read-value "initial block"))
+    ;(def contract-config (read-value "contract config"))
     (displayln "creating contract ...")
-    (def pretx {create-contract-pretransaction self initial-block})
+    (def create-pretx {create-contract-pretransaction self initial-block})
     (displayln "verifying contract config ...")
-    (verify-contract-config contract-config pretx)
+    (verify-contract-config contract-config create-pretx)
     (displayln "generating signature ...")
     (def Seller (hash-get (@ self participants) 'Seller))
     (def digest0 (car (hash-get (@ self arguments) 'digest0)))
     (def signature (make-message-signature (secret-key<-address Seller) digest0))
     (displayln "publishing signature ...")
-    {send-message self signature initial-block}))
+    (def message-pretx
+      {create-message-pretransaction self signature Signature initial-block Seller (.@ contract-config contract-address)})
+    (displayln "message-pretx: " (.call PreTransaction .sexp<- message-pretx))
+    (def receipt (post-transaction message-pretx))
+    (displayln "receipt: " (.call TransactionReceipt .sexp<- receipt))))
+
+
+;; : (Bytes <- 'a) <- (<- 'a Out)
+(def (bytes<-<-marshal marshal)
+  (lambda (x) (call-with-output-u8vector (lambda (port) (marshal x port)))))
 
 ;; A call frame, with all the data required to restart computation,
 ;; prepended by a 2-byte frame length. The frame starts with the pc
 ;; and the last-action-block, then contains the values of frame-specific
 ;; variables. So far, all values are stored as a fixed number of bytes
 ;; depending on their type, with no padding.)
-(defmethod {send-message Interpreter}
-  (λ (self message initial-block)
+(defmethod {create-message-pretransaction Interpreter}
+  (λ (self message type initial-block sender-address contract-address)
+    (displayln "send-message")
+    ; length UInt16
+    ; stop/go UInt8
     (def frame-variables
       {create-frame-variables self initial-block})
-    (def frame-variables-digest
-      (digest-product frame-variables))
-    (def frame-size
-      (bytes-length frame-variables-digest))
-    (def frame-digest
-      (digest-product (cons [frame-size UInt16] initial-state)))
-    (void)))
+    (displayln "frame-variables: " frame-variables)
+
+    (def frame-variable-bytes (marshal-product-f frame-variables))
+    (displayln "frame-variable-bytes: " frame-variable-bytes)
+    (def frame-length
+      (bytes-length frame-variable-bytes))
+    (displayln "frame-length: " frame-length)
+
+    (def out (open-output-u8vector))
+    (marshal UInt16 frame-length out)
+    (marshal-product-to frame-variables out)
+    (marshal type message out)
+    (marshal UInt8 1 out)
+    (def message-bytes (get-output-u8vector out))
+    (displayln "sender-address: " sender-address)
+    (displayln "contract-address: " contract-address)
+    (call-function sender-address contract-address message-bytes gas: 300000)))
+
+(def (marshal-product-f fields)
+  (def out (open-output-u8vector))
+  (marshal-product-to fields out)
+  (get-output-u8vector out))
+
+(def (marshal-product-to fields port)
+  (for ((p fields))
+    (with (([v t] p)) (marshal t v port))))
 
 (def (digest-product fields)
-  (def digesting (current-content-addressing))
-  (digest<-marshal
-    (λ (port)
-      (map (λ (field)
-        (match field
-          ([value type]
-            (marshal type value port)))) fields))
-    digesting))
-
+  (def out (open-output-u8vector))
+  (for ((p fields))
+    (with (([v t] p)) (marshal t v out)))
+  (digest<-bytes (marshal-product-f fields)))
 
 (defmethod {generate-consensus-runtime Interpreter}
   (λ (self)
@@ -192,8 +223,8 @@
         (let (other-participant {find-other-participant self new-participant})
           ; TODO: support more than two participants
           [(&check-participant-or-timeout!
-            must-act: {load-variable self new-participant Address}
-            or-end-in-favor-of: {load-variable self other-participant Address})]))
+            must-act: {lookup-variable-offset self new-participant}
+            or-end-in-favor-of: {lookup-variable-offset self other-participant})]))
       (['def variable-name expression]
         {add-local-variable self variable-name}
         (match expression

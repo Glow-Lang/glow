@@ -8,7 +8,7 @@
   :mukn/ethereum/known-addresses :mukn/ethereum/signing :mukn/ethereum/hex :mukn/ethereum/transaction
   :mukn/ethereum/t/signing-test
   :mukn/ethereum/t/transaction-integrationtest
-  ; :mukn/ethereum/t/batch-send-integrationtest
+  :mukn/ethereum/t/batch-send-integrationtest
   ../runtime/ethereum-interpreter
   )
 
@@ -16,8 +16,8 @@
 
 (def participants
   (hash
-    (Buyer #u8(197 78 134 223 251 135 185 115 110 46 53 221 133 199 117 53 143 28 49 206))
-    (Seller #u8(244 116 8 20 61 50 126 75 198 168 126 244 167 10 78 10 240 155 154 28))))
+    (Buyer (address<-0x "0xC54e86DFFb87B9736E2E35DD85c775358F1c31CE"))
+    (Seller (address<-0x "0xF47408143d327e4bc6A87EF4a70A4E0aF09b9A1C"))))
 (def arguments
   (hash
     (digest0 [(string->bytes "abcdefghijklmnopqrstuvwxyz012345") Digest])
