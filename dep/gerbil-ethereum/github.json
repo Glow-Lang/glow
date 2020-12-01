@@ -1,8 +1,8 @@
 {
-  "owner": "JBetz",
+  "owner": "fare",
   "repo": "gerbil-ethereum",
-  "branch": "debugging-buy-sig-runtime",
+  "branch": "debug-contract-runtime",
   "private": false,
-  "rev": "55767ee4487226c1c75b4ce0563598cbcd6762b5",
-  "sha256": "0hgjmgs8bndz0hkx7mgy0d6bv3s028p5mx8gi3wkaqazj091ag9h"
+  "rev": "ab14e2e957c98ba6ba8ca53c5a9b4da640232c5b",
+  "sha256": "0l5fpwpbifhwh2nl089cz5gvkdwm4aa0hj5c3lyl40fgli1vz5w2"
 }
