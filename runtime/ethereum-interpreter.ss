@@ -5,11 +5,12 @@
   :std/srfi/1 :std/sugar :std/iter
   :std/misc/list :std/misc/number :std/misc/ports
   :clan/persist/content-addressing :clan/persist/db
-  :clan/poo/io :clan/poo/poo (only-in :clan/poo/mop display-poo)
+  :clan/poo/io :clan/poo/poo (only-in :clan/poo/mop display-poo sexp<- Type)
   :clan/path-config :clan/syntax
   :clan/base :clan/ports
   :gerbil/gambit/bytes
-  :mukn/ethereum/assembly :mukn/ethereum/types :mukn/ethereum/ethereum :mukn/ethereum/network-config
+  :mukn/ethereum/assembly :mukn/ethereum/hex :mukn/ethereum/types
+  :mukn/ethereum/ethereum :mukn/ethereum/network-config
   :mukn/ethereum/transaction :mukn/ethereum/tx-tracker :mukn/ethereum/json-rpc
   :mukn/ethereum/contract-runtime :mukn/ethereum/signing :mukn/ethereum/assets
   :mukn/ethereum/known-addresses :mukn/ethereum/contract-config :mukn/ethereum/hex)
@@ -31,6 +32,9 @@
         [[initial-block Block]]
         (map (λ (participant) [participant Address]) (hash-values (@ self participants)))
         (hash-values (@ self arguments))])))
+
+(def (sexp<-frame-variables frame-variables)
+  `(list ,@(map (match <> ([v t] `(list ,(sexp<- t v) ,(sexp<- Type t)))) frame-variables)))
 
 (defmethod {create-contract-pretransaction Interpreter}
   (λ (self initial-block sender-address)
@@ -82,9 +86,9 @@
     (DBG "publishing signature ..." signature)
     (def message-pretx
       {create-message-pretransaction self signature Signature initial-block Seller (.@ contract-config contract-address)})
-    (DBG "message-pretx: " message-pretx)
+    (displayln "message-pretx: " (object->string (sexp<- PreTransaction message-pretx)))
     (def receipt (post-transaction message-pretx))
-    (DBG "receipt: " receipt)))
+    (displayln "receipt: " (object->string (sexp<- TransactionReceipt receipt)))))
 
 ;; See gerbil-ethereum/contract-runtime.ss for spec.
 (defmethod {create-message-pretransaction Interpreter}
@@ -92,12 +96,10 @@
     (displayln "send-message")
     (def frame-variables
       {create-frame-variables self initial-block})
-    (displayln "frame-variables: " frame-variables)
-
+    (displayln "frame-variables: " (object->string (sexp<-frame-variables frame-variables)))
     (def frame-variable-bytes (marshal-product-f frame-variables))
-    (displayln "frame-variable-bytes: " frame-variable-bytes)
-    (def frame-length
-      (bytes-length frame-variable-bytes))
+    (displayln "frame-variable-bytes: " (0x<-bytes frame-variable-bytes))
+    (def frame-length (bytes-length frame-variable-bytes))
     (displayln "frame-length: " frame-length)
 
     (def out (open-output-u8vector))
@@ -106,8 +108,8 @@
     (marshal type message out)
     (marshal UInt8 1 out)
     (def message-bytes (get-output-u8vector out))
-    (displayln "sender-address: " sender-address)
-    (displayln "contract-address: " contract-address)
+    (displayln "sender-address: " (0x<-address sender-address))
+    (displayln "contract-address: " (0x<-address contract-address))
     (call-function sender-address contract-address message-bytes gas: 300000)))
 
 (def (marshal-product-f fields)
