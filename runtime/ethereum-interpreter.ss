@@ -208,6 +208,7 @@
 (defmethod {interpret-consensus-statement Interpreter}
   (λ (self statement)
     (match statement
+      ; TODO: fix @check-timeout and re-enable the pattern
       (['set-participant-XXX new-participant]
         (let (other-participant {find-other-participant self new-participant})
           ; TODO: support more than two participants
