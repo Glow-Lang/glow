@@ -5,7 +5,7 @@
   :std/srfi/1 :std/sugar :std/iter
   :std/misc/list :std/misc/number :std/misc/ports
   :clan/persist/content-addressing :clan/persist/db
-  :clan/poo/io :clan/poo/poo
+  :clan/poo/io :clan/poo/poo (only-in :clan/poo/mop display-poo)
   :clan/path-config :clan/syntax
   :clan/base :clan/ports
   :gerbil/gambit/bytes
@@ -13,6 +13,8 @@
   :mukn/ethereum/transaction :mukn/ethereum/tx-tracker :mukn/ethereum/json-rpc
   :mukn/ethereum/contract-runtime :mukn/ethereum/signing :mukn/ethereum/assets
   :mukn/ethereum/known-addresses :mukn/ethereum/contract-config)
+
+(import :clan/debug)
 
 ; INTERPRETER
 (defclass Interpreter (program participants arguments variable-offsets params-end)
@@ -44,23 +46,16 @@
 
 (defmethod {execute-buyer Interpreter}
   (λ (self)
-    (displayln "creating contract ...")
     (def timeoutInBlocks (.@ (current-ethereum-network) timeoutInBlocks))
     (def initial-block (+ (eth_blockNumber) timeoutInBlocks))
-    (displayln "timeoutInBlocks: " timeoutInBlocks)
-    (displayln "initial-block: " initial-block)
     (def pretx {create-contract-pretransaction self initial-block})
-    (displayln "deploying contract ...")
+    (DBG "deploying contract:" timeoutInBlocks initial-block)
     (def receipt (post-transaction pretx))
-    (displayln "generating contract config ...")
     (def contract-config (contract-config<-creation-receipt receipt))
-    (displayln "contract address: " (.call Address .json<- (.@ contract-config contract-address)))
-    (displayln "creation hash: " (.call Address .json<- (.@ contract-config creation-hash)))
-    (displayln "verifying contract config ...")
+    (display-poo ["generating contract config: " ContractConfig contract-config "\n"])
+    (DBG "verifying contract config ...")
     (verify-contract-config contract-config pretx)
-    (displayln "handing off to seller ...")
-    (displayln "initial block: " initial-block)
-    (displayln "contract config: " contract-config)
+    (DBG "handing off to seller ..." initial-block contract-config)
     {execute-seller self initial-block contract-config}))
 
 (def (read-value name)
@@ -71,25 +66,20 @@
   (λ (self initial-block contract-config)
     ;(def initial-block (read-value "initial block"))
     ;(def contract-config (read-value "contract config"))
-    (displayln "creating contract ...")
+    (DBG "creating contract ..." initial-block contract-config)
     (def create-pretx {create-contract-pretransaction self initial-block})
-    (displayln "verifying contract config ...")
+    (DBG "verifying contract config ...")
     (verify-contract-config contract-config create-pretx)
-    (displayln "generating signature ...")
+    (DBG "generating signature ...")
     (def Seller (hash-get (@ self participants) 'Seller))
     (def digest0 (car (hash-get (@ self arguments) 'digest0)))
     (def signature (make-message-signature (secret-key<-address Seller) digest0))
-    (displayln "publishing signature ...")
+    (DBG "publishing signature ...")
     (def message-pretx
       {create-message-pretransaction self signature Signature initial-block Seller (.@ contract-config contract-address)})
-    (displayln "message-pretx: " (.call PreTransaction .sexp<- message-pretx))
+    (DBG "message-pretx: " message-pretx) ; PreTransaction
     (def receipt (post-transaction message-pretx))
-    (displayln "receipt: " (.call TransactionReceipt .sexp<- receipt))))
-
-
-;; : (Bytes <- 'a) <- (<- 'a Out)
-(def (bytes<-<-marshal marshal)
-  (lambda (x) (call-with-output-u8vector (lambda (port) (marshal x port)))))
+    (DBG "receipt: " receipt))) ; TransactionReceipt
 
 ;; A call frame, with all the data required to restart computation,
 ;; prepended by a 2-byte frame length. The frame starts with the pc
@@ -219,7 +209,7 @@
 (defmethod {interpret-consensus-statement Interpreter}
   (λ (self statement)
     (match statement
-      (['set-participant new-participant]
+      (['set-participant-XXX new-participant]
         (let (other-participant {find-other-participant self new-participant})
           ; TODO: support more than two participants
           [(&check-participant-or-timeout!
