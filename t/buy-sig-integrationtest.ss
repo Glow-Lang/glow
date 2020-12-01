@@ -1,8 +1,8 @@
 (export #t)
 
 (import
-  :std/format :std/srfi/1 :std/test :std/sugar :std/iter
-  :clan/persist/db :clan/decimal :clan/poo/poo :clan/poo/io :clan/path-config
+  :std/format :std/srfi/1 :std/test :std/sugar :std/iter :std/text/json
+  :clan/persist/db :clan/decimal :clan/poo/poo :clan/poo/io :clan/path-config :clan/ports
   :mukn/ethereum/ethereum :mukn/ethereum/known-addresses :mukn/ethereum/json-rpc
   :mukn/ethereum/batch-send :mukn/ethereum/network-config :mukn/ethereum/assets
   :mukn/ethereum/known-addresses :mukn/ethereum/signing :mukn/ethereum/hex :mukn/ethereum/transaction
@@ -14,10 +14,13 @@
 
 (ensure-db-connection (run-path "testdb"))
 
+(def buyer-address (address<-0x "0xC54e86DFFb87B9736E2E35DD85c775358F1c31CE"))
+(def seller-address (address<-0x "0xF47408143d327e4bc6A87EF4a70A4E0aF09b9A1C"))
+
 (def participants
   (hash
-    (Buyer (address<-0x "0xC54e86DFFb87B9736E2E35DD85c775358F1c31CE"))
-    (Seller (address<-0x "0xF47408143d327e4bc6A87EF4a70A4E0aF09b9A1C"))))
+    (Buyer buyer-address)
+    (Seller seller-address)))
 (def arguments
   (hash
     (digest0 [(string->bytes "abcdefghijklmnopqrstuvwxyz012345") Digest])
@@ -42,5 +45,10 @@
         program: program
         participants: participants
         arguments: arguments))
-      {execute-buyer interpreter}))))
+      (displayln "executing buyer move ...")
+      (def contract-handshake {execute-buyer interpreter buyer-address})
+      (def message-string (json-object->string (json<- ContractHandshake contract-handshake)))
+      (displayln message-string)
+      (displayln "executing seller move ...")
+      {execute-seller interpreter contract-handshake seller-address}))))
 
