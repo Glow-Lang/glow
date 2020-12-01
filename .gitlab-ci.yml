@@ -14,6 +14,7 @@ build:
   script:
     - export GERBIL_PATH=$PWD/.build
     - ./build.ss nix
+    - ./unit-tests.ss check-git-up-to-date
   after_script:
     - ./unit-tests.ss version
     - cachix authtoken $CACHIX_AUTH_TOKEN && cachix use mukn
@@ -25,10 +26,9 @@ build:
 
 test:
   stage: test
-    #- ./unit-tests.ss # These should already have been taken care of by the build
-    #- ### Here, insert setup of integration
-    #- ./unit-tests.ss integration # Now we're talking: integration tests! They require setup.
-    - ./unit-tests.ss check-git-up-to-date
-
+  before_script:
+    #- ### Here, insert setup for integration tests
   script:
-    - export GERBIL_PATH=$PWD/.build
+    #- export GERBIL_PATH=$PWD/.build
+    - ./unit-tests.ss # These should already have been taken care of by the build
+    #- ./unit-tests.ss integration # Now we're talking: integration tests! They require setup.
