@@ -14,7 +14,7 @@ build:
     - ./build.ss nix
   after_script:
     - ./unit-tests.ss version
-    - ./unit-tests.ss check-git-up-to-date
+    - cachix authtoken $CACHIX_AUTH_TOKEN && cachix use mukn
     - bash -c "comm -13 <(sort /tmp/store-path-pre-build | grep -v '\.drv$') <(nix path-info --all | grep -v '\.drv$' | sort) | cachix push mukn"
   artifacts:
     paths:
@@ -22,6 +22,10 @@ build:
 
 test:
   stage: test
+    #- ./unit-tests.ss # These should already have been taken care of by the build
+    #- ### Here, insert setup of integration
+    #- ./unit-tests.ss integration # Now we're talking: integration tests! They require setup.
+    - ./unit-tests.ss check-git-up-to-date
 
   script:
     - export GERBIL_PATH=$PWD/.build
