@@ -1,72 +1,134 @@
 (export #t)
 
 (import
-  :gerbil/gambit/ports
-  :std/srfi/1 :std/sugar :std/iter
+  :gerbil/gambit/bytes :gerbil/gambit/ports
+  :std/format :std/iter :std/srfi/1 :std/sugar
   :std/misc/list :std/misc/number :std/misc/ports
   :clan/persist/content-addressing :clan/persist/db
-  :clan/poo/io :clan/poo/poo
-  :clan/path-config :clan/syntax
-  :clan/base
-  :mukn/ethereum/assembly :mukn/ethereum/types :mukn/ethereum/ethereum :mukn/ethereum/network-config
+  :clan/poo/io :clan/poo/poo (only-in :clan/poo/mop display-poo sexp<- Type new)
+  :clan/json :clan/path-config :clan/syntax :clan/base :clan/ports
+  :mukn/ethereum/assembly :mukn/ethereum/hex :mukn/ethereum/types
+  :mukn/ethereum/ethereum :mukn/ethereum/network-config
   :mukn/ethereum/transaction :mukn/ethereum/tx-tracker :mukn/ethereum/json-rpc
   :mukn/ethereum/contract-runtime :mukn/ethereum/signing :mukn/ethereum/assets
-  :mukn/ethereum/known-addresses :mukn/ethereum/contract-config)
+  :mukn/ethereum/known-addresses :mukn/ethereum/contract-config :mukn/ethereum/hex)
 
 ; INTERPRETER
 (defclass Interpreter (program participants arguments variable-offsets params-end)
   transparent: #t)
 
-(defmethod {create-deployment-pretransaction Interpreter}
+(defmethod {create-frame-variables Interpreter}
   (λ (self initial-block)
-    (defvalues (contract-runtime-bytes contract-runtime-labels)
+    (defvalues (_ contract-runtime-labels)
       {generate-consensus-runtime self})
     (def checkpoint-location
       (hash-get contract-runtime-labels {make-checkpoint-label self}))
-    (def initial-state-fields
-      (flatten1
+    (flatten1
        [[[checkpoint-location UInt16]]
         [[initial-block Block]]
         (map (λ (participant) [participant Address]) (hash-values (@ self participants)))
-        (hash-values (@ self arguments))]))
+        (hash-values (@ self arguments))])))
+
+(def (sexp<-frame-variables frame-variables)
+  `(list ,@(map (match <> ([v t] `(list ,(sexp<- t v) ,(sexp<- Type t)))) frame-variables)))
+
+(defmethod {create-contract-pretransaction Interpreter}
+  (λ (self initial-block sender-address)
+    (defvalues (contract-runtime-bytes contract-runtime-labels)
+      {generate-consensus-runtime self})
     (def initial-state
-      (digest-product initial-state-fields))
+      {create-frame-variables self initial-block})
+    (def initial-state-digest
+      (digest-product initial-state))
     (def contract-bytes
-      (stateful-contract-init initial-state contract-runtime-bytes))
-    (create-contract (hash-get (@ self participants) 'Buyer) contract-bytes)))
+      (stateful-contract-init initial-state-digest contract-runtime-bytes))
+    (create-contract sender-address contract-bytes)))
+
+(define-type ContractHandshake
+  (Record
+   initial-block: [Block]
+   contract-config: [ContractConfig]))
 
 (defmethod {execute-buyer Interpreter}
-  (λ (self)
-    (displayln "creating contract ...")
+  (λ (self Buyer)
     (def timeoutInBlocks (.@ (current-ethereum-network) timeoutInBlocks))
     (def initial-block (+ (eth_blockNumber) timeoutInBlocks))
-    (def pretx {create-deployment-pretransaction self initial-block})
-    (displayln "deploying contract ...")
+    (def pretx {create-contract-pretransaction self initial-block Buyer})
+    (display-poo ["Deploying contract... " "timeoutInBlocks: " timeoutInBlocks
+                  "initial-block: " initial-block "\n"])
     (def receipt (post-transaction pretx))
-    (displayln "generating contract config ...")
     (def contract-config (contract-config<-creation-receipt receipt))
-    (displayln "verifying contract config ...")
+    (display-poo ["Contract config: " ContractConfig contract-config "\n"])
+    (displayln "Verifying contract config...")
     (verify-contract-config contract-config pretx)
-    (displayln "handing off to seller ...")
-    {execute-seller self initial-block contract-config}))
+    (def handshake (new ContractHandshake initial-block contract-config))
+    (display-poo ["Handshake: " ContractHandshake handshake "\n"])
+    (displayln "Handing off to seller ...\nPlease send this handshake to the other participant:\n```\n"
+                (json-string<- ContractHandshake handshake) "\n```\n")
+    handshake))
+
+(def (read-value name)
+  (printf "~a: " name)
+  (read-line))
 
 (defmethod {execute-seller Interpreter}
-  (λ (self initial-block contract-config)
-    (displayln "creating contract ...")
-    (def pretx {create-deployment-pretransaction self initial-block})
-    (displayln "verifying contract config ...")
-    (verify-contract-config contract-config pretx)
-    (displayln "generating signature ...")
-    (def Seller (hash-get (@ self participants) 'Seller))
-    (def digest0 (hash-get (@ self arguments) 'digest0))
-    (def signature #f)
-      ; (make-message-signature (secret-key<-address Seller) digest0))
-    (displayln "publishing signature ...")
-    {send-message self signature}))
+  (λ (self contract-handshake Seller)
+    (def initial-block (.@ contract-handshake initial-block))
+    (def contract-config (.@ contract-handshake contract-config))
+    (display-poo ["Verifying contract... "
+                  "initial-block: " initial-block " "
+                  ContractConfig contract-config "\n"])
+    (def create-pretx {create-contract-pretransaction self initial-block Seller})
+    (verify-contract-config contract-config create-pretx)
+    (def digest0 (car (hash-get (@ self arguments) 'digest0)))
+    (display-poo ["Generating signature..." "Seller: " Address Seller "Digest: " Digest digest0 "\n"])
+    (def signature (make-message-signature (secret-key<-address Seller) digest0))
+    (def valid-signature? (message-signature-valid? Seller signature digest0))
+    (display-poo ["Publishing signature..."
+                  "signature: " Signature signature "verified valid: " valid-signature? "\n"])
+    (def message-pretx
+      {create-message-pretransaction self signature Signature initial-block Seller (.@ contract-config contract-address)})
+    (display-poo ["Posting pre-tx: " PreTransaction message-pretx "\n"])
+    (def receipt (post-transaction message-pretx))
+    (display-poo ["receipt: " TransactionReceipt receipt "\n"])
+    receipt))
 
-(defmethod {send-message Interpreter}
-  (λ (self message)
-    (void)))
+;; See gerbil-ethereum/contract-runtime.ss for spec.
+(defmethod {create-message-pretransaction Interpreter}
+  (λ (self message type initial-block sender-address contract-address)
+    (displayln "Send-message")
+    (def frame-variables
+      {create-frame-variables self initial-block})
+    (displayln "Frame-variables: " (object->string (sexp<-frame-variables frame-variables)))
+    (def frame-variable-bytes (marshal-product-f frame-variables))
+    (displayln "frame-variable-bytes: " (0x<-bytes frame-variable-bytes))
+    (def frame-length (bytes-length frame-variable-bytes))
+    (displayln "frame-length: " frame-length)
+
+    (def out (open-output-u8vector))
+    (marshal UInt16 frame-length out)
+    (marshal-product-to frame-variables out)
+    (marshal type message out)
+    (marshal UInt8 1 out)
+    (def message-bytes (get-output-u8vector out))
+    (displayln "sender-address: " (0x<-address sender-address))
+    (displayln "contract-address: " (0x<-address contract-address))
+    (call-function sender-address contract-address message-bytes)))
+
+(def (marshal-product-f fields)
+  (def out (open-output-u8vector))
+  (marshal-product-to fields out)
+  (get-output-u8vector out))
+
+(def (marshal-product-to fields port)
+  (for ((p fields))
+    (with (([v t] p)) (marshal t v port))))
+
+(def (digest-product fields)
+  (def out (open-output-u8vector))
+  (for ((p fields))
+    (with (([v t] p)) (marshal t v out)))
+  (digest<-bytes (marshal-product-f fields)))
 
 (defmethod {generate-consensus-runtime Interpreter}
   (λ (self)
@@ -151,12 +213,13 @@
 (defmethod {interpret-consensus-statement Interpreter}
   (λ (self statement)
     (match statement
-      (['set-participant new-participant]
+      ; TODO: fix @check-timeout and re-enable the pattern
+      (['set-participant-XXX new-participant]
         (let (other-participant {find-other-participant self new-participant})
           ; TODO: support more than two participants
           [(&check-participant-or-timeout!
-            must-act: {load-variable self new-participant Address}
-            or-end-in-favor-of: {load-variable self other-participant Address})]))
+            must-act: {lookup-variable-offset self new-participant}
+            or-end-in-favor-of: {lookup-variable-offset self other-participant})]))
       (['def variable-name expression]
         {add-local-variable self variable-name}
         (match expression
@@ -178,13 +241,6 @@
         [&end-contract!])
       (else
         (displayln "ignoring: " statement)))))
-
-(def (digest-product fields)
-  (digest<-marshal (λ (port)
-    (map (λ (field)
-      (match field
-        ([value type]
-          (marshal type value port)))) fields))))
 
 ; PARSER
 (def (parse-project-output file-path)
@@ -276,20 +332,3 @@
       (else
         {add-statement parse-context statement}))))
   (@ parse-context code))
-
-
-; TESTING
-(def program
-  (parse-project-output "./examples/buy_sig.project.sexp"))
-(def participants
-  (hash
-    (Buyer #u8(197 78 134 223 251 135 185 115 110 46 53 221 133 199 117 53 143 28 49 206))
-    (Seller #u8(244 116 8 20 61 50 126 75 198 168 126 244 167 10 78 10 240 155 154 28))))
-(def arguments
-  (hash
-    (digest0 [(string->bytes "abcdefghijklmnopqrstuvwxyz012345") Digest])
-    (price [10000000 Ether])))
-(def interpreter (make-Interpreter
-  program: program
-  participants: participants
-  arguments: arguments))
