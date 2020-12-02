@@ -1,21 +1,17 @@
 (export #t)
 
 (import
-  :gerbil/gambit/ports
-  :std/srfi/1 :std/sugar :std/iter
+  :gerbil/gambit/bytes :gerbil/gambit/ports
+  :std/format :std/iter :std/srfi/1 :std/sugar
   :std/misc/list :std/misc/number :std/misc/ports
   :clan/persist/content-addressing :clan/persist/db
-  :clan/poo/io :clan/poo/poo (only-in :clan/poo/mop display-poo sexp<- Type)
-  :clan/path-config :clan/syntax
-  :clan/base :clan/ports
-  :gerbil/gambit/bytes
+  :clan/poo/io :clan/poo/poo (only-in :clan/poo/mop display-poo sexp<- Type new)
+  :clan/json :clan/path-config :clan/syntax :clan/base :clan/ports
   :mukn/ethereum/assembly :mukn/ethereum/hex :mukn/ethereum/types
   :mukn/ethereum/ethereum :mukn/ethereum/network-config
   :mukn/ethereum/transaction :mukn/ethereum/tx-tracker :mukn/ethereum/json-rpc
   :mukn/ethereum/contract-runtime :mukn/ethereum/signing :mukn/ethereum/assets
   :mukn/ethereum/known-addresses :mukn/ethereum/contract-config :mukn/ethereum/hex)
-
-(import :clan/debug)
 
 ; INTERPRETER
 (defclass Interpreter (program participants arguments variable-offsets params-end)
@@ -48,57 +44,62 @@
       (stateful-contract-init initial-state-digest contract-runtime-bytes))
     (create-contract sender-address contract-bytes)))
 
-(defmethod {execute-buyer Interpreter}
-  (λ (self Buyer)
-    (def timeoutInBlocks (.@ (current-ethereum-network) timeoutInBlocks))
-    (def initial-block (+ (eth_blockNumber) timeoutInBlocks))
-    (def pretx {create-contract-pretransaction self initial-block Buyer})
-    (DBG "deploying contract:" timeoutInBlocks initial-block)
-    (def receipt (post-transaction pretx))
-    (def contract-config (contract-config<-creation-receipt receipt))
-    (display-poo ["contract config: " ContractConfig contract-config "\n"])
-    (displayln "contract address: " (.call Address .sexp<- (.@ contract-config contract-address)))
-    (DBG "verifying contract config ...")
-    (verify-contract-config contract-config pretx)
-    (DBG "handing off to seller ..." initial-block contract-config)
-    (.o (:: @ ContractHandshake) initial-block contract-config)))
-
 (define-type ContractHandshake
   (Record
    initial-block: [Block]
    contract-config: [ContractConfig]))
 
+(defmethod {execute-buyer Interpreter}
+  (λ (self Buyer)
+    (def timeoutInBlocks (.@ (current-ethereum-network) timeoutInBlocks))
+    (def initial-block (+ (eth_blockNumber) timeoutInBlocks))
+    (def pretx {create-contract-pretransaction self initial-block Buyer})
+    (display-poo ["Deploying contract... " "timeoutInBlocks: " timeoutInBlocks
+                  "initial-block: " initial-block "\n"])
+    (def receipt (post-transaction pretx))
+    (def contract-config (contract-config<-creation-receipt receipt))
+    (display-poo ["Contract config: " ContractConfig contract-config "\n"])
+    (displayln "Verifying contract config...")
+    (verify-contract-config contract-config pretx)
+    (def handshake (new ContractHandshake initial-block contract-config))
+    (display-poo ["Handshake: " ContractHandshake handshake "\n"])
+    (displayln "Handing off to seller ...\nPlease send this handshake to the other participant:\n```\n"
+                (json-string<- ContractHandshake handshake) "\n```\n")
+    handshake))
+
 (def (read-value name)
-  (print (string-append name ": "))
+  (printf "~a: " name)
   (read-line))
 
 (defmethod {execute-seller Interpreter}
   (λ (self contract-handshake Seller)
     (def initial-block (.@ contract-handshake initial-block))
     (def contract-config (.@ contract-handshake contract-config))
-    (DBG "creating contract ..." initial-block contract-config)
+    (display-poo ["Verifying contract... "
+                  "initial-block: " initial-block " "
+                  ContractConfig contract-config "\n"])
     (def create-pretx {create-contract-pretransaction self initial-block Seller})
-    (DBG "verifying contract config ...")
     (verify-contract-config contract-config create-pretx)
     (def digest0 (car (hash-get (@ self arguments) 'digest0)))
-    (DBG "generating signature ..." Seller digest0)
+    (display-poo ["Generating signature..." "Seller: " Address Seller "Digest: " Digest digest0 "\n"])
     (def signature (make-message-signature (secret-key<-address Seller) digest0))
-    (def valid-signature (message-signature-valid? Seller signature digest0))
-    (DBG "publishing signature ..." signature valid-signature)
+    (def valid-signature? (message-signature-valid? Seller signature digest0))
+    (display-poo ["Publishing signature..."
+                  "signature: " Signature signature "verified valid: " valid-signature? "\n"])
     (def message-pretx
       {create-message-pretransaction self signature Signature initial-block Seller (.@ contract-config contract-address)})
-    (displayln "message-pretx: " (object->string (sexp<- PreTransaction message-pretx)))
+    (display-poo ["Posting pre-tx: " PreTransaction message-pretx "\n"])
     (def receipt (post-transaction message-pretx))
-    (displayln "receipt: " (object->string (sexp<- TransactionReceipt receipt)))
+    (display-poo ["receipt: " TransactionReceipt receipt "\n"])
     receipt))
 
 ;; See gerbil-ethereum/contract-runtime.ss for spec.
 (defmethod {create-message-pretransaction Interpreter}
   (λ (self message type initial-block sender-address contract-address)
-    (displayln "send-message")
+    (displayln "Send-message")
     (def frame-variables
       {create-frame-variables self initial-block})
-    (displayln "frame-variables: " (object->string (sexp<-frame-variables frame-variables)))
+    (displayln "Frame-variables: " (object->string (sexp<-frame-variables frame-variables)))
     (def frame-variable-bytes (marshal-product-f frame-variables))
     (displayln "frame-variable-bytes: " (0x<-bytes frame-variable-bytes))
     (def frame-length (bytes-length frame-variable-bytes))
