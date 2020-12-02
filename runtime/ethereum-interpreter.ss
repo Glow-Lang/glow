@@ -83,12 +83,14 @@
     (def digest0 (car (hash-get (@ self arguments) 'digest0)))
     (DBG "generating signature ..." Seller digest0)
     (def signature (make-message-signature (secret-key<-address Seller) digest0))
-    (DBG "publishing signature ..." signature)
+    (def valid-signature (message-signature-valid? Seller signature digest0))
+    (DBG "publishing signature ..." signature valid-signature)
     (def message-pretx
       {create-message-pretransaction self signature Signature initial-block Seller (.@ contract-config contract-address)})
     (displayln "message-pretx: " (object->string (sexp<- PreTransaction message-pretx)))
     (def receipt (post-transaction message-pretx))
-    (displayln "receipt: " (object->string (sexp<- TransactionReceipt receipt)))))
+    (displayln "receipt: " (object->string (sexp<- TransactionReceipt receipt)))
+    receipt))
 
 ;; See gerbil-ethereum/contract-runtime.ss for spec.
 (defmethod {create-message-pretransaction Interpreter}
@@ -110,7 +112,7 @@
     (def message-bytes (get-output-u8vector out))
     (displayln "sender-address: " (0x<-address sender-address))
     (displayln "contract-address: " (0x<-address contract-address))
-    (call-function sender-address contract-address message-bytes gas: 300000)))
+    (call-function sender-address contract-address message-bytes)))
 
 (def (marshal-product-f fields)
   (def out (open-output-u8vector))
