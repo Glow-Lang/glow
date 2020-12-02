@@ -21,29 +21,31 @@
 
 #|
 > (add-load-path (path-normalize "../gerbil-ethereum"))
-> (json<- Bytes20 alice-address)
-"0xc54e86dffb87b9736e2e35dd85c775358f1c31ce"
-> (json<- Bytes20 bob-address)
-"0x9ccaed210ce8c0cb49c5ad1c4f583406c264ba69"
+> (def d (current-directory))
+> (import :mukn/ethereum/scripts/run-ethereum-test-net)
+> (current-directory d)
 > (0x<-bytes (string->bytes "abcdefghijklmnopqrstuvwxyz012345"))
 "0x6162636465666768696a6b6c6d6e6f707172737475767778797a303132333435"
+> (import "./t/buy-sig-demo.ss")
 |#
 
 #|
 enter JSON agreement or handshake:
 ["agreement",
  { "interaction": "payForSignature",
-   "participants": { "Buyer": "0xc54e86dffb87b9736e2e35dd85c775358f1c31ce",
-                     "Seller": "0x9ccaed210ce8c0cb49c5ad1c4f583406c264ba69" },
+   "participants": { "Buyer": "0xC54e86DFFb87B9736E2E35DD85c775358F1c31CE",
+                     "Seller": "0xF47408143d327e4bc6A87EF4a70A4E0aF09b9A1C" },
    "parameters": { "digest0": "0x6162636465666768696a6b6c6d6e6f707172737475767778797a303132333435",
                    "price": 10000000 },
    "options": {} }]
 |#
 
+(displayln "enter JSON agreement or handshake:")
 (def aj (read-json))
-(def interaction-name (hash-ref aj 'interaction))
-(def participant-name-jaddresses (hash-ref aj 'participants))
-(def parameter-name-jvalues (hash-ref aj 'parameters))
+(def ajo (with ((["agreement" ajo] aj)) ajo))
+(def interaction-name (hash-ref ajo 'interaction))
+(def participant-name-jaddresses (hash-ref ajo 'participants))
+(def parameter-name-jvalues (hash-ref ajo 'parameters))
 
 (def participants
   (list->hash-table
@@ -77,8 +79,13 @@ enter JSON agreement or handshake:
     arguments: arguments))
 (displayln "executing buyer move ...")
 (def contract-handshake {execute-buyer interpreter buyer-address})
-(def message-string (json-object->string (json<- ContractHandshake contract-handshake)))
+(def message-string (json-object->string ["handshake" (json<- ContractHandshake contract-handshake)]))
+(displayln "copy and send the following JSON handshake to other participants:")
 (displayln message-string)
+(displayln "enter JSON agreement or handshake:")
+(def hj (read-json))
+(def hjo (with ((["handshake" hjo] hj)) hjo))
+(def contract-handshake-2 (<-json ContractHandshake hjo))
 (displayln "executing seller move ...")
-{execute-seller interpreter contract-handshake seller-address}
+{execute-seller interpreter contract-handshake-2 seller-address}
 
