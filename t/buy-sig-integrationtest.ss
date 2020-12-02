@@ -30,17 +30,18 @@
     (digest0 [digest Digest])
     (price [10000000 Ether])))
 
-;; TODO: in general, properly parse the log-data
+;; TODO: Instead, let the language interpreter parse the logs and return a first-class environment,
+;; then extract the signature from the environment.
 ;; Signature <- TransactionReceipt
 (def (extract-signature receipt)
-  (def logs (.@ receipt logs))
-  (def first-log (car logs))
-  (def log-data (.@ first-log data))
-  ((<-bytes<-unmarshal
-    (lambda (port)
-      (begin0 (unmarshal-signature port)
-        (assert! (= 1 (read-u8 port))))))
-   log-data))
+  (!> receipt
+      (cut .@ <> logs)
+      car
+      (cut .@ <> data)
+      (<-bytes<-unmarshal
+       (lambda (port)
+         (begin0 (unmarshal-signature port)
+           (assert! (= 1 (read-u8 port))))))))
 
 (def buy-sig-integrationtest
   (test-suite "integration test for ethereum/buy-sig"
@@ -51,11 +52,13 @@
         program: program
         participants: participants
         arguments: arguments))
-      (displayln "Executing buyer move ...")
+      (displayln "\nEXECUTING BUYER STEP 1...")
       (def contract-handshake {execute-buyer interpreter buyer-address})
-      (display-poo ["Handshake: " ContractHandshake contract-handshake "\n"])
-      (displayln "Executing seller move ...")
+
+      (displayln "\nEXECUTING SELLER STEP 1...")
       (def result {execute-seller interpreter contract-handshake seller-address})
+
+      (displayln "\nEXECUTING BUYER STEP 2...")
       (def signature (extract-signature result))
-      (displayln "valid?: "
-                 (message-signature-valid? seller-address signature digest))))))
+      (display-poo ["Signature extracted from contract logs: " Signature signature
+                    "valid?: " (message-signature-valid? seller-address signature digest) "\n\n"])))))

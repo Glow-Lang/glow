@@ -64,7 +64,8 @@
     (def handshake (new ContractHandshake initial-block contract-config))
     (display-poo ["Handshake: " ContractHandshake handshake "\n"])
     (displayln "Handing off to seller ...\nPlease send this handshake to the other participant:\n```\n"
-                (json-string<- ContractHandshake handshake) "\n```\n")
+               (string<-json [ContractHandshake: (json<- ContractHandshake handshake)])
+               "\n```\n")
     handshake))
 
 (def (read-value name)
@@ -76,15 +77,15 @@
     (def initial-block (.@ contract-handshake initial-block))
     (def contract-config (.@ contract-handshake contract-config))
     (display-poo ["Verifying contract... "
-                  "initial-block: " initial-block " "
-                  ContractConfig contract-config "\n"])
+                  "initial-block: " initial-block
+                  "contract-config: " ContractConfig contract-config "\n"])
     (def create-pretx {create-contract-pretransaction self initial-block Seller})
     (verify-contract-config contract-config create-pretx)
     (def digest0 (car (hash-get (@ self arguments) 'digest0)))
-    (display-poo ["Generating signature..." "Seller: " Address Seller "Digest: " Digest digest0 "\n"])
+    (display-poo ["Generating signature... " "Seller: " Address Seller "Digest: " Digest digest0 "\n"])
     (def signature (make-message-signature (secret-key<-address Seller) digest0))
     (def valid-signature? (message-signature-valid? Seller signature digest0))
-    (display-poo ["Publishing signature..."
+    (display-poo ["Publishing signature... "
                   "signature: " Signature signature "verified valid: " valid-signature? "\n"])
     (def message-pretx
       {create-message-pretransaction self signature Signature initial-block Seller (.@ contract-config contract-address)})
