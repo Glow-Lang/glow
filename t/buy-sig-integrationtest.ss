@@ -4,7 +4,7 @@
   :gerbil/gambit/ports
   :std/format :std/srfi/1 :std/test :std/sugar :std/iter :std/text/json
   :clan/poo/poo :clan/poo/io (only-in :clan/poo/mop display-poo)
-  :clan/decimal :clan/ports :clan/io :clan/path-config
+  :clan/base :clan/decimal :clan/ports :clan/io :clan/path-config
   :clan/crypto/keccak
   :clan/persist/db
   :mukn/ethereum/ethereum :mukn/ethereum/known-addresses :mukn/ethereum/json-rpc
@@ -27,7 +27,7 @@
     (Seller seller-address)))
 (def arguments
   (hash
-    (digest0 [digest Digest])
+    (digest0 [digest Digest]) ;; TODO: have it be [Digest digest] -- dependent pairs with type first!
     (price [10000000 Ether])))
 
 ;; TODO: Instead, let the language interpreter parse the logs and return a first-class environment,

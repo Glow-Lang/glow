@@ -3,6 +3,8 @@
 // - "swaps" where you sign a message for another blockchain
 // - rental where you sign a key access message that some door's / some car's reader will accept
 // - "Diploma" or other affidavit
+// - Usually for purely digital goods. For physical ones you will want the last step to be
+//   sending the money to an multisig escrow contract.
 
 @interaction([Buyer, Seller])
 let payForSignature = (digest : Digest, price : nat) => {

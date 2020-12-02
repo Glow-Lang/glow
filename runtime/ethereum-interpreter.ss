@@ -59,7 +59,6 @@
     (def receipt (post-transaction pretx))
     (def contract-config (contract-config<-creation-receipt receipt))
     (display-poo ["Contract config: " ContractConfig contract-config "\n"])
-    (displayln "Verifying contract config...")
     (verify-contract-config contract-config pretx)
     (def handshake (new ContractHandshake initial-block contract-config))
     (display-poo ["Handshake: " ContractHandshake handshake "\n"])
@@ -241,7 +240,8 @@
       (['@label 'end0]
         [&end-contract!])
       (else
-        (displayln "ignoring: " statement)))))
+       ;; TODO: don't ignore anything the compiler throws at us!!!
+       (display "") #;(displayln "ignoring: " statement)))))
 
 ; PARSER
 (def (parse-project-output file-path)
@@ -316,7 +316,8 @@
         (set! (@ program arguments) arguments)
         (list->hash-table interactions))
       (else
-        (displayln "ignoring: " statement))))
+       ;; TODO: don't ignore anything the compiler throws at us!!!
+       (display "") #;(displayln "ignoring: " statement))))
   (def raw-interactions (find hash-table? (map process-header-statement statements)))
   (def interactions-table (make-hash-table))
   (hash-map (λ (name body) (hash-put! interactions-table name (process-program name body))) raw-interactions)
