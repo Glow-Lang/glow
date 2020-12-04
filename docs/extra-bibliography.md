@@ -23,7 +23,7 @@ Other non-Lisp types of interest?
 ### Compilers
 
 * [Jay McCarthy's course on compiler construction](https://jeapostrophe.github.io/courses/2019/spring/406/course/)
-* [Nanopass compilers](https://nanopass.org/documentation.html), and [this example](https://github.com/akeep/scheme-to-c/blob/master/c.ss), [this course](https://iucompilercourse.github.io/IU-P423-P523-E313-E513-Fall-2020/) with [video lectures](https://iu.mediaspace.kaltura.com/media/Compiler+Course%2C+September+1%2C+2020/1_7o6702no)
+* [Nanopass compilers](https://nanopass.org/documentation.html), and [this example](https://github.com/akeep/scheme-to-c/blob/master/c.ss) or [that one](https://github.com/akeep/scheme-to-llvm), [this course](https://iucompilercourse.github.io/IU-P423-P523-E313-E513-Fall-2020/) with [video lectures](https://iu.mediaspace.kaltura.com/media/Compiler+Course%2C+September+1%2C+2020/1_7o6702no)
 * [Urlang](https://github.com/soegaard/urlang), compiling from SEXP syntax with macros to JavaScript as a Racket `#lang` using a nanopass compiler.
 * Not to be confused with Chlipala's [Ur](http://www.impredicative.com/ur/) is a very different language, that supports metaprogramming using row types.
 * Daniel Patterson on [proving a compiler fully abstract](https://dbp.io/essays/2018-04-19-how-to-prove-a-compiler-fully-abstract.html)
@@ -56,6 +56,7 @@ Other non-Lisp types of interest?
 * [Deploying container and application services with Disnix](https://sandervanderburg.blogspot.com/2020/04/deploying-container-and-application.html)
 * [Arion: Docker compose with NixOS images](https://github.com/hercules-ci/arion)
 * [Graham Christensen: erase your darlings](https://grahamc.com/blog/erase-your-darlings)
+* [Cachix](https://cachix.org/) (including [our cache](https://app.cachix.org/cache/mukn))
 * See also Fugue, Darklang, below.
 
 ### Game Theory
@@ -80,6 +81,8 @@ Other non-Lisp types of interest?
   [Counter-example](https://arxiv.org/abs/1905.04463),
   [also this](https://arxiv.org/pdf/1907.05523.pdf).
 
+* [Noise Explorer](https://symbolic.software/noiseexplorer.html)
+
 ### Proof Systems
 
 * [Lean](https://leanprover.github.io/theorem_proving_in_lean/)
@@ -97,6 +100,20 @@ Other non-Lisp types of interest?
 * [Dark](https://darklang.com), a holistic programming language, editor, and infrastructure for building backends without accidental complexity.
 * [Unison](https://unisonweb.org), an open source functional programming language based on a simple idea with big implications: code is content-addressed and immutable.
 * [Pony](https://www.ponylang.io/), an open-source, object-oriented, actor-model, capabilities-secure, high-performance programming language.
+
+### Blockchain languages to watch
+
+* [Plutus](https://github.com/input-output-hk/plutus) from IOHK
+* [Marlowe](https://alpha.marlowe.iohkdev.io/tutorial/index.html)
+* Blockly from IOHK
+* Pact
+* [Aquamarine](https://github.com/fluencelabs/aquamarine) (see its [demo](https://github.com/fluencelabs/aqua-demo))
+* StateBox
+* Libra's MOVE
+* [Reach](https://docs.reach.sh/index.html)
+* Rho-lang
+* [LLL](https://lll-docs.readthedocs.io/en/latest/lll_introduction.html)
+* See more in [this file](https://github.com/AlacrisIO/alacrity/blob/master/archive/competition.md)
 
 ### Complexity
 
@@ -127,11 +144,16 @@ Other non-Lisp types of interest?
 ### Fluence
 
 * [Fluence](https://fluence.network/)
-* [Aquamarine](https://github.com/fluencelabs/aquamarine) (see its [demo](https://github.com/fluencelabs/aqua-demo))
 
 ### Trezor (Hard Wallet)
 
 * [Trezor](https://wiki.trezor.io/Developers_guide)
+
+### Wallets and chats
+
+* [Status](https://status.im/developer_tools/)
+* [MetaMask](https://metamask.io/)
+* [Telegram](https://telegram.org/)
 
 ### Cryptographic primitives
 
@@ -141,19 +163,34 @@ Other non-Lisp types of interest?
 
 * [Time-lock encryption](https://www.gwern.net/Self-decrypting-files)
 
+* SNARKs, e.g. from O(1)labs, ZoKrates, Zoracles, Zcash, ...
+
+* STARKs, e.g. from [Starkware](https://starkware.co/)
+
 ### Optimistic Roll-Up
 
-* [Optimism](https://medium.com/ethereum-optimism/optimism-cd9bea61a3ee)
+* [Optimism](https://medium.com/ethereum-optimism/optimism-cd9bea61a3ee) [docs](https://docs.optimism.io/)
 
 ### DEX
 
 * [Saturn](https://www.saturn.network/blog/what-is-saturn-network/) ([git](https://github.com/saturn-network/))
 * [Paraswap](https://www.paraswap.io/)
 
+### State Channels
+
+* Cardano's Hydra
+* [Connext](https://github.com/connext/vector/tree/main/modules/contracts/src.sol)
+
+### Some toolkits
+
+* [Ethereum build tools](https://ethereum.org/en/developers/learning-tools/)
+* [Blockstack](https://www.blockstack.org/)
+* Parity: the [Substrate](https://www.parity.io/substrate/) framework, and
+  Polkadot and its [parachains](https://wiki.polkadot.network/docs/en/learn-parachains);
+
 ### More...
 
 * Ledger
 * COSMOS
-* Polkadot and its Substrate framework
-* Blockly from IOHK
+* https://rgb-org.github.io/
 * [Kleros](https://kleros.io)
