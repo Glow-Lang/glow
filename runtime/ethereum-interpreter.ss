@@ -11,7 +11,9 @@
   :mukn/ethereum/ethereum :mukn/ethereum/network-config
   :mukn/ethereum/transaction :mukn/ethereum/tx-tracker :mukn/ethereum/json-rpc
   :mukn/ethereum/contract-runtime :mukn/ethereum/signing :mukn/ethereum/assets
-  :mukn/ethereum/known-addresses :mukn/ethereum/contract-config :mukn/ethereum/hex)
+  :mukn/ethereum/known-addresses :mukn/ethereum/contract-config :mukn/ethereum/hex
+  ../compiler/method-resolve/method-resolve
+  ../compiler/typecheck/type)
 
 ; INTERPRETER
 (defclass Interpreter (program participants arguments variable-offsets params-end)
@@ -176,9 +178,8 @@
 
 (defmethod {add-local-variable Interpreter}
   (λ (self variable-name)
-    ; TODO: look this up in the type table
     (def type
-      (if (eq? variable-name 'signature) Signature Bool))
+      {lookup-type (@ self program) variable-name})
     (def argument-length
       (param-length type))
     (hash-put! (@ self variable-offsets)
@@ -237,12 +238,17 @@
        (error "Interpreter does not recognize consensus statement: " statement)))))
 
 ; PARSER
-(def (parse-project-output file-path)
-  (def project-output-file (open-file file-path))
+(def (parse-compiler-output file-path)
+  (def project-output-path (string-append file-path ".project.sexp"))
+  (def project-output-file (open-file project-output-path))
   (def project-output (read project-output-file))
-  (extract-program project-output))
 
-(defclass Program (name arguments interactions)
+  (def type-table-output-path (string-append file-path ".typetable.sexp"))
+  (def type-table (read-type-table-file type-table-output-path))
+
+  (extract-program project-output type-table))
+
+(defclass Program (name arguments interactions type-table)
   transparent: #t)
 
 (defmethod {:init! Program}
@@ -254,6 +260,10 @@
 (defmethod {get-interaction Program}
   (λ (self participant)
     (hash-get (@ self interactions) participant)))
+
+(defmethod {lookup-type Program}
+  (λ (self variable-name)
+    (type:name-sym (hash-get (@ self type-table) variable-name))))
 
 (defclass ParseContext (current-participant current-label code)
   constructor: :init!
@@ -300,7 +310,7 @@
               self)))))))
 
 
-(def (extract-program statements)
+(def (extract-program statements type-table)
   (def program (make-Program))
   (def (process-header-statement statement)
     (match statement
@@ -314,7 +324,8 @@
   (def raw-interactions (find hash-table? (map process-header-statement statements)))
   (def interactions-table (make-hash-table))
   (hash-map (λ (name body) (hash-put! interactions-table name (process-program name body))) raw-interactions)
-  (set! (@ program interactions) interactions-table))
+  (set! (@ program interactions) interactions-table)
+  (set! (@ program type-table) type-table))
 
 (def (process-program name body)
   (def parse-context (make-ParseContext))

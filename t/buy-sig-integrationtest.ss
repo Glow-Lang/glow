@@ -46,7 +46,7 @@
 (def buy-sig-integrationtest
   (test-suite "integration test for ethereum/buy-sig"
     (test-case "buy sig parses"
-      (def program (parse-project-output "./examples/buy_sig.project.sexp"))
+      (def program (parse-project-output "./examples/buy_sig"))
     (test-case "buy sig executes"
       (def interpreter (make-Interpreter
         program: program
