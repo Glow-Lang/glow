@@ -44,7 +44,7 @@
 ;; TODO: inherit this list from a map of bindings in our runtime system
 ;; init-syms : [Listof Sym]
 (def init-syms
-  '(int nat bool bytes Digest Assets Signature
+  '(Unit Int Nat Bool Bytes Digest Assets Signature
     not <= < > >= + - * / mod sqr sqrt
     member
     randomUInt256 isValidSignature

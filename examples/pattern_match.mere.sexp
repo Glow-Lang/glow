@@ -14,7 +14,7 @@
          (switch p ((@tuple (@var-pat a) (@var-pat b0)) (@app + a b0)))
          (def v (@record (x 3) (y 4)))
          (switch v ((@record (x (@var-pat x)) (y (@var-pat y))) (@app sqrt (@app + (@app sqr x) (@app sqr y)))))
-         (defdata lcexpr (Var int) (Lam lcexpr) (App lcexpr lcexpr))
+         (defdata lcexpr (Var Int) (Lam lcexpr) (App lcexpr lcexpr))
          (def lcexpr1
               (@record (input (λ (tag) (def x1 (input lcexpr tag)) x1))))
          (def omega

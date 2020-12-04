@@ -2,14 +2,14 @@
 ;; Last point Before Blockchain-End-Point-Projection
 
 ;;(defdata Action
-;;  ((Bid TokenAmount) ;; uint96, token amount in wei
+;;  ((Bid TokenAmount) ;; UInt96, token amount in wei
 ;;   (Close)))
-;; replaced by (type+ (type* uint96) unit)
+;; replaced by (type+ (type* UInt96) Unit)
 ;; Its with: clause is expanded away as follows:
-(def Bid (: (uint96 . -> . (type+ (type* uint96) unit)))
+(def Bid (: (UInt96 . -> . (type+ (type* UInt96) Unit)))
   (lambda (n) (sum_constructor 0 n)))
-(def Close (: (type+ (type* uint96) unit))
-  (sum_constructor 1 unit))
+(def Close (: (type+ (type* UInt96) Unit))
+  (sum_constructor 1 Unit))
 (def Action ()
   (record (show ...) (toString ...) ...))
 
@@ -23,10 +23,10 @@
    (participant-checkpoint
     pc ;; point B
     (state: (product ;; These are the live variables (published, for the contract)
-             (Seller : uint160)
-             (goods : uint128) ;; units of the ERC20 "FOO"
-             (expirationTime : uint32)
-             (escrow : uint96))) ;; Seller escrow in wei
+             (Seller : UInt160)
+             (goods : UInt128) ;; units of the ERC20 "FOO"
+             (expirationTime : UInt32)
+             (escrow : UInt96))) ;; Seller escrow in wei
      balances: ()
      escrows: ()
      next-participant: Seller
@@ -41,18 +41,18 @@
       (def tmp1 (> expirationTime tmp0))
       (require! tmp1)
       (@continue-interaction pc0
-       (Seller : uint160)
-       (goods : uint128) ;; units of the ERC20 "FOO"
-       (expirationTime : uint32)
-       (escrow : uint96)))) ;; Seller escrow in wei
+       (Seller : UInt160)
+       (goods : UInt128) ;; units of the ERC20 "FOO"
+       (expirationTime : UInt32)
+       (escrow : UInt96)))) ;; Seller escrow in wei
 
    (participant-checkpoint
     pc0
     (state: (product ;; These are the live variables (published, for the contract)
-             (Seller : uint160)
-             (goods : uint128) ;; units of the ERC20 "FOO"
-             (expirationTime : uint32)
-             (escrow : uint96))) ;; Seller escrow in wei
+             (Seller : UInt160)
+             (goods : UInt128) ;; units of the ERC20 "FOO"
+             (expirationTime : UInt32)
+             (escrow : UInt96))) ;; Seller escrow in wei
      balances: ()
      escrows: ()
      next-participant: Seller
@@ -70,12 +70,12 @@
    (participant-checkpoint
     auction
     (state: (product
-             (Seller : uint160)
-             (goods : uint128) ;; units of the ERC20 "FOO"
-             (expirationTime : uint32)
-             (escrow : uint96) ;; Seller escrow in wei
-             (CurrentBidder : uint160)
-             (currentBid : uint96))) ;; bid in wei
+             (Seller : UInt160)
+             (goods : UInt128) ;; units of the ERC20 "FOO"
+             (expirationTime : UInt32)
+             (escrow : UInt96) ;; Seller escrow in wei
+             (CurrentBidder : UInt160)
+             (currentBid : UInt96))) ;; bid in wei
     ;; NB: if the way to access the balances and deadlines from the contract state
     ;; is uniform across all nodes of the interaction,
     ;; then all nodes can share a generic timeout handler
@@ -90,7 +90,7 @@
     body:
     (choice
      (forall-participant (NewBidder)
-      (@NewBidder (def tmp2 (: uint96) (input uint96 "Enter next bid")))
+      (@NewBidder (def tmp2 (: UInt96) (input UInt96 "Enter next bid")))
       (@NewBidder (def bid (: ...) (Bid tmp2)))
       (@NewBidder (publish! bid))
       (@NewBidder (wei__deposit! bid))

@@ -10,10 +10,10 @@
                                  x2))
                        (toNat (λ (x3) (switch x3 ((@app-ctor LT) 0) ((@app-ctor EQ) 1) ((@app-ctor GT) 2))))
                        (ofNat (λ (x4) (switch x4 (0 LT) (1 EQ) (2 GT))))))
-         (defdata pos2d (Posn int int))
+         (defdata pos2d (Posn Int Int))
          (def pos2d1
               (@record (input (λ (tag1) (def x5 (input pos2d tag1)) x5))))
-         (deftype colorRGB (@record (r int) (g int) (b int)))
+         (deftype colorRGB (@record (r Int) (g Int) (b Int)))
          (defdata (pair 'a 'b) (Pair 'a 'b))
          (def pair1 (@record))
          (def pair_tuple
@@ -42,7 +42,7 @@
                   (Lam (lcexpr 'lit))
                   (App (lcexpr 'lit) (lcexpr 'lit)))
          (def lcexpr1 (@record))
-         (deftype lcintexpr (lcexpr int))
+         (deftype lcintexpr (lcexpr Int))
          (defdata nothing)
          (def nothing1
               (@record (input (λ (tag3)

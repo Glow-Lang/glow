@@ -14,7 +14,7 @@
   ((@record (x (@var-pat x)) (y (@var-pat y)))
    (@app sqrt (@app + (@app sqr x) (@app sqr y)))))
 (defdata lcexpr
-         (Var int)
+         (Var Int)
          (Lam lcexpr)
          (App lcexpr lcexpr)
          with:
@@ -41,11 +41,11 @@
          No
          with:
          (@record (input (λ (tag0) (: ymn) (def x2 (: ymn) (input ymn tag0)) x2))
-                  (toNat (λ ((x3 : ymn)) (: nat) (switch x3 ((@app-ctor Yes) 0) ((@app-ctor Maybe) 1) ((@app-ctor No) 2))))
-                  (ofNat (λ ((x4 : nat)) (: ymn) (switch x4 (0 Yes) (1 Maybe) (2 No))))))
+                  (toNat (λ ((x3 : ymn)) (: Nat) (switch x3 ((@app-ctor Yes) 0) ((@app-ctor Maybe) 1) ((@app-ctor No) 2))))
+                  (ofNat (λ ((x4 : Nat)) (: ymn) (switch x4 (0 Yes) (1 Maybe) (2 No))))))
 (def ans () Maybe)
-(def possible () (λ ((a1 : ymn)) (: bool) (switch a1 ((@or-pat (@app-ctor Yes) (@app-ctor Maybe)) #t) ((@app-ctor No) #f))))
-(def definite () (λ ((a2 : ymn)) (: bool) (switch a2 ((@app-ctor Yes) #t) ((@or-pat (@app-ctor No) (@app-ctor Maybe)) #f))))
+(def possible () (λ ((a1 : ymn)) (: Bool) (switch a1 ((@or-pat (@app-ctor Yes) (@app-ctor Maybe)) #t) ((@app-ctor No) #f))))
+(def definite () (λ ((a2 : ymn)) (: Bool) (switch a2 ((@app-ctor Yes) #t) ((@or-pat (@app-ctor No) (@app-ctor Maybe)) #f))))
 (switch (@tuple (@app possible ans) (@app definite ans))
         ((@tuple #t #t) "yes")
         ((@tuple #t #f) "maybe")

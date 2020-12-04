@@ -2,7 +2,7 @@
 // -*- JavaScript -*-
 // Inspired by https://github.com/KarolTrzeszczkowski/Electron-Cash-Last-Will-Plugin
 
-data Command = Withdraw(x : nat) | Inherit(x : nat)
+data Command = Withdraw(x : Nat) | Inherit(x : Nat)
 
 @interaction([Owner, Heir])
 let deadManSwitch = (expirationDelay) => {

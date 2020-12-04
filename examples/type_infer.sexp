@@ -16,10 +16,10 @@
 ;;  - Thesis: Stephen Dolan Algebraic Subtyping
 ;;    https://www.cl.cam.ac.uk/~sd601/thesis.pdf
 
-(def pick_one ; (-> bool 'a 'a 'a)
+(def pick_one ; (-> Bool 'a 'a 'a)
   (λ (b x y) (if b x y)))
 
-(def select ; (-> (-> 'a bool) 'a 'b (∪ 'a 'b))
+(def select ; (-> (-> 'a Bool) 'a 'b (∪ 'a 'b))
   (λ (p v d) (if (p v) v d)))
 
 #|
@@ -37,7 +37,7 @@
 (def self ; (-> (∩ (-> 'a 'b) 'a) 'b)
   (λ (x) (x x)))
 
-(def id_on_int ; (-> (∩ int 'a) 'a)
+(def id_on_int ; (-> (∩ Int 'a) 'a)
   (λ (x)
     (+ x 1)
     x)))

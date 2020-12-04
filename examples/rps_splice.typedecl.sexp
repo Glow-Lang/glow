@@ -19,7 +19,7 @@
                             (type:var 'wagerAmount3)
                             (type:var 'wagerAmount4)
                             (type:var 'wagerAmount5)
-                            (type:name 'int))))
+                            (type:name 'Int))))
              (type:name 'Outcome0)))))
          ('Paper (entry:ctor #f (typing-scheme (symdict) (type:name 'Hand0))))
          ('winner

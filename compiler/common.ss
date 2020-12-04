@@ -34,7 +34,7 @@
     (_ #f)))
 
 ;; type TrivialExprStx = IdentifierStx | AtomicLiteralStx
-;; trivial-expr? : ExprStx -> bool
+;; trivial-expr? : ExprStx -> Bool
 ;; is this expression trivial enough to be used in a call?
 ;; this implies evaluating it has no side-effect whatsoever and can commute with anything.
 (def (trivial-expr? expr)

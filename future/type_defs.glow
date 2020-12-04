@@ -4,9 +4,9 @@ data yn = Yes | No;
 
 data ordering = LT | EQ | GT;
 
-data pos2d = Posn(int, int);
+data pos2d = Posn(Int, Int);
 
-type colorRGB = { r: int, g: int, b: int };
+type colorRGB = { r: Int, g: Int, b: Int };
 
 data pair('a, 'b) = Pair('a, 'b);
 
@@ -45,7 +45,7 @@ data lcexpr('lit) =
   | Lam(lcexpr('lit))
   | App(lcexpr('lit), lcexpr('lit));
 
-type lcintexpr = lcexpr(int);
+type lcintexpr = lcexpr(Int);
 
 data nothing = ;
 

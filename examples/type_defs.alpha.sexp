@@ -3,9 +3,9 @@
 
 (defdata ordering LT EQ GT)
 
-(defdata pos2d (Posn int int))
+(defdata pos2d (Posn Int Int))
 
-(deftype colorRGB (@record (r int) (g int) (b int)))
+(deftype colorRGB (@record (r Int) (g Int) (b Int)))
 
 (defdata (pair 'a 'b) (Pair 'a 'b))
 
@@ -45,7 +45,7 @@
   (Lam (lcexpr 'lit))
   (App (lcexpr 'lit) (lcexpr 'lit)))
 
-(deftype lcintexpr (lcexpr int))
+(deftype lcintexpr (lcexpr Int))
 
 (defdata nothing)
 

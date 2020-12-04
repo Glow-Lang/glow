@@ -3,7 +3,7 @@
      ()
      (@make-interaction
       ((@list Buyer Seller))
-      ((digest0 : Digest) (price : nat))
+      ((digest0 : Digest) (price : Nat))
       ()
       (deposit! Buyer price)
       (@ Seller (def signature () (sign digest0)))
