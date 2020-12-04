@@ -59,7 +59,7 @@
  {"name": "Private Ethereum Testnet",
   "description": "Local PoA testnet",
   "networkId": 17,
-  "chainId": 17,
+  "chainId": 1337,
   "shortName": "pet",
   "chain": "PET",
   "network": "petnet",
