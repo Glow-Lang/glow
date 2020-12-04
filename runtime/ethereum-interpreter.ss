@@ -231,8 +231,8 @@
       (['require! variable-name]
         [{load-variable self variable-name Bool} &require!])
       (['consensus:withdraw participant amount]
-        [{load-variable self participant Address}
-         {load-variable self amount Ether}
+        [{load-variable self amount Ether}
+         {load-variable self participant Address}
          &withdraw!])
       (['@label 'end0]
         [&end-contract!])
