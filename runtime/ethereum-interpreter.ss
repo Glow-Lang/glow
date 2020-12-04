@@ -213,8 +213,7 @@
 (defmethod {interpret-consensus-statement Interpreter}
   (λ (self statement)
     (match statement
-      ; TODO: fix @check-timeout and re-enable the pattern
-      (['set-participant-XXX new-participant]
+     (['set-participant new-participant]
         (let (other-participant {find-other-participant self new-participant})
           ; TODO: support more than two participants
           [(&check-participant-or-timeout!
@@ -233,15 +232,16 @@
              &isValidSignature])))
       (['require! variable-name]
         [{load-variable self variable-name Bool} &require!])
-      (['expect-withdrawn participant amount]
+      (['consensus:withdraw participant amount]
         [{load-variable self participant Address}
          {load-variable self amount Ether}
          &withdraw!])
       (['@label 'end0]
         [&end-contract!])
+      (['return ['@tuple]]
+        (void))
       (else
-       ;; TODO: don't ignore anything the compiler throws at us!!!
-       (display "") #;(displayln "ignoring: " statement)))))
+       (error "Interpreter does not recognize consensus statement: " statement)))))
 
 ; PARSER
 (def (parse-project-output file-path)
