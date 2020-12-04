@@ -26,7 +26,7 @@
     (flatten1
        [[[checkpoint-location UInt16]]
         [[initial-block Block]]
-        (map (λ (participant) [participant Address]) (hash-values (@ self participants)))
+        (map (λ (participant) [Address . participant]) (hash-values (@ self participants)))
         (hash-values (@ self arguments))])))
 
 (def (sexp<-frame-variables frame-variables)
@@ -80,7 +80,7 @@
                   "contract-config: " ContractConfig contract-config "\n"])
     (def create-pretx {create-contract-pretransaction self initial-block Seller})
     (verify-contract-config contract-config create-pretx)
-    (def digest0 (car (hash-get (@ self arguments) 'digest0)))
+    (def digest0 (cdr (hash-get (@ self arguments) 'digest0)))
     (display-poo ["Generating signature... " "Seller: " Address Seller "Digest: " Digest digest0 "\n"])
     (def signature (make-message-signature (secret-key<-address Seller) digest0))
     (def valid-signature? (message-signature-valid? Seller signature digest0))
@@ -115,12 +115,12 @@
 
 (def (marshal-product-to fields port)
   (for ((p fields))
-    (with (([v t] p)) (marshal t v port))))
+    (with (([t . v] p)) (marshal t v port))))
 
 (def (digest-product fields)
   (def out (open-output-u8vector))
   (for ((p fields))
-    (with (([v t] p)) (marshal t v out)))
+    (with (([t . v] p)) (marshal t v out)))
   (digest<-bytes (marshal-product-f fields)))
 
 (defmethod {generate-consensus-runtime Interpreter}

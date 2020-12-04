@@ -27,8 +27,8 @@
     (Seller seller-address)))
 (def arguments
   (hash
-    (digest0 [digest Digest]) ;; TODO: have it be [Digest digest] -- dependent pairs with type first!
-    (price [10000000 Ether])))
+    (digest0 [Digest . digest])
+    (price [Ether . 10000000])))
 
 ;; TODO: Instead, let the language interpreter parse the logs and return a first-class environment,
 ;; then extract the signature from the environment.
