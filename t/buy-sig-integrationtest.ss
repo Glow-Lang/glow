@@ -31,7 +31,7 @@
 (def arguments
   (hash
     (digest0 [Digest . digest])
-    (price [Ether . 10000000])))
+    (price [Ether . one-ether-in-wei])))
 
 ;; TODO: Instead, let the language interpreter parse the logs and return a first-class environment,
 ;; then extract the signature from the environment.
