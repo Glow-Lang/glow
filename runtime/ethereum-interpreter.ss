@@ -312,19 +312,27 @@
 
 (def (extract-program statements type-table)
   (def program (make-Program))
-  (def (process-header-statement statement)
+  (for ((statement statements))
     (match statement
       (['def name ['@make-interaction [['@list participants ...]] arguments labels interactions ...]]
         (set! (@ program name) name)
         (set! (@ program arguments) arguments)
-        (list->hash-table interactions))
+        (def interactions-table (make-hash-table))
+        (for ((values name body) (list->hash-table interactions))
+          (hash-put! interactions-table name (process-program name body)))
+        (set! (@ program interactions) interactions-table))
+      ('@module
+        (void))
+      (['begin 'end]
+        (void))
+      (['@label 'begin]
+        (void))
+      (['return ['@tuple]]
+        (void))
+      (['@label 'end]
+        (void))
       (else
-       ;; TODO: don't ignore anything the compiler throws at us!!!
-       (display "") #;(displayln "ignoring: " statement))))
-  (def raw-interactions (find hash-table? (map process-header-statement statements)))
-  (def interactions-table (make-hash-table))
-  (hash-map (λ (name body) (hash-put! interactions-table name (process-program name body))) raw-interactions)
-  (set! (@ program interactions) interactions-table)
+        (error "Unrecognized program statement: " statement))))
   (set! (@ program type-table) type-table))
 
 (def (process-program name body)
