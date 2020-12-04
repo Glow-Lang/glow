@@ -8,10 +8,11 @@
   :clan/poo/io :clan/poo/poo (only-in :clan/poo/mop display-poo sexp<- Type new)
   :clan/json :clan/path-config :clan/syntax :clan/base :clan/ports
   :mukn/ethereum/assembly :mukn/ethereum/hex :mukn/ethereum/types
-  :mukn/ethereum/ethereum :mukn/ethereum/network-config
+  :mukn/ethereum/ethereum :mukn/ethereum/network-config :mukn/ethereum/signing
   :mukn/ethereum/transaction :mukn/ethereum/tx-tracker :mukn/ethereum/json-rpc
   :mukn/ethereum/contract-runtime :mukn/ethereum/signing :mukn/ethereum/assets
   :mukn/ethereum/known-addresses :mukn/ethereum/contract-config :mukn/ethereum/hex
+  <expander-runtime>
   ../compiler/method-resolve/method-resolve
   ../compiler/typecheck/type)
 
@@ -26,8 +27,8 @@
     (def checkpoint-location
       (hash-get contract-runtime-labels {make-checkpoint-label self}))
     (flatten1
-       [[[checkpoint-location UInt16]]
-        [[initial-block Block]]
+       [[[UInt16 . checkpoint-location]]
+        [[Block . initial-block]]
         (map (λ (participant) [Address . participant]) (hash-values (@ self participants)))
         (hash-values (@ self arguments))])))
 
@@ -121,8 +122,8 @@
 
 (def (digest-product fields)
   (def out (open-output-u8vector))
-  (for ((p fields))
-    (with (([t . v] p)) (marshal t v out)))
+  (for ((field fields))
+    (with (([t . v] field)) (marshal t v out)))
   (digest<-bytes (marshal-product-f fields)))
 
 (defmethod {generate-consensus-runtime Interpreter}
@@ -155,7 +156,7 @@
       (def parameter-length (param-length Address))
       (hash-put! frame-variables
         variable (post-increment! start parameter-length)))
-    (for ((values variable [_ type]) (in-hash (@ self arguments)))
+    (for ((values variable [type . _]) (in-hash (@ self arguments)))
       (def argument-length (param-length type))
       (hash-put! frame-variables
         variable (post-increment! start argument-length)))
@@ -168,7 +169,7 @@
       (hash-get (@ self variable-offsets) variable-name))
     (if offset
       offset
-      (error "no address for variable: " variable-name))))
+      (error "No offset for variable: " variable-name))))
 
 (defmethod {load-variable Interpreter}
   (λ (self variable-name variable-type)
@@ -178,10 +179,13 @@
 
 (defmethod {add-local-variable Interpreter}
   (λ (self variable-name)
-    (def type
-      {lookup-type (@ self program) variable-name})
-    (def argument-length
-      (param-length type))
+    (def type {lookup-type (@ self program) variable-name})
+    ;; TODO: remove case-conversion when typetable outputs all upper case type names
+    (def uppercase-type (string->symbol (list->string
+      (match (string->list (symbol->string type))
+        ([h . t]
+          [(char-upcase h) . t])))))
+    (def argument-length (param-length (eval uppercase-type)))
     (hash-put! (@ self variable-offsets)
       variable-name (post-increment! (@ self params-end) argument-length))))
 
@@ -238,18 +242,13 @@
        (error "Interpreter does not recognize consensus statement: " statement)))))
 
 ; PARSER
-(def (parse-compiler-output file-path)
-  (def project-output-path (string-append file-path ".project.sexp"))
-  (def project-output-file (open-file project-output-path))
-  (def project-output (read project-output-file))
-
-  (def type-table-output-path (string-append file-path ".typetable.sexp"))
-  (def type-table (read-type-table-file type-table-output-path))
-
-  (extract-program project-output type-table))
-
-(defclass Program (name arguments interactions type-table)
+(defclass Program (name arguments interactions compiler-output)
   transparent: #t)
+
+(def (parse-compiler-output output)
+  (def program (extract-program (hash-ref output 'project.sexp)))
+  (set! (@ program compiler-output) output)
+  program)
 
 (defmethod {:init! Program}
   (λ (self (n "") (as []) (is #f))
@@ -261,9 +260,11 @@
   (λ (self participant)
     (hash-get (@ self interactions) participant)))
 
+;; TODO: use typemethods table for custom data types
 (defmethod {lookup-type Program}
   (λ (self variable-name)
-    (type:name-sym (hash-get (@ self type-table) variable-name))))
+    (def type-table (hash-ref (@ self compiler-output) 'typetable.sexp))
+    (type:name-sym (hash-get type-table variable-name))))
 
 (defclass ParseContext (current-participant current-label code)
   constructor: :init!
@@ -310,9 +311,9 @@
               self)))))))
 
 
-(def (extract-program statements type-table)
+(def (extract-program statements)
   (def program (make-Program))
-  (for ((statement statements))
+  (for ((statement (syntax->datum statements)))
     (match statement
       (['def name ['@make-interaction [['@list participants ...]] arguments labels interactions ...]]
         (set! (@ program name) name)
@@ -333,7 +334,7 @@
         (void))
       (else
         (error "Unrecognized program statement: " statement))))
-  (set! (@ program type-table) type-table))
+  program)
 
 (def (process-program name body)
   (def parse-context (make-ParseContext))
