@@ -4,9 +4,9 @@
   :gerbil/gambit/bytes :gerbil/gambit/ports
   :std/format :std/iter :std/srfi/1 :std/sugar
   :std/misc/list :std/misc/number :std/misc/ports
+  :clan/base :clan/exception :clan/json :clan/path-config :clan/ports :clan/syntax
+  :clan/poo/io (only-in :clan/poo/mop display-poo sexp<- Type new) :clan/poo/poo
   :clan/persist/content-addressing :clan/persist/db
-  :clan/poo/io :clan/poo/poo (only-in :clan/poo/mop display-poo sexp<- Type new)
-  :clan/json :clan/path-config :clan/syntax :clan/base :clan/ports
   :mukn/ethereum/assembly :mukn/ethereum/hex :mukn/ethereum/types
   :mukn/ethereum/ethereum :mukn/ethereum/network-config :mukn/ethereum/signing
   :mukn/ethereum/transaction :mukn/ethereum/tx-tracker :mukn/ethereum/json-rpc
@@ -54,6 +54,7 @@
 
 (defmethod {execute-buyer Interpreter}
   (λ (self Buyer)
+    (with-logged-exceptions ()
     (def timeoutInBlocks (.@ (current-ethereum-network) timeoutInBlocks))
     (def initial-block (+ (eth_blockNumber) timeoutInBlocks))
     (def pretx {create-contract-pretransaction self initial-block Buyer})
@@ -68,7 +69,7 @@
     (displayln "Handing off to seller ...\nPlease send this handshake to the other participant:\n```\n"
                (string<-json [ContractHandshake: (json<- ContractHandshake handshake)])
                "\n```\n")
-    handshake))
+    handshake)))
 
 (def (read-value name)
   (printf "~a: " name)
@@ -76,6 +77,7 @@
 
 (defmethod {execute-seller Interpreter}
   (λ (self contract-handshake Seller)
+    (with-logged-exceptions ()
     (def initial-block (.@ contract-handshake initial-block))
     (def contract-config (.@ contract-handshake contract-config))
     (display-poo ["Verifying contract... "
@@ -94,7 +96,7 @@
     (display-poo ["Posting pre-tx: " PreTransaction message-pretx "\n"])
     (def receipt (post-transaction message-pretx))
     (display-poo ["receipt: " TransactionReceipt receipt "\n"])
-    receipt))
+    receipt)))
 
 ;; See gerbil-ethereum/contract-runtime.ss for spec.
 (defmethod {create-message-pretransaction Interpreter}
@@ -109,9 +111,9 @@
     (marshal type message out)
     (marshal UInt8 1 out)
     (def message-bytes (get-output-u8vector out))
-    (call-function sender-address contract-address message-bytes)))
-      gas: 4000000
-      value: one-ether-in-wei)))
+    (call-function sender-address contract-address message-bytes
+                   gas: 4000000
+                   value: one-ether-in-wei)))
 
 (def (marshal-product-f fields)
   (def out (open-output-u8vector))
