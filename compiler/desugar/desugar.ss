@@ -75,8 +75,8 @@
                    (toNat-cases (for/collect ((c ofNat-cases))
                                   (with (([n d] c)) [['@app-ctor d] n]))))
                ;; TODO: use some magic sum-index internal, not switches
-               [['toNat [#'λ [[x-to ': #'spec]] [': 'nat] [#'switch x-to . toNat-cases]]]
-                ['ofNat [#'λ [[of-x ': #'nat]] [': #'spec] [#'switch of-x . ofNat-cases]]]])
+               [['toNat [#'λ [[x-to ': #'spec]] [': 'Nat] [#'switch x-to . toNat-cases]]]
+                ['ofNat [#'λ [[of-x ': #'Nat]] [': #'spec] [#'switch of-x . ofNat-cases]]]])
              '())))
        (def spec-name (stx-e (if (identifier? #'spec) #'spec (stx-car #'spec))))
        (def rtvalue `(@record ,@input ,@toofNat))

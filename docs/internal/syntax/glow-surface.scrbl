@@ -216,7 +216,7 @@ would be parsed into this glow-sexpr-ugly representation:
 @racketblock[
 (\@ (interaction (\@list Buyer Seller))
    (def payForSignature
-     (λ ((digest : Digest) (price : Assets)) ; inferred `: unit`
+     (λ ((digest : Digest) (price : Assets)) ; inferred `: Unit`
        (\@ Buyer (deposit! price))
        (\@ Seller (\@ publicly (def signature (sign digest))))
        (withdraw! Seller price))))

@@ -7,5 +7,5 @@
              (@list (type:name 'Participant)
                     (type:name 'Participant)
                     (type:name 'Digest)
-                    (type:name-subtype 'nat (type:name 'int)))
+                    (type:name-subtype 'Nat (type:name 'Int)))
              (type:tuple (@list)))))))

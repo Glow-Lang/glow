@@ -7,7 +7,7 @@
 //   sending the money to an multisig escrow contract.
 
 @interaction([Buyer, Seller])
-let payForSignature = (digest : Digest, price : nat) => {
+let payForSignature = (digest : Digest, price : Nat) => {
   deposit! Buyer -> price;
 
   // This line is equivalent to the three below:

@@ -34,7 +34,7 @@
     (_ #f)))
 
 ;; type TrivialExprStx = IdentifierStx | AtomicLiteralStx
-;; trivial-expr? : ExprStx -> bool
+;; trivial-expr? : ExprStx -> Bool
 ;; is this expression trivial enough to be used in a call?
 ;; this implies evaluating it has no side-effect whatsoever and can commute with anything.
 (def (trivial-expr? expr)
@@ -107,7 +107,11 @@
 
 ;; TODO: do we need to properly parameterize the context (?)
 (def (read-sexp-module file)
-  (first-and-only (read-syntax-from-file file)))
+  ; (first-and-only (read-syntax-from-file file)))
+  (match (read-syntax-from-file file)
+    ([stx] stx)
+    (stxs
+     (error 'read-sexp-module "expected exactly 1 sexp, given" (length stxs) "in" file))))
 
 ;; NB: this is lossy of source location and identifier resolution
 (def (write-sexp-module module (port (current-output-port)))

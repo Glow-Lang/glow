@@ -33,7 +33,7 @@
    (@app sqrt (@app + (@app sqr x) (@app sqr y)))))
 
 (defdata lcexpr
-  (Var int)
+  (Var Int)
   (Lam lcexpr)
   (App lcexpr lcexpr))
 (def omega
@@ -55,12 +55,12 @@
 (defdata ymn Yes Maybe No)
 (def ans Maybe)
 (def possible
-  (λ ((a1 : ymn)) : bool
+  (λ ((a1 : ymn)) : Bool
     (switch a1
       ((@or-pat (@app-ctor Yes) (@app-ctor Maybe)) #t)
       ((@app-ctor No) #f))))
 (def definite
-  (λ ((a2 : ymn)) : bool
+  (λ ((a2 : ymn)) : Bool
     (switch a2
       ((@app-ctor Yes) #t)
       ((@or-pat (@app-ctor No) (@app-ctor Maybe)) #f))))

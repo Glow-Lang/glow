@@ -4,21 +4,21 @@
          No
          with:
          (@record (input (λ (tag) (: yn) (def x (: yn) (input yn tag)) x))
-                  (toNat (λ ((x0 : yn)) (: nat) (switch x0 ((@app-ctor Yes) 0) ((@app-ctor No) 1))))
-                  (ofNat (λ ((x1 : nat)) (: yn) (switch x1 (0 Yes) (1 No))))))
+                  (toNat (λ ((x0 : yn)) (: Nat) (switch x0 ((@app-ctor Yes) 0) ((@app-ctor No) 1))))
+                  (ofNat (λ ((x1 : Nat)) (: yn) (switch x1 (0 Yes) (1 No))))))
 (defdata ordering
          LT
          EQ
          GT
          with:
          (@record (input (λ (tag0) (: ordering) (def x2 (: ordering) (input ordering tag0)) x2))
-                  (toNat (λ ((x3 : ordering)) (: nat) (switch x3 ((@app-ctor LT) 0) ((@app-ctor EQ) 1) ((@app-ctor GT) 2))))
-                  (ofNat (λ ((x4 : nat)) (: ordering) (switch x4 (0 LT) (1 EQ) (2 GT))))))
+                  (toNat (λ ((x3 : ordering)) (: Nat) (switch x3 ((@app-ctor LT) 0) ((@app-ctor EQ) 1) ((@app-ctor GT) 2))))
+                  (ofNat (λ ((x4 : Nat)) (: ordering) (switch x4 (0 LT) (1 EQ) (2 GT))))))
 (defdata pos2d
-         (Posn int int)
+         (Posn Int Int)
          with:
          (@record (input (λ (tag1) (: pos2d) (def x5 (: pos2d) (input pos2d tag1)) x5))))
-(deftype colorRGB (@record (r int) (g int) (b int)))
+(deftype colorRGB (@record (r Int) (g Int) (b Int)))
 (defdata (pair 'a 'b)
          (Pair 'a 'b)
          with:
@@ -60,10 +60,10 @@
          (App (lcexpr 'lit) (lcexpr 'lit))
          with:
          (@record))
-(deftype lcintexpr (lcexpr int))
+(deftype lcintexpr (lcexpr Int))
 (defdata nothing
          with:
          (@record (input (λ (tag3) (: nothing) (def x7 (: nothing) (input nothing tag3)) x7))
-                  (toNat (λ ((x8 : nothing)) (: nat) (switch x8)))
-                  (ofNat (λ ((x9 : nat)) (: nothing) (switch x9)))))
+                  (toNat (λ ((x8 : nothing)) (: Nat) (switch x8)))
+                  (ofNat (λ ((x9 : Nat)) (: nothing) (switch x9)))))
 (deftype purelcexpr (lcexpr nothing)))

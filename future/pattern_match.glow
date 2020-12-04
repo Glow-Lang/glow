@@ -38,7 +38,7 @@ switch (v) {
 };
 
 data lcexpr =
-  | Var(int)
+  | Var(Int)
   | Lam(lcexpr)
   | App(lcexpr, lcexpr);
 let omega = App(Lam(App(Var(0), Var(0))),
@@ -61,12 +61,12 @@ switch (omega) {
 
 data ymn = Yes | Maybe | No;
 let ans = Maybe;
-let possible = (a: ymn) : bool =>
+let possible = (a: ymn) : Bool =>
   switch (a) {
   | (Yes | Maybe) => true
   | No => false
   };
-let definite = (a: ymn) : bool =>
+let definite = (a: ymn) : Bool =>
   switch (a) {
   | Yes => true
   | (No | Maybe) => false

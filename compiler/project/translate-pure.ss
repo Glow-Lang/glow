@@ -167,8 +167,8 @@
   (match t
     ((type:name 'Signature) #'Signature)
     ((type:name 'Digest) #'Bytes32)
-    ((type:name 'int) #'Int)
-    ((type:name-subtype 'nat _) #'Nat)
+    ((type:name 'Int) #'Int)
+    ((type:name-subtype 'Nat _) #'Nat)
     ((type:name x) (get-tysym-methods-id x))
     ((type:name-subtype x _) (get-tysym-methods-id x))
     ((type:var _) (error 'type-methods-expr "type variables not supported" t))

@@ -28,7 +28,7 @@
 
   ;;(@make-interaction
   ;;((@list Buyer Seller))
-  ;; ((digest0 : Digest) (price : nat)) ==> used to generate frame when encoding initial state,
+  ;; ((digest0 : Digest) (price : Nat)) ==> used to generate frame when encoding initial state,
   ;; and when having the assumptions about state at given label.
 
   (def-frame (begin0 saved: ((Seller 20) (Buyer 20) (digest0 32) (price 32)) ;; size 12 for price?

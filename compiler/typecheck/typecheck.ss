@@ -656,30 +656,31 @@
 ;; init-env : Env
 (def init-env
   (symdict
-   ('int (entry:type #f [] type:int))
-   ('nat (entry:type #f [] type:nat))
-   ('bool (entry:type #f [] type:bool))
-   ('bytes (entry:type #f [] type:bytes))
+   ('Unit (entry:type #f [] type:Unit))
+   ('Int (entry:type #f [] type:Int))
+   ('Nat (entry:type #f [] type:Nat))
+   ('Bool (entry:type #f [] type:Bool))
+   ('Bytes (entry:type #f [] type:Bytes))
    ('Participant (entry:type #f [] type:Participant))
    ('Digest (entry:type #f [] type:Digest))
    ('Assets (entry:type #f [] type:Assets))
    ('Signature (entry:type #f [] type:Signature))
-   ('not (entry:known #f (typing-scheme empty-symdict (type:arrow [type:bool] type:bool))))
-   ('<= (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int type:int] type:bool))))
-   ('< (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int type:int] type:bool))))
-   ('> (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int type:int] type:bool))))
-   ('>= (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int type:int] type:bool))))
-   ('+ (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int type:int] type:int))))
-   ('- (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int type:int] type:int))))
-   ('* (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int type:int] type:int))))
-   ('/ (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int type:int] type:int))))
-   ('mod (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int type:nat] type:nat))))
-   ('sqr (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int] type:int))))
-   ('sqrt (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int] type:int))))
+   ('not (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Bool] type:Bool))))
+   ('<= (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Int type:Int] type:Bool))))
+   ('< (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Int type:Int] type:Bool))))
+   ('> (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Int type:Int] type:Bool))))
+   ('>= (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Int type:Int] type:Bool))))
+   ('+ (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Int type:Int] type:Int))))
+   ('- (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Int type:Int] type:Int))))
+   ('* (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Int type:Int] type:Int))))
+   ('/ (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Int type:Int] type:Int))))
+   ('mod (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Int type:Nat] type:Nat))))
+   ('sqr (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Int] type:Int))))
+   ('sqrt (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Int] type:Int))))
    ;; TODO: make polymorphic
-   ('member (entry:known #f (typing-scheme empty-symdict (type:arrow [type:int (type:listof type:int)] type:bool))))
-   ('randomUInt256 (entry:known #f (typing-scheme empty-symdict (type:arrow [] type:nat))))
-   ('isValidSignature (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Participant type:Digest type:Signature] type:bool))))))
+   ('member (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Int (type:listof type:Int)] type:Bool))))
+   ('randomUInt256 (entry:known #f (typing-scheme empty-symdict (type:arrow [] type:Nat))))
+   ('isValidSignature (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Participant type:Digest type:Signature] type:Bool))))))
 
 ;; typecheck : ModuleStx UnusedTable → (values Env TypeInfoTable)
 ;; Input unused-table is mutated.
@@ -717,9 +718,9 @@
 ;; tc-body/check : MPart Env BodyStx (U #f Type) -> TypingScheme
 (def (tc-body/check part env stx expected-ty)
   (cond ((stx-null? stx)
-         (unless (or (not expected-ty) (subtype? (type:tuple []) expected-ty))
+         (unless (or (not expected-ty) (subtype? type:Unit expected-ty))
            (error 'tc-body/check "type mismatch with implicit unit at end of body"))
-         (typing-scheme empty-symdict (or expected-ty (type:tuple []))))
+         (typing-scheme empty-symdict (or expected-ty type:Unit)))
         ((stx-null? (stx-cdr stx)) (tc-expr/check part env (stx-car stx) expected-ty))
         (else
          (let-values (((penv nenv) (tc-stmt part env (stx-car stx))))
@@ -964,7 +965,7 @@
   ;; tce : ExprStx -> TypingScheme
   (def (tce e) (tc-expr part env e))
   ;; tce/bool : ExprStx -> TypingScheme
-  (def (tce/bool e) (tc-expr/check part env e type:bool))
+  (def (tce/bool e) (tc-expr/check part env e type:Bool))
   (syntax-case stx (: ann @dot @dot/type @tuple @record @list @app and or if block splice == sign λ @make-interaction switch input digest require! assert! deposit! withdraw!)
     ((ann expr type)
      (tc-expr/check part env #'expr (parse-type part env covariant empty-symdict #'type)))
@@ -999,7 +1000,7 @@
        ;; TODO: constrain the types in `at` and `bt` to types that
        ;;       can be compared for equality
        (typing-scheme (menvs-meet (map typing-scheme-menv [at bt]))
-                      type:bool)))
+                      type:Bool)))
     ((sign e)
      (let ((ts (tc-expr/check part env #'e type:Digest)))
        (typing-scheme (typing-scheme-menv ts) type:Signature)))
@@ -1010,7 +1011,7 @@
        (tc-switch-cases part env ts (syntax->list #'(swcase ...)))))
     ((input type tag)
      (let ((t (parse-type part env covariant empty-symdict #'type))
-           (ts (tc-expr/check part env #'tag type:bytes)))
+           (ts (tc-expr/check part env #'tag type:Bytes)))
        (typing-scheme (typing-scheme-menv ts) t)))
     ((digest e ...)
      (let ((ts (stx-map tce #'(e ...))))
@@ -1020,10 +1021,10 @@
                       type:Digest)))
     ((require! e)
      (let ((et (tce/bool #'e)))
-       (typing-scheme (typing-scheme-menv et) type:unit)))
+       (typing-scheme (typing-scheme-menv et) type:Unit)))
     ((assert! e)
      (let ((et (tce/bool #'e)))
-       (typing-scheme (typing-scheme-menv et) type:unit)))
+       (typing-scheme (typing-scheme-menv et) type:Unit)))
     ((deposit! x e) (identifier? #'x)
      (tc-deposit-withdraw part env stx))
     ((withdraw! x e) (identifier? #'x)
@@ -1144,31 +1145,31 @@
      (let ()
        (when part (error (stx-e #'dw) "only allowed in the consensus"))
        (def pt (tc-expr/check part env #'participant type:Participant))
-       (def at (tc-expr/check part env #'amount type:int))
+       (def at (tc-expr/check part env #'amount type:Int))
        (typing-scheme (menvs-meet (map typing-scheme-menv [pt at]))
-                      type:unit)))))
+                      type:Unit)))))
 
 ;; tc-literal : LiteralStx -> Type
 ;; Produces the most specific type for the literal
 (def (tc-literal stx)
   (def e (stx-e stx))
   (cond ((exact-integer? e)
-         (cond ((negative? e) type:int)
-               (else type:nat))) ; nat when non-negative, more specific
-        ((boolean? e) type:bool)
-        ((string? e) type:bytes) ; represent as bytess using UTF-8
-        ((bytes? e) type:bytes)
-        ((and (pair? e) (length=n? e 1) (equal? (stx-e (car e)) '@tuple)) type:unit)
+         (cond ((negative? e) type:Int)
+               (else type:Nat))) ; Nat when non-negative, more specific
+        ((boolean? e) type:Bool)
+        ((string? e) type:Bytes) ; represent as bytess using UTF-8
+        ((bytes? e) type:Bytes)
+        ((and (pair? e) (length=n? e 1) (equal? (stx-e (car e)) '@tuple)) type:Unit)
         (else (error 'tc-literal "unrecognized literal"))))
 
 ;; tc-pat-literal : LiteralStx -> Type
 ;; Produces the most permissive type for the literal, not the most specific
 (def (tc-pat-literal stx)
   (def e (stx-e stx))
-  (cond ((exact-integer? e) type:int) ; never nat, int is more permissive
-        ((boolean? e) type:bool)
-        ((string? e) type:bytes)
-        ((bytes? e) type:bytes)
+  (cond ((exact-integer? e) type:Int) ; never Nat, Int is more permissive
+        ((boolean? e) type:Bool)
+        ((string? e) type:Bytes)
+        ((bytes? e) type:Bytes)
         (else (error 'tc-pat-literal "unrecognized literal"))))
 
 ;; tc-switch-cases : MPart Env TypingScheme [Listof SwitchCaseStx] -> TypingScheme

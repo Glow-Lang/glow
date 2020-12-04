@@ -3,7 +3,7 @@
 data or_timeout('a) = Action('a) | Timeout;
 
 let callWithTimeout = (fun : message('s, 'i, 'd) -> 'o,
-                       handler : unit -> 'o
+                       handler : Unit -> 'o
                        expirationTime : Timestamp) => {
    switch (@event) {
    | Message(sender, Action(i), deposit) => fun(Message(sender, i, deposit))

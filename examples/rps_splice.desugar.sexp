@@ -5,16 +5,16 @@
          Scissors
          with:
          (@record (input (λ (tag) (: Hand) (def x (: Hand) (input Hand tag)) x))
-                  (toNat (λ ((x0 : Hand)) (: nat) (switch x0 ((@app-ctor Rock) 0) ((@app-ctor Paper) 1) ((@app-ctor Scissors) 2))))
-                  (ofNat (λ ((x1 : nat)) (: Hand) (switch x1 (0 Rock) (1 Paper) (2 Scissors))))))
+                  (toNat (λ ((x0 : Hand)) (: Nat) (switch x0 ((@app-ctor Rock) 0) ((@app-ctor Paper) 1) ((@app-ctor Scissors) 2))))
+                  (ofNat (λ ((x1 : Nat)) (: Hand) (switch x1 (0 Rock) (1 Paper) (2 Scissors))))))
 (defdata Outcome
          B_Wins
          Draw
          A_Wins
          with:
          (@record (input (λ (tag0) (: Outcome) (def x2 (: Outcome) (input Outcome tag0)) x2))
-                  (toNat (λ ((x3 : Outcome)) (: nat) (switch x3 ((@app-ctor B_Wins) 0) ((@app-ctor Draw) 1) ((@app-ctor A_Wins) 2))))
-                  (ofNat (λ ((x4 : nat)) (: Outcome) (switch x4 (0 B_Wins) (1 Draw) (2 A_Wins))))))
+                  (toNat (λ ((x3 : Outcome)) (: Nat) (switch x3 ((@app-ctor B_Wins) 0) ((@app-ctor Draw) 1) ((@app-ctor A_Wins) 2))))
+                  (ofNat (λ ((x4 : Nat)) (: Outcome) (switch x4 (0 B_Wins) (1 Draw) (2 A_Wins))))))
 (def winner
      ()
      (λ ((handA : Hand) (handB : Hand))

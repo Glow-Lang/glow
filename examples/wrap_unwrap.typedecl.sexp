@@ -32,6 +32,6 @@
                      (@list (type:var 'w5)
                             (type:app
                              (type:name 'wrap0)
-                             (@list (@list (type:var 'aₙ) (ntype:intersection (@list (type:var 'aₚ) (type:var 'v4) (type:var 'v5) (type:name 'int)))))))))
-             (type:name 'int)))))
+                             (@list (@list (type:var 'aₙ) (ntype:intersection (@list (type:var 'aₚ) (type:var 'v4) (type:var 'v5) (type:name 'Int)))))))))
+             (type:name 'Int)))))
          ('wrap (entry:type #f (@list (@list 'aₙ 'aₚ)) (type:app (type:name 'wrap0) (@list (@list (type:var 'aₙ) (type:var 'aₚ)))))))

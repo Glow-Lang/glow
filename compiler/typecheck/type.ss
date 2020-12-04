@@ -115,23 +115,23 @@
 
 ;; --------------------------------------------------------
 
-(def type:unit (type:tuple []))
-(def type:empty-record (type:record empty-symdict))
-(def empty-methods (typing-scheme empty-symdict type:empty-record))
+(def type:Unit (type:tuple []))
+(def type:Empty-Record (type:record empty-symdict))
+(def empty-methods (typing-scheme empty-symdict type:Empty-Record))
 (def empty-type-info (type-info [] empty-methods))
 (def (add-empty-type-info! name) (add-type-info! name empty-type-info))
 
-(def type:int (type:name 'int))
-(def type:nat (type:name-subtype 'nat type:int))
-(def type:bool (type:name 'bool))
-(def type:bytes (type:name 'bytes))
+(def type:Int (type:name 'Int))
+(def type:Nat (type:name-subtype 'Nat type:Int))
+(def type:Bool (type:name 'Bool))
+(def type:Bytes (type:name 'Bytes))
 
 (def type:Participant (type:name 'Participant))
 (def type:Digest (type:name 'Digest))
 (def type:Assets (type:name 'Assets))
 (def type:Signature (type:name 'Signature))
 
-(for-each add-empty-type-info! '(int nat bool bytes Participant Digest Assets Signature))
+(for-each add-empty-type-info! '(Int Nat Bool Bytes Participant Digest Assets Signature))
 
 ;; lists are covariant, so (listof a) <: (listof b) when a <: b
 (def typector:listof (type:name 'listof))

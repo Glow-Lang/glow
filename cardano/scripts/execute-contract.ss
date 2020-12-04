@@ -11,7 +11,7 @@
   (values
     '(@header
       (Buyer Seller)
-      ((digest0 : Digest) (price : nat)))
+      ((digest0 : Digest) (price : Nat)))
     '(@body
       (@label begin0)
       (@label cp)
