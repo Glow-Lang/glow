@@ -96,23 +96,16 @@
 ;; See gerbil-ethereum/contract-runtime.ss for spec.
 (defmethod {create-message-pretransaction Interpreter}
   (λ (self message type initial-block sender-address contract-address)
-    (displayln "Send-message")
     (def frame-variables
       {create-frame-variables self initial-block})
-    (displayln "Frame-variables: " (object->string (sexp<-frame-variables frame-variables)))
     (def frame-variable-bytes (marshal-product-f frame-variables))
-    (displayln "frame-variable-bytes: " (0x<-bytes frame-variable-bytes))
     (def frame-length (bytes-length frame-variable-bytes))
-    (displayln "frame-length: " frame-length)
-
     (def out (open-output-u8vector))
     (marshal UInt16 frame-length out)
     (marshal-product-to frame-variables out)
     (marshal type message out)
     (marshal UInt8 1 out)
     (def message-bytes (get-output-u8vector out))
-    (displayln "sender-address: " (0x<-address sender-address))
-    (displayln "contract-address: " (0x<-address contract-address))
     (call-function sender-address contract-address message-bytes)))
 
 (def (marshal-product-f fields)
