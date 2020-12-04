@@ -46,7 +46,7 @@
          (begin0 (unmarshal-signature port)
            (assert! (= 1 (read-u8 port))))))))
 
-(def state (run-passes "examples/buy_sig.glow" pass: 'project show?: #f))
+(def state (run-passes (source-path "examples/buy_sig.glow") pass: 'project show?: #f))
 
 (def buy-sig-integrationtest
   (test-suite "integration test for ethereum/buy-sig"
