@@ -55,6 +55,8 @@ Other non-Lisp types of interest?
 
 * [Deploying container and application services with Disnix](https://sandervanderburg.blogspot.com/2020/04/deploying-container-and-application.html)
 * [Arion: Docker compose with NixOS images](https://github.com/hercules-ci/arion)
+* [Graham Christensen: erase your darlings](https://grahamc.com/blog/erase-your-darlings)
+* See also Fugue, Darklang, below.
 
 ### Game Theory
 
@@ -122,6 +124,11 @@ Other non-Lisp types of interest?
 * [wallet signing api](https://kadena-io.github.io/signing-api/)
 * [nodes](https://github.com/kadena-io/chainweb-node)
 
+### Fluence
+
+* [Fluence](https://fluence.network/)
+* [Aquamarine](https://github.com/fluencelabs/aquamarine) (see its [demo](https://github.com/fluencelabs/aqua-demo))
+
 ### Trezor (Hard Wallet)
 
 * [Trezor](https://wiki.trezor.io/Developers_guide)
@@ -137,6 +144,11 @@ Other non-Lisp types of interest?
 ### Optimistic Roll-Up
 
 * [Optimism](https://medium.com/ethereum-optimism/optimism-cd9bea61a3ee)
+
+### DEX
+
+* [Saturn](https://www.saturn.network/blog/what-is-saturn-network/) ([git](https://github.com/saturn-network/))
+* [Paraswap](https://www.paraswap.io/)
 
 ### More...
 
