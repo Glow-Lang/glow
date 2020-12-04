@@ -110,6 +110,8 @@
     (marshal UInt8 1 out)
     (def message-bytes (get-output-u8vector out))
     (call-function sender-address contract-address message-bytes)))
+      gas: 4000000
+      value: one-ether-in-wei)))
 
 (def (marshal-product-f fields)
   (def out (open-output-u8vector))
@@ -134,8 +136,8 @@
         (&begin
          &simple-contract-prelude
          &define-simple-logging
-         (&define-check-participant-or-timeout)
-         (&define-end-contract)
+         (&define-check-participant-or-timeout debug: #t)
+         (&define-end-contract debug: #t)
          {generate-consensus-code self}
          [&label 'brk-start@ (unbox (brk-start))])))))
 
