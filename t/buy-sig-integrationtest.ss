@@ -14,6 +14,9 @@
   :mukn/ethereum/t/transaction-integrationtest
   :mukn/ethereum/t/batch-send-integrationtest
   :mukn/ethereum/types
+  ../compiler/passes
+  ../compiler/multipass
+  ../compiler/syntax-context
   ../runtime/ethereum-interpreter
   )
 
@@ -43,10 +46,12 @@
          (begin0 (unmarshal-signature port)
            (assert! (= 1 (read-u8 port))))))))
 
+(def state (run-passes "examples/buy_sig.glow" pass: 'project show?: #f))
+
 (def buy-sig-integrationtest
   (test-suite "integration test for ethereum/buy-sig"
     (test-case "buy sig parses"
-      (def program (parse-project-output "./examples/buy_sig"))
+      (def program (parse-compiler-output state))
     (test-case "buy sig executes"
       (def interpreter (make-Interpreter
         program: program
