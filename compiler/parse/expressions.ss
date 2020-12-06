@@ -400,7 +400,7 @@
           (_(match-token-value? #\=)) (variants Variants))
         (return (dataAssignmentStatement name typarams variants)))))
 
-(def SubStatement (.begin (peek (match-token-type? 'ReservedWord))
+(def SubStatement (.begin (peek (match-token-type? (.or "verify" "publish" "data" "type")))
     (.or VerifyStatement  PublishStatement DataAssignmentStatement TypeDeclaration)))
 
 (defstruct (expression-statement statement) (expr) transparent: #t)
@@ -409,27 +409,25 @@
 
 (defstruct (assignment-statement statement) (identifier type expr) transparent: #t)
 (def AssignmentStatement
-  (.begin (match-token-value? "let")
     (.let*  (
         (name Identifier)
         (typ (.or (.begin (match-token-value? #\:) Type) #f))
         (_(match-token-value? #\=))
         (expr Expression))
-      (return (assignment-statement name typ expr)))))
+      (return (assignment-statement name typ expr))))
 
 
 (defstruct (function-declaration statement) (identifier params type expr) transparent: #t)
 (def FunctionDeclaration
-  (.begin (match-token-value? "let")
     (.let* ((name Identifier)
             (_(match-token-value? #\=))
             (params  Params)
             (typ (.or (.begin (match-token-value? #\:) Type) #f))
             (_(match-token-value? "=>"))
             (expr Expression))
-          (return (function-declaration name  params typ expr)))))
+          (return (function-declaration name  params typ expr))))
 
-(def LetStatement (.begin #t (peek (match-token-value? "let")) (.or FunctionDeclaration  AssignmentStatement)))
+(def LetStatement (.begin (match-token-value? "let") (.or FunctionDeclaration  AssignmentStatement)))
 
 (def Params
   (.let* ((_(match-token-value? #\())
