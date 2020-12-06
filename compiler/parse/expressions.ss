@@ -1,5 +1,6 @@
 ;;(import :drewc/smug "./lexical" )
-(import :drewc/smug :mukn/glow/compiler/parse/lexical :std/iter :std/misc/list)
+;;(import :drewc/smug :mukn/glow/compiler/parse/lexical :std/iter :std/misc/list)
+(import :drewc/smug "./lexical" :std/iter :std/misc/list)
 (export #t)
 
 (defstruct expression ())
@@ -32,6 +33,8 @@
 (defstruct (boolean-literal literal) () transparent: #t)
 (defstruct (numeric-literal literal) () transparent: #t)
 (defstruct (string-literal literal) () transparent: #t)
+
+(defstruct (call-expression expression) (function arguments)  transparent: #t)
 
 (def Literal
   (.or
@@ -75,11 +78,9 @@
 
 (defstruct (unary-expression expression) (op expression) transparent: #t)
 (def UnaryExpression
-  (.begin
-    #t
-    (.or (.let* ((op (match-token-value? (.or "+" "-" "~" "!")))
+    (.let* ((op (.or (match-token-value? (.or "+" "-" "~" "!")) #f))
                  (exp PrimaryExpression))
-           (return (unary-expression op exp))) PrimaryExpression)))
+           (if op  (return (unary-expression op exp)) exp)))
 
 (defstruct (exponentiation-expression operator) () transparent: #t)
 (def ExponentiationExpression
@@ -100,7 +101,6 @@
   (.let* ((g (Operator additive-expression MultiplicativeExpression (.or "+" "-")))
            (e (.or (match-token-value? "+") (match-token-value? "-") #f))
            (right (if e (.let* (a AdditiveExpression)(additive-expression g e a)) g))) right))
-
 
 (defstruct (shift-expression operator) () transparent: #t)
 (def ShiftExpression
@@ -146,7 +146,6 @@
 
 
 (defstruct attribute (id arguments)  transparent: #t)
-
 (def Attribute
   (.or (.let* ((id Identifier)
                (_(match-token-value? #\( ) )
@@ -156,40 +155,34 @@
        (.let* (id Identifier) (attribute id #f))))
 
 
-(defstruct (call-expression expression) (function arguments)  transparent: #t)
-
-
 (defstruct (require-expression expression) (exp) transparent: #t)
 (def RequireExpression
-  (.begin (match-token-value? "require") (match-token-value? "!")
-    (.let* ((exp ConditionalExpression))
-          (return (require-expression exp)))))
+    (.let* ((_(match-token-value? "!"))
+          (exp ConditionalExpression))
+          (return (require-expression exp))))
 
 (defstruct (assert-expression expression) (exp) transparent: #t)
-(def AssertExpression
-  (.begin (match-token-value? "assert") (match-token-value? "!")
-    (.let* ((exp ConditionalExpression))
-          (return (assert-expression exp)))))
+(def AssertExpression  
+    (.let* ((_ (match-token-value? "!"))
+          (exp ConditionalExpression))
+          (return (assert-expression exp))))
 
 (defstruct (deposit-expression expression) (id exp) transparent: #t)
 (def DepositExpression
-  (.begin (match-token-value? "deposit") (match-token-value? "!")
-    (.let* ((id Identifier) (_(match-token-value? "->")) (exp Expression))
-          (return (deposit-expression id exp)))))
+    (.let* ( (_ (match-token-value? "!")) (id Identifier) (_(match-token-value? "->")) (exp Expression))
+          (return (deposit-expression id exp))))
 
 (defstruct (withdraw-expression expression) (id exp) transparent: #t)
 (def WithdrawExpression
-  (.begin (match-token-value? "withdraw") (match-token-value? "!")
-    (.let* ((id Identifier)
+    (.let* ((_ (match-token-value? "!")) (id Identifier)
             (_(match-token-value? "<-"))
             (exp ArithmeticExpression))
-          (return (withdraw-expression id exp)))))
+          (return (withdraw-expression id exp))))
 
 (defstruct (annotated-expression expression) (attr  expr) transparent: #t)
 (def AnnotatedExpression
-  (.begin (match-token-value? #\@)
     (.let* ((attr Attribute) (exp PrimaryExpression))
-      (return (annotated-expression attr exp)))))
+      (return (annotated-expression attr exp))))
 
 (defstruct (dot-expression expression) (expr id) transparent: #t)
 
@@ -256,7 +249,6 @@
 (def Variants
   (.begin (.or (match-token-value? #\|) #t)
           (sepby1 Variant (match-token-value? #\|))))
-
 
 (defstruct (record-expr expression) (entries) transparent: #t)
 (def RecordExpr
@@ -330,24 +322,24 @@
 
 (defstruct (if-expression expression) (exp body-then body-else) transparent: #t)
 (def IfExpression
-  (.begin (match-token-value? "if") (match-token-value? #\()
-    (.let* ((expr ConditionalExpression)
+    (.let* ((_ (match-token-value? #\())
+          (expr ConditionalExpression)
           (_ (match-token-value? #\)))
           (body-then (bracket (match-token-value? #\{) Body (match-token-value? #\})))
           (e (.or (match-token-value? "else") #f))
           (body-else (if (equal? e #f)  [] (bracket (match-token-value? #\{) Body (match-token-value? #\})))))
-      (return (if-expression expr body-then body-else)))))
+      (return (if-expression expr body-then body-else))))
 
 (defstruct (switch expression) (expression cases) transparent: #t)
 (def SwitchExpression
-    (.begin (match-token-value? "switch") (match-token-value? #\()
-      (.let* ((expr ArithmeticExpression)
+      (.let* ((_ (match-token-value? #\())
+              (expr ArithmeticExpression)
               (_ (match-token-value? #\) ))
               (_ (match-token-value? #\{ ))
               (empty? (.or (match-token-value? #\} ) #f))
               (cases (if empty? [] Cases))
               (_ (if (equal? empty? #f)  (match-token-value? #\} ) #f)))
-        (return (switch expr cases)))))
+        (return (switch expr cases))))
 
 
 (defstruct case (pat body) transparent: #t)
@@ -362,14 +354,19 @@
 
 
 (def Expression
-    (.or AnnotatedExpression TypeExpression
-         IfExpression SwitchExpression
-         RequireExpression  AssertExpression DepositExpression WithdrawExpression
-         ArithmeticExpression PrimaryExpression))
-
-
-
-;
+   (.begin (.or  
+         (.begin (peek (match-token-value? (.or "switch" "deposit" "withdraw" "if" "assert" "require" "@")))
+               (.let* (t (item))
+               (display (get-token-value t)) 
+               (cond
+                ((string=? (get-token-value t) "switch") SwitchExpression)
+                ((string=? (get-token-value t) "if") IfExpression)
+                ((string=? (get-token-value t) "withdraw") WithdrawExpression)
+                ((string=? (get-token-value t) "deposit") DepositExpression)
+                ((string=? (get-token-value t) "assert") AssertExpression)
+                ((string=? (get-token-value t) "require") RequireExpression)
+                ((string=? (get-token-value t) "@") AnnotatedExpression) ) )) 
+      TypeExpression ArithmeticExpression)))
 
 (defstruct (publish-statement statement) (id expr) transparent: #t)
 (def PublishStatement
@@ -403,9 +400,8 @@
           (_(match-token-value? #\=)) (variants Variants))
         (return (dataAssignmentStatement name typarams variants)))))
 
-
-
-(def SubStatement (.or VerifyStatement  PublishStatement DataAssignmentStatement TypeDeclaration))
+(def SubStatement (.begin (peek (match-token-type? 'ReservedWord))
+    (.or VerifyStatement  PublishStatement DataAssignmentStatement TypeDeclaration)))
 
 (defstruct (expression-statement statement) (expr) transparent: #t)
 (def ExpressionStatement (.let* ((exp Expression) )
@@ -433,7 +429,7 @@
             (expr Expression))
           (return (function-declaration name  params typ expr)))))
 
-(def LetStatement (.or FunctionDeclaration  AssignmentStatement))
+(def LetStatement (.begin #t (peek (match-token-value? "let")) (.or FunctionDeclaration  AssignmentStatement)))
 
 (def Params
   (.let* ((_(match-token-value? #\())
