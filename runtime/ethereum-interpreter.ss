@@ -21,9 +21,7 @@
   transparent: #t)
 
 (defmethod {create-frame-variables Interpreter}
-  (λ (self initial-block)
-    (defvalues (_ contract-runtime-labels)
-      {generate-consensus-runtime self})
+  (λ (self initial-block contract-runtime-labels)
     (def checkpoint-location
       (hash-get contract-runtime-labels {make-checkpoint-label self}))
     (flatten1
@@ -40,7 +38,7 @@
     (defvalues (contract-runtime-bytes contract-runtime-labels)
       {generate-consensus-runtime self})
     (def initial-state
-      {create-frame-variables self initial-block})
+      {create-frame-variables self initial-block contract-runtime-labels})
     (def initial-state-digest
       (digest-product initial-state))
     (def contract-bytes
@@ -101,8 +99,10 @@
 ;; See gerbil-ethereum/contract-runtime.ss for spec.
 (defmethod {create-message-pretransaction Interpreter}
   (λ (self message type initial-block sender-address contract-address)
+    (defvalues (_ contract-runtime-labels)
+      {generate-consensus-runtime self})
     (def frame-variables
-      {create-frame-variables self initial-block})
+      {create-frame-variables self initial-block contract-runtime-labels})
     (def frame-variable-bytes (marshal-product-f frame-variables))
     (def frame-length (bytes-length frame-variable-bytes))
     (def out (open-output-u8vector))
