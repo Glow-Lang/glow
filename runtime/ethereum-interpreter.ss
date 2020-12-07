@@ -184,12 +184,7 @@
 (defmethod {add-local-variable Interpreter}
   (λ (self variable-name)
     (def type {lookup-type (@ self program) variable-name})
-    ;; TODO: remove case-conversion when typetable outputs all upper case type names
-    (def uppercase-type (string->symbol (list->string
-      (match (string->list (symbol->string type))
-        ([h . t]
-          [(char-upcase h) . t])))))
-    (def argument-length (param-length (eval uppercase-type)))
+    (def argument-length (param-length (eval type)))
     (hash-put! (@ self variable-offsets)
       variable-name (post-increment! (@ self params-end) argument-length))))
 
