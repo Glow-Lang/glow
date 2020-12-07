@@ -1,3 +1,11 @@
+#|
+$ gxi
+> (add-load-path (path-normalize "../gerbil-ethereum"))
+> (def d (current-directory))
+> (import :mukn/ethereum/scripts/run-geth-test-net)
+> (current-directory d)
+> (import "t/buy-sig-integrationtest.ss")
+|#
 (export #t)
 
 (import
@@ -20,8 +28,8 @@
   ../runtime/ethereum-interpreter
   )
 
-(def buyer-address alice-address)
-(def seller-address bob-address)
+(def buyer-address alice)
+(def seller-address bob)
 (def digest (keccak256<-string "abcdefghijklmnopqrstuvwxyz012345"))
 
 (def participants
