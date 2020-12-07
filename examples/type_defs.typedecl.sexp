@@ -33,9 +33,9 @@
            #f
            (@list)
            (type:record
-            (symdict ('g (type:name 'int))
-                     ('b (type:name 'int))
-                     ('r (type:name 'int))))))
+            (symdict ('g (type:name 'Int))
+                     ('b (type:name 'Int))
+                     ('r (type:name 'Int))))))
          ('lcexpr
           (entry:type
            #f
@@ -138,7 +138,7 @@
           (entry:type
            #f
            (@list)
-           (type:app (type:name 'lcexpr0) (@list (@list (type:name 'int) (type:name 'int))))))
+           (type:app (type:name 'lcexpr0) (@list (@list (type:name 'Int) (type:name 'Int))))))
          ('nothing (entry:type #f (@list) (type:name 'nothing0)))
          ('option_result
           (entry:known
@@ -182,7 +182,7 @@
            (typing-scheme
             (symdict)
             (type:arrow
-             (@list (type:name 'int) (type:name 'int))
+             (@list (type:name 'Int) (type:name 'Int))
              (type:name 'pos2d0)))))
          ('Lam
           (entry:ctor
