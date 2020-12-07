@@ -14,6 +14,9 @@
   :mukn/ethereum/t/transaction-integrationtest
   :mukn/ethereum/t/batch-send-integrationtest
   :mukn/ethereum/types
+  ../compiler/passes
+  ../compiler/multipass
+  ../compiler/syntax-context
   ../runtime/ethereum-interpreter
   )
 
@@ -27,8 +30,8 @@
     (Seller seller-address)))
 (def arguments
   (hash
-    (digest0 [digest Digest]) ;; TODO: have it be [Digest digest] -- dependent pairs with type first!
-    (price [10000000 Ether])))
+    (digest0 [Digest . digest])
+    (price [Ether . one-ether-in-wei])))
 
 ;; TODO: Instead, let the language interpreter parse the logs and return a first-class environment,
 ;; then extract the signature from the environment.
@@ -43,10 +46,12 @@
          (begin0 (unmarshal-signature port)
            (assert! (= 1 (read-u8 port))))))))
 
+(def state (run-passes (source-path "examples/buy_sig.glow") pass: 'project show?: #f))
+
 (def buy-sig-integrationtest
   (test-suite "integration test for ethereum/buy-sig"
     (test-case "buy sig parses"
-      (def program (parse-project-output "./examples/buy_sig.project.sexp"))
+      (def program (parse-compiler-output state))
     (test-case "buy sig executes"
       (def interpreter (make-Interpreter
         program: program

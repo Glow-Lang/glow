@@ -12,8 +12,9 @@ else
 fi
 
 export GLOW_SRC="$(dirname $this)"
-export GLOW_HOME
+export GLOW_HOME GERBIL_APPLICATION_HOME
 : ${GLOW_HOME:=${GLOW_SRC}}
+GERBIL_APPLICATION_HOME=$GLOW_HOME
 bindir=${GLOW_SRC}/.build_outputs
 GERBIL_PACKAGE=gerbil-unstable
 
@@ -25,7 +26,7 @@ GERBIL_PACKAGE=gerbil-unstable
 # Then you can use this, which assumes the clan utilities were installed via gxpkg:
 . "${GERBIL_PATH:-${HOME}/.gerbil}/pkg/github.com/fare/gerbil-utils/gerbil-nix-env.sh"
 
-GERBIL_LOADPATH="${GERBIL_LOADPATH}:${GERBIL_PATH:-${HOME}/.gerbil}/pkg/github.com/fare/gerbil-ethereum"
+GERBIL_LOADPATH="${GLOW_SRC}:${GERBIL_LOADPATH}:${GERBIL_PATH:-${HOME}/.gerbil}/pkg/github.com/fare/gerbil-ethereum"
 
 
 # Manage the git submodule
@@ -63,3 +64,4 @@ wcss () {
     echo "all: $a"
 }
 glo_gxi () { gxi ${GLOW_SRC}/all-glow.ss $GERBIL_HOME/lib/gxi-interactive - ;}
+regeth () { $GERBIL_ETHEREUM_SRC/scripts/run-ethereum-test-net.ss ;}

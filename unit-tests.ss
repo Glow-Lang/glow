@@ -4,4 +4,4 @@
 
 (import :clan/t/test-support)
 (init-test-environment!)
-(import :mukn/glow/version :mukn/glow/t/common :mukn/glow/compiler/syntax-context)
+(import :mukn/glow/version :mukn/glow/t/common :mukn/glow/compiler/syntax-context :mukn/ethereum/signing :mukn/ethereum/types)
