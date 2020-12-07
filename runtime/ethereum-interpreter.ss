@@ -230,9 +230,11 @@
       (['require! variable-name]
         [{load-variable self variable-name Bool} &require!])
       (['consensus:withdraw participant amount]
-        [{load-variable self amount Ether}
-         {load-variable self participant Address}
-         &withdraw!])
+        (void))
+        ; TODO: uncomment once issue with EVM bytecode is fixed
+        ; [{load-variable self amount Ether}
+        ;  {load-variable self participant Address}
+        ;  &withdraw!])
       (['@label 'end0]
         [&end-contract!])
       (['return ['@tuple]]
