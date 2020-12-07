@@ -265,7 +265,9 @@
 (defmethod {lookup-type Program}
   (λ (self variable-name)
     (def type-table (hash-ref (@ self compiler-output) 'typetable.sexp))
-    (type:name-sym (hash-get type-table variable-name))))
+    (match (hash-get type-table variable-name)
+      ((type:name sym) sym)
+      ((type:name-subtype sym _) sym))))
 
 (defclass ParseContext (current-participant current-label code)
   constructor: :init!
