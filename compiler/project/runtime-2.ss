@@ -374,7 +374,7 @@
     (def participant->consensus (make-channel #f))
     (def addresses
       (for/collect ((p interaction-participants))
-        (<-json Bytes20 (hash-ref participant-name-addresses p))))
+        (<-json Address (hash-ref participant-name-addresses p))))
     (def arguments
       (for/collect ((xt interaction-parameter-types))
         (with (([x . t] xt))

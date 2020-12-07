@@ -3,17 +3,17 @@ To generate from the command-line in the glow directory:
 ./unit-tests.ss pass project-2 examples/rps.sexp
 To run from gxi in the glow directory, assuming gerbil-etherum is in a sibling directory:
 > (add-load-path (path-normalize "../gerbil-ethereum"))
-> (import "examples/rps.project-2.ss" :clan/poo/io :mukn/ethereum/types :mukn/ethereum/t/signing-test :clan/persist/content-addressing)
-> (json<- Bytes20 alice-address)
-"0xc54e86dffb87b9736e2e35dd85c775358f1c31ce"
-> (json<- Bytes20 bob-address)
-"0x9ccaed210ce8c0cb49c5ad1c4f583406c264ba69"
+> (import "examples/rps.project-2.ss" :clan/poo/io :clan/persist/content-addressing :mukn/ethereum/types :mukn/ethereum/signing :mukn/ethereum/t/signing-test)
+> (json<- Address alice)                                                                     "0xC54e86DFFb87B9736E2E35DD85c775358F1c31CE"
+"0xC54e86DFFb87B9736E2E35DD85c775358F1c31CE"
+> (json<- Address bob)
+"0x9CcaEd210CE8c0Cb49c5Ad1C4f583406c264BA69"
 > (main) ; ((rockPaperScissors alice-address bob-address) 1)
 enter JSON agreement or handshake:
 ["agreement",
  { "interaction": "rockPaperScissors",
-   "participants": { "A": "0xc54e86dffb87b9736e2e35dd85c775358f1c31ce",
-                     "B": "0x9ccaed210ce8c0cb49c5ad1c4f583406c264ba69" },
+   "participants": { "A": "0xC54e86DFFb87B9736E2E35DD85c775358F1c31CE",
+                     "B": "0x9CcaEd210CE8c0Cb49c5Ad1C4f583406c264BA69" },
    "parameters": { "wagerAmount": "0x1" },
    "options": {} }]
 copy and send the following JSON handshake to other participants:
