@@ -10,9 +10,9 @@ $ gxi
 
 (import
   :gerbil/gambit/ports
-  :std/format :std/srfi/1 :std/test :std/sugar :std/iter :std/text/json
+  :std/format :std/srfi/1 :std/test :std/sugar :std/iter :std/text/json :std/misc/ports
   :clan/poo/poo :clan/poo/io (only-in :clan/poo/mop display-poo)
-  :clan/base :clan/decimal :clan/ports :clan/io :clan/path-config
+  :clan/base :clan/decimal :clan/ports :clan/io :clan/path-config :clan/json
   :clan/crypto/keccak
   :clan/persist/db
   :mukn/ethereum/ethereum :mukn/ethereum/known-addresses :mukn/ethereum/json-rpc
@@ -26,6 +26,7 @@ $ gxi
   ../compiler/multipass
   ../compiler/syntax-context
   ../runtime/ethereum-interpreter
+  ../runtime/ethereum-execution-context
   )
 
 (def buyer-address alice)
@@ -56,6 +57,9 @@ $ gxi
 
 (def state (run-passes (source-path "examples/buy_sig.glow") pass: 'project show?: #f))
 
+; (defclass ExecutionContext (role contract current-code-block current-label locals message)
+;  transparent: #t)
+
 (def buy-sig-integrationtest
   (test-suite "integration test for ethereum/buy-sig"
     (test-case "buy sig parses"
@@ -65,13 +69,22 @@ $ gxi
         program: program
         participants: participants
         arguments: arguments))
-      (displayln "\nEXECUTING BUYER STEP 1...")
-      (def contract-handshake {execute-buyer interpreter buyer-address})
 
-      (displayln "\nEXECUTING SELLER STEP 1...")
-      (def result {execute-seller interpreter contract-handshake seller-address})
+      (displayln "\nEXECUTING BUYER ...")
+      (set! (@ interpreter execution-context) (make-ExecutionContext 'Buyer))
+      {execute interpreter}
 
-      (displayln "\nEXECUTING BUYER STEP 2...")
-      (def signature (extract-signature result))
-      (display-poo ["Signature extracted from contract logs: " Signature signature
-                    "valid?: " (message-signature-valid? seller-address signature digest) "\n\n"])))))
+      (def handshake (<-json (read-file-json "contract-handshake.json")))
+      (displayln handshake)
+
+      (displayln "\nEXECUTING SELLER ...")
+      (set! (@ interpreter execution-context) (make-ExecutionContext 'Seller handshake 'cp0))
+      {execute interpreter}))))
+
+      ; (displayln "\nEXECUTING SELLER STEP 1...")
+      ; (def result {execute-seller interpreter contract-handshake seller-address})
+
+      ; (displayln "\nEXECUTING BUYER STEP 2...")
+      ; (def signature (extract-signature result))
+      ; (display-poo ["Signature extracted from contract logs: " Signature signature
+      ;               "valid?: " (message-signature-valid? seller-address signature digest) "\n\n"])))))

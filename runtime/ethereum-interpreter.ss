@@ -17,7 +17,7 @@
   ../compiler/typecheck/type)
 
 ; INTERPRETER
-(defclass Interpreter (program participants arguments variable-offsets params-end)
+(defclass Interpreter (program participants arguments variable-offsets params-end execution-context)
   transparent: #t)
 
 (defmethod {create-frame-variables Interpreter}
@@ -50,70 +50,70 @@
    initial-block: [Block]
    contract-config: [ContractConfig]))
 
-(defmethod {execute-buyer Interpreter}
-  (λ (self Buyer)
-    (with-logged-exceptions ()
-    (def timeoutInBlocks (.@ (current-ethereum-network) timeoutInBlocks))
-    (def initial-block (+ (eth_blockNumber) timeoutInBlocks))
-    (def pretx {create-contract-pretransaction self initial-block Buyer})
-    (display-poo ["Deploying contract... " "timeoutInBlocks: " timeoutInBlocks
-                  "initial-block: " initial-block "\n"])
-    (def receipt (post-transaction pretx))
-    (def contract-config (contract-config<-creation-receipt receipt))
-    (display-poo ["Contract config: " ContractConfig contract-config "\n"])
-    (verify-contract-config contract-config pretx)
-    (def handshake (new ContractHandshake initial-block contract-config))
-    (display-poo ["Handshake: " ContractHandshake handshake "\n"])
-    (displayln "Handing off to seller ...\nPlease send this handshake to the other participant:\n```\n"
-               (string<-json [ContractHandshake: (json<- ContractHandshake handshake)])
-               "\n```\n")
-    handshake)))
+; (defmethod {execute-buyer Interpreter}
+;   (λ (self Buyer)
+;     (with-logged-exceptions ()
+;     (def timeoutInBlocks (.@ (current-ethereum-network) timeoutInBlocks))
+;     (def initial-block (+ (eth_blockNumber) timeoutInBlocks))
+;     (def pretx {create-contract-pretransaction self initial-block Buyer})
+;     (display-poo ["Deploying contract... " "timeoutInBlocks: " timeoutInBlocks
+;                   "initial-block: " initial-block "\n"])
+;     (def receipt (post-transaction pretx))
+;     (def contract-config (contract-config<-creation-receipt receipt))
+;     (display-poo ["Contract config: " ContractConfig contract-config "\n"])
+;     (verify-contract-config contract-config pretx)
+;     (def handshake (new ContractHandshake initial-block contract-config))
+;     (display-poo ["Handshake: " ContractHandshake handshake "\n"])
+;     (displayln "Handing off to seller ...\nPlease send this handshake to the other participant:\n```\n"
+;                (string<-json [ContractHandshake: (json<- ContractHandshake handshake)])
+;                "\n```\n")
+;     handshake)))
 
-(def (read-value name)
-  (printf "~a: " name)
-  (read-line))
+; (def (read-value name)
+;   (printf "~a: " name)
+;   (read-line))
 
-(defmethod {execute-seller Interpreter}
-  (λ (self contract-handshake Seller)
-    (with-logged-exceptions ()
-    (def initial-block (.@ contract-handshake initial-block))
-    (def contract-config (.@ contract-handshake contract-config))
-    (display-poo ["Verifying contract... "
-                  "initial-block: " initial-block
-                  "contract-config: " ContractConfig contract-config "\n"])
-    (def create-pretx {create-contract-pretransaction self initial-block Seller})
-    (verify-contract-config contract-config create-pretx)
-    (def digest0 (cdr (hash-get (@ self arguments) 'digest0)))
-    (display-poo ["Generating signature... " "Seller: " Address Seller "Digest: " Digest digest0 "\n"])
-    (def signature (make-message-signature (secret-key<-address Seller) digest0))
-    (def valid-signature? (message-signature-valid? Seller signature digest0))
-    (display-poo ["Publishing signature... "
-                  "signature: " Signature signature "verified valid: " valid-signature? "\n"])
-    (def message-pretx
-      {create-message-pretransaction self signature Signature initial-block Seller (.@ contract-config contract-address)})
-    (display-poo ["Posting pre-tx: " PreTransaction message-pretx "\n"])
-    (def receipt (post-transaction message-pretx))
-    (display-poo ["receipt: " TransactionReceipt receipt "\n"])
-    receipt)))
+; (defmethod {execute-seller Interpreter}
+;   (λ (self contract-handshake Seller)
+;     (with-logged-exceptions ()
+;     (def initial-block (.@ contract-handshake initial-block))
+;     (def contract-config (.@ contract-handshake contract-config))
+;     (display-poo ["Verifying contract... "
+;                   "initial-block: " initial-block
+;                   "contract-config: " ContractConfig contract-config "\n"])
+;     (def create-pretx {create-contract-pretransaction self initial-block Seller})
+;     (verify-contract-config contract-config create-pretx)
+;     (def digest0 (cdr (hash-get (@ self arguments) 'digest0)))
+;     (display-poo ["Generating signature... " "Seller: " Address Seller "Digest: " Digest digest0 "\n"])
+;     (def signature (make-message-signature (secret-key<-address Seller) digest0))
+;     (def valid-signature? (message-signature-valid? Seller signature digest0))
+;     (display-poo ["Publishing signature... "
+;                   "signature: " Signature signature "verified valid: " valid-signature? "\n"])
+;     (def message-pretx
+;       {create-message-pretransaction self signature Signature initial-block Seller (.@ contract-config contract-address)})
+;     (display-poo ["Posting pre-tx: " PreTransaction message-pretx "\n"])
+;     (def receipt (post-transaction message-pretx))
+;     (display-poo ["receipt: " TransactionReceipt receipt "\n"])
+;     receipt)))
 
-;; See gerbil-ethereum/contract-runtime.ss for spec.
-(defmethod {create-message-pretransaction Interpreter}
-  (λ (self message type initial-block sender-address contract-address)
-    (defvalues (_ contract-runtime-labels)
-      {generate-consensus-runtime self})
-    (def frame-variables
-      {create-frame-variables self initial-block contract-runtime-labels})
-    (def frame-variable-bytes (marshal-product-f frame-variables))
-    (def frame-length (bytes-length frame-variable-bytes))
-    (def out (open-output-u8vector))
-    (marshal UInt16 frame-length out)
-    (marshal-product-to frame-variables out)
-    (marshal type message out)
-    (marshal UInt8 1 out)
-    (def message-bytes (get-output-u8vector out))
-    (call-function sender-address contract-address message-bytes
-                   gas: 4000000
-                   value: one-ether-in-wei)))
+; ;; See gerbil-ethereum/contract-runtime.ss for spec.
+; (defmethod {create-message-pretransaction Interpreter}
+;   (λ (self message type initial-block sender-address contract-address)
+;     (defvalues (_ contract-runtime-labels)
+;       {generate-consensus-runtime self})
+;     (def frame-variables
+;       {create-frame-variables self initial-block contract-runtime-labels})
+;     (def frame-variable-bytes (marshal-product-f frame-variables))
+;     (def frame-length (bytes-length frame-variable-bytes))
+;     (def out (open-output-u8vector))
+;     (marshal UInt16 frame-length out)
+;     (marshal-product-to frame-variables out)
+;     (marshal type message out)
+;     (marshal UInt8 1 out)
+;     (def message-bytes (get-output-u8vector out))
+;     (call-function sender-address contract-address message-bytes
+;                    gas: 4000000
+;                    value: one-ether-in-wei)))
 
 (def (marshal-product-f fields)
   (def out (open-output-u8vector))
@@ -138,8 +138,8 @@
         (&begin
          &simple-contract-prelude
          &define-simple-logging
-         (&define-check-participant-or-timeout debug: #t)
-         (&define-end-contract debug: #t)
+         (&define-check-participant-or-timeout)
+         (&define-end-contract)
          {generate-consensus-code self}
          [&label 'brk-start@ (unbox (brk-start))])))))
 
@@ -244,6 +244,7 @@
 
 ; PARSER
 (defclass Program (name arguments interactions compiler-output)
+  constructor: :init!
   transparent: #t)
 
 (def (parse-compiler-output output)
@@ -252,10 +253,10 @@
   program)
 
 (defmethod {:init! Program}
-  (λ (self (n "") (as []) (is #f))
+  (λ (self (n "") (a []) (i (make-hash-table)))
     (set! (@ self name) n)
-    (set! (@ self arguments) as)
-    (set! (@ self interactions) (if is is (make-hash-table)))))
+    (set! (@ self arguments) a)
+    (set! (@ self interactions) i)))
 
 (defmethod {get-interaction Program}
   (λ (self participant)
@@ -282,35 +283,35 @@
 (defmethod {add-statement ParseContext}
   (λ (self statement)
     (match (hash-get (@ self code) (@ self current-label))
-      ((code-block statements exits)
-        (let ((x (append statements [statement])))
-          (hash-put! (@ self code) (@ self current-label) (make-code-block x exits))
+      ((code-block current-participant statements exits)
+        (let ((cb-statements (append statements [statement])))
+          (hash-put! (@ self code) (@ self current-label) (make-code-block current-participant cb-statements exits))
           self))
       (#f
         self))))
 
-(defstruct code-block (statements exit) transparent: #t)
+(defstruct code-block (participant statements exit) transparent: #t)
 
 (defmethod {set-participant ParseContext}
   (λ (self new-participant)
     (unless (and (@ self current-participant) (equal? new-participant (@ self current-participant)))
       (let (contract (@ self code))
         (match (hash-get contract (@ self current-label))
-          ((code-block statements exits)
+          ((code-block current-participant statements exits)
             (begin
               (match (last statements)
                 (['@label last-label]
                   (def init-statements (take statements (- (length statements) 1)))
-                  (hash-put! contract (@ self current-label) (make-code-block init-statements last-label))
-                  (hash-put! contract last-label (make-code-block [['set-participant new-participant]] #f))
+                  (hash-put! contract (@ self current-label) (make-code-block current-participant init-statements last-label))
+                  (hash-put! contract last-label (make-code-block new-participant [] #f))
                   (set! (@ self current-participant) new-participant)
                   (set! (@ self current-label) last-label))
                 (else
-                  (error "change of participant with no preceding label")))))
+                  (error "Change of participant with no preceding label")))))
           (#f
             (begin
               (set! (@ self current-participant) new-participant)
-              (hash-put! contract (@ self current-label) (make-code-block [['set-participant new-participant]] #f))
+              (hash-put! contract (@ self current-label) (make-code-block new-participant [] #f))
               self)))))))
 
 
