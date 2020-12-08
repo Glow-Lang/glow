@@ -339,7 +339,7 @@
       (return (case pat body))))
 
 (def Cases
-  (.begin (.or (match-token-value? #\|) #f) (sepby1 Case (match-token-value? #\|))))
+  (.begin (.or (match-token-value? #\|) #t) (sepby1 Case (match-token-value? #\|))))
 
 (def Expression
   (.begin (.or AnnotatedExpression IfExpression
