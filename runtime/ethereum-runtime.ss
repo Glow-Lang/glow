@@ -88,6 +88,7 @@
            (outbox (@ message outbox))
            (message-pretx {prepare-call-function-transaction self outbox initial-block contract-address})
            (tx-receipt (post-transaction message-pretx)))
+          ;; TODO: remove once we have transaction watching
           (write-file-json "run/tx-receipt.json" (json<- TransactionReceipt tx-receipt)))))))
 
 (defmethod {add-to-environment Runtime}
@@ -121,6 +122,8 @@
     (verify-contract-config contract-config pretx)
     (def handshake (new ContractHandshake initial-block contract-config))
     (display-poo ["Handshake: " ContractHandshake handshake "\n"])
+    ;; TODO: display at terminal for user to copy paste and send to
+    ;; other participants through outside channel
     (write-file-json "run/contract-handshake.json" (json<- ContractHandshake handshake))))
 
 ;; See gerbil-ethereum/contract-runtime.ss for spec.
