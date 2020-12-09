@@ -4,6 +4,11 @@ Alacrity is not exactly doing the same things as *Glow* and is technically more 
 
 On top of DApp-scaling, *Glow* also offers a much deeper layer of safety.
 
+### Website and Github repository
+
+* [Alacrity](https://alacrity-lang.org/), September 2019.
+  See the code on its [github repository](https://github.com/AlacrisIO/alacrity).
+
 ### Talks about Alacrity
 
 * [Alacrity: A DSL for Simple, Formally-Verified DApps](https://github.com/AlacrisIO/alacrity/blob/master/docs/paper.md), October 2019
