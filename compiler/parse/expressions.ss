@@ -1,15 +1,16 @@
 ;;(import :drewc/smug "./lexical" )
-(import :drewc/smug :mukn/glow/compiler/parse/lexical :std/iter :std/misc/list)
+;;(import :drewc/smug :mukn/glow/compiler/parse/lexical :std/iter :std/misc/list)
+(import :drewc/smug "./lexical" :std/iter :std/misc/list)
 (export #t)
 
 (defstruct expression ())
 (defstruct statement ())
 
 (def (parse-operator side op)
-  (.or (.let* ((lhs side) (pop (match-token-value? op))
-               (rhs side))
-         (return (values lhs pop rhs)))
-       (.let* (s side) (return (values s #f #f)))))
+  (.let* ((lhs side) (pop? (.or (match-token-value? op) #f)))
+    (if (equal? pop? #f) (return (values lhs #f #f))
+        (.let* (rhs side)
+            (return (values lhs pop? rhs))))))
 
 (defstruct (operator expression) (lhs op rhs) transparent: #t)
 (defrules Operator ()
@@ -74,11 +75,9 @@
 
 (defstruct (unary-expression expression) (op expression) transparent: #t)
 (def UnaryExpression
-  (.begin
-    #t
-    (.or (.let* ((op (match-token-value? (.or "+" "-" "~" "!")))
-                 (exp PrimaryExpression))
-           (return (unary-expression op exp))) PrimaryExpression)))
+    (.let* ((op (.or (match-token-value? (.or "+" "-" "~" "!")) #f))
+            (exp TypedOrNonTypedPrimaryExpression))
+              (if op  (return (unary-expression op exp)) exp)))
 
 (defstruct (exponentiation-expression operator) () transparent: #t)
 (def ExponentiationExpression
@@ -141,7 +140,7 @@
   (Operator logical-or-expression LogicalANDExpression "||"))
 
 (def ConditionalExpression (.begin #t LogicalORExpression))
-(def ArithmeticExpression (.begin #t ShiftExpression))
+(def ArithmeticExpression (.begin #t ConditionalExpression))
 
 
 (defstruct attribute (id arguments)  transparent: #t)
@@ -236,9 +235,9 @@
         (return entries)))
 
 (defstruct (type-expression expression) (expr typ) transparent: #t)
-(def TypeExpression
-  (.let* ((exp PrimaryExpression) (_(match-token-value? #\:)) (typ BaseType))
-      (return (type-expression exp typ))))
+(def TypedOrNonTypedPrimaryExpression
+  (.let* ((exp PrimaryExpression) (typ? (.or (.begin (match-token-value? #\:)  BaseType) #f)))
+      (if (equal? typ? #f) exp  (return (type-expression exp typ?)))))
 
 (def Type
   (.or RecordType BracketedType  AnnotatedType BaseType))
@@ -357,18 +356,15 @@
       (return (case pat body))))
 
 (def Cases
-  (.begin (.or (match-token-value? #\|) #f) (sepby1 Case (match-token-value? #\|))))
+  (.begin (.or (match-token-value? #\|) #t) (sepby1 Case (match-token-value? #\|))))
 
 
 (def Expression
-    (.or AnnotatedExpression TypeExpression
+    (.or AnnotatedExpression
          IfExpression SwitchExpression
          RequireExpression  AssertExpression DepositExpression WithdrawExpression
-         ArithmeticExpression PrimaryExpression))
+         ArithmeticExpression))
 
-
-
-;
 
 (defstruct (publish-statement statement) (id expr) transparent: #t)
 (def PublishStatement
