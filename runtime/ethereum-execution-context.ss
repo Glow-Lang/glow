@@ -51,7 +51,7 @@
 
 (defmethod {add-to-published Message}
   (λ (self name type value)
-    (hash-put! (@ self published) name [type . value])))
+    (hash-put! (@ self outbox) name [type . value])))
 
 ;; expect-published : Sym TypeMethods -> Any
 (defmethod {expect-published Message}
@@ -155,7 +155,7 @@
       (or
         (hash-get (@ self participants) variable-name)
         (hash-get (@ self arguments) variable-name)
-        (hash-get (@ self locals) variable-name)))
+        (hash-get (@ (@ self execution-context) locals) variable-name)))
     (match variable-value
       ([type . value]
         value)
@@ -235,11 +235,13 @@
                  (signature {resolve-variable self signature-variable}))
                 (isValidSignature address digest signature)))
             (['sign digest-variable]
-              (let (digest {resolve-variable self digest-variable})
-                (sign digest)))))
+              (let
+                ((this-participant {get-current-participant self})
+                 (digest {resolve-variable self digest-variable}))
+                (make-message-signature (secret-key<-address this-participant) digest)))))
           {add-to-locals (@ self execution-context) variable-name variable-value}))
 
-      (['require variable-name]
+      (['require! variable-name]
         (match {resolve-variable self variable-name}
           (#t (void))
           (else
@@ -249,4 +251,4 @@
         (void))
 
       (['@label name]
-        (set! (@ self current-label) name)))))
+        (set! (@ (@ self execution-context) current-label) name)))))
