@@ -13,6 +13,7 @@
   ../compiler/project/runtime-2)
 
 ;; PARTICIPANT RUNTIME
+;; TODO: add separate field for most recent transaction seen
 (defclass Runtime (contract role contract-state current-code-block current-label environment message)
   constructor: :init!
   transparent: #t)
@@ -32,11 +33,14 @@
     (with-logged-exceptions ()
       (def code-block-label (@ self current-code-block))
       (displayln "executing code block: " code-block-label)
+
       (def code-block {get-current-code-block self})
+
       {prepare self}
       (for ((statement (code-block-statements code-block)))
         {interpret-participant-statement self statement})
       {commit self}
+
       (match (code-block-exit code-block)
         (#f
           (void)) ; contract finished
@@ -56,6 +60,8 @@
     (def contract-state (@ self contract-state))
     ;; TODO: create a sum type for all the contract states
     ;; (NotYetDeployed, DeployedByOtherParticipant, ContractHandshake, Active TransactionReceipt, Complete)
+    (when )
+      {watch self})
     (cond
       ((element? ContractHandshake contract-state)
         (displayln "verifying contract ...")
@@ -67,6 +73,7 @@
       ((element? TransactionReceipt contract-state)
         (displayln "extracting published data from transaction receipt ...")
         (let
+          ;; TODO: handle multiple logs
           (log-data (.@ (car (.@ contract-state logs)) data))
           (set! (@ (@ self message) inbox) (open-input-u8vector log-data))))
       (else
@@ -75,6 +82,7 @@
 (defmethod {commit Runtime}
   (λ (self)
     (def contract-state (@ self contract-state))
+    ;; TODO: check that previous transaction for expected asset transfers
     (cond
       ((equal? contract-state #f)
         (displayln "deploying contract ...")
@@ -88,6 +96,7 @@
            (outbox (@ message outbox))
            (message-pretx {prepare-call-function-transaction self outbox initial-block contract-address})
            (tx-receipt (post-transaction message-pretx)))
+          {reset message}
           ;; TODO: remove once we have transaction watching
           (write-file-json "run/tx-receipt.json" (json<- TransactionReceipt tx-receipt)))))))
 
@@ -153,6 +162,14 @@
       {get-interaction (@ contract program) (@ self role)})
     (hash-get participant-interaction (@ self current-code-block))))
 
+;; TODO: put participant and interaction argument variables into the environment
+;; TODO: map alpha-converted names to names in original source when displaying to user
+(defmethod {initialize-environment Runtime}
+  (lambda (self)
+    (void)))
+
+;; TODO: handle constant values
+;; TODO: rename to reduce expression?
 (defmethod {resolve-variable Runtime}
   (λ (self variable-name)
     (def variable-value
@@ -195,8 +212,7 @@
 
       (['set-participant new-participant]
         (let (this-participant (@ self role))
-          (if (eq? new-participant this-participant)
-            (void) ; continue
+          (unless (eq? new-participant this-participant)
             (error "Change participant inside code block, this should be impossible"))))
 
       (['add-to-deposit amount-variable]
@@ -245,8 +261,10 @@
       (['require! variable-name]
         (match {resolve-variable self variable-name}
           (#t (void))
+          (#f
+            (error "Assertion failed"))
           (else
-            (error (string-append "Assertion failed: " variable-name " is not #t")))))
+            (error "Assertion failed, variable is not a Boolean" variable-name))))
 
       (['return ['@tuple]]
         (void))
@@ -265,10 +283,15 @@
   transparent: #t)
 
 (defmethod {:init! Message}
-  (λ (self (i (open-output-u8vector)) (o (make-hash-table)) (at []))
+  (λ (self (i #f) (o (make-hash-table)) (at []))
     (set! (@ self inbox) i)
     (set! (@ self outbox) o)
     (set! (@ self asset-transfers) at)))
+
+(defmethod {reset Message}
+  (lambda (self)
+    (set! (@ self inbox) #f)
+    (hash-clear (@ self outbox))))
 
 (defmethod {add-to-published Message}
   (λ (self name type value)

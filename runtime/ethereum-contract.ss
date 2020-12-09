@@ -36,7 +36,7 @@
          {generate-consensus-code self}
          [&label 'brk-start@ (unbox (brk-start))])))))
 
-; TODO: increment counter of checkpoints
+;; TODO: increment counter of checkpoints
 (defmethod {make-checkpoint-label Contract}
   (λ (self)
     (def checkpoint-number 0)
