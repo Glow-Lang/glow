@@ -92,13 +92,13 @@
     (set! (@ self asset-transfers) mat3)))
 
 ;; deploy contract or wait for other participant to make their move
-(defmethod {change-participant Interpreter}
+(defmethod {change-participant Contract}
   (λ (self)
     (if (@ (@ self execution-context) contract)
       {wait self}
       {deploy-contract self})))
 
-(defmethod {deploy-contract Interpreter}
+(defmethod {deploy-contract Contract}
   (λ (self)
     (displayln "Deploying contract ...")
     (def address (hash-get (@ self participants) (@ (@ self execution-context) role)))
@@ -118,7 +118,7 @@
                "\n```\n")
     (write-file-json "contract-handshake.json" (json<- ContractHandshake handshake))))
 
-(defmethod {execute Interpreter}
+(defmethod {execute Contract}
   (λ (self)
     (with-logged-exceptions ()
       (def code-block-label (@ (@ self execution-context) current-code-block))
@@ -142,14 +142,14 @@
             (void)
             {deploy-contract self})))))))
 
-(defmethod {get-current-code-block Interpreter}
+(defmethod {get-current-code-block Contract}
   (λ (self)
     (def ctx (@ self execution-context))
     (def participant-interaction
       {get-interaction (@ self program) (@ ctx role)})
     (hash-get participant-interaction (@ ctx current-code-block))))
 
-(defmethod {resolve-variable Interpreter}
+(defmethod {resolve-variable Contract}
   (λ (self variable-name)
     (def variable-value
       (or
@@ -164,7 +164,7 @@
       (value
         value))))
 
-(defmethod {get-current-participant Interpreter}
+(defmethod {get-current-participant Contract}
   (λ (self)
     (def ctx (@ self execution-context))
     (hash-get (@ self participants) (@ ctx role))))
@@ -187,7 +187,7 @@
 ;         ['return ['@tuple]]
 ;         ['@label 'end0]]
 ;         #f))))))
-(defmethod {interpret-participant-statement Interpreter}
+(defmethod {interpret-participant-statement Contract}
   (λ (self statement)
     (displayln statement)
     (match statement

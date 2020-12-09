@@ -65,7 +65,7 @@ $ gxi
     (test-case "buy sig parses"
       (def program (parse-compiler-output state))
     (test-case "buy sig executes"
-      (def interpreter (make-Interpreter
+      (def interpreter (make-Contract
         program: program
         participants: participants
         arguments: arguments))
@@ -74,7 +74,9 @@ $ gxi
       (set! (@ interpreter execution-context) (make-ExecutionContext 'Buyer))
       {execute interpreter}
 
-      (def handshake (<-json (read-file-json "contract-handshake.json")))
+      (def handshake-json (json<-string (string<-json (read-file-json "contract-handshake.json"))))
+      (displayln (hash-keys handshake-json))
+      (def handshake (<-json ContractHandshake handshake-json))
       (displayln handshake)
 
       (displayln "\nEXECUTING SELLER ...")

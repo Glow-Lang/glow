@@ -17,10 +17,10 @@
   ../compiler/typecheck/type)
 
 ; INTERPRETER
-(defclass Interpreter (program participants arguments variable-offsets params-end execution-context)
+(defclass Contract (program participants arguments variable-offsets params-end execution-context)
   transparent: #t)
 
-(defmethod {create-frame-variables Interpreter}
+(defmethod {create-frame-variables Contract}
   (λ (self initial-block contract-runtime-labels)
     (def checkpoint-location
       (hash-get contract-runtime-labels {make-checkpoint-label self}))
@@ -33,7 +33,7 @@
 (def (sexp<-frame-variables frame-variables)
   `(list ,@(map (match <> ([v t] `(list ,(sexp<- t v) ,(sexp<- Type t)))) frame-variables)))
 
-(defmethod {create-contract-pretransaction Interpreter}
+(defmethod {create-contract-pretransaction Contract}
   (λ (self initial-block sender-address)
     (defvalues (contract-runtime-bytes contract-runtime-labels)
       {generate-consensus-runtime self})
@@ -50,7 +50,7 @@
    initial-block: [Block]
    contract-config: [ContractConfig]))
 
-; (defmethod {execute-buyer Interpreter}
+; (defmethod {execute-buyer Contract}
 ;   (λ (self Buyer)
 ;     (with-logged-exceptions ()
 ;     (def timeoutInBlocks (.@ (current-ethereum-network) timeoutInBlocks))
@@ -73,7 +73,7 @@
 ;   (printf "~a: " name)
 ;   (read-line))
 
-; (defmethod {execute-seller Interpreter}
+; (defmethod {execute-seller Contract}
 ;   (λ (self contract-handshake Seller)
 ;     (with-logged-exceptions ()
 ;     (def initial-block (.@ contract-handshake initial-block))
@@ -97,7 +97,7 @@
 ;     receipt)))
 
 ; ;; See gerbil-ethereum/contract-runtime.ss for spec.
-; (defmethod {create-message-pretransaction Interpreter}
+; (defmethod {create-message-pretransaction Contract}
 ;   (λ (self message type initial-block sender-address contract-address)
 ;     (defvalues (_ contract-runtime-labels)
 ;       {generate-consensus-runtime self})
@@ -130,7 +130,7 @@
     (with (([t . v] field)) (marshal t v out)))
   (digest<-bytes (marshal-product-f fields)))
 
-(defmethod {generate-consensus-runtime Interpreter}
+(defmethod {generate-consensus-runtime Contract}
   (λ (self)
     {compute-parameter-offsets self}
     (parameterize ((brk-start (box params-start@)))
@@ -144,14 +144,14 @@
          [&label 'brk-start@ (unbox (brk-start))])))))
 
 ; TODO: increment counter of checkpoints
-(defmethod {make-checkpoint-label Interpreter}
+(defmethod {make-checkpoint-label Contract}
   (λ (self)
     (def checkpoint-number 0)
     (string->symbol (string-append
       (symbol->string (@ (@ self program) name))
       (string-append "--cp" (number->string checkpoint-number))))))
 
-(defmethod {compute-parameter-offsets Interpreter}
+(defmethod {compute-parameter-offsets Contract}
   (λ (self)
     (def frame-variables (make-hash-table))
     ;; Initial offset computed by global registers, see :mukn/ethereum/contract-runtime
@@ -167,7 +167,7 @@
     (set! (@ self variable-offsets) frame-variables)
     (set! (@ self params-end) start)))
 
-(defmethod {lookup-variable-offset Interpreter}
+(defmethod {lookup-variable-offset Contract}
   (λ (self variable-name)
     (def offset
       (hash-get (@ self variable-offsets) variable-name))
@@ -175,20 +175,20 @@
       offset
       (error "No offset for variable: " variable-name))))
 
-(defmethod {load-variable Interpreter}
+(defmethod {load-variable Contract}
   (λ (self variable-name variable-type)
     (&mloadat
       {lookup-variable-offset self variable-name}
       (param-length variable-type))))
 
-(defmethod {add-local-variable-to-frame Interpreter}
+(defmethod {add-local-variable-to-frame Contract}
   (λ (self variable-name)
     (def type {lookup-type (@ self program) variable-name})
     (def argument-length (param-length (eval type)))
     (hash-put! (@ self variable-offsets)
       variable-name (post-increment! (@ self params-end) argument-length))))
 
-(defmethod {generate-consensus-code Interpreter}
+(defmethod {generate-consensus-code Contract}
   (λ (self)
     (def consensus-interaction
       {get-interaction (@ self program) #f})
@@ -201,13 +201,13 @@
         (flatten1 (map (λ (statement)
           {interpret-consensus-statement self statement}) cp0-statements))))))
 
-(defmethod {find-other-participant Interpreter}
+(defmethod {find-other-participant Contract}
   (λ (self participant)
     (find
       (λ (p) (not (equal? p participant)))
       (hash-keys (@ self participants)))))
 
-(defmethod {interpret-consensus-statement Interpreter}
+(defmethod {interpret-consensus-statement Contract}
   (λ (self statement)
     (match statement
       (['set-participant new-participant]
@@ -240,7 +240,7 @@
       (['return ['@tuple]]
         (void))
       (else
-       (error "Interpreter does not recognize consensus statement: " statement)))))
+       (error "Contract does not recognize consensus statement: " statement)))))
 
 ; PARSER
 (defclass Program (name arguments interactions compiler-output)
