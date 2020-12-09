@@ -13,7 +13,7 @@ build:
     - nix path-info --all > /tmp/store-path-pre-build
   script:
     #- export GERBIL_PATH=$PWD/.build
-    - ./build.ss nix
+    - nix-build
     - nix-shell --arg thunk false --arg precompile true --pure --command "./unit-tests.ss version"
     # To make the below to work inside nix-shell would be tough:
     # both git and the exact git checkout might be required.
@@ -31,13 +31,20 @@ test:
   stage: test
   before_script:
     - cachix authtoken $CACHIX_AUTH_TOKEN && cachix use mukn
-    ## For integration tests, run without --pure so we can have test-time state?
-    - nix-shell --arg thunk false --command \
-        "gxi -e '(import :mukn/ethereum/scripts/run-geth-test-net)'"
+    ## For integration tests, nix-shell --pure causes us to run in an read-only directory,
+    ## so let' try it a slightly hard way...
+    - nix-build
+    - GLOWPATH="$(nix path-info '(import ./default.nix)')"
+    - export GERBIL_ETHEREUM_SRC=$(nix eval '(let pkgs = import ./pkgs.nix; in pkgs.gerbilPackages-unstable.gerbil-ethereum.src)' | tail -1 | tr -d \")
+    - export PATH="$GLOWPATH/bin:$PATH" GLOW_HOME=$PWD GERBIL_APPLICATION_HOME=$PWD GLOW_SRC=$PWD
+    - echo $PWD ; mkdir -p run ; echo foo > run/blah
+    - export GERBIL_LOADPATH="$(nix eval '(let pkgs = import ./pkgs.nix; in "${pkgs.glow-lang.src}:${pkgs.gerbil-support.gerbilLoadPath ([pkgs.glow-lang] ++ pkgs.glow-lang.passthru.pre-pkg.gerbilInputs)}:${pkgs.gerbilPackages-unstable.gerbil-ethereum.src}")' | tail -1 | tr -d \")"
+    # gxi -e '(import :mukn/ethereum/scripts/run-geth-test-net)'
+    - $GERBIL_ETHEREUM_SRC/scripts/run-geth-test-net.ss
   script:
     ## NB: Regular unit-tests should already have been taken care of by the build
     ##- nix-shell --arg thunk false --arg precompile true --pure --command "./unit-tests.ss"
     ## For integration tests, run without --pure so we can have test-time state?
-    - nix-shell --arg thunk false --arg precompile true --command "./unit-tests.ss integration"
+    - ./unit-tests.ss integration
   after_script:
     - killall geth

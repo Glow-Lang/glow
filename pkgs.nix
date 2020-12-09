@@ -119,6 +119,9 @@ let
 
       gerbil-support =
         POP.extendPop pkgs.gerbil-support (_: super: {
+          # Skip extra files so that we can play with CI configuration yet have the CI reuse cached builds.
+          gerbilSkippableFiles = super.gerbilSkippableFiles ++ [".gitlab.yml" "pkgs.nix" "shell.nix" "default.nix" "scripts"];
+
           prePackages-unstable = POP.extendPop super.prePackages-unstable (_: super:
             maybeOverrideDep "gerbil-utils" super //
             maybeOverrideDep "gerbil-poo" super //
