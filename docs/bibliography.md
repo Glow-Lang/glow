@@ -1,30 +1,34 @@
 # Bibliography about Glow
 
-## By the authors of Glow
+## By the authors of *Glow*
 
-### Active websites
+### Active official links
 
-The company developing Glow:
-* [Mutual Knowledge Systems](https://mukn.io) has some videos and documentation.
+**Websites:**
 
-Current whitepaper:
+* [Mutual Knowledge Systems](https://mukn.io) for the company that develops *Glow*
+* [Glow-lang.org]() for the language's official website
+
+
+
+**Current whitepaper:**
+
 * [Glow whitepaper](https://docs.google.com/document/d/1nBmI28yISX2HynodZnYWW0Px6re4JyYNNw2ncaFfJSg/)
 
-The predecessor to Glow:
-* [Alacrity](https://alacrity-lang.org/), September 2019.
-  See the code on its [github repository](https://github.com/AlacrisIO/alacrity).
 
-### Talks about Glow and its predecessors
 
-* [Alacrity: A DSL for Simple, Formally-Verified DApps](https://github.com/AlacrisIO/alacrity/blob/master/docs/paper.md), October 2019
-* [Language Abstraction for [V]erifiable Blockchain Distributed Applications](http://github.com/alacrisio/lavbda), April 2019 (has video)
-* [Binding Blockchains Together With Accountability Through Computability Logic](http://github.com/alacrisio/bbtwatcl), June 2018 (has video)
+**Social media and discussion channels**
 
-### Previous whitepapers
+* Twitter: [@MutualKnowledge](https://twitter.com/MutualKnowledge)
+* Facebook: [facebook.com/MuKnSys/](https://facebook.com/MuKnSys/)
+* Telegram: [t.me/mukn_io](https://t.me/mukn_io)
+* Linkedin: [linkedin.com/company/mukn-io/](https://linkedin.com/company/mukn-io/)
+* Youtube: [www.youtube.com/playlist?list=PLiEa4i6H-qcdosr5x1jPkGJRUVPB1GOlL](https://www.youtube.com/playlist?list=PLiEa4i6H-qcdosr5x1jPkGJRUVPB1GOlL)
+* Discord: https://discord.com/channels/655606984514469899/655606984967585832
 
-We released this one:
-* [Legicash FaCTS: Fast Cryptocurrency Transactions, Securely](https://j.mp/FaCTS), our original Whitepaper, released March 2018
 
-We never released those:
-* [Alacris Whitepaper](https://docs.google.com/document/d/1X5JoanOuPETu-mMd90kiNYA8Okh-fkhI18RI8kwq5l8/), July 2019 (first draft completed, never released)
-* [Legicash: Binding Blockchains Together through Smart Law](https://j.mp/legicash), January 2018 (draft, never completed, never released)
+
+### External sources about *Glow*
+
+* [A simple demo](https://www.youtube.com/watch?v=lj9SlvOIBgU&feature=youtu.be&t=2903) of *Glow* on IOHK's youtube channel, hosted by Aparna Jue (Dec. 2020)
+* [An article](https://eng.ambcrypto.com/cardano-goguen-on-schedule/) mentioning the collaboration between Mutual Knowledge Systems and IOHK on AMB Crypto (Dec. 2020)
