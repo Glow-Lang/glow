@@ -60,8 +60,8 @@
     (def contract-state (@ self contract-state))
     ;; TODO: create a sum type for all the contract states
     ;; (NotYetDeployed, DeployedByOtherParticipant, ContractHandshake, Active TransactionReceipt, Complete)
-    (when )
-      {watch self})
+    ;(when )
+    ;  {watch self})
     (cond
       ((element? ContractHandshake contract-state)
         (displayln "verifying contract ...")
@@ -291,7 +291,7 @@
 (defmethod {reset Message}
   (lambda (self)
     (set! (@ self inbox) #f)
-    (hash-clear (@ self outbox))))
+    (hash-clear! (@ self outbox))))
 
 (defmethod {add-to-published Message}
   (λ (self name type value)
