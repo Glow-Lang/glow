@@ -12,12 +12,15 @@ build:
     - cachix authtoken $CACHIX_AUTH_TOKEN && cachix use mukn
     - nix path-info --all > /tmp/store-path-pre-build
   script:
-    - export GERBIL_PATH=$PWD/.build
-    - ./build.ss nix
+    #- export GERBIL_PATH=$PWD/.build
+    - nix-build
+    - nix-shell --arg thunk false --arg precompile true --pure --command "./unit-tests.ss version"
+    # To make the below to work inside nix-shell would be tough:
+    # both git and the exact git checkout might be required.
     - ./unit-tests.ss check-git-up-to-date
   after_script:
-    - ./unit-tests.ss version
-    - cachix authtoken $CACHIX_AUTH_TOKEN && cachix use mukn
+    #- cachix authtoken $CACHIX_AUTH_TOKEN && cachix use mukn
+    - echo $CACHIX_AUTH_TOKEN | sha256sum
     - bash -c "comm -13 <(sort /tmp/store-path-pre-build | grep -v '\.drv$') <(nix path-info --all | grep -v '\.drv$' | sort) | cachix push mukn"
   ## No need for artifacts, we build and test with nix!
   #artifacts:
@@ -27,8 +30,21 @@ build:
 test:
   stage: test
   before_script:
-    #- ### Here, insert setup for integration tests
+    - cachix authtoken $CACHIX_AUTH_TOKEN && cachix use mukn
+    ## For integration tests, nix-shell --pure causes us to run in an read-only directory,
+    ## so let' try it a slightly hard way...
+    - nix-build
+    - GLOWPATH="$(nix path-info '(import ./default.nix)')"
+    - export GERBIL_ETHEREUM_SRC=$(nix eval '(let pkgs = import ./pkgs.nix; in pkgs.gerbilPackages-unstable.gerbil-ethereum.src)' | tail -1 | tr -d \")
+    - export PATH="$GLOWPATH/bin:$PATH" GLOW_HOME=$PWD GERBIL_APPLICATION_HOME=$PWD GLOW_SRC=$PWD
+    - echo $PWD ; mkdir -p run ; echo foo > run/blah
+    - export GERBIL_LOADPATH="$(nix eval '(let pkgs = import ./pkgs.nix; in "${pkgs.glow-lang.src}:${pkgs.gerbil-support.gerbilLoadPath ([pkgs.glow-lang] ++ pkgs.glow-lang.passthru.pre-pkg.gerbilInputs)}:${pkgs.gerbilPackages-unstable.gerbil-ethereum.src}")' | tail -1 | tr -d \")"
+    # gxi -e '(import :mukn/ethereum/scripts/run-geth-test-net)'
+    - $GERBIL_ETHEREUM_SRC/scripts/run-geth-test-net.ss
   script:
-    #- export GERBIL_PATH=$PWD/.build
-    - ./unit-tests.ss # These should already have been taken care of by the build
-    #- ./unit-tests.ss integration # Now we're talking: integration tests! They require setup.
+    ## NB: Regular unit-tests should already have been taken care of by the build
+    ##- nix-shell --arg thunk false --arg precompile true --pure --command "./unit-tests.ss"
+    ## For integration tests, run without --pure so we can have test-time state?
+    - ./unit-tests.ss integration
+  after_script:
+    - killall geth

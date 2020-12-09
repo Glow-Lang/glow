@@ -1,3 +1,2 @@
-let super = (import ./pkgs.nix);
-    pkgs = import ./scripts/glow-overlay.nix pkgs super; in
+let pkgs = import ./pkgs.nix; in
 pkgs.glow-lang
