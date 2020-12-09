@@ -1,7 +1,5 @@
 # Bibliography about Glow
 
-## By the authors of *Glow*
-
 ### Active official links
 
 **Websites:**
