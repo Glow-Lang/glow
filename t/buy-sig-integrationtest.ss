@@ -57,14 +57,14 @@ $ gxi
       (def runtime-buyer-1 (make-Runtime contract 'Buyer))
       {execute runtime-buyer-1}
 
-      (def handshake-json (json<-string (string<-json (read-file-json "contract-handshake.json"))))
+      (def handshake-json (json<-string (string<-json (read-file-json "run/contract-handshake.json"))))
       (def handshake (<-json ContractHandshake handshake-json))
 
       (displayln "\nEXECUTING SELLER STEP 1 ...")
       (def runtime-seller-1 (make-Runtime contract  'Seller handshake 'cp0))
       {execute runtime-seller-1}
 
-      (def tx-receipt-json (json<-string (string<-json (read-file-json "tx-receipt.json"))))
+      (def tx-receipt-json (json<-string (string<-json (read-file-json "run/tx-receipt.json"))))
       (def tx-receipt (<-json TransactionReceipt tx-receipt-json))
 
       (displayln "\nEXECUTING BUYER STEP 2 ...")

@@ -88,7 +88,7 @@
            (outbox (@ message outbox))
            (message-pretx {prepare-call-function-transaction self outbox initial-block contract-address})
            (tx-receipt (post-transaction message-pretx)))
-          (write-file-json "tx-receipt.json" (json<- TransactionReceipt tx-receipt)))))))
+          (write-file-json "run/tx-receipt.json" (json<- TransactionReceipt tx-receipt)))))))
 
 (defmethod {add-to-environment Runtime}
   (λ (self name value)
@@ -121,7 +121,7 @@
     (verify-contract-config contract-config pretx)
     (def handshake (new ContractHandshake initial-block contract-config))
     (display-poo ["Handshake: " ContractHandshake handshake "\n"])
-    (write-file-json "contract-handshake.json" (json<- ContractHandshake handshake))))
+    (write-file-json "run/contract-handshake.json" (json<- ContractHandshake handshake))))
 
 ;; See gerbil-ethereum/contract-runtime.ss for spec.
 (defmethod {prepare-call-function-transaction Runtime}
