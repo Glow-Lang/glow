@@ -1,0 +1,321 @@
+(export #t)
+
+(import
+  :gerbil/gambit/bytes
+  :std/iter :std/sugar
+  :clan/exception :clan/json :clan/poo/io :clan/pure/dict/assq :clan/persist/content-addressing
+  :mukn/ethereum/ethereum :mukn/ethereum/network-config  :mukn/ethereum/json-rpc
+  :mukn/ethereum/transaction :mukn/ethereum/tx-tracker
+  :mukn/ethereum/contract-runtime :mukn/ethereum/contract-config
+  ./program
+  ./ethereum-contract
+  ../compiler/method-resolve/method-resolve
+  ../compiler/project/runtime-2)
+
+;; PARTICIPANT RUNTIME
+(defclass Runtime (contract role contract-state current-code-block current-label environment message)
+  constructor: :init!
+  transparent: #t)
+
+(defmethod {:init! Runtime}
+  (λ (self contract role (cs #f) (ccb 'begin0) (cl 'begin) (l (make-hash-table)) (m (make-Message)))
+    (set! (@ self contract) contract)
+    (set! (@ self role) role)
+    (set! (@ self contract-state) cs)
+    (set! (@ self current-code-block) ccb)
+    (set! (@ self current-label) cl)
+    (set! (@ self environment) l)
+    (set! (@ self message) m)))
+
+(defmethod {execute Runtime}
+  (λ (self)
+    (with-logged-exceptions ()
+      (def code-block-label (@ self current-code-block))
+      (displayln "executing code block: " code-block-label)
+      (def code-block {get-current-code-block self})
+      {prepare self}
+      (for ((statement (code-block-statements code-block)))
+        {interpret-participant-statement self statement})
+      {commit self}
+      (match (code-block-exit code-block)
+        (#f
+          (void)) ; contract finished
+        (exit
+          (set! (@ self current-code-block ) exit)
+          ; TODO: recurse after seeing new transaction
+          ; {execute self}
+          )))))
+
+(defmethod {watch Runtime}
+  (λ (self)
+    ;; TODO: watch blockchain for new transactions against contract
+    (void)))
+
+(defmethod {prepare Runtime}
+  (λ (self)
+    (def contract-state (@ self contract-state))
+    ;; TODO: create a sum type for all the contract states
+    ;; (NotYetDeployed, DeployedByOtherParticipant, ContractHandshake, Active TransactionReceipt, Complete)
+    (cond
+      ((element? ContractHandshake contract-state)
+        (displayln "verifying contract ...")
+        (let*
+           ((initial-block (.@ contract-state initial-block))
+            (contract-config (.@ contract-state contract-config))
+            (create-pretx {prepare-create-contract-transaction self initial-block}))
+          (verify-contract-config contract-config create-pretx)))
+      ((element? TransactionReceipt contract-state)
+        (displayln "extracting published data from transaction receipt ...")
+        (let
+          (log-data (.@ (car (.@ contract-state logs)) data))
+          (set! (@ (@ self message) inbox) (open-input-u8vector log-data))))
+      (else
+        (void)))))
+
+(defmethod {commit Runtime}
+  (λ (self)
+    (def contract-state (@ self contract-state))
+    (cond
+      ((equal? contract-state #f)
+        (displayln "deploying contract ...")
+        {deploy-contract self})
+      ((element? ContractHandshake contract-state)
+        (displayln "publishing message ...")
+        (let*
+          ((initial-block (.@ contract-state initial-block))
+           (contract-address (.@ (.@ contract-state contract-config) contract-address))
+           (message (@ self message))
+           (outbox (@ message outbox))
+           (message-pretx {prepare-call-function-transaction self outbox initial-block contract-address})
+           (tx-receipt (post-transaction message-pretx)))
+          (write-file-json "tx-receipt.json" (json<- TransactionReceipt tx-receipt)))))))
+
+(defmethod {add-to-environment Runtime}
+  (λ (self name value)
+    (hash-put! (@ self environment) name value)))
+
+(defmethod {prepare-create-contract-transaction Runtime}
+  (λ (self initial-block)
+    (def sender-address {get-active-participant self})
+    (defvalues (contract-runtime-bytes contract-runtime-labels)
+      {generate-consensus-runtime (@ self contract)})
+    (def initial-state
+      {create-frame-variables (@ self contract) initial-block contract-runtime-labels})
+    (def initial-state-digest
+      (digest-product-f initial-state))
+    (def contract-bytes
+      (stateful-contract-init initial-state-digest contract-runtime-bytes))
+    (create-contract sender-address contract-bytes
+      value: {compute-participant-dues (@ self message) sender-address})))
+
+(defmethod {deploy-contract Runtime}
+  (λ (self)
+    (def timeoutInBlocks (.@ (current-ethereum-network) timeoutInBlocks))
+    (def initial-block (+ (eth_blockNumber) timeoutInBlocks))
+    (def pretx {prepare-create-contract-transaction self initial-block})
+    (display-poo ["Deploying contract... " "timeoutInBlocks: " timeoutInBlocks
+                  "initial-block: " initial-block "\n"])
+    (def receipt (post-transaction pretx))
+    (def contract-config (contract-config<-creation-receipt receipt))
+    (display-poo ["Contract config: " ContractConfig contract-config "\n"])
+    (verify-contract-config contract-config pretx)
+    (def handshake (new ContractHandshake initial-block contract-config))
+    (display-poo ["Handshake: " ContractHandshake handshake "\n"])
+    (write-file-json "contract-handshake.json" (json<- ContractHandshake handshake))))
+
+;; See gerbil-ethereum/contract-runtime.ss for spec.
+(defmethod {prepare-call-function-transaction Runtime}
+  (λ (self outbox initial-block contract-address)
+    (def sender-address {get-active-participant self})
+    (defvalues (_ contract-runtime-labels)
+      {generate-consensus-runtime (@ self contract)})
+    (def frame-variables
+      {create-frame-variables (@ self contract) initial-block contract-runtime-labels})
+    (def frame-variable-bytes (marshal-product-f frame-variables))
+    (def frame-length (bytes-length frame-variable-bytes))
+    (def out (open-output-u8vector))
+    (marshal UInt16 frame-length out)
+    (marshal-product-to frame-variables out)
+    (for ([type . value] (hash-values outbox))
+      (marshal type value out))
+    (marshal UInt8 1 out)
+    (def message-bytes (get-output-u8vector out))
+    (call-function sender-address contract-address message-bytes
+      value: {compute-participant-dues (@ self message) sender-address})))
+
+(defmethod {get-current-code-block Runtime}
+  (λ (self)
+    (def contract (@ self contract))
+    (def participant-interaction
+      {get-interaction (@ contract program) (@ self role)})
+    (hash-get participant-interaction (@ self current-code-block))))
+
+(defmethod {resolve-variable Runtime}
+  (λ (self variable-name)
+    (def variable-value
+      (or
+        (hash-get (@ self environment) variable-name)
+        (hash-get (@ (@ self contract) participants) variable-name)
+        (hash-get (@ (@ self contract) arguments) variable-name)))
+    (match variable-value
+      ([type . value]
+        value)
+      (#f
+        (error (string-append variable-name " is missing from execution environment")))
+      (value
+        value))))
+
+(defmethod {get-active-participant Runtime}
+  (λ (self)
+    (def contract (@ self contract))
+    (hash-get (@ contract participants) (@ self role))))
+
+(def (marshal-product-f fields)
+  (def out (open-output-u8vector))
+  (marshal-product-to fields out)
+  (get-output-u8vector out))
+
+(def (marshal-product-to fields port)
+  (for ((p fields))
+    (with (([t . v] p)) (marshal t v port))))
+
+(def (digest-product-f fields)
+  (def out (open-output-u8vector))
+  (for ((field fields))
+    (with (([t . v] field)) (marshal t v out)))
+  (digest<-bytes (marshal-product-f fields)))
+
+(defmethod {interpret-participant-statement Runtime}
+  (λ (self statement)
+    (displayln statement)
+    (match statement
+
+      (['set-participant new-participant]
+        (let (this-participant (@ self role))
+          (if (eq? new-participant this-participant)
+            (void) ; continue
+            (error "Change participant inside code block, this should be impossible"))))
+
+      (['add-to-deposit amount-variable]
+        (let
+          ((this-participant {get-active-participant self})
+           (amount {resolve-variable self amount-variable}))
+          {add-to-deposit (@ self message) this-participant amount}))
+
+      (['expect-deposited amount-variable]
+        (let
+          ((this-participant {get-active-participant self})
+           (amount {resolve-variable self amount-variable}))
+          {expect-deposited (@ self message) this-participant amount}))
+
+      (['participant:withdraw address-variable price-variable]
+        (let
+          ((address {resolve-variable self address-variable})
+           (price {resolve-variable self price-variable}))
+          {add-to-withdraw (@ self message) address price}))
+
+      (['add-to-publish ['quote publish-name] variable-name]
+        (let
+          ((publish-value {resolve-variable self variable-name})
+           (publish-type {lookup-type (@ (@ self contract) program) variable-name}))
+          {add-to-published (@ self message) publish-name publish-type publish-value}))
+
+      (['def variable-name expression]
+        (let (variable-value
+          (match expression
+            (['expect-published ['quote publish-name]]
+              (let (publish-type {lookup-type (@ (@ self contract) program) publish-name})
+                {expect-published (@ self message) publish-name publish-type}))
+            (['@app 'isValidSignature address-variable digest-variable signature-variable]
+              (let
+                ((address {resolve-variable self address-variable})
+                 (digest {resolve-variable self digest-variable})
+                 (signature {resolve-variable self signature-variable}))
+                (isValidSignature address digest signature)))
+            (['sign digest-variable]
+              (let
+                ((this-participant {get-active-participant self})
+                 (digest {resolve-variable self digest-variable}))
+                (make-message-signature (secret-key<-address this-participant) digest)))))
+          {add-to-environment self variable-name variable-value}))
+
+      (['require! variable-name]
+        (match {resolve-variable self variable-name}
+          (#t (void))
+          (else
+            (error (string-append "Assertion failed: " variable-name " is not #t")))))
+
+      (['return ['@tuple]]
+        (void))
+
+      (['@label name]
+        (set! (@ self current-label) name)))))
+
+(define-type ContractHandshake
+  (Record
+   initial-block: [Block]
+   contract-config: [ContractConfig]))
+
+;; MESSAGE
+(defclass Message (inbox outbox asset-transfers)
+  constructor: :init!
+  transparent: #t)
+
+(defmethod {:init! Message}
+  (λ (self (i (open-output-u8vector)) (o (make-hash-table)) (at []))
+    (set! (@ self inbox) i)
+    (set! (@ self outbox) o)
+    (set! (@ self asset-transfers) at)))
+
+(defmethod {add-to-published Message}
+  (λ (self name type value)
+    (hash-put! (@ self outbox) name [type . value])))
+
+;; expect-published : Sym TypeMethods -> Any
+(defmethod {expect-published Message}
+  (λ (self name type)
+    ;; ignore name, by order not by name
+    (unmarshal type (@ self inbox))))
+
+;; add-to-withdraw : Address Nat -> Void
+(defmethod {add-to-withdraw Message}
+  (λ (self address amount)
+    (def mat (@ self asset-transfers))
+    (def mat2 (assq-update mat address (cut + <> amount) 0))
+    (def mat3 (assq-update mat2 #f (cut - <> amount) 0))
+    (set! (@ self asset-transfers) mat3)))
+
+;; add-to-deposit : Nat -> Void
+(defmethod {add-to-deposit Message}
+  (λ (self address amount)
+    (def mat (@ self asset-transfers))
+    (def mat2 (assq-update mat address (cut - <> amount) 0))
+    (def mat3 (assq-update mat2 #f (cut + <> amount) 0))
+    (set! (@ self asset-transfers) mat3)))
+
+;; expect-deposited : Nat -> Void
+(defmethod {expect-deposited Message}
+  (λ (self address amount)
+    (def mat (@ self asset-transfers))
+    (def mat2 (assq-update mat address (cut + <> amount) 0))
+    (def mat3 (assq-update mat2 #f (cut - <> amount) 0))
+    (set! (@ self asset-transfers) mat3)))
+
+;; expect-withdrawn : Address Nat -> Void
+(defmethod {expect-withdrawn Message}
+  (λ (self address amount)
+    (def mat (@ self asset-transfers))
+    (def mat2 (assq-update mat address (cut - <> amount) 0))
+    (def mat3 (assq-update mat2 #f (cut + <> amount) 0))
+    (set! (@ self asset-transfers) mat3)))
+
+(defmethod {compute-participant-dues Message}
+  (λ (self participant)
+    (def asset-transfers (@ self asset-transfers))
+    (def active-balance
+      (if (assq-has-key? asset-transfers participant)
+        (assq-ref asset-transfers participant)
+        0))
+    (if (negative? active-balance)
+      (abs active-balance)
+      0)))
