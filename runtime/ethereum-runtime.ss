@@ -19,14 +19,15 @@
   transparent: #t)
 
 (defmethod {:init! Runtime}
-  (λ (self contract role (cs #f) (ccb 'begin0) (cl 'begin) (l (make-hash-table)) (m (make-Message)))
+  (λ (self contract role (cs #f) (ccb 'begin0) (cl 'begin) (e (make-hash-table)) (m (make-Message)))
     (set! (@ self contract) contract)
     (set! (@ self role) role)
     (set! (@ self contract-state) cs)
     (set! (@ self current-code-block) ccb)
     (set! (@ self current-label) cl)
-    (set! (@ self environment) l)
-    (set! (@ self message) m)))
+    (set! (@ self environment) e)
+    (set! (@ self message) m)
+    {initialize-environment self}))
 
 (defmethod {execute Runtime}
   (λ (self)
@@ -162,21 +163,19 @@
       {get-interaction (@ contract program) (@ self role)})
     (hash-get participant-interaction (@ self current-code-block))))
 
-;; TODO: put participant and interaction argument variables into the environment
 ;; TODO: map alpha-converted names to names in original source when displaying to user
 (defmethod {initialize-environment Runtime}
   (lambda (self)
-    (void)))
+    (def contract (@ self contract))
+    (for ((values key value) (in-hash (@ contract participants)))
+      {add-to-environment self key value})
+    (for ((values key [_ . value]) (in-hash (@ contract arguments)))
+      {add-to-environment self key value})))
 
-;; TODO: handle constant values
-;; TODO: rename to reduce expression?
 (defmethod {reduce-expression Runtime}
   (λ (self expression)
     (if (symbol? expression)
-      (let (variable-value (or
-          (hash-get (@ self environment) expression)
-          (hash-get (@ (@ self contract) participants) expression)
-          (hash-get (@ (@ self contract) arguments) expression)))
+      (let (variable-value (hash-get (@ self environment) expression))
         (match variable-value
           ([type . value]
             value)
