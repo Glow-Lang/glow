@@ -170,20 +170,21 @@
 
 ;; TODO: handle constant values
 ;; TODO: rename to reduce expression?
-(defmethod {resolve-variable Runtime}
-  (λ (self variable-name)
-    (def variable-value
-      (or
-        (hash-get (@ self environment) variable-name)
-        (hash-get (@ (@ self contract) participants) variable-name)
-        (hash-get (@ (@ self contract) arguments) variable-name)))
-    (match variable-value
-      ([type . value]
-        value)
-      (#f
-        (error (string-append variable-name " is missing from execution environment")))
-      (value
-        value))))
+(defmethod {reduce-expression Runtime}
+  (λ (self expression)
+    (if (symbol? expression)
+      (let (variable-value (or
+          (hash-get (@ self environment) expression)
+          (hash-get (@ (@ self contract) participants) expression)
+          (hash-get (@ (@ self contract) arguments) expression)))
+        (match variable-value
+          ([type . value]
+            value)
+          (#f
+            (error (string-append expression " is missing from execution environment")))
+          (value
+            value)))
+      (expression))))
 
 (defmethod {get-active-participant Runtime}
   (λ (self)
@@ -218,24 +219,24 @@
       (['add-to-deposit amount-variable]
         (let
           ((this-participant {get-active-participant self})
-           (amount {resolve-variable self amount-variable}))
+           (amount {reduce-expression self amount-variable}))
           {add-to-deposit (@ self message) this-participant amount}))
 
       (['expect-deposited amount-variable]
         (let
           ((this-participant {get-active-participant self})
-           (amount {resolve-variable self amount-variable}))
+           (amount {reduce-expression self amount-variable}))
           {expect-deposited (@ self message) this-participant amount}))
 
       (['participant:withdraw address-variable price-variable]
         (let
-          ((address {resolve-variable self address-variable})
-           (price {resolve-variable self price-variable}))
+          ((address {reduce-expression self address-variable})
+           (price {reduce-expression self price-variable}))
           {add-to-withdraw (@ self message) address price}))
 
       (['add-to-publish ['quote publish-name] variable-name]
         (let
-          ((publish-value {resolve-variable self variable-name})
+          ((publish-value {reduce-expression self variable-name})
            (publish-type {lookup-type (@ (@ self contract) program) variable-name}))
           {add-to-published (@ self message) publish-name publish-type publish-value}))
 
@@ -247,19 +248,19 @@
                 {expect-published (@ self message) publish-name publish-type}))
             (['@app 'isValidSignature address-variable digest-variable signature-variable]
               (let
-                ((address {resolve-variable self address-variable})
-                 (digest {resolve-variable self digest-variable})
-                 (signature {resolve-variable self signature-variable}))
+                ((address {reduce-expression self address-variable})
+                 (digest {reduce-expression self digest-variable})
+                 (signature {reduce-expression self signature-variable}))
                 (isValidSignature address digest signature)))
             (['sign digest-variable]
               (let
                 ((this-participant {get-active-participant self})
-                 (digest {resolve-variable self digest-variable}))
+                 (digest {reduce-expression self digest-variable}))
                 (make-message-signature (secret-key<-address this-participant) digest)))))
           {add-to-environment self variable-name variable-value}))
 
       (['require! variable-name]
-        (match {resolve-variable self variable-name}
+        (match {reduce-expression self variable-name}
           (#t (void))
           (#f
             (error "Assertion failed"))
