@@ -5,7 +5,15 @@
 
 { # Prevent execution if this script was only partially downloaded
 
+## For most users, use the alpha branch of MuKn's fork of nixpkgs
+export nixpkgs=https://github.com/muknio/nixpkgs/archive/alpha.tar.gz
+
+## For the development branch, you could instead be using:
+#export nixpkgs=https://github.com/muknio/nixpkgs/archive/devel.tar.gz
+
+
 # 0. Small prelude
+
 panic() {
     echo "$0:" "$@" >&2
     exit 1
@@ -47,7 +55,7 @@ cachix use mukn
 # Similarly, solc is only for testing, or, in the future, for interfacing with other contracts;
 # and go-ethereum is for testing and/or otherwise running your own ethereum node.
 echo "Using Nix to install Glow, and with it gerbil, geth, solc, racket..."
-nix-env -f https://github.com/fare-patches/nixpkgs/archive/fare.tar.gz -iA \
+nix-env -f $nixpkgs -iA \
         glow-lang gerbil-unstable gerbilPackages-unstable go-ethereum solc racket
 
 # 5. Install nix-thunk. See https://github.com/obsidiansystems/nix-thunk

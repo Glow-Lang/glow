@@ -113,6 +113,10 @@ In the meantime, you can build your own with:
 
 ## Installing *Glow* the Hard Way
 
+If you are going to be modifying the implementation of *Glow*,
+you may want to install things the hard way as below
+before you look at the file [HACKING](HACKING.md) for development guidance.
+
 If you don't use either Linux or macOS, and can't use Docker,
 or if you insist on not using Nix, or on reproducing every step manually for audit purposes,
 then you will have to build and install *Glow* the Hard Way:
@@ -196,16 +200,20 @@ for i in ${DEPS[@]} ; do
 done
 ```
 
+If the build of `smug-gerbil` fails (as it does as I write these lines),
+you may need to manually finish it with:
+
+    (cd ~/.gerbil/pkg/github.com/drewc/smug-gerbil ; gxc -O smug.ss)
+
+(The reason is that `smug-gerbil` depends on some non-standard extension
+to Gerbil's build system that has yet to be upstreamed. The Nix recipe knows
+about this and takes special steps to bypass the regular build system.)
+
 Note that [drewc-r7rs-swank](https://github.com/drewc/drewc-r7rs-swank) is
 a gerbil-friendlier fork of [r7rs-swank](https://github.com/ecraven/r7rs-swank),
 the latter containing still-unmerged patches
 (see also [r7rs-swank PR #10](https://github.com/ecraven/r7rs-swank/pull/10)
 for a similar patch to it, from [my fork](github.com/fare-patches/r7rs-swank)).
-
-Also note that as of the current writing, `smug-gerbil` has a dependency
-on some extensions to Gerbil's build system, and that the standard one may fail to build
-the top-level `smug` module, that you can build manually with: `gxc -O smug.ss`.
-This step is done correctly by the Nix build.
 
 If at some point you need to hack some or all of our dependencies,
 you can reinstall them the following way,
@@ -232,6 +240,11 @@ for i in ${DEPS[@]} ; do
    gxpkg build $i $PWD)
 done)
 ```
+
+Once again, you might need to manually finish the `smug-gerbil` build with:
+
+    (cd ~/.gerbil/pkg/github.com/drewc/smug-gerbil ; gxc -O smug.ss)
+
 
 ### Last but not least, build *Glow*
 

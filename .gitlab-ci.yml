@@ -34,11 +34,11 @@ test:
     ## For integration tests, nix-shell --pure causes us to run in an read-only directory,
     ## so let' try it a slightly hard way...
     - nix-build
-    - GLOWPATH="$(nix path-info '(import ./default.nix)')"
-    - export GERBIL_ETHEREUM_SRC=$(nix eval '(let pkgs = import ./pkgs.nix; in pkgs.gerbilPackages-unstable.gerbil-ethereum.src)' | tail -1 | tr -d \")
+    - GLOWPATH="$(nix path-info -f ./pkgs.nix glow-lang)')"
+    - export GERBIL_ETHEREUM_SRC=$(nix eval -f pkgs.nix gerbilPackages-unstable.gerbil-ethereum.src | tail -1 | tr -d \")
     - export PATH="$GLOWPATH/bin:$PATH" GLOW_HOME=$PWD GERBIL_APPLICATION_HOME=$PWD GLOW_SRC=$PWD
     - echo $PWD ; mkdir -p run ; echo foo > run/blah
-    - export GERBIL_LOADPATH="$(nix eval '(let pkgs = import ./pkgs.nix; in "${pkgs.glow-lang.src}:${pkgs.gerbil-support.gerbilLoadPath ([pkgs.glow-lang] ++ pkgs.glow-lang.passthru.pre-pkg.gerbilInputs)}:${pkgs.gerbilPackages-unstable.gerbil-ethereum.src}")' | tail -1 | tr -d \")"
+    - export GERBIL_LOADPATH="$(nix eval -f pkgs.nix glow-lang.passthru.pre-pkg.testGerbilLoadPath | tail -1 | tr -d \")"
     # gxi -e '(import :mukn/ethereum/scripts/run-geth-test-net)'
     - $GERBIL_ETHEREUM_SRC/scripts/run-geth-test-net.ss
   script:

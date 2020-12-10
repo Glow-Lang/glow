@@ -2,7 +2,15 @@
 
 (export #t)
 
-(import :mukn/glow/all-glow :clan/multicall)
+(import :mukn/glow/all-glow :clan/multicall :mukn/glow/version :clan/versioning :std/pregexp)
+
+(define-entry-point (git-version)
+  "Print the git version that Glow was compiled from"
+  (def glow-vstring (cdr (assoc "Glow" software-layers)))
+  (def v (match (pregexp-match "^.*-[0-9]+-g([0-9a-f]+)$" glow-vstring)
+           ([_ v] v)
+           (_ glow-vstring)))
+  (displayln v))
 
 (def (main . args)
   (apply call-entry-point args))

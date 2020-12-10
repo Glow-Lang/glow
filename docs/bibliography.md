@@ -4,16 +4,12 @@
 
 **Websites:**
 
-* [Mutual Knowledge Systems](https://mukn.io) for the company that develops *Glow*
-* [Glow-lang.org]() for the language's official website
-
-
+* [Glow-lang.org](), the language's official website, open to the community.
+* [Mutual Knowledge Systems](https://mukn.io), the company that develops *Glow*.
 
 **Current whitepaper:**
 
 * [Glow whitepaper](https://docs.google.com/document/d/1nBmI28yISX2HynodZnYWW0Px6re4JyYNNw2ncaFfJSg/)
-
-
 
 **Social media and discussion channels**
 
@@ -24,9 +20,7 @@
 * Youtube: [www.youtube.com/playlist?list=PLiEa4i6H-qcdosr5x1jPkGJRUVPB1GOlL](https://www.youtube.com/playlist?list=PLiEa4i6H-qcdosr5x1jPkGJRUVPB1GOlL)
 * Discord: https://discord.com/channels/655606984514469899/655606984967585832
 
-
-
 ### External sources about *Glow*
 
-* [A simple demo](https://www.youtube.com/watch?v=lj9SlvOIBgU&feature=youtu.be&t=2903) of *Glow* on IOHK's youtube channel, hosted by Aparna Jue (Dec. 2020)
+* [A simple demo](https://youtu.be/lj9SlvOIBgU?t=2903) of *Glow* on IOHK's youtube channel, hosted by Aparna Jue (Dec. 2020)
 * [An article](https://eng.ambcrypto.com/cardano-goguen-on-schedule/) mentioning the collaboration between Mutual Knowledge Systems and IOHK on AMB Crypto (Dec. 2020)
