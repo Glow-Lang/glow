@@ -35,7 +35,8 @@ test:
     ## so let' try it a slightly hard way...
     - nix-build
     - echo $PWD ; mkdir -p run ; echo foo > run/blah
-    - export GERBIL_ETHEREUM_SRC=$(nix eval --raw -f pkgs.nix glow-lang.passthru.pre-pkg.gerbilEthereumSrc)
+    #- export GERBIL_ETHEREUM_SRC=$(nix eval --raw -f pkgs.nix glow-lang.passthru.pre-pkg.gerbilEthereumSrc)
+    - export GERBIL_ETHEREUM_SRC=$(nix-build './pkgs.nix' -A gerbilPackages-unstable.gerbil-ethereum.src | tail -1)
     - export GERBIL_LOADPATH=$(nix eval --raw -f pkgs.nix glow-lang.passthru.pre-pkg.testGerbilLoadPath)
     - export GLOWPATH=$(nix eval --raw -f ./pkgs.nix glow-lang)
     - export PATH="$GLOWPATH/bin:$PATH" GLOW_HOME=$PWD GERBIL_APPLICATION_HOME=$PWD GLOW_SRC=$PWD
