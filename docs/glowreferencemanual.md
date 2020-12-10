@@ -823,7 +823,7 @@ But this one does:
 
 Like most languages, *Glow* uses conditionality with `if `
 
-For three propositions <a>, <b> and <c>, the common *Glow* syntax is:
+For three elements `<a>`, `<b>` and `<c>`, the common *Glow* syntax is:
 
 > `if <a> then <b> else <c>`
 
@@ -1015,7 +1015,7 @@ The first step is as follows:
 > `@A @verifiably let commitment = digest([salt, handA]);`
 > `publish! A -> commitment; deposit! A -> wagerAmount;`
 
-Note that the variable definitions preceded by @A only take place on Alice’s computer. 
+Note that the variable definitions preceded by `@A` only take place on Alice’s computer. 
 
 
 
@@ -1099,22 +1099,22 @@ Let’s suppose that two participant Alice and Bob agree that Alice will buy a s
 
 First they they construct an agreement, and exchange it off-chain encoded in JSON, where the ethereum addresses of the respective users are used:
 
-> ["interaction-agreement", 
-> 	{"glow-version": "v0.0-383-g83524b1",  
-> 	"interaction": "mukn/glow/examples/buy_sig#payForSignature",  
-> 	"participants": {"Buyer": "0xC54e86DFFb87B9736E2E35DD85c775358F1c31CE",         
-> 						"Seller": "0x9CcaEd210CE8c0Cb49c5Ad1C4f583406c264BA69"},  
-> 	"parameters": {"digest": 
-> "0x7a33c718fe7f3b9c56bd67b7b3e20fec6e3edf083626a7e11a10bba90243e405"         
-> 			"price": "0x246ddf97976680000"},  
-> "reference": {"Buyer": "Purchase #42", "Seller": "Sale #101"}},  
-> "parameters": {"wagerAmount": {"TestEther": 100}}  
-> "options": {"blockchain": "Cardano KEVM testnet",        
-> 		"escrowAmount": {"TestEther": 10},        
-> 		"timeoutInBlocks": 100,        
-> 		"maxInitialBlock": 61247}  
-> 	"Code-digest": 
-> "0xaac1265d31e58390f2971bb58004f1944082116908ddb9c4a64be8b7d495c757"}]
+> ``["interaction-agreement", `
+> 	`{"glow-version": "v0.0-383-g83524b1",  `
+> 	`"interaction": "mukn/glow/examples/buy_sig#payForSignature",`  
+> 	`"participants": {"Buyer": "0xC54e86DFFb87B9736E2E35DD85c775358F1c31CE",    `     
+> 						`"Seller": "0x9CcaEd210CE8c0Cb49c5Ad1C4f583406c264BA69"},  `
+> `	"parameters": {"digest": `
+> `"0x7a33c718fe7f3b9c56bd67b7b3e20fec6e3edf083626a7e11a10bba90243e405"       `  
+> 		`	"price": "0x246ddf97976680000"},  `
+> `"reference": {"Buyer": "Purchase #42", "Seller": "Sale #101"}},  `
+> `"parameters": {"wagerAmount": {"TestEther": 100}}  `
+> `"options": {"blockchain": "Cardano KEVM testnet",       ` 
+> 	`	"escrowAmount": {"TestEther": 10},       ` 
+> 	`	"timeoutInBlocks": 100,        `
+> 	`	"maxInitialBlock": 61247}  `
+> `	"Code-digest": `
+> `"0xaac1265d31e58390f2971bb58004f1944082116908ddb9c4a64be8b7d495c757"}]`
 
 
 
@@ -1154,7 +1154,8 @@ For physical ones you will want the last step to be sending the money to a multi
 
 
 > \#lang glow
-> @interaction([Buyer, Seller])let payForSignature = (digest : Digest, price : Nat) => {`
+>
+> `@interaction([Buyer, Seller])let payForSignature = (digest : Digest, price : Nat) => {`
 >
 > ` deposit! Buyer -> price;`
 
