@@ -2,6 +2,8 @@
 
 Welcome to *Glow*'s reference manual.
 
+*Glow* is a domain-specific language to write *safe* DApps (Decentralized Applications).
+
 Here you will learn everything about this mighty language and its associated toolset
 and perform feats previously inaccessible to mere mortals!
 
@@ -134,42 +136,57 @@ compared to its centralized ancestor, it has many advantages:
 - Complete traceability of an asset, for supply chain managers, stock-management, or even lawyers.
 - Enhanced privacy.
 
-**Problem**:
-Compared to centralized programs, DApps are much harder to write.
-When designing protocols, you must make sure the incentives of all participants are aligned at all times.
-When manipulating digital assets managed by immutable decentralized ledgers,
-you cannot afford any single bug in the parts of your apps that deal with the ledgers,
-or you may lose all the assets at stake (and this has happened before).
-They are harder to program, and if you want them to be safe,
-it'll require more computing and networking resources, and more time.
+### Problem
 
-**Solution**:
+Compared to centralized programs,
+DApps are both *much* harder to write and *much* less tolerant to mistakes.
+
+DApps are harder to write, because they inherently involve
+multiple untrusting participants over asynchronous networks;
+when designing protocols, you must therefore make sure that
+the incentives of all participants are aligned at all times.
+
+DApps are less tolerant to mistakes,
+because active adversaries constantly seek to take advantage of any mistakes to steal your assets,
+and there is no central authority to enforce your rights if that happens (or to violate them ordinarily);
+thus you cannot afford any single bug in the parts of your apps that deal
+with  immutable decentralized ledgers.
+
+Hundreds of millions of dollars worth of assets have been lost to various mistakes
+made in DApps, already.
+Even seasoned experts make simple manipulation mistakes and lose tens of thousands of dollars.
+
+### Solution
+
 To make DApps more mainstream, the world needed a toolset to automate
 all the critical parts of a DApp and make them safe.
 
 This is precisely what *Glow* is:
 it drastically simplifies the way a DApp is programmed, to make it safer.
 
-## What is *Glow*?
+## What is *Glow* for?
 
 ### A programming language for DApps
 
-*Glow* is a programming language used to make DApps. It comes with a wide set of tools.
+*Glow* is a programming language used to make DApps.
+It comes with a wide set of tools.
 
 *Glow's* three main specificities are:
 
-- **Safety**: each newly implemented function is thoroughly audited
- so that a programmer using the *Glow* language or its associated toolset
- won't have to worry about securing interactions between users.
-- **User-friendliness**: we want to make DApps mainstream, and
- *Glow*'s development team always aims at making it obvious what a DApp does or doesn't,
- so users can ascertain that it indeed matches their expectations.
-- **Portable* to any blockchain**: applications written in *Glow*
-  can produce run on any blockchain, so you unlike with previous tools,
-  you don't have to learn all the tooling specific to a single blockchain
-  only to realize later the users you want will be on another blockchain.
-  A same DApp will be able to use the resources of multiple blockchains at once,
-  and meet the users where they are and wherever they will be.
+  - **Safety**: each newly implemented function is thoroughly audited
+    so that a programmer using the *Glow* language or its associated toolset
+    won't have to worry about securing interactions between users.
+
+  - **User-friendliness**: we want to make DApps mainstream, and
+    *Glow*'s development team always aims at making it obvious what a DApp does or doesn't,
+    so users can ascertain that it indeed matches their expectations.
+
+  - **Portable* to any blockchain**: applications written in *Glow*
+    can produce run on any blockchain, so you unlike with previous tools,
+    you don't have to learn all the tooling specific to a single blockchain
+    only to realize later the users you want will be on another blockchain.
+    A same DApp will be able to use the resources of multiple blockchains at once,
+    and meet the users where they are and wherever they will be.
 
 In other words: what usually takes a huge amount of lines of code,
 and many experts in various fields, has been automated.
@@ -398,15 +415,42 @@ If you really want to try it this way, you can check our
 
 ## Overview
 
-The base language is a statically typed pure functional dialect of JavaScript,
+*Glow* is a domain-specific language for DApps, Decentralized Applications.
+
+The language syntax is based on that of JavaScript,
 with some inspiration from ReasonML where we have to diverge from JavaScript.
+While it should feel familiar to you if you know JavaScript,
+there are many differences underneath designed to keep your DApps safe:
+
+  - The language is statically typed.
+    Its type system is in the same general style as ReasonML or TypeScript,
+    yet differs in many details, wherein we optimize our design for the safety of DApps.
+
+  - Though the syntax looks imperative, it is a function language underneath.
+    In particular, you cannot modify bindings to existing variables,
+    you can only have new variables shadow old variables.
+    You also cannot side-effect data structures, only create new data structures
+    that shadow the old data structures as those in consideration.
+
+  - Many features are currently missing, such as loops or recursion,
+    that will be added slowly as the need arises.
 
 If you are used to programming in imperative languages, you will also find common concepts.
+
+_For programming language buffs_:
+DApps are asynchronous interactions between multiple mutually-untrusting participant
+manipulating digital assets on decentralized ledgers,
+according to rules verifiable by blockchain smart contracts.
+Semantically, *Glow* is an applicative language with a pure functional programming core
+extended with a few primitives and annotations making it suitable for for multiparty computation.
+It has a static type system based on MLsub, and static safety analyses
+that are discharged by a theorem solver. (TODO: complete the static analyses.)
 
 If you are a seasoned developer, you can check our less-detailed and straight-to-the-point grammar,
 our [front-end syntax](https://gitlab.com/mukn/glow/-/blob/master/docs/internal/syntax/glow-sexpr.scrbl) and [surface grammar](https://gitlab.com/mukn/glow/-/blob/master/docs/internal/syntax/glow-surface.scrbl).
 
 Otherwise the next chapters are designed to make you grasp it quickly.
+
 
 ## Fundamentals: Hello world!
 
@@ -635,7 +679,7 @@ This convention isn't enforced by the language.
 
 - Units: `Unit`
 - Booleans: `Bool`
-- Integers: `Nat`
+- Integers: `Int`
 - Byte strings: `Bytes`
 
 #### Units
@@ -652,7 +696,6 @@ Both values have to be typed in lowercase.
 ##### Operators involving booleans
 
 - boolean and: `&&`
-
 - boolean or: `||`
 - boolean not: `!`
 
@@ -668,7 +711,19 @@ it only evaluates the right-hand-side expression `<b>` if `<a>` evaluates to fal
 
 #### Integers
 
-The next most common data type in *Glow* is the integer.
+The next most common data type in *Glow* is the integer type `Int`.
+
+The syntax is for literal integers is just decimal for the moment:
+just write a non-empty sequence of digits from `0` to `9`.
+For instance, `0`, `1`, `2`, `42`, `1729` are values of type `Int`.
+
+Integers in *Glow* are not limited in size:
+they are `BigInt`s in JavaScript parlance (or bignums as called in the Lisp tradition).
+Nevertheless integer literals in *Glow* do *not* take a final `n` at the end like they do in JavaScript.
+
+However, when compiling *Glow* to smart contracts running on a blockchain,
+
+
 
 At this moment, *Glow* only supports the type `Nat` which contains non-negative natural integers.
 
@@ -677,9 +732,6 @@ numbers are also restricted to fit in 256 bits (or 32 bytes),
 the same as the usual type `UInt256` of Ethereum.
 Operations that yield integers greater or equal to 2**256 or less than zero
 will cause a runtime error.
-
-The syntax is just decimal for the moment:
-just write a non-empty sequence of digits from `0` to `9`.
 
 TODO: We will support a richer set of integer types in the near future, and will add hexadecimal syntax.
 
@@ -1002,6 +1054,47 @@ Note that this particular syntax is only allowed with `if`.
 - `type` defines aliases types
 - `verify`
 - `withdraw!` is used to deposit funds to a participant. See our examples of smart contracts for more details regarding proper syntax.
+
+## Caveats when using both *Glow* and JavaScript
+
+The syntax or *Glow* was specifically designed to be familiar to those who use
+JavaScript, ReasonML, TypeScript, etc.
+
+One major principle we follow is one to avoid confusion:
+**If program fragment is valid in both *Glow* and JavaScript,
+the *meaning* of that fragment should be the same in both languages, and/or
+any discrepancy in this meaning should be *obvious*.**
+
+If at any point you are confused by how a *Glow* program works
+based on your expectations as a JavaScript or ReasonML or TypeScript programmer,
+or on the contrary if when writing code in JavaScript or ReasonML or TypeScript
+you are led to wrong expectations based on what you read or wrote in *Glow*,
+then this is a serious design issue that we will try to address in a future version of *Glow*.
+
+That said, here are some differences between *Glow* and JavaScript:
+
+- *Glow* integers are all `BigInt`s, yet *Glow* integer literals do not end with an `n`
+  whereas JavaScript `BigInt` literals do, and JavaScript integer literals without an `n`
+  are read as floating point-numbers that only keep 52 bits worth of mantissa information.
+  This difference should be pretty obvious when reading or writing *Glow* or JavaScript programs
+  and translating from one to the other, but bears mentioning.
+
+- *Glow* uses `|` for alternatives in types or in pattern matching, not for bitwise-or.
+  Also, *Glow* does not use `&` or `^` or `~` for bitwise and, xor, not.
+  Instead, *Glow* uses tripled operators `&&&`, `|||`, `^^^`, `~~~`
+  for bitwise and, or, xor, not operations.
+  The syntactic difference is obvious and leaves no room for confusion.
+
+- *Glow* uses `<<` and `>>` for bitwise shift left and right operations.
+  These work the same as in JavaScript as long as you use `BigInt` in JavaScript.
+  Note however that legacy bitwise operations on "normal" numbers in JavaScript
+  first interprets floating-point numbers as 32-bit signed integers,
+  then computes on those 32-bit signed integers;
+  it then provides a special `>>>` "logical" shift right operation
+  that unlike other operations specially treats its left-hand-side argument as
+  an 32-bit *unsigned* integer; this operator is not available on `BigInt`.
+  There again, these differences should be relatively obvious to people dealing
+  with integers in JavaScript vs *Glow*.
 
 ## Compiling your program
 
