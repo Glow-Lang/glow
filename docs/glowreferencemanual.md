@@ -571,16 +571,16 @@ Both values have to be typed in lowercase.
 - or: ||
 - not: not
 
-> <a> && <b> boolean "and" operator—only evaluates the right-hand-side expression <b> if <a> evaluates to true.
+> `<a> && <b> boolean "and" operator—only evaluates the right-hand-side expression <b> if <a> evaluates to true.`
 
 
 
-> <a> || <b> boolean short-circuiting "or" operator—only evaluates the right-hand-side expression <b> if <a> evaluates to false.
+> `<a> || <b> boolean short-circuiting "or" operator—only evaluates the right-hand-side expression <b> if <a> evaluates to false.`
 
 
 
 > ```
-> ! true` == `false
+> ! true == false
 > ```
 
 Note that short-circuit evaluation works in *Glow* just like in Javascript
@@ -681,12 +681,12 @@ This previous line has set the triplet of values within a tuple.
 
 More precisely, at the moment, what you will type in *Glow* will be:
 
-type Byte = Nat; 
-let doubleQuote = 34; 
-let backslash : Byte = 92; 
+> type Byte = Nat; 
+> let doubleQuote = 34; 
+> let backslash : Byte = 92; 
 
-type RGB = (Byte, Byte, Byte); 
-let mySoftBlue : RGB = (204, 238, 255);
+> type RGB = (Byte, Byte, Byte); 
+> let mySoftBlue : RGB = (204, 238, 255);
 
 
 
@@ -717,13 +717,13 @@ The syntax to define a new sum type is to type the command `data` followed by th
 
 
 
- `data <name> = | <constructor1> | <constructor2> ...` 
+> `data <name> = | <constructor1> | <constructor2> ...` 
 
 
 
 For example, if you want to start programming a Rock-Paper-Scissors game, here's how you would name your data `Hand` and list the possible values for it (namely `Rock`, `Paper`,`Scissors`)
 
-`data Hand = | Rock | Paper | Scissors;`
+> `data Hand = | Rock | Paper | Scissors;`
 
 
 
