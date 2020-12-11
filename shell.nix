@@ -12,6 +12,7 @@ in
     buildInputs = with pkgs; (
       glow-lang.buildInputs ++
       lib.optional ethereum go-ethereum ++
+      # To speed this one up: nix path-info -f ./pkgs.nix -r thunkExe | cachix push mukn
       lib.optional thunk thunkExe);
     shellHook = ''
       echo ${gerbil-poo.src}; echo ${pkgs.gerbilPackages-unstable.gerbil-poo.src} ; echo

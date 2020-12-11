@@ -73,7 +73,7 @@ enter JSON agreement or handshake:
 
 (def program (parse-project-output "./examples/buy_sig.project.sexp"))
 (def interpreter
-  (make-Interpreter
+  (make-Contract
     program: program
     participants: participants
     arguments: arguments))

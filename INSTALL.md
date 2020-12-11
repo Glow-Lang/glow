@@ -43,7 +43,7 @@ and skip reading the rest of this file (except the warnings and prerequisites):
    you might reduce the memory pressure somewhat by passing the argument `--cores 1` or such
    to `nix-env` in the second step of the script:
 
-        nix-env --cores 1 -f https://github.com/fare-patches/nixpkgs/archive/fare.tar.gz \
+        nix-env --cores 1 -f https://github.com/muknio/nixpkgs/archive/devel.tar.gz \
             -iA glow-lang gerbil-unstable go-ethereum solc
 
 5. Installing *Glow*, or any software, requires that you trust the authors and their infrastructure.
@@ -160,7 +160,7 @@ For instance, on macOS using [homebrew](https://brew.sh/), you could use:
 
 On Nix (recommended, but could skip to the last step as above), you could have used:
 
-    nix-env -f http://github.com/fare-patches/nixpkgs/archive/fare.tar.gz -iA gerbil-unstable
+    nix-env -f http://github.com/muknio/nixpkgs/archive/devel.tar.gz -iA gerbil-unstable
 
 Note that to avoid conflict with other versions of Gerbil, you may have to make sure that
 

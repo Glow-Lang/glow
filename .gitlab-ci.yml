@@ -34,13 +34,14 @@ test:
     ## For integration tests, nix-shell --pure causes us to run in an read-only directory,
     ## so let' try it a slightly hard way...
     - nix-build
-    - GLOWPATH="$(nix path-info -f ./pkgs.nix glow-lang)')"
-    - export GERBIL_ETHEREUM_SRC=$(nix eval -f pkgs.nix gerbilPackages-unstable.gerbil-ethereum.src | tail -1 | tr -d \")
-    - export PATH="$GLOWPATH/bin:$PATH" GLOW_HOME=$PWD GERBIL_APPLICATION_HOME=$PWD GLOW_SRC=$PWD
     - echo $PWD ; mkdir -p run ; echo foo > run/blah
-    - export GERBIL_LOADPATH="$(nix eval -f pkgs.nix glow-lang.passthru.pre-pkg.testGerbilLoadPath | tail -1 | tr -d \")"
-    # gxi -e '(import :mukn/ethereum/scripts/run-geth-test-net)'
+    #- export GERBIL_ETHEREUM_SRC=$(nix eval --raw -f pkgs.nix glow-lang.passthru.pre-pkg.gerbilEthereumSrc)
+    - export GERBIL_ETHEREUM_SRC=$(nix-build './pkgs.nix' -A gerbilPackages-unstable.gerbil-ethereum.src | tail -1)
+    - export GERBIL_LOADPATH=$(nix eval --raw -f pkgs.nix glow-lang.passthru.pre-pkg.testGerbilLoadPath)
+    - export GLOWPATH=$(nix eval --raw -f ./pkgs.nix glow-lang)
+    - export PATH="$GLOWPATH/bin:$PATH" GLOW_HOME=$PWD GERBIL_APPLICATION_HOME=$PWD GLOW_SRC=$PWD
     - $GERBIL_ETHEREUM_SRC/scripts/run-geth-test-net.ss
+    # gxi -e '(import :mukn/ethereum/scripts/run-geth-test-net)'
   script:
     ## NB: Regular unit-tests should already have been taken care of by the build
     ##- nix-shell --arg thunk false --arg precompile true --pure --command "./unit-tests.ss"

@@ -1,8 +1,8 @@
 {
-  "owner": "fare-patches",
+  "owner": "muknio",
   "repo": "nixpkgs",
   "branch": "fare",
   "private": false,
-  "rev": "94f39b67b96e31dde0ed49984b2ed764e8298a8d",
-  "sha256": "1y135xw79v9v1n44mdakfc6s49wsiydq8gfjbj639dr6d5c8ichh"
+  "rev": "9f3f9491355b2fa3c1478e4ce5e854cc57ef0ec1",
+  "sha256": "0qdq6qm8x2fm9d85igchkrxsqsw30w5bh8grs3175lnwhmia839a"
 }
