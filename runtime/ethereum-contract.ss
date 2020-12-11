@@ -7,13 +7,13 @@
   ./program
   ../compiler/project/runtime-2)
 
-(defclass Contract (program participants arguments variable-offsets params-end)
+(defclass Contract (program participants arguments variable-offsets params-end timeout)
   transparent: #t)
 
 (defmethod {create-frame-variables Contract}
-  (λ (self initial-block contract-runtime-labels)
+  (λ (self initial-block contract-runtime-labels checkpoint)
     (def checkpoint-location
-      (hash-get contract-runtime-labels {make-checkpoint-label self}))
+      (hash-get contract-runtime-labels {make-checkpoint-label self checkpoint}))
     (flatten1
        [[[UInt16 . checkpoint-location]]
         [[Block . initial-block]]
@@ -23,8 +23,11 @@
 (def (sexp<-frame-variables frame-variables)
   `(list ,@(map (match <> ([v t] `(list ,(sexp<- t v) ,(sexp<- Type t)))) frame-variables)))
 
+;; TODO: Generate code for ALL checkpoints, not just the one passed in as an argument.
+;; As is, it won't work for multi-transaction contracts.
 (defmethod {generate-consensus-runtime Contract}
-  (λ (self)
+  (λ (self checkpoint)
+    (set! (@ self params-end) #f)
     {compute-parameter-offsets self}
     (parameterize ((brk-start (box params-start@)))
       (assemble
@@ -33,16 +36,14 @@
          &define-simple-logging
          (&define-check-participant-or-timeout)
          (&define-end-contract)
-         {generate-consensus-code self}
+         {generate-consensus-code self checkpoint}
          [&label 'brk-start@ (unbox (brk-start))])))))
 
-;; TODO: increment counter of checkpoints
 (defmethod {make-checkpoint-label Contract}
-  (λ (self)
-    (def checkpoint-number 0)
+  (λ (self checkpoint)
     (string->symbol (string-append
       (symbol->string (@ (@ self program) name))
-      (string-append "--cp" (number->string checkpoint-number))))))
+      (string-append "--" (symbol->string checkpoint))))))
 
 (defmethod {compute-parameter-offsets Contract}
   (λ (self)
@@ -82,18 +83,18 @@
       variable-name (post-increment! (@ self params-end) argument-length))))
 
 (defmethod {generate-consensus-code Contract}
-  (λ (self)
+  (λ (self checkpoint)
     (def consensus-interaction
       {get-interaction (@ self program) #f})
     ;; TODO: don't hardcode the checkpoint label
-    (def cp0-statements
+    (def checkpoint-statements
       (code-block-statements (hash-get consensus-interaction 'cp0)))
     {compute-parameter-offsets self}
     (&begin*
       (cons
-        [&jumpdest {make-checkpoint-label self}]
+        [&jumpdest {make-checkpoint-label self checkpoint}]
         (flatten1 (map (λ (statement)
-          {interpret-consensus-statement self statement}) cp0-statements))))))
+          {interpret-consensus-statement self statement}) checkpoint-statements))))))
 
 (defmethod {find-other-participant Contract}
   (λ (self participant)
@@ -132,6 +133,10 @@
         ; [{load-variable self amount Ether}
         ;  {load-variable self participant Address}
         ;  &withdraw!])
+
+      (['expect-deposited amount]
+        ;; TODO: implement
+        (void))
 
       (['@label 'end0]
         [&end-contract!])
