@@ -65,7 +65,7 @@
                 (['@label last-label]
                   (def init-statements (take statements (- (length statements) 1)))
                   (hash-put! contract (@ self current-label) (make-code-block current-participant init-statements last-label))
-                  (hash-put! contract last-label (make-code-block new-participant [] #f))
+                  (hash-put! contract last-label (make-code-block new-participant [['set-participant new-participant]] #f))
                   (set! (@ self current-participant) new-participant)
                   (set! (@ self current-label) last-label))
                 (else
