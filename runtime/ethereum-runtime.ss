@@ -214,15 +214,14 @@
 (defmethod {reduce-expression Runtime}
   (λ (self expression)
     (if (symbol? expression)
-      (let (variable-value (hash-get (@ self environment) expression))
-        (match variable-value
-          ([type . value]
-            value)
-          (#f
-            (error (string-append expression " is missing from execution environment")))
-          (value
-            value)))
-      (expression))))
+      (match (hash-get (@ self environment) expression)
+        ([type . value]
+          value)
+        (#f
+          (error (string-append expression " is missing from execution environment")))
+        (value
+          value))
+      expression)))
 
 (defmethod {get-active-participant Runtime}
   (λ (self)
