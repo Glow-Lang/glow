@@ -23,10 +23,10 @@
 (def (sexp<-frame-variables frame-variables)
   `(list ,@(map (match <> ([v t] `(list ,(sexp<- t v) ,(sexp<- Type t)))) frame-variables)))
 
-;; TODO: Generate code for ALL checkpoints, not just the one passed in as an argument.
-;; As is, it won't work for multi-transaction contracts.
+;; TODO: Exclude checkpoints that have already been executed by the first active
+;; participant.
 (defmethod {generate-consensus-runtime Contract}
-  (λ (self checkpoint)
+  (λ (self)
     (set! (@ self params-end) #f)
     {compute-parameter-offsets self}
     (parameterize ((brk-start (box params-start@)))
@@ -36,7 +36,7 @@
          &define-simple-logging
          (&define-check-participant-or-timeout)
          (&define-end-contract)
-         {generate-consensus-code self checkpoint}
+         {generate-consensus-code self}
          [&label 'brk-start@ (unbox (brk-start))])))))
 
 (defmethod {make-checkpoint-label Contract}
@@ -83,18 +83,21 @@
       variable-name (post-increment! (@ self params-end) argument-length))))
 
 (defmethod {generate-consensus-code Contract}
-  (λ (self checkpoint)
-    (def consensus-interaction
-      {get-interaction (@ self program) #f})
-    ;; TODO: don't hardcode the checkpoint label
-    (def checkpoint-statements
-      (code-block-statements (hash-get consensus-interaction 'cp0)))
+  (λ (self)
+    (def consensus-interaction {get-interaction (@ self program) #f})
     {compute-parameter-offsets self}
     (&begin*
-      (cons
-        [&jumpdest {make-checkpoint-label self checkpoint}]
-        (flatten1 (map (λ (statement)
-          {interpret-consensus-statement self statement}) checkpoint-statements))))))
+      (flatten1 (hash-map (λ (checkpoint code-block)
+        {generate-consensus-code-block self checkpoint code-block})
+        consensus-interaction)))))
+
+(defmethod {generate-consensus-code-block Contract}
+  (λ (self checkpoint code-block)
+    (def checkpoint-statements (code-block-statements code-block))
+    (cons
+      [&jumpdest {make-checkpoint-label self checkpoint}]
+      (flatten1 (map (λ (statement)
+        {interpret-consensus-statement self statement}) checkpoint-statements)))))
 
 (defmethod {find-other-participant Contract}
   (λ (self participant)

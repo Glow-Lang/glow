@@ -146,7 +146,7 @@
     (def sender-address {get-active-participant self})
     (def next (code-block-exit {get-current-code-block self}))
     (defvalues (contract-runtime-bytes contract-runtime-labels)
-      {generate-consensus-runtime (@ self contract) next})
+      {generate-consensus-runtime (@ self contract)})
     (def initial-state
       {create-frame-variables (@ self contract) initial-block contract-runtime-labels next})
     (def initial-state-digest
@@ -179,7 +179,7 @@
   (λ (self outbox initial-block contract-address)
     (def sender-address {get-active-participant self})
     (defvalues (_ contract-runtime-labels)
-      {generate-consensus-runtime (@ self contract) (@ self current-code-block-label)})
+      {generate-consensus-runtime (@ self contract)})
     (def frame-variables
       {create-frame-variables (@ self contract) initial-block contract-runtime-labels (@ self current-code-block-label)})
     (def frame-variable-bytes (marshal-product-f frame-variables))
