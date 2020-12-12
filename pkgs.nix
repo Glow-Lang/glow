@@ -98,17 +98,14 @@ let
     ] ++ old.configureFlags;
   });
 
-  inherit (pkgs.lib) POP;
+  inherit (pkgs.lib.POP) kxPop extendPop;
   inherit (pkgs.gerbil-support) path-src overrideSrcIfShaDiff gerbilFilterSource;
 
-  maybeOverrideDep = name: super:
+  maybeOverrideDep = name:
     let path = ./dep + "/${name}";
         json = builtins.fromJSON (builtins.readFile "${path}/github.json");
-        git-version = pkgs.lib.sublist 0 7 json.rev;
-        version = "local-${git-version}";
-        pre-src = path-src (nix-thunk.thunkSource path)
-                  // json // { inherit version git-version; }; in
-    { ${name} = overrideSrcIfShaDiff name pre-src super.${name}; };
+        pre-src = path-src (nix-thunk.thunkSource path) // json; in
+        overrideSrcIfShaDiff name pre-src;
 
   config = {
     packageOverrides = pkgs: rec {
@@ -118,22 +115,25 @@ let
       thunkExe = pkgs.haskell.lib.doJailbreak (nixThunkHaskellPackages.callCabal2nix "nix-thunk" (nix-thunk.thunkSource ./dep/nix-thunk) {});
 
       gerbil-support =
-        POP.extendPop pkgs.gerbil-support (gerbil-support: super: {
+        extendPop pkgs.gerbil-support (gerbil-support: super: {
           # Skip extra files so that we can play with CI configuration yet have the CI reuse cached builds.
-          gerbilSkippableFiles = super.gerbilSkippableFiles ++ [".gitlab.yml" "pkgs.nix" "shell.nix" "default.nix" "docs" "future" "dep" "Dockerfile" "Dockerfile.nixos" "glow-install"];
+          gerbilSkippableFiles = super.gerbilSkippableFiles ++ [".gitlab.yml" "pkgs.nix" "shell.nix" "default.nix" "docs" "future" "dep" "Dockerfile" "Dockerfile.nixos" "glow-install" "ci.ss"];
 
-          prePackages-unstable = POP.extendPop super.prePackages-unstable (_: super:
+          prePackages-unstable = extendPop super.prePackages-unstable (_: super:
             maybeOverrideDep "gerbil-utils" super //
             maybeOverrideDep "gerbil-poo" super //
             maybeOverrideDep "gerbil-persist" super //
             maybeOverrideDep "gerbil-ethereum" super //
-            { "glow-lang" = POP.extendPop super.glow-lang (params: super:
+            { "glow-lang" = extendPop super.glow-lang (params: super:
               let source = gerbilFilterSource ./.; in
               { pre-src = path-src source;
+                inherit source;
+                inherit pkgs;
+                preFiltered = ./.;
                 testGerbilLoadPath = "${
                   source}:${
-                  gerbil-support.gerbilLoadPath ([pkgs.glow-lang] ++ params.gerbilInputs)}:${
-                  pkgs.gerbilPackages-unstable.gerbil-ethereum.src}";
+                  pkgs.gerbilPackages-unstable.gerbil-ethereum.src}:${
+                  gerbil-support.gerbilLoadPath ([pkgs.glow-lang] ++ params.gerbilInputs)}";
                 gerbilEthereumSrc = "${pkgs.gerbilPackages-unstable.gerbil-ethereum.src}";});});});
 
       nixThunkHaskellPackages = pkgs.haskell.packages.ghc865.override rec {

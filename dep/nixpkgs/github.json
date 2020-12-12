@@ -1,8 +1,8 @@
 {
   "owner": "muknio",
   "repo": "nixpkgs",
-  "branch": "fare",
+  "branch": "devel",
   "private": false,
-  "rev": "9f3f9491355b2fa3c1478e4ce5e854cc57ef0ec1",
-  "sha256": "0qdq6qm8x2fm9d85igchkrxsqsw30w5bh8grs3175lnwhmia839a"
+  "rev": "886bb47617c0f32bbc3ba45f1dab9113c732b3cf",
+  "sha256": "1fy5s7xpj829zks3f4q3zx3dm0r9hg1rk1pahz4ayimpd9c5xmgd"
 }

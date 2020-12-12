@@ -65,4 +65,5 @@ wcss () {
     echo "all: $a"
 }
 glo_gxi () { gxi ${GLOW_SRC}/all-glow.ss $GERBIL_HOME/lib/gxi-interactive - ;}
-regeth () { $GERBIL_ETHEREUM_SRC/scripts/run-ethereum-test-net.ss ;}
+regeth () { $GERBIL_ETHEREUM_SRC/scripts/run-geth-test-net.ss ;}
+buu () { ./build.ss && ./unit-tests.ss && ./unit-tests.ss integration ;}

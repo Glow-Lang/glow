@@ -1,51 +1,25 @@
-image: fahree/gerbil-utils:latest
+image: mukn/glow:latest
 
+# NB: Until I implement remote merge-base detection, this parameter is
+# the maximum allowed distance to the reference branch (e.g. master)
 variables:
   GIT_DEPTH: 50
 
 build:
   stage: build
   before_script:
-    #- echo HOME=$HOME PWD=$PWD USER=$USER UID=$UID PATH=$PATH BASH_VERSION=$BASH_VERSION LC_CTYPE=$LC_CTYPE LC_ALL=$LC_ALL TERM=$TERM GERBIL_LOADPATH=$GERBIL_LOADPATH GERBIL_PATH=$GERBIL_PATH ; ls -l /proc/$$/fd
-    ### NB: here we trust developers who have keys to be honest.
-    ### When going to production, we will have to be less trusting and only let trusted machines build.
-    - cachix authtoken $CACHIX_AUTH_TOKEN && cachix use mukn
-    - nix path-info --all > /tmp/store-path-pre-build
+    - ./scripts/ci.ss before-build
   script:
-    #- export GERBIL_PATH=$PWD/.build
-    - nix-build
-    - nix-shell --arg thunk false --arg precompile true --pure --command "./unit-tests.ss version"
-    # To make the below to work inside nix-shell would be tough:
-    # both git and the exact git checkout might be required.
-    - ./unit-tests.ss check-git-up-to-date
+    - ./scripts/ci.ss build
   after_script:
-    #- cachix authtoken $CACHIX_AUTH_TOKEN && cachix use mukn
-    - echo $CACHIX_AUTH_TOKEN | sha256sum
-    - bash -c "comm -13 <(sort /tmp/store-path-pre-build | grep -v '\.drv$') <(nix path-info --all | grep -v '\.drv$' | sort) | cachix push mukn"
-  ## No need for artifacts, we build and test with nix!
-  #artifacts:
-  #  paths:
-  #     - .build
+    - ./scripts/ci.ss after-build
+  #artifacts: # No need for artifacts, we build and test with nix then push to cachix!
 
 test:
   stage: test
   before_script:
-    - cachix authtoken $CACHIX_AUTH_TOKEN && cachix use mukn
-    ## For integration tests, nix-shell --pure causes us to run in an read-only directory,
-    ## so let' try it a slightly hard way...
-    - nix-build
-    - echo $PWD ; mkdir -p run ; echo foo > run/blah
-    #- export GERBIL_ETHEREUM_SRC=$(nix eval --raw -f pkgs.nix glow-lang.passthru.pre-pkg.gerbilEthereumSrc)
-    - export GERBIL_ETHEREUM_SRC=$(nix-build './pkgs.nix' -A gerbilPackages-unstable.gerbil-ethereum.src | tail -1)
-    - export GERBIL_LOADPATH=$(nix eval --raw -f pkgs.nix glow-lang.passthru.pre-pkg.testGerbilLoadPath)
-    - export GLOWPATH=$(nix eval --raw -f ./pkgs.nix glow-lang)
-    - export PATH="$GLOWPATH/bin:$PATH" GLOW_HOME=$PWD GERBIL_APPLICATION_HOME=$PWD GLOW_SRC=$PWD
-    - $GERBIL_ETHEREUM_SRC/scripts/run-geth-test-net.ss
-    # gxi -e '(import :mukn/ethereum/scripts/run-geth-test-net)'
+    - ./scripts/ci.ss before-test
   script:
-    ## NB: Regular unit-tests should already have been taken care of by the build
-    ##- nix-shell --arg thunk false --arg precompile true --pure --command "./unit-tests.ss"
-    ## For integration tests, run without --pure so we can have test-time state?
-    - ./unit-tests.ss integration
+    - ./scripts/ci.ss test
   after_script:
-    - killall geth
+    - ./scripts/ci.ss after-test

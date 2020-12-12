@@ -12,7 +12,9 @@
 (set! application-source-envvar "GLOW_SRC")
 (set! application-home-envvar "GLOW_HOME")
 
-(def (glow-src) (getenv "GLOW_SRC" build-time-glow-src))
+(def (glow-src)
+  (or (getenv "GLOW_SRC" #f)
+      (and (file-exists? build-time-glow-src) build-time-glow-src)))
 (def (glow-home) (or (getenv "GLOW_HOME" #f) (glow-src)))
 (set! source-directory glow-src)
 (set! home-directory glow-home)

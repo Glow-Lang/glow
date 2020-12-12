@@ -190,24 +190,15 @@ DEPS=(github.com/fare/gerbil-utils
       github.com/fare/gerbil-poo
       github.com/fare/gerbil-persist
       github.com/fare/gerbil-ethereum
-      github.com/drewc/js-syntax
       github.com/drewc/gerbil-swank
       github.com/drewc/drewc-r7rs-swank
-      github.com/drewc/smug-gerbil) ;
+      github.com/drewc/smug-gerbil
+      github.com/vyzo/gerbil-libp2p) ;
 for i in ${DEPS[@]} ; do
   gxpkg install $i &&
   gxpkg build $i
 done
 ```
-
-If the build of `smug-gerbil` fails (as it does as I write these lines),
-you may need to manually finish it with:
-
-    (cd ~/.gerbil/pkg/github.com/drewc/smug-gerbil ; gxc -O smug.ss)
-
-(The reason is that `smug-gerbil` depends on some non-standard extension
-to Gerbil's build system that has yet to be upstreamed. The Nix recipe knows
-about this and takes special steps to bypass the regular build system.)
 
 Note that [drewc-r7rs-swank](https://github.com/drewc/drewc-r7rs-swank) is
 a gerbil-friendlier fork of [r7rs-swank](https://github.com/ecraven/r7rs-swank),
@@ -226,10 +217,10 @@ DEPS=(github.com/fare/gerbil-utils
       github.com/fare/gerbil-poo
       github.com/fare/gerbil-persist
       github.com/fare/gerbil-ethereum
-      github.com/drewc/js-syntax
       github.com/drewc/gerbil-swank
       github.com/drewc/drewc-r7rs-swank
-      github.com/drewc/smug-gerbil) ;
+      github.com/drewc/smug-gerbil
+      github.com/vyzo/gerbil-libp2p) ;
 SRCDIR=.. ;
 (cd ${SRCDIR} &&
 for i in ${DEPS[@]} ; do
@@ -240,11 +231,6 @@ for i in ${DEPS[@]} ; do
    gxpkg build $i $PWD)
 done)
 ```
-
-Once again, you might need to manually finish the `smug-gerbil` build with:
-
-    (cd ~/.gerbil/pkg/github.com/drewc/smug-gerbil ; gxc -O smug.ss)
-
 
 ### Last but not least, build *Glow*
 
