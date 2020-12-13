@@ -75,7 +75,7 @@
 
 (defstruct (unary-expression expression) (op expression) transparent: #t)
 (def UnaryExpression
-    (.let* ((op (.or (match-token-value? (.or "+" "-" "~" "!")) #f))
+    (.let* ((op (.or (match-token-value? (.or "+" "-" "~~~" "!")) #f))
             (exp TypedOrNonTypedPrimaryExpression))
               (if op  (return (unary-expression op exp)) exp)))
 
@@ -102,7 +102,7 @@
 
 (defstruct (shift-expression operator) () transparent: #t)
 (def ShiftExpression
-  (Operator shift-expression AdditiveExpression (.or  ">>>" "<<" ">>")))
+  (Operator shift-expression AdditiveExpression (.or  ">>>" "<<<")))
 
 
 (defstruct (relational-expression operator) () transparent: #t)
@@ -121,15 +121,15 @@
 
 (defstruct (bitwise-and-expression operator) () transparent: #t)
 (def BitwiseANDExpression
-  (Operator bitwise-and-expression EqualityExpression "&"))
+  (Operator bitwise-and-expression EqualityExpression "&&&"))
 
 (defstruct (bitwise-xor-expression operator) () transparent: #t)
 (def BitwiseXORExpression
-  (Operator bitwise-xor-expression BitwiseANDExpression "^"))
+  (Operator bitwise-xor-expression BitwiseANDExpression "^^^"))
 
 (defstruct (bitwise-or-expression operator) () transparent: #t)
 (def BitwiseORExpression
-  (Operator bitwise-or-expression BitwiseXORExpression "|"))
+  (Operator bitwise-or-expression BitwiseXORExpression "|||"))
 
 (defstruct (logical-and-expression operator) () transparent: #t)
 (def LogicalANDExpression

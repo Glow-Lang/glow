@@ -10,13 +10,13 @@
  (def rockPaperScissors
   (λ (wagerAmount)
     (@ A (def handA (@app (@dot Hand input) "First player, pick your hand")))
-    ;;(@ A (assert! (canReach end (== (@dot end outcome) A_Wins))))
+    (@ A (assert! (@app canReach end (== (@dot end outcome) A_Wins))))
     (@ A (def salt (@app randomUInt256)))
-    (@ A (@ verifiably (def commitment (digest (@tuple salt handA)))))
+    (@ A (@ verifiably (def commitment (digest salt handA))))
     (publish! A commitment)
     (deposit! A wagerAmount)
 
-    ;;(@ B (assert! (canReach end (== (@dot end outcome) B_Wins))))
+    (@ B (assert! (@app canReach end (== (@dot end outcome) B_Wins))))
     (@ B (def handB (@app (@dot Hand input) "Second player, pick your hand")))
     (publish! B handB)
     (deposit! B wagerAmount)
