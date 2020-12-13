@@ -40,8 +40,7 @@
 ;; lit->sexpr : Literal -> SExpr
 (def (lit->sexpr x)
   (match x
-    ((null-literal value) ('TODO))
-    ((boolean-literal value) ('TODO value))
+    ((boolean-literal value) value)
     ((numeric-literal value) (string->number value))
     ((string-literal ['DoubleQuoteStringLiteral str]) str)))
 
@@ -153,4 +152,4 @@
     ((pattern-or pats) `(@or-pat ,@(map pat->sexpr pats)))
     ((pattern-list args) `(@list ,@(map pat->sexpr args)))
     ((pattern-record entries)
-     `(@record ,@(map (match <> ([k . v] [(id->sexpr k) (expr->sexpr v)])) entries)))))
+     `(@record ,@(map (match <> ([k . v] [(id->sexpr k) (pat->sexpr v)])) entries)))))

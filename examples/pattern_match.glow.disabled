@@ -1,0 +1,81 @@
+#lang glow
+let i = 2;
+switch (i) {
+  | 0 => "zero"
+  | 1 => "one"
+  | 2 => "two"
+  | _ => if (0 < i) { "many" } else { "negative" }
+};
+
+let b = false;
+switch (b) {
+  | true  => "yes"
+  | false => "no"
+};
+
+let bs = "apple";
+switch (bs) {
+  | "apple"  => "orange"
+  | "banana" => "forage"
+  | _        => "storage"
+};
+
+let l = [1, 2];
+switch (l) {
+  | [0, 1]    => "dore"
+  | [1, 2]    => "remi"
+  | [3, 6, 0] => "fatido"
+  | _         => "other"
+};
+
+let p = (1, 2);
+switch (p) { (a, b) => a + b };
+
+let v = { x: 3, y: 4 };
+switch (v) {
+  | { x: x, y: y } => sqrt(sqr(x) + sqr(y))
+};
+
+data lcexpr =
+  | Var(Int)
+  | Lam(lcexpr)
+  | App(lcexpr,lcexpr);
+let omega = App(Lam(App(Var(0), Var(0))),
+                Lam(App(Var(0), Var(0))));
+let freevars =
+  (e: lcexpr) =>
+    switch (e) {
+      | Var(x) => [x]
+      | _ => [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] // TODO: fix when we add recursion
+    };
+switch (omega) {
+  | App(Lam(b), a) => "beta"
+  | Lam(App(f, Var(0))) =>
+    if (not(member(0, freevars(f)))) {
+      "eta"
+    } else {
+      "not immediate"
+    }
+  | _ => "not immediate"
+};
+
+data ymn = Yes | Maybe | No;
+let ans = Maybe;
+let possible =
+  (a : ymn) : Bool =>
+    switch (a) {
+      | (Yes | Maybe) => true
+      | No            => false
+    };
+let definite =
+  (a : ymn) : Bool =>
+    switch (a) {
+      | Yes          => true
+      | (No | Maybe) => false
+    };
+switch ((possible(ans), definite(ans))) {
+  | (true, true)   => "yes"
+  | (true, false)  => "maybe"
+  | (false, false) => "no"
+  | (false, true)  => "inconceivable!"
+};

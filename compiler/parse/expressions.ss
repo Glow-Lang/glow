@@ -28,7 +28,6 @@
 
 
 (defstruct (literal expression) (value) transparent: #t)
-(defstruct (null-literal literal) () transparent: #t)
 (defstruct (boolean-literal literal) () transparent: #t)
 (defstruct (numeric-literal literal) () transparent: #t)
 (defstruct (string-literal literal) () transparent: #t)
@@ -268,7 +267,7 @@
   (sepby1 (.let* ((id Identifier)
                   (_(match-token-value? #\:))
                   (expr ConditionalExpression))
-            (return (cons id exp)) )
+            (return (cons id expr)) )
           (match-token-value? #\,)))
 
 (defstruct pattern () transparent: #t)
