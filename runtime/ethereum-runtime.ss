@@ -122,6 +122,9 @@
           (displayln "deploying contract ...")
           {deploy-contract self})
 
+        ;; TODO: Verify asset transfers using previous transaction and balances
+        ;; recorded in Message's asset-transfer table during interpretation. Probably
+        ;; requires getting TransactionInfo using the TransactionReceipt.
         ((ContractStatus-Active (vector initial-block tx-receipt))
           (displayln "publishing message ...")
           (let*
