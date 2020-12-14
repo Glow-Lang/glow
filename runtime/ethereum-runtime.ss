@@ -298,7 +298,10 @@
               (let
                 ((this-participant {get-active-participant self})
                  (digest {reduce-expression self digest-variable}))
-                (make-message-signature (secret-key<-address this-participant) digest)))))
+                (make-message-signature (secret-key<-address this-participant) digest)))
+            (['input 'Nat tag]
+             (let ((tagv {reduce-expression self tag}))
+               (input Nat tagv)))))
           {add-to-environment self variable-name variable-value}))
 
       (['require! variable-name]
