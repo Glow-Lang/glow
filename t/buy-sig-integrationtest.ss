@@ -56,6 +56,8 @@ $ gxi
 
       (def environment #f)
 
+      ;; TODO: erase run/contract-handshake.json from filesystem
+
       (displayln "\nEXECUTING BUYER THREAD ...")
       (spawn-thread (lambda ()
         (def buyer-runtime (make-Runtime 'Buyer contract))

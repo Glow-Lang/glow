@@ -28,6 +28,7 @@
     (set! (@ self role) role)
     (set! (@ self contract) contract)
     (set! (@ self contract-status) cs)
+    ;; TODO: extract initial code block label from contract compiler output
     (set! (@ self current-code-block-label) ccbl)
     (set! (@ self current-label) cl)
     (set! (@ self environment) e)
@@ -95,10 +96,12 @@
                   (vector initial-block (eth_getTransactionReceipt (.@ contract-config creation-hash))))))))
 
       ((ContractStatus-Active (vector initial-block tx-receipt))
-        ;; TODO: handle multiple logs
+        ;; TODO: handle multiple logs and also handle multiple events within the same block
         (unless {is-active-participant? self}
           (displayln "watching for new transaction ...")
           (let*
+            ;; TODO: `from` should be calculated using the deadline and not necessarily the previous tx,
+            ;; since it may or not be setting the deadline
             ((from (.@ tx-receipt blockNumber))
              (new-tx-receipt {watch self (.@ tx-receipt contractAddress) from})
              (log-data (.@ new-tx-receipt data)))
