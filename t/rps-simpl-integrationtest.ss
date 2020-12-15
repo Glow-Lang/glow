@@ -39,7 +39,7 @@ $ gxi
 
 (def compiler-output (run-passes (source-path "examples/rps_simpl.sexp") pass: 'project show?: #f))
 
-(def buy-sig-integrationtest
+(def rps-simpl-integrationtest
   (test-suite "integration test for ethereum/rps_simpl"
     (test-case "rps_simpl parses"
       (def program (parse-compiler-output compiler-output))
