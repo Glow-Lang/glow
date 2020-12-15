@@ -41,16 +41,18 @@
       (def ccbl (@ self current-code-block-label))
       (displayln "executing code block: " ccbl)
 
-      ;; pre-conditions
-      {prepare self}
+      ;; non-active participants verify previous move
+      (unless {is-active-participant? self}
+        {receive self})
 
       ;; interpreter
       (def code-block {get-current-code-block self})
       (for ((statement (code-block-statements code-block)))
         {interpret-participant-statement self statement})
 
-      ;; post-conditions
-      {commit self}
+      ;; active participants make next move
+      (when {is-active-participant? self}
+        {publish self})
 
       (match (code-block-exit code-block)
         (#f
@@ -78,35 +80,32 @@
     Complete: Unit))
 (define-sum-constructors ContractStatus NotYetDeployed Active Complete)
 
-(defmethod {prepare Runtime}
+(defmethod {receive Runtime}
   (λ (self)
     (match (@ self contract-status)
-
       ((ContractStatus-NotYetDeployed _)
-        (unless {is-active-participant? self}
-          (displayln "verifying contract config ...")
-          (let*
-            ((contract-handshake {read-handshake self})
-             (initial-block (.@ contract-handshake initial-block))
-             (contract-config (.@ contract-handshake contract-config))
-             (create-pretx {prepare-create-contract-transaction self initial-block}))
-              (verify-contract-config contract-config create-pretx)
-              (set! (@ self contract-status)
-                (ContractStatus-Active
-                  (vector initial-block (eth_getTransactionReceipt (.@ contract-config creation-hash))))))))
+        (displayln "verifying contract config ...")
+        (let*
+          ((contract-handshake {read-handshake self})
+           (initial-block (.@ contract-handshake initial-block))
+           (contract-config (.@ contract-handshake contract-config))
+           (create-pretx {prepare-create-contract-transaction self initial-block}))
+            (verify-contract-config contract-config create-pretx)
+            (set! (@ self contract-status)
+              (ContractStatus-Active
+                (vector initial-block (eth_getTransactionReceipt (.@ contract-config creation-hash)))))))
 
       ((ContractStatus-Active (vector initial-block tx-receipt))
         ;; TODO: handle multiple logs and also handle multiple events within the same block
-        (unless {is-active-participant? self}
-          (displayln "watching for new transaction ...")
-          (let*
-            ;; TODO: `from` should be calculated using the deadline and not necessarily the previous tx,
-            ;; since it may or not be setting the deadline
-            ((from (.@ tx-receipt blockNumber))
-             (new-tx-receipt {watch self (.@ tx-receipt contractAddress) from})
-             (log-data (.@ new-tx-receipt data)))
-            (set! (@ self contract-status) (ContractStatus-Active (vector initial-block new-tx-receipt)))
-            (set! (@ (@ self message) inbox) (open-input-u8vector log-data)))))
+        (displayln "watching for new transaction ...")
+        (let*
+          ;; TODO: `from` should be calculated using the deadline and not necessarily the previous tx,
+          ;; since it may or not be setting the deadline
+          ((from (.@ tx-receipt blockNumber))
+            (new-tx-receipt {watch self (.@ tx-receipt contractAddress) from})
+            (log-data (.@ new-tx-receipt data)))
+          (set! (@ self contract-status) (ContractStatus-Active (vector initial-block new-tx-receipt)))
+          (set! (@ (@ self message) inbox) (open-input-u8vector log-data))))
 
       ((ContractStatus-Complete _)
         (void)))))
@@ -116,32 +115,31 @@
     (def handshake-json (json<-string (string<-json (read-file-json "run/contract-handshake.json"))))
     (<-json ContractHandshake handshake-json)))
 
-(defmethod {commit Runtime}
+(defmethod {publish Runtime}
   (λ (self)
-    (when {is-active-participant? self}
-      (match (@ self contract-status)
+    (match (@ self contract-status)
 
-        ((ContractStatus-NotYetDeployed _)
-          (displayln "deploying contract ...")
-          {deploy-contract self})
+      ((ContractStatus-NotYetDeployed _)
+        (displayln "deploying contract ...")
+        {deploy-contract self})
 
-        ;; TODO: Verify asset transfers using previous transaction and balances
-        ;; recorded in Message's asset-transfer table during interpretation. Probably
-        ;; requires getting TransactionInfo using the TransactionReceipt.
-        ((ContractStatus-Active (vector initial-block tx-receipt))
-          (displayln "publishing message ...")
-          (let*
-            ((contract-address (.@ tx-receipt contractAddress))
-             (message (@ self message))
-             (outbox (@ message outbox))
-             (message-pretx {prepare-call-function-transaction self outbox initial-block contract-address}))
-            (begin
-              (def new-tx-receipt (post-transaction message-pretx))
-              {reset message}
-              (set! (@ self contract-status) (ContractStatus-Active (vector initial-block new-tx-receipt))))))
+      ;; TODO: Verify asset transfers using previous transaction and balances
+      ;; recorded in Message's asset-transfer table during interpretation. Probably
+      ;; requires getting TransactionInfo using the TransactionReceipt.
+      ((ContractStatus-Active (vector initial-block tx-receipt))
+        (displayln "publishing message ...")
+        (let*
+          ((contract-address (.@ tx-receipt contractAddress))
+            (message (@ self message))
+            (outbox (@ message outbox))
+            (message-pretx {prepare-call-function-transaction self outbox initial-block contract-address}))
+          (begin
+            (def new-tx-receipt (post-transaction message-pretx))
+            {reset message}
+            (set! (@ self contract-status) (ContractStatus-Active (vector initial-block new-tx-receipt))))))
 
-        ((ContractStatus-Complete _)
-            (void))))))
+      ((ContractStatus-Complete _)
+        (void)))))
 
 (defmethod {add-to-environment Runtime}
   (λ (self name value)
