@@ -12,6 +12,33 @@
   ../compiler/method-resolve/method-resolve
   ../compiler/project/runtime-2)
 
+;; NB: Whichever function exports data end-users / imports from them should make sure to put in a Json array (Scheme list) prepend by the name of the type. And/or we may have a {"": "InteractionAgreement" ...} field with this asciibetically always-first name. Maybe such function belongs to gerbil-poo, too.
+
+(define-type Tokens (MonomorphicPoo Nat))
+
+(define-type AgreementOptions
+  (Record
+   blockchain: [String] ;; e.g. "Cardano KEVM Testnet", as per ethereum_networks.json
+   escrowAmount: [(Maybe Tokens) default: (void)] ;; not meaningful for all contracts
+   timeoutInBlocks: [Nat]
+   maxInitialBlock: [Nat]))
+
+(define-type InteractionAgreement
+  (.+
+   (Record
+    glow-version: [String] ;; e.g. "Glow v0.0-560-gda782c9 on Gerbil-ethereum v0.0-83-g6568bc6" ;; TODO: have a function to compute that from versioning.ss
+    interaction: [String] ;; e.g. "mukn/glow/examples/buy_sig#payForSignature", fully qualified Gerbil symbol
+    participant: [(MonomorphicPoo Address)] ;; e.g. {Buyer: alice Seller: bob}
+    parameters: [Json] ;; This Json object to be decoded according to a type descriptor from the interaction (dependent types yay!)
+    reference: [(MonomorphicPoo Json)] ;; Arbitrary reference objects from each participant, with some conventional size limits on the Json string.
+    options: [AgreementOptions] ;; See above
+    code-digest: [Digest]))) ;; Make it the digest of Glow source code (in the future, including all Glow libraries transitively used)
+
+(define-type AgreementHandshake ;; TODO: Use that instead of ContractHandshake
+  (Record
+   agreement: InteractionAgreement
+   contract-config: ContractConfig))
+
 ;; PARTICIPANT RUNTIME
 ;; TODO: add separate field for most recent transaction seen
 (defclass Runtime (contract role contract-state current-code-block current-label environment message)
