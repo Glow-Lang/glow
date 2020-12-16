@@ -71,8 +71,8 @@
                     "%=" "%"
                     "/=" "/"
                     "|||" "||"
-                    "&&&" "&&" "&"
-                    "^^^" "~~~" ))
+                    "&&&" "&&"
+                    "^^^" "~~~"  ))
         (return `(Opertor ,op))))
 
 
@@ -135,8 +135,9 @@
         ;; Numbers come first because ~.~ is a punctuator
         IntegerLiteral
         StringLiteral
+        Opertor
         Marker
-        Opertor))
+        ))
 
 (def TokenTemplate
     (.or

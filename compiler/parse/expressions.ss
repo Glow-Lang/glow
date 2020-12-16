@@ -9,8 +9,7 @@
 (def (parse-operator side op)
   (.let* ((lhs side) (pop? (.or (match-token-value? op) #f)))
     (if (equal? pop? #f) (return (values lhs #f #f))
-        (.let* (rhs side)
-            (return (values lhs pop? rhs))))))
+        (.let* (rhs side) (return (values lhs pop? rhs))))))
 
 (defstruct (operator expression) (lhs op rhs) transparent: #t)
 (defrules Operator ()
@@ -26,7 +25,6 @@
           (peek (match-token-value? (.not ReservedWord)))
           (.let* (t (item))
             (return (identifier (get-token-value t))))))
-
 
 (defstruct (literal expression) (value) transparent: #t)
 (defstruct (boolean-literal literal) () transparent: #t)
@@ -58,7 +56,7 @@
           (bs (many ArgumentsOrDot)))
     (for/fold (a a) ((b bs))
       (cond ((arguments? b) (call-expression a b))
-            (else           (dot-expression a b))))))
+            (else (dot-expression a b))))))
 
 (defstruct (arguments expression) (list) transparent: #t)
 (def Arguments
@@ -83,8 +81,7 @@
 (def ExponentiationExpression
   (Operator exponentiation-expression UnaryExpression "**"))
 
-
-(defstruct      (multiplicative-expression operator) () transparent: #t)
+(defstruct (multiplicative-expression operator) () transparent: #t)
 (def MultiplicativeExpression
   (.let* ((g (Operator multiplicative-expression ExponentiationExpression MultiplicativeOperator))
            (e (.or (match-token-value? #\*) (match-token-value? #\/) (match-token-value? #\%)  #f))
@@ -114,9 +111,7 @@
 (defstruct (equality-expression operator) () transparent: #t)
 (def EqualityExpression
   (.or (Operator equality-expression RelationalExpression "==")
-       (Operator equality-expression RelationalExpression "!=")
-       (Operator equality-expression RelationalExpression "===")
-       (Operator equality-expression RelationalExpression "!==")))
+       (Operator equality-expression RelationalExpression "!=")))
 
 
 (defstruct (bitwise-and-expression operator) () transparent: #t)
@@ -156,32 +151,27 @@
 
 (defstruct (call-expression expression) (function arguments)  transparent: #t)
 
-
 (defstruct (require-expression expression) (exp) transparent: #t)
 (def RequireExpression
-  (.begin (match-token-value? "require") (match-token-value? "!")
     (.let* ((exp ConditionalExpression))
-          (return (require-expression exp)))))
+          (return (require-expression exp))))
 
 (defstruct (assert-expression expression) (exp) transparent: #t)
 (def AssertExpression
-  (.begin (match-token-value? "assert") (match-token-value? "!")
     (.let* ((exp ConditionalExpression))
-          (return (assert-expression exp)))))
+          (return (assert-expression exp))))
 
 (defstruct (deposit-expression expression) (id exp) transparent: #t)
 (def DepositExpression
-  (.begin (match-token-value? "deposit") (match-token-value? "!")
     (.let* ((id Identifier) (_(match-token-value? "->")) (exp Expression))
-          (return (deposit-expression id exp)))))
+          (return (deposit-expression id exp))))
 
 (defstruct (withdraw-expression expression) (id exp) transparent: #t)
 (def WithdrawExpression
-  (.begin (match-token-value? "withdraw") (match-token-value? "!")
     (.let* ((id Identifier)
             (_(match-token-value? "<-"))
             (exp ArithmeticExpression))
-          (return (withdraw-expression id exp)))))
+          (return (withdraw-expression id exp))))
 
 (defstruct (annotated-expression expression) (attr  expr) transparent: #t)
 (def AnnotatedExpression
@@ -243,18 +233,16 @@
   (.or RecordType BracketedType  AnnotatedType BaseType))
 
 (def Variant
-  (.or
     (.let* ((name Identifier)
-            (_(match-token-value? #\( ))
-            (typs (sepby1 Type  (match-token-value? #\,)))
-            (_(match-token-value? #\) )) )
-      (cons name typs))
-    Identifier))
+            (marker? (.or (match-token-value? #\( ) #f)))
+            (if (equal? marker? #f) name 
+            (.let* ((typs (sepby1 Type  (match-token-value? #\,)))
+                (_(match-token-value? #\) )) )
+      (cons name typs)))))
 
 (def Variants
   (.begin (.or (match-token-value? #\|) #t)
           (sepby1 Variant (match-token-value? #\|))))
-
 
 (defstruct (record-expr expression) (entries) transparent: #t)
 (def RecordExpr
@@ -262,6 +250,7 @@
           (.let* ((records RecordExprEntries)
                   (_(match-token-value? #\})))
             (return (record-expr records)))))
+
 (def RecordExprEntries
   (sepby1 (.let* ((id Identifier)
                   (_(match-token-value? #\:))
@@ -288,7 +277,7 @@
 
 (def BracketedPattern
   (.begin  (match-token-value? #\()
-            (.let* ((rst (sepby1 BasePattern (match-token-value? #\,))) (_(match-token-value? #\))))
+           (.let* ((rst (sepby1 BasePattern (match-token-value? #\,))) (_(match-token-value? #\))))
                 (return (if (length=n? rst 1) (car rst) (pattern-tuple rst))))))
 
 (def BarPattern
@@ -296,13 +285,13 @@
     (.let* (pats (sepby1 BasePattern (match-token-value? #\|))) (return (pattern-or pats)))))
 
 (def BlockPattern
-  (.begin  (match-token-value? #\[)
-            (.let* ((rst (sepby1 BasePattern (match-token-value? #\,))) (_(match-token-value? #\])))
+  (.begin (match-token-value? #\[)
+          (.let* ((rst (sepby1 BasePattern (match-token-value? #\,))) (_(match-token-value? #\])))
                 (return (pattern-list rst)))))
 
 (def AnnotatedPattern
   (.begin (match-token-value? #\@)
-            (.let* ((attr Attribute) (pat BasePattern)) (return (annotated-pattern attr pat)))))
+          (.let* ((attr Attribute) (pat BasePattern)) (return (annotated-pattern attr pat)))))
 
 (def TypePattern
   (.let* ((pat BasePattern) (_(match-token-value? #\:))  (typ Type)) (return (type-pattern pat typ))))
@@ -360,47 +349,52 @@
 
 
 (def Expression
-    (.or AnnotatedExpression
-         IfExpression SwitchExpression
-         RequireExpression  AssertExpression DepositExpression WithdrawExpression
-         ArithmeticExpression))
-
+  (.begin (.or AnnotatedExpression IfExpression SwitchExpression
+    (.begin (peek (match-token-value? (.or "deposit" "withdraw" "assert" "require")))
+      (.let* ((t (item)) (_(match-token-value? "!")))
+        (cond
+          ((string=? (get-token-value t) "withdraw") WithdrawExpression)
+          ((string=? (get-token-value t) "deposit") DepositExpression)
+          ((string=? (get-token-value t) "assert") AssertExpression)
+          ((string=? (get-token-value t) "require") RequireExpression)))) 
+    ArithmeticExpression)))
 
 (defstruct (publish-statement statement) (id expr) transparent: #t)
 (def PublishStatement
-  (.begin (match-token-value? "publish") (match-token-value? "!")
-    (.let* ( (p-id Identifier) (_(match-token-value? "->")) (x-ids (sepby1 Identifier (match-token-value? #\,))) )
-      (return (publish-statement p-id x-ids)))))
+    (.let* ((_(match-token-value? "!")) (p-id Identifier) (_(match-token-value? "->")) (x-ids (sepby1 Identifier (match-token-value? #\,))) )
+      (return (publish-statement p-id x-ids))))
 
 (defstruct (verify-statement statement) (id) transparent: #t)
 (def VerifyStatement
-  (.begin (match-token-value? "verify") (match-token-value? "!")
-    (.let* (ids (sepby1 Identifier (match-token-value? #\,)))
-      (return (verify-statement ids)))))
+    (.let* ((_(match-token-value? "!")) (ids (sepby1 Identifier (match-token-value? #\,))))
+      (return (verify-statement ids))))
 
 (def Typarams
     (.begin #t (sepby1 Identifier (match-token-value? #\,))))
 
 (defstruct (type-declaration statement) (identifier typarams typ) transparent: #t)
 (def TypeDeclaration
-    (.begin (match-token-value? "type")
       (.let*  ((name Identifier)
               (typarams (.or (bracket  (match-token-value? #\() Typarams (match-token-value? #\))) #f))
               (_(match-token-value? #\=))  (typ Type) )
-            (return (type-declaration name typarams typ)))))
+            (return (type-declaration name typarams typ))))
 
 
 (defstruct (dataAssignmentStatement statement) (identifier typarams variants) transparent: #t)
 (def DataAssignmentStatement
-  (.begin (match-token-value? "data")
     (.let* ((name Identifier)
           (typarams  (.or (bracket (match-token-value? #\() Typarams (match-token-value? #\))) #f))
           (_(match-token-value? #\=)) (variants Variants))
-        (return (dataAssignmentStatement name typarams variants)))))
+        (return (dataAssignmentStatement name typarams variants))))
 
-
-
-(def SubStatement (.or VerifyStatement  PublishStatement DataAssignmentStatement TypeDeclaration))
+(def SubStatement 
+  (.begin (peek (match-token-value? (.or "verify" "publish" "data" "type")))
+    (.let* (t (item))
+      (cond
+        ((string=? (get-token-value t) "verify") VerifyStatement)
+        ((string=? (get-token-value t) "publish") PublishStatement)
+        ((string=? (get-token-value t) "type") TypeDeclaration)
+        ((string=? (get-token-value t) "data") DataAssignmentStatement)))))
 
 (defstruct (expression-statement statement) (expr) transparent: #t)
 (def ExpressionStatement (.let* ((exp Expression) )
@@ -408,27 +402,25 @@
 
 (defstruct (assignment-statement statement) (identifier type expr) transparent: #t)
 (def AssignmentStatement
-  (.begin (match-token-value? "let")
     (.let*  (
         (name Identifier)
         (typ (.or (.begin (match-token-value? #\:) Type) #f))
         (_(match-token-value? #\=))
         (expr Expression))
-      (return (assignment-statement name typ expr)))))
+      (return (assignment-statement name typ expr))))
 
 
 (defstruct (function-declaration statement) (identifier params type expr) transparent: #t)
 (def FunctionDeclaration
-  (.begin (match-token-value? "let")
     (.let* ((name Identifier)
             (_(match-token-value? #\=))
             (params  Params)
             (typ (.or (.begin (match-token-value? #\:) Type) #f))
             (_(match-token-value? "=>"))
             (expr Expression))
-          (return (function-declaration name  params typ expr)))))
+          (return (function-declaration name  params typ expr))))
 
-(def LetStatement (.or FunctionDeclaration  AssignmentStatement))
+(def LetStatement (.begin (match-token-value? "let") (.or FunctionDeclaration  AssignmentStatement)))
 
 (def Params
   (.let* ((_(match-token-value? #\())
@@ -436,11 +428,15 @@
           (_(match-token-value? #\)))) params))
 
 (defstruct param-data (id typ) transparent: #t)
-(def Param
-    (.let* (param  (.or
-        (.let* ((id Identifier) (_ (match-token-value? #\:) ) (typ Type))
-          (return (param-data id typ))) (.let* (id Identifier) (return (param-data id #f))) #f)) param))
 
+(def Param
+  (.let* (param  
+      (.let* ((id? (.or Identifier #f)) )
+              (if (equal? id? #f) #f
+                (.let* (typ? (.or (.begin (match-token-value? #\:) Type) #f))
+                  (if (equal? typ? #f) 
+                    (return (param-data id? #f))
+                    (return (param-data id? typ?))))))) param))
 
 (defstruct (annotationStatement statement) (attribute stat) transparent: #t)
 (def AnnotationStatement
@@ -449,14 +445,7 @@
         (return (annotationStatement attr stat)))))
 
 (def Statement
-  (.or
-      AnnotationStatement
-      LetStatement
-      SubStatement
-      ExpressionStatement
-
-  ))
-
+  (.or AnnotationStatement LetStatement SubStatement ExpressionStatement))
 
 (def StatementSemicolon (.let* ((stat Statement) (_(match-token-value? #\;))) stat))
 (def StatementList (many1 StatementSemicolon))
