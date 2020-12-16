@@ -1,6 +1,6 @@
 ;;(import :drewc/smug "./lexical" )
-;;(import :drewc/smug :mukn/glow/compiler/parse/lexical :std/iter :std/misc/list)
-(import :drewc/smug "./lexical" :std/iter :std/misc/list)
+(import :drewc/smug :mukn/glow/compiler/parse/lexical :std/iter :std/misc/list)
+;;(import :drewc/smug "./lexical" :std/iter :std/misc/list)
 (export #t)
 
 (defstruct expression ())
