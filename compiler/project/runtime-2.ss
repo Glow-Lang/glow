@@ -341,7 +341,7 @@
   (digest<-bytes (get-output-u8vector out)))
 
 (def (input t s)
-  (printf "input ~s: ~a\n" (.@ t sexp) s)
+  (printf "input ~s: ~a\n" (.@ t sexp) (if (u8vector? s) (bytes->string s) s))
   (<-json t (read-json (current-input-port))))
 
 ;; isValidSignature : Address Digest Signature -> Bool
