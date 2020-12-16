@@ -1,10 +1,11 @@
 #|
+In another terminal on `gerbil-ethereum`:
+$ ../gerbil-ethereum/scripts/run-geth-test-net.ss
+In the main terminal in `glow`:
 $ gxi
 > (add-load-path (path-normalize "../gerbil-ethereum"))
-> (def d (current-directory))
-> (import :mukn/ethereum/scripts/run-geth-test-net)
-> (current-directory d)
-> (import "t/rps-simpl-integrationtest.ss")
+> (import :std/test "t/rps-simpl-integrationtest.ss")
+> (run-tests! rps-simpl-integrationtest)
 |#
 (export #t)
 
