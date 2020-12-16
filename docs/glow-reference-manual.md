@@ -1244,7 +1244,7 @@ where the hexadecimal bits are the ethereum addresses of the respective users,
 and various other digests:
 
 ```
-["interaction-agreement",
+["InteractionAgreement",
   {"glow-version": "v0.0-383-g83524b1",
     "interaction": "mukn/glow/examples/buy_sig#payForSignature",
     "participants": {"Buyer": "0xC54e86DFFb87B9736E2E35DD85c775358F1c31CE",
@@ -1252,7 +1252,6 @@ and various other digests:
     "parameters": {"digest": "0x7a33c718fe7f3b9c56bd67b7b3e20fec6e3edf083626a7e11a10bba90243e405"
                    "price": "0x246ddf97976680000"},
     "reference": {"Buyer": "Purchase #42", "Seller": "Sale #101"},
-    "parameters": {"wagerAmount": {"TestEther": 100}},
     "options": {"blockchain": "Cardano KEVM testnet",
                 "escrowAmount": {"TestEther": 10},
                 "timeoutInBlocks": 100,
@@ -1265,7 +1264,7 @@ and sends a handshake containing verifiable contract creation information
 together with the agreement as context.
 
 ```
-["agreement-handshake",
+["AgreementHandshake",
   <… copy of the interaction agreement …>
   {"contract-address": "0xaf0FdEA3C5eF883dB314fb8d5c5cf2892c8efC30",
    "code-hash": "0xaac1265d31e58390f2971bb58004f1944082116908ddb9c4a64be8b7d495c757",
