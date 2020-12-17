@@ -227,7 +227,10 @@
           (error (string-append expression " is missing from execution environment")))
         (value
           value)))
+     ((boolean? expression) expression)
      ((string? expression) (string->bytes expression))
+     ((bytes? expression) expression)
+     ((integer? expression) expression)
      ;; TODO: reduce other trivial expressions
      (else
       expression))))
@@ -298,6 +301,22 @@
                  (digest {reduce-expression self digest-variable})
                  (signature {reduce-expression self signature-variable}))
                 (isValidSignature address digest signature)))
+            (['@app '< a b]
+              (let
+                ((av {reduce-expression self a})
+                 (bv {reduce-expression self b}))
+                (< av bv)))
+            (['@app 'randomUInt256]
+             (randomUInt256))
+            (['@tuple . es]
+             (list->vector
+              (for/collect ((e es))
+                {reduce-expression self e})))
+            (['digest . es]
+             (digest
+              (for/collect ((e es))
+                (cons {lookup-type (@ (@ self contract) program) e}
+                      {reduce-expression self e}))))
             (['sign digest-variable]
               (let
                 ((this-participant {get-active-participant self})
