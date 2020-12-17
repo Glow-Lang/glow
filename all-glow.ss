@@ -36,13 +36,13 @@
   :clan/timestamp :clan/debug :clan/diceware
   :clan/error :clan/exit
   :clan/failure :clan/ffi :clan/files :clan/filesystem
-  :clan/generator :clan/hash
+  :clan/generator :clan/git-fu :clan/hash
   :clan/json :clan/list :clan/logger
-  :clan/maybe :clan/memo :clan/multicall :clan/number :clan/option
+  :clan/maybe :clan/memo :clan/multicall :clan/number :clan/option :clan/order
   :clan/path :clan/path-config :clan/peekable-iterator
   :clan/random
   :clan/source :clan/simple-rpc-client :clan/stateful-avl-map :clan/string
-  :clan/subprocess
+  :clan/subprocess :clan/syntax
   :clan/temporary-files
   :clan/vector :clan/versioning :clan/watch :clan/with-id
   :clan/persist/db :clan/persist/persist
@@ -70,7 +70,7 @@
   ;;:mukn/glow/compiler/checkpointify/checkpointify
   :clan/crypto/keccak :clan/crypto/secp256k1
   :mukn/ethereum/hex :mukn/ethereum/abi :mukn/ethereum/types :mukn/ethereum/ethereum
-  :mukn/ethereum/signing :mukn/ethereum/known-addresses
+  :mukn/ethereum/rlp :mukn/ethereum/signing :mukn/ethereum/known-addresses :mukn/ethereum/logger
   :mukn/ethereum/network-config :mukn/ethereum/json-rpc :mukn/ethereum/transaction
   :mukn/ethereum/assembly :mukn/ethereum/contract-config :mukn/ethereum/contract-runtime
   :mukn/ethereum/nonce-tracker :mukn/ethereum/tx-tracker :mukn/ethereum/batch-send

@@ -162,7 +162,7 @@
 
 (defmethod {deploy-contract Runtime}
   (λ (self)
-    (def timeoutInBlocks (.@ (current-ethereum-network) timeoutInBlocks))
+    (def timeoutInBlocks (ethereum-timeout-in-blocks))
     (def initial-block (+ (eth_blockNumber) timeoutInBlocks))
     (def pretx {prepare-create-contract-transaction self initial-block})
     (display-poo ["Deploying contract... " "timeoutInBlocks: " timeoutInBlocks
