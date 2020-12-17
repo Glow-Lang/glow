@@ -1,4 +1,4 @@
-(export #t)
+(export #t read-alpha-back-table write-alpha-back-table alpha-back-table=?)
 
 (import :std/iter
         :std/format

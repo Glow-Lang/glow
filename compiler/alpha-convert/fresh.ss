@@ -2,6 +2,8 @@
 
 (import
   <expander-runtime>
+  :std/format
+  :clan/base
   ../common.ss
   ./symbolnat)
 
@@ -96,3 +98,26 @@
 (def (use/check-unused* x)
   (use/check-unused x)
   (add-alpha-back! x x))
+
+;; --------------------------------------------------------
+
+;; read-alpha-back-table : PathString -> AlphaBackTable
+(def (read-alpha-back-table file)
+  (repr-sexpr->alpha-back-table (call-with-input-file file read)))
+
+;; write-alpha-back-table : AlphaBackTable OutputPort -> Void
+(def (write-alpha-back-table alba out)
+  (fprintf out "~y" (alpha-back-table->repr-sexpr alba)))
+
+;; alpha-back-table=? : AlphaBackTable AlphaBackTable -> Bool
+(def (alpha-back-table=? a b)
+  (equal? (alpha-back-table->repr-sexpr a)
+          (alpha-back-table->repr-sexpr b)))
+
+;; alpha-back-table->repr-sexpr : AlphaBackTable -> Sexpr
+(def alpha-back-table->repr-sexpr
+  (hash->repr-sexpr identity symbol->repr-sexpr symbol<?))
+
+;; repr-sexpr->alpha-back-table : Sexpr -> AlphaBackTable
+(def repr-sexpr->alpha-back-table
+  (repr-sexpr->hash identity repr-sexpr->symbol))

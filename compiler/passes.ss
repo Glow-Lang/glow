@@ -42,7 +42,7 @@
 ;; Alpha-converted Glow programs, and the Unused table and AlphaBackTable
 (define-layer alpha.sexp read-sexp-module write-sexp-module stx-sexpr=?)
 (define-layer Unused #f #f #f)
-(define-layer albatable.sexp #f #f #f)
+(define-layer albatable.sexp read-alpha-back-table write-alpha-back-table alpha-back-table=?)
 
 ;; Desugared Glow programs
 ;; TODO: also represent source location and unused-table?

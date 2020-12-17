@@ -3,7 +3,7 @@
 (import :gerbil/gambit/bytes :gerbil/gambit/hash
         <expander-runtime>
         :std/misc/repr
-        :std/format :std/iter :std/misc/list
+        :std/format :std/iter :std/misc/list :std/misc/hash
         :clan/base :clan/files :clan/list
         :mukn/glow/compiler/syntax-context
         (for-template :mukn/glow/compiler/syntax-context))
@@ -173,6 +173,26 @@
   (match s
     ((cons '@list l) (map s->v l))
     (_ (error 'repr-sexpr->list "expected `@list`"))))
+
+;; hash->repr-sexpr : [K -> Sexpr] [V -> Sexpr] [K K -> Bool] -> [[Hashof K V]  -> Sexpr]
+;; repr-sexpr->hash : [Sexpr -> K] [Sexpr -> V] -> [Sexpr -> [Hashof K V]]
+(def ((hash->repr-sexpr k->s v->s k<?) h)
+  (cons 'hash
+        (for/collect ((p (hash->list/sort h k<?)))
+          (with (([k . v] p))
+            [(k->s k) (v->s v)]))))
+
+(def ((repr-sexpr->hash s->k s->v) s)
+  (match s
+    ((cons 'hash ents)
+     (def h (make-hash-table))
+     (for ((ent ents))
+       (with (([ks vs] ent))
+         (def k (s->k ks))
+         (def v (s->v vs))
+         (hash-put! h k v)))
+     h)
+    (_ (error 'repr-sexpr->hash "expected `hash`"))))
 
 (defrules cond/compare (else)
   ((_ (a b) (else body)) body)

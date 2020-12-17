@@ -254,31 +254,17 @@
      (apply map (compose types-meet list) argss))
     (_ [])))
 
-(def (hash->repr-sexpr h k->s v->s)
-  (cons 'hash
-        (for/collect ((p (hash->list/sort h sexpr<?)))
-          (with (([k . v] p))
-            [(k->s k) (v->s v)]))))
-
-(def (repr-sexpr->hash s s->k s->v)
-  (match s
-    ((cons 'hash ents)
-     (def h (make-hash-table))
-     (for ((ent ents))
-       (with (([ks vs] ent))
-         (def k (s->k ks))
-         (def v (s->v vs))
-         (hash-put! h k v)))
-     h)))
-
 ;; type-table->repr-sexpr
-(def (type-table->repr-sexpr tbl)
-  (and tbl (hash->repr-sexpr tbl identity
-             (lambda (t) (and t (type->repr-sexpr t))))))
+(def type-table->repr-sexpr
+  (hash->repr-sexpr
+    identity
+    (lambda (t) (and t (type->repr-sexpr t)))
+    sexpr<?))
 ;; repr-sexpr->type-table
-(def (repr-sexpr->type-table s)
-  (and s (repr-sexpr->hash s identity
-           (lambda (t) (and t (repr-sexpr->type t))))))
+(def repr-sexpr->type-table
+  (repr-sexpr->hash
+    identity
+    (lambda (t) (and t (repr-sexpr->type t)))))
 
 (def (read-type-table-file file)
   ;; TODO: move error handling to `run-pass` or `run-passes` in multipass.ss
@@ -300,13 +286,16 @@
   (and a b (equal? (type-table->repr-sexpr a) (type-table->repr-sexpr b))))
 
 ;; tysym-methods-table->repr-sexpr
-(def (tysym-methods-table->repr-sexpr tbl)
-  (and tbl (hash->repr-sexpr tbl identity
-             (lambda (t) (and t (symbol->repr-sexpr (syntax->datum t)))))))
+(def tysym-methods-table->repr-sexpr
+  (hash->repr-sexpr
+    identity
+    (lambda (t) (and t (symbol->repr-sexpr (syntax->datum t))))
+    symbol<?))
 ;; repr-sexpr->tysym-methods-table
-(def (repr-sexpr->tysym-methods-table s)
-  (and s (repr-sexpr->hash s identity
-           (lambda (t) (and t (repr-sexpr->symbol t))))))
+(def repr-sexpr->tysym-methods-table
+  (repr-sexpr->hash
+    identity
+    (lambda (t) (and t (repr-sexpr->symbol t)))))
 
 (def (read-tysym-methods-table-file file)
   ;; TODO: move error handling to `run-pass` or `run-passes` in multipass.ss
@@ -328,11 +317,11 @@
   (and a b (equal? (tysym-methods-table->repr-sexpr a) (tysym-methods-table->repr-sexpr b))))
 
 ;; methods-id-back-table->repr-sexpr
-(def (methods-id-back-table->repr-sexpr tbl)
-  (and tbl (hash->repr-sexpr tbl identity symbol->repr-sexpr)))
+(def methods-id-back-table->repr-sexpr
+  (hash->repr-sexpr identity symbol->repr-sexpr symbol<?))
 ;; repr-sexpr->methods-id-back-table
-(def (repr-sexpr->methods-id-back-table s)
-  (and s (repr-sexpr->hash s identity repr-sexpr->symbol)))
+(def repr-sexpr->methods-id-back-table
+  (repr-sexpr->hash identity repr-sexpr->symbol))
 
 (def (read-methods-id-back-table-file file)
   ;; TODO: move error handling to `run-pass` or `run-passes` in multipass.ss

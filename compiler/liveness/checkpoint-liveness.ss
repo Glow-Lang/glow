@@ -75,24 +75,6 @@
   (equal? (checkpoint-liveness-table->repr-sexpr a)
           (checkpoint-liveness-table->repr-sexpr b)))
 
-;; checkpoint-liveness-table->repr-sexpr : CheckpointLivenessTable -> Sexpr
-(def (checkpoint-liveness-table->repr-sexpr cpit)
-  (cons 'hash
-        (for/collect ((p (hash->list/sort cpit symbol<?)))
-          (with (((cons k v) p))
-            [k (checkpoint-liveness->repr-sexpr v)]))))
-
-;; repr-sexpr->checkpoint-liveness-table : Sexpr -> CheckpointLivenessTable
-(def (repr-sexpr->checkpoint-liveness-table s)
-  (match s
-    ((cons 'hash entries)
-     (def h (make-hash-table))
-     (for ((e entries))
-       (with (([k v] e))
-         (hash-put! h k (repr-sexpr->checkpoint-liveness v))))
-     h)
-    (_ (error 'checkpoint-liveness-table "expected `hash`"))))
-
 ;; checkpoint-liveness->repr-sexpr : CheckpointLiveness -> Sexpr
 (def (checkpoint-liveness->repr-sexpr cl)
   (list->repr-sexpr cl symbol->repr-sexpr))
@@ -100,6 +82,14 @@
 ;; repr-sexpr->checkpoint-liveness : Sexpr -> CheckpointLiveness
 (def (repr-sexpr->checkpoint-liveness s)
   (repr-sexpr->list s repr-sexpr->symbol))
+
+;; checkpoint-liveness-table->repr-sexpr : CheckpointLivenessTable -> Sexpr
+(def checkpoint-liveness-table->repr-sexpr
+  (hash->repr-sexpr identity checkpoint-liveness->repr-sexpr symbol<?))
+
+;; repr-sexpr->checkpoint-liveness-table : Sexpr -> CheckpointLivenessTable
+(def repr-sexpr->checkpoint-liveness-table
+  (repr-sexpr->hash identity repr-sexpr->checkpoint-liveness))
 
 ;; --------------------------------------------------------
 
