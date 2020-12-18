@@ -1,6 +1,5 @@
-;;(import :drewc/smug "./lexical" )
 (import :drewc/smug :mukn/glow/compiler/parse/lexical :std/iter :std/misc/list)
-;;(import :drewc/smug "./lexical" :std/iter :std/misc/list)
+
 (export #t)
 
 (defstruct expression ())
@@ -99,7 +98,7 @@
 
 (defstruct (shift-expression operator) () transparent: #t)
 (def ShiftExpression
-  (Operator shift-expression AdditiveExpression (.or  ">>>" "<<<")))
+  (Operator shift-expression AdditiveExpression (.or  ">>" "<<")))
 
 
 (defstruct (relational-expression operator) () transparent: #t)
