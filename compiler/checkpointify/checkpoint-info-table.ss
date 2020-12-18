@@ -35,24 +35,6 @@
           (checkpoint-info-table->repr-sexpr b)))
 
 
-;; checkpoint-info-table->repr-sexpr : CheckpointInfoTable -> Sexpr
-(def (checkpoint-info-table->repr-sexpr cpit)
-  (cons 'hash
-        (for/collect ((p (hash->list/sort cpit symbol<?)))
-          (with (((cons k v) p))
-            [k (checkpoint-info->repr-sexpr v)]))))
-
-;; repr-sexpr->checkpoint-info-table : Sexpr -> CheckpointInfoTable
-(def (repr-sexpr->checkpoint-info-table s)
-  (match s
-    ((cons 'hash entries)
-     (def h (make-hash-table))
-     (for ((e entries))
-       (with (([k v] e))
-         (hash-put! h k (repr-sexpr->checkpoint-info v))))
-     h)
-    (_ (error 'checkpoint-info-table "expected `hash`"))))
-
 ;; checkpoint-info->repr-sexpr : CheckpointInfo -> Sexpr
 (def (checkpoint-info->repr-sexpr c)
   (match c
@@ -72,6 +54,14 @@
          (repr-sexpr->list incoming-transitions repr-sexpr->transition-info)
          (repr-sexpr->list outgoing-transitions repr-sexpr->transition-info)))
     (_ (error 'checkpoint-info "expected `ci`"))))
+
+;; checkpoint-info-table->repr-sexpr : CheckpointInfoTable -> Sexpr
+(def checkpoint-info-table->repr-sexpr
+  (hash->repr-sexpr identity checkpoint-info->repr-sexpr symbol<?))
+
+;; repr-sexpr->checkpoint-info-table : Sexpr -> CheckpointInfoTable
+(def repr-sexpr->checkpoint-info-table
+  (repr-sexpr->hash identity repr-sexpr->checkpoint-info))
 
 ;; transition-info->repr-sexpr : TransitionInfo -> Sexpr
 (def (transition-info->repr-sexpr t)

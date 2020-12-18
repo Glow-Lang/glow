@@ -2,6 +2,8 @@
 
 (import
   <expander-runtime>
+  :std/format
+  :clan/base
   ../common.ss
   ./symbolnat)
 
@@ -54,3 +56,68 @@
     (error 'identifier-fresh "expected identifier"))
   (restx id (symbol-fresh (stx-e id))))
 
+;; --------------------------------------------------------
+
+;; An AlphaBackTable is a [Hashof Symbol Symbol]
+;; From alpha-converted symbols to surface symbols.
+;; Temps that don't coincide with any surface symbols,
+;; should not be in this table.
+
+;; make-alpha-back-table : -> AlphaBackTable
+(def (make-alpha-back-table) (make-hash-table-eq))
+
+;; current-alpha-back-table : [Parameterof AlphaBackTable]
+(def current-alpha-back-table (make-parameter (make-alpha-back-table)))
+
+;; copy-current-alpha-back-table : -> AlphaBackTable
+(def (copy-current-alpha-back-table) (hash-copy (current-alpha-back-table)))
+
+;; add-alpha-back! : Identifier Identifier -> Void
+;; From alpha x to surface y
+(def (add-alpha-back! x y)
+  (hash-put! (current-alpha-back-table)
+             (syntax->datum x)
+             (syntax->datum y)))
+
+;; symbol-fresh* : Symbol -> Symbol
+;; Fresh symbol with an entry in the alpha-back-table
+(def (symbol-fresh* x)
+  (def y (symbol-fresh x))
+  (add-alpha-back! y x)
+  y)
+
+;; identifier-fresh* : Identifier -> Identifier
+;; Fresh identifier with an entry in the alpha-back-table
+(def (identifier-fresh* x)
+  (def y (identifier-fresh x))
+  (add-alpha-back! y x)
+  y)
+
+;; use/check-unused* : Symbol -> Void
+;; Unused-so-far symbol with an entry in the alpha-back-table
+(def (use/check-unused* x)
+  (use/check-unused x)
+  (add-alpha-back! x x))
+
+;; --------------------------------------------------------
+
+;; read-alpha-back-table : PathString -> AlphaBackTable
+(def (read-alpha-back-table file)
+  (repr-sexpr->alpha-back-table (call-with-input-file file read)))
+
+;; write-alpha-back-table : AlphaBackTable OutputPort -> Void
+(def (write-alpha-back-table alba out)
+  (fprintf out "~y" (alpha-back-table->repr-sexpr alba)))
+
+;; alpha-back-table=? : AlphaBackTable AlphaBackTable -> Bool
+(def (alpha-back-table=? a b)
+  (equal? (alpha-back-table->repr-sexpr a)
+          (alpha-back-table->repr-sexpr b)))
+
+;; alpha-back-table->repr-sexpr : AlphaBackTable -> Sexpr
+(def alpha-back-table->repr-sexpr
+  (hash->repr-sexpr identity symbol->repr-sexpr symbol<?))
+
+;; repr-sexpr->alpha-back-table : Sexpr -> AlphaBackTable
+(def repr-sexpr->alpha-back-table
+  (repr-sexpr->hash identity repr-sexpr->symbol))

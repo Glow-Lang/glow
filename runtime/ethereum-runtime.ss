@@ -207,6 +207,7 @@
     (hash-get participant-interaction (@ self current-code-block-label))))
 
 ;; TODO: map alpha-converted names to names in original source when displaying to user
+;;       using the alpha-back-table
 (defmethod {initialize-environment Runtime}
   (λ (self)
     (def contract (@ self contract))
