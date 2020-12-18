@@ -9,7 +9,7 @@ $ gxi
 (export #t)
 
 (import
-  :gerbil/gambit/ports
+  :gerbil/gambit/ports :gerbil/gambit/threads
   :std/format :std/srfi/1 :std/test :std/sugar :std/iter :std/text/json :std/misc/ports
   :clan/poo/poo :clan/poo/io (only-in :clan/poo/mop display-poo) :clan/crypto/keccak
   :clan/base :clan/decimal :clan/ports :clan/io :clan/path-config :clan/json
@@ -51,26 +51,35 @@ $ gxi
       (def contract (make-Contract
         program: program
         participants: participants
-        arguments: arguments))
+        arguments: arguments
+        timeout: 20))
 
-      (displayln "\nEXECUTING BUYER STEP 1 ...")
-      (def runtime-buyer-1 (make-Runtime contract 'Buyer))
-      {execute runtime-buyer-1}
+      (def environment #f)
 
-      (def handshake-json (json<-string (string<-json (read-file-json "run/contract-handshake.json"))))
-      (def handshake (<-json ContractHandshake handshake-json))
+      ;; TODO: erase run/contract-handshake.json from filesystem
 
-      (displayln "\nEXECUTING SELLER STEP 1 ...")
-      (def runtime-seller-1 (make-Runtime contract  'Seller handshake 'cp0))
-      {execute runtime-seller-1}
+      (displayln "\nEXECUTING BUYER THREAD ...")
+      (spawn-thread (lambda ()
+        (def buyer-runtime (make-Runtime 'Buyer contract))
+        {execute buyer-runtime}
+        (displayln "buyer finished")
+        (set! environment (@ buyer-runtime environment))))
 
-      (def tx-receipt-json (json<-string (string<-json (read-file-json "run/tx-receipt.json"))))
-      (def tx-receipt (<-json TransactionReceipt tx-receipt-json))
+      (while (not (file-exists? "run/contract-handshake.json"))
+        (displayln "waiting for contract handshake ...")
+        (thread-sleep! 1))
 
-      (displayln "\nEXECUTING BUYER STEP 2 ...")
-      (def runtime-buyer-2 (make-Runtime contract 'Buyer tx-receipt 'cp0))
-      {execute runtime-buyer-2}
-      (def signature (hash-get (@ runtime-buyer-2 environment) 'signature))
+      (displayln "\nEXECUTING SELLER THREAD ...")
+      (spawn-thread (lambda ()
+        (def seller-runtime (make-Runtime 'Seller contract))
+        {execute seller-runtime}
+        (displayln "seller finished")))
+
+      (while (not environment)
+        (displayln "waiting for buyer to finish ...")
+        (thread-sleep! 1))
+
+      (def signature (hash-get environment 'signature))
       (display-poo
           ["Signature extracted from contract logs: " Signature signature
           "valid?: " (message-signature-valid? seller-address signature digest)])))))
