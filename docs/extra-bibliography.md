@@ -18,6 +18,9 @@ or who want to understand the wider context.
 Other non-Lisp types of interest?
 * [Cedille](https://cedille.github.io/), with its "extrinsic" (Curry-style) types as annotations
   to untyped terms (vs intrinsic / Church style as parts of the term).
+* [Caledon](https://github.com/mmirman/caledon), [Habit](http://www.habit-lang.org), [Tyrade](https://github.com/willcrichton/tyrade)
+
+
 * LEAN, Idris, Coq, Agda, F*, ATS, NuPRL, Isabelle, HOL, Epigram, Cayenne.
 
 ### Compilers
@@ -188,9 +191,14 @@ Other non-Lisp types of interest?
 * Parity: the [Substrate](https://www.parity.io/substrate/) framework, and
   Polkadot and its [parachains](https://wiki.polkadot.network/docs/en/learn-parachains);
 
+### Documentation
+
+* [The documentation system, by David Laing](https://documentation.divio.com/)
+
 ### More...
 
 * Ledger
 * COSMOS
-* https://rgb-org.github.io/
+* [RGB](https://rgb-org.github.io/)
 * [Kleros](https://kleros.io)
+* [Ergo](https://ergoplatform.org/en/)

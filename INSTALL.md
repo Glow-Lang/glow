@@ -104,12 +104,16 @@ You can look at the above-mentioned installation scripts, and reproduce their st
 
 ## Trying it out with Docker
 
-When we have a stable release, we'll directly provide an image `mukn/glow:stable` on
-[Docker](https://hub.docker.com/repository/docker/mukn/glow).
+We have a Docker image [`mukn/glow:latest`](https://hub.docker.com/repository/docker/mukn/glow)
+with *Glow* and its associated libraries precompiled:
 
-In the meantime, you can build your own with:
+    docker pull mukn/glow:latest
+    docker run -it mukn/glow:latest bash
 
-    docker build -t mukn/glow -f scripts/Dockerfile .
+When we have a stable release, we'll provide an image `mukn/glow:stable` instead.
+
+You can build your own using `scripts/make-docker-image.ss` from
+[gerbil-utils](https://github.com/fare/gerbil-utils).
 
 ## Installing *Glow* the Hard Way
 
