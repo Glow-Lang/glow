@@ -218,15 +218,22 @@
 
 (defmethod {reduce-expression Runtime}
   (λ (self expression)
-    (if (symbol? expression)
+    (cond
+     ((symbol? expression)
       (match (hash-get (@ self environment) expression)
         ([type . value]
           value)
         (#f
           (error (string-append expression " is missing from execution environment")))
         (value
-          value))
-      expression)))
+          value)))
+     ((boolean? expression) expression)
+     ((string? expression) (string->bytes expression))
+     ((bytes? expression) expression)
+     ((integer? expression) expression)
+     ;; TODO: reduce other trivial expressions
+     (else
+      expression))))
 
 (defmethod {get-active-participant Runtime}
   (λ (self)
@@ -294,11 +301,30 @@
                  (digest {reduce-expression self digest-variable})
                  (signature {reduce-expression self signature-variable}))
                 (isValidSignature address digest signature)))
+            (['@app '< a b]
+              (let
+                ((av {reduce-expression self a})
+                 (bv {reduce-expression self b}))
+                (< av bv)))
+            (['@app 'randomUInt256]
+             (randomUInt256))
+            (['@tuple . es]
+             (list->vector
+              (for/collect ((e es))
+                {reduce-expression self e})))
+            (['digest . es]
+             (digest
+              (for/collect ((e es))
+                (cons {lookup-type (@ (@ self contract) program) e}
+                      {reduce-expression self e}))))
             (['sign digest-variable]
               (let
                 ((this-participant {get-active-participant self})
                  (digest {reduce-expression self digest-variable}))
-                (make-message-signature (secret-key<-address this-participant) digest)))))
+                (make-message-signature (secret-key<-address this-participant) digest)))
+            (['input 'Nat tag]
+             (let ((tagv {reduce-expression self tag}))
+               (input UInt256 tagv)))))
           {add-to-environment self variable-name variable-value}))
 
       (['require! variable-name]

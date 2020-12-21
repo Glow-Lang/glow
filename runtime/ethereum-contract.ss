@@ -75,6 +75,23 @@
       {lookup-variable-offset self variable-name}
       (param-length variable-type))))
 
+;; use load-variable for types passed by value
+;; use lookup-variable-offset for types passed by reference (Signature)
+;; otherwise place a constant on the stack
+(defmethod {trivial-expression Contract}
+  (λ (self expr)
+    (def type {lookup-type (@ self program) expr})
+    (cond
+      ((symbol? expr)
+       (cond ((member (.@ type sexp) '(Signature (Tuple UInt256 UInt256)))
+              {lookup-variable-offset self expr type})
+             (else
+              {load-variable self expr type})))
+      ((integer? expr)
+       expr)
+      (else
+       (error 'trivial-expression "unknown" expr type)))))
+
 (defmethod {add-local-variable-to-frame Contract}
   (λ (self variable-name)
     (def type {lookup-type (@ self program) variable-name})
@@ -120,15 +137,24 @@
         (match expression
           (['expect-published published-variable-name]
             [{lookup-variable-offset self variable-name} &read-published-data-to-mem])
+          ; TODO: digest
           (['@app 'isValidSignature participant digest signature]
             [{load-variable self participant Address}
              {load-variable self digest Digest}
              ; signatures are passed by reference, not by value
              {lookup-variable-offset self signature}
-             &isValidSignature])))
+             &isValidSignature])
+          (['@app '< a b]
+            [{trivial-expression self a}
+             {trivial-expression self b}
+             LT])))
 
       (['require! variable-name]
         [{load-variable self variable-name Bool} &require!])
+
+      (['expect-deposited amount]
+        (void))
+        ; TODO: check that this amount was deposited by the active participant
 
       (['consensus:withdraw participant amount]
         (void))

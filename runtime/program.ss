@@ -3,6 +3,8 @@
 (import
   :std/iter :std/misc/list :std/srfi/1 :clan/base
   <expander-runtime>
+  :mukn/ethereum/types
+  :mukn/ethereum/ethereum
   ../compiler/typecheck/type)
 
 (defclass Program (name argument-names interactions compiler-output)
@@ -28,9 +30,15 @@
 (defmethod {lookup-type Program}
   (λ (self variable-name)
     (def type-table (hash-ref (@ self compiler-output) 'typetable.sexp))
-    (match (hash-get type-table variable-name)
-      ((type:name sym) (eval sym))
-      ((type:name-subtype sym _) (eval sym)))))
+    (def (type-methods t)
+      (match t
+        ((type:name 'Bool) Bool)
+        ((type:name 'Digest) Digest)
+        ((type:name-subtype 'Nat _) UInt256)
+        ((type:name sym) (eval sym))
+        ((type:name-subtype sym _) (eval sym))
+        ((type:tuple ts) (apply Tuple (map type-methods ts)))))
+    (type-methods (hash-get type-table variable-name))))
 
 (defclass ParseContext (current-participant current-label code)
   constructor: :init!
