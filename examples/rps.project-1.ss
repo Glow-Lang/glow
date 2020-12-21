@@ -85,7 +85,7 @@ done
                      (def handA0 (expect-published 'handA0))
                      (def tmp16 (vector salt handA0))
                      (def tmp17
-                          (digest (@list (cons (Tuple Nat Hand1) tmp16))))
+                          (digest (@list (cons (Tuple UInt256 Hand1) tmp16))))
                      (def tmp18 (== commitment tmp17))
                      (assert! tmp18)
                      (def outcome (%%app winner handA0 handB0))
@@ -118,7 +118,7 @@ done
                      (def tmp14 (vector salt handA0))
                      (participant:set-participant A)
                      (def commitment
-                          (digest (@list (cons (Tuple Nat Hand1) tmp14))))
+                          (digest (@list (cons (Tuple UInt256 Hand1) tmp14))))
                      (participant:set-participant A)
                      (add-to-publish 'commitment commitment)
                      (participant:set-participant A)
@@ -135,7 +135,7 @@ done
                      (add-to-publish 'handA0 handA0)
                      (def tmp16 (vector salt handA0))
                      (def tmp17
-                          (digest (@list (cons (Tuple Nat Hand1) tmp16))))
+                          (digest (@list (cons (Tuple UInt256 Hand1) tmp16))))
                      (def tmp18 (== commitment tmp17))
                      (assert! tmp18)
                      (def outcome (%%app winner handA0 handB0))
@@ -181,7 +181,7 @@ done
                      (def handA0 (expect-published 'handA0))
                      (def tmp16 (vector salt handA0))
                      (def tmp17
-                          (digest (@list (cons (Tuple Nat Hand1) tmp16))))
+                          (digest (@list (cons (Tuple UInt256 Hand1) tmp16))))
                      (def tmp18 (== commitment tmp17))
                      (assert! tmp18)
                      (def outcome (%%app winner handA0 handB0))
@@ -202,7 +202,7 @@ done
      (def consensus->B (make-channel #f))
      (def consensus->participants (@list consensus->A consensus->B))
      (def participant->consensus (make-channel #f))
-     (def balances (get-balances [A B]))
+     (def balances (get-balances (@list A B)))
      (def consensus-thread
           (spawn/name/params
            'consensus

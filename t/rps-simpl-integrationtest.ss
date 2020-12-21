@@ -7,7 +7,7 @@ $ gxi
 > (add-load-path (path-normalize "../gerbil-ethereum"))
 > (import :std/test "t/rps-simpl-integrationtest.ss")
 > (run-tests! rps-simpl-integrationtest)
-input Nat: First player, pick your hand: 0 (Rock), 1 (Paper), 2 (Scissors)
+input UInt256: First player, pick your hand: 0 (Rock), 1 (Paper), 2 (Scissors)
 0
 |#
 (export #t)

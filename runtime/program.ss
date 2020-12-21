@@ -32,8 +32,9 @@
     (def type-table (hash-ref (@ self compiler-output) 'typetable.sexp))
     (def (type-methods t)
       (match t
+        ((type:name 'Bool) Bool)
         ((type:name 'Digest) Digest)
-        ((type:name-subtype 'Nat _) Nat)
+        ((type:name-subtype 'Nat _) UInt256)
         ((type:name sym) (eval sym))
         ((type:name-subtype sym _) (eval sym))
         ((type:tuple ts) (apply Tuple (map type-methods ts)))))
