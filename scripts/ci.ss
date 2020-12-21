@@ -102,7 +102,7 @@
   ;; so let' try it a slightly hard way...
   (run-process/batch ["./build.ss" "nix"]) ;; NB: this should use the path from cachix
   (defvalues (glow-lang.out gerbil-ethereum.src loadpath) (set-test-environment-variables))
-  (def testnet.ss (subpath gerbil-ethereum.src "scripts/run-geth-test-net.ss"))
+  (def testnet.ss (subpath gerbil-ethereum.src "scripts/run-ethereum-test-net.ss"))
   (def signing-test (subpath gerbil-ethereum.src "t/signing-test.ss"))
   #;(DBG before: gerbil-ethereum.src (file-exists? gerbil-ethereum.src) glow-lang.out)
   (unless (file-exists? gerbil-ethereum.src)

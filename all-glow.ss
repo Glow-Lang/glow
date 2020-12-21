@@ -19,7 +19,7 @@
   :std/error :std/format :std/getopt :std/iter :std/logger
   :std/misc/bytes :std/misc/deque :std/misc/hash :std/misc/list
   :std/misc/ports :std/misc/process :std/misc/queue :std/misc/repr :std/misc/string
-  :std/net/websocket
+  :std/net/request :std/net/websocket
   :std/pregexp :std/sort
   :std/srfi/1 :std/srfi/13 (except-in :std/srfi/19 time) ;; :std/srfi/43
   :std/sugar :std/text/csv :std/text/hex :std/text/json :std/test
@@ -39,7 +39,7 @@
   :clan/generator :clan/git-fu :clan/hash
   :clan/json :clan/list :clan/logger
   :clan/maybe :clan/memo :clan/multicall :clan/number :clan/option :clan/order
-  :clan/path :clan/path-config :clan/peekable-iterator
+  :clan/path :clan/path-config :clan/peekable-iterator :clan/ports
   :clan/random
   :clan/source :clan/simple-rpc-client :clan/stateful-avl-map :clan/string
   :clan/subprocess :clan/syntax
@@ -71,7 +71,7 @@
   :clan/crypto/keccak :clan/crypto/secp256k1
   :mukn/ethereum/hex :mukn/ethereum/abi :mukn/ethereum/types :mukn/ethereum/ethereum
   :mukn/ethereum/rlp :mukn/ethereum/signing :mukn/ethereum/known-addresses :mukn/ethereum/logger
-  :mukn/ethereum/network-config :mukn/ethereum/json-rpc :mukn/ethereum/transaction
+  :mukn/ethereum/network-config :mukn/ethereum/json-rpc :mukn/ethereum/transaction :mukn/ethereum/watch
   :mukn/ethereum/assembly :mukn/ethereum/contract-config :mukn/ethereum/contract-runtime
   :mukn/ethereum/nonce-tracker :mukn/ethereum/tx-tracker :mukn/ethereum/batch-send
   :mukn/ethereum/assets

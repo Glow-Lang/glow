@@ -17,8 +17,7 @@ $ gxi
   :mukn/ethereum/batch-send :mukn/ethereum/network-config :mukn/ethereum/assets
   :mukn/ethereum/signing :mukn/ethereum/hex :mukn/ethereum/transaction :mukn/ethereum/types
   :mukn/ethereum/t/signing-test
-  :mukn/ethereum/t/transaction-integrationtest
-  :mukn/ethereum/t/batch-send-integrationtest
+  :mukn/ethereum/t/50-batch-send-integrationtest
   ../compiler/passes
   ../compiler/multipass
   ../compiler/syntax-context
