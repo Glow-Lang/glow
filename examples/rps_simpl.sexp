@@ -9,7 +9,7 @@
                     (@ A (def salt (@app randomUInt256)))
                     (@ A
                        (@ verifiably
-                          (def commitment (digest (@tuple salt handA)))))
+                          (def commitment (digest salt handA))))
                     (publish! A commitment)
                     (deposit! A wagerAmount)
                     (@ B

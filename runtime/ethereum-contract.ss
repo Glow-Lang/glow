@@ -137,6 +137,7 @@
         (match expression
           (['expect-published published-variable-name]
             [{lookup-variable-offset self variable-name} &read-published-data-to-mem])
+          ; TODO: digest
           (['@app 'isValidSignature participant digest signature]
             [{load-variable self participant Address}
              {load-variable self digest Digest}
