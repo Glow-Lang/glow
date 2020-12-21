@@ -63,15 +63,16 @@
                         (return `(IntegerLiteral, (list->string n)))))
 
 (def Opertor
-    (.let* (op (.or ">>" "<<"
+    (.let* (op (.or "<<<" ">>>"
                     "==" "=>" "<="  "!=" "!" "="  "<-" "<" ">"
                     "++" "+=" "+"
                     "--" "-=" "->" "-"
                     "*=" "**" "*"
                     "%=" "%"
                     "/=" "/"
-                    "||"
-                    "&&" "&"))
+                    "|||" "||"
+                    "&&&" "&&"
+                    "^^^" "~~~"  ))
         (return `(Opertor ,op))))
 
 
@@ -134,8 +135,9 @@
         ;; Numbers come first because ~.~ is a punctuator
         IntegerLiteral
         StringLiteral
+        Opertor
         Marker
-        Opertor))
+        ))
 
 (def TokenTemplate
     (.or

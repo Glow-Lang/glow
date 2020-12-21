@@ -35,6 +35,12 @@
     ("%" 'mod)
     ("&&" 'and)
     ("||" 'or)
+    ("|||" 'bitwise-or)
+    ("&&&" 'bitwise-and)
+    ("^^^" 'bitwise-xor)
+    ("~~~" 'bitwise-not)
+    ("<<"  'bitwise-shift-right)
+    (">>"  'bitwise-shift-left)
     (_ (string->symbol str))))
 
 ;; lit->sexpr : Literal -> SExpr
