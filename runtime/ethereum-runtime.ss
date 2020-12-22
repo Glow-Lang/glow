@@ -271,7 +271,7 @@
 
       (['set-participant new-participant]
         ;; Since the contract has already been separated into transaction boundaries,
-        ;; the participant doesn't need to do anything here, since the active participant
+        ;; the participant doesn't need to do anything here since the active participant
         ;; is already known.
         (void))
 
@@ -339,11 +339,12 @@
 
       (['require! variable-name]
         (match {reduce-expression self variable-name}
-          (#t (void))
+          (#t
+            (void))
           (#f
             (error "Assertion failed"))
           (else
-            (error "Assertion failed, variable is not a Boolean" variable-name))))
+            (error "Assertion failed, " variable-name " is not a Boolean"))))
 
       (['return ['@tuple]]
         (void))
