@@ -1,17 +1,9 @@
-#|
-$ gxi
-> (add-load-path (path-normalize "../gerbil-ethereum"))
-> (def d (current-directory))
-> (import :mukn/ethereum/scripts/run-geth-test-net)
-> (current-directory d)
-> (import "t/buy-sig-integrationtest.ss")
-|#
 (export #t)
 
 (import
   :gerbil/gambit/ports :gerbil/gambit/threads
   :std/format :std/srfi/1 :std/test :std/sugar :std/iter :std/text/json :std/misc/ports
-  :clan/poo/poo :clan/poo/io (only-in :clan/poo/mop display-poo) :clan/crypto/keccak
+  :clan/poo/poo :clan/poo/io (only-in :clan/poo/mop display-poo-ln) :clan/crypto/keccak
   :clan/base :clan/decimal :clan/ports :clan/io :clan/path-config :clan/json
   :mukn/ethereum/ethereum :mukn/ethereum/known-addresses :mukn/ethereum/json-rpc
   :mukn/ethereum/batch-send :mukn/ethereum/network-config :mukn/ethereum/assets
@@ -42,6 +34,7 @@ $ gxi
 
 (def buy-sig-integrationtest
   (test-suite "integration test for ethereum/buy-sig"
+    (ensure-addresses-prefunded)
     (test-case "buy sig parses"
       (def program (parse-compiler-output compiler-output))
 
@@ -79,6 +72,6 @@ $ gxi
         (thread-sleep! 1))
 
       (def signature (hash-get environment 'signature))
-      (display-poo
+      (display-poo-ln
           ["Signature extracted from contract logs: " Signature signature
-          "valid?: " (message-signature-valid? seller-address signature digest)])))))
+           "valid?: " (message-signature-valid? seller-address signature digest)])))))
