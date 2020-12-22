@@ -166,10 +166,6 @@
         ;  {load-variable self participant Address}
         ;  &withdraw!])
 
-      (['expect-deposited amount]
-        ;; TODO: implement
-        (void))
-
       (['@label 'end0]
         [&end-contract!])
 
