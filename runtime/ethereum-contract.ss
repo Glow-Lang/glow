@@ -166,8 +166,12 @@
         ;  {load-variable self participant Address}
         ;  &withdraw!])
 
-      (['@label 'end0]
-        [&end-contract!])
+      (['@label label]
+        (match label
+          ('end0
+            [&end-contract!])
+          (else
+            (void))))
 
       (['return ['@tuple]]
         (void))
