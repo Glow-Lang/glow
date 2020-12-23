@@ -71,13 +71,14 @@
             (begin
               (match (last statements)
                 (['@label last-label]
-                  (def init-statements (take statements (- (length statements) 1)))
-                  (hash-put! contract (@ self current-label) (make-code-block current-participant init-statements last-label))
-                  (hash-put! contract last-label (make-code-block new-participant [['set-participant new-participant]] #f))
-                  (set! (@ self current-participant) new-participant)
-                  (set! (@ self current-label) last-label))
+                 ;;TODO: replace the two statements below by (hash-put! contract (@ self current-label) (make-code-block current-participant statements last-label)) then update all call sites of {get-current-code-block Runtime}
+                 (def init-statements (take statements (- (length statements) 1)))
+                 (hash-put! contract (@ self current-label) (make-code-block current-participant init-statements last-label))
+                 (hash-put! contract last-label (make-code-block new-participant [['set-participant new-participant]] #f))
+                 (set! (@ self current-participant) new-participant)
+                 (set! (@ self current-label) last-label))
                 (else
-                  (error "Change of participant with no preceding label")))))
+                 (error "Change of participant with no preceding label")))))
           (#f
             (begin
               (set! (@ self current-participant) new-participant)

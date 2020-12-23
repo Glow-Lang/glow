@@ -7,18 +7,21 @@
   ./program
   ../compiler/project/runtime-2)
 
-(defclass Contract (program participants arguments variable-offsets params-end timeout)
+(defclass Contract (program participants arguments variable-offsets params-end initial-timer-start timeout)
   transparent: #t)
 
 (defmethod {create-frame-variables Contract}
-  (λ (self initial-block contract-runtime-labels checkpoint)
+  (λ (self timer-start contract-runtime-labels checkpoint)
     (def checkpoint-location
       (hash-get contract-runtime-labels {make-checkpoint-label self checkpoint}))
     (flatten1
        [[[UInt16 . checkpoint-location]]
-        [[Block . initial-block]]
+        [[Block . timer-start]]
         (map (λ (participant) [Address . participant]) (hash-values (@ self participants)))
         (hash-values (@ self arguments))])))
+
+(def (timer-start<-frame-variables frame-variables)
+  (cdadr frame-variables))
 
 (def (sexp<-frame-variables frame-variables)
   `(list ,@(map (match <> ([v t] `(list ,(sexp<- t v) ,(sexp<- Type t)))) frame-variables)))

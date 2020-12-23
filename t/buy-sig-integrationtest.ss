@@ -1,24 +1,16 @@
-#|
-$ gxi
-> (add-load-path (path-normalize "../gerbil-ethereum"))
-> (def d (current-directory))
-> (import :mukn/ethereum/scripts/run-geth-test-net)
-> (current-directory d)
-> (import "t/buy-sig-integrationtest.ss")
-|#
 (export #t)
 
 (import
-  :gerbil/gambit/ports :gerbil/gambit/threads
+  :gerbil/gambit/os :gerbil/gambit/ports :gerbil/gambit/threads
   :std/format :std/srfi/1 :std/test :std/sugar :std/iter :std/text/json :std/misc/ports
-  :clan/poo/poo :clan/poo/io (only-in :clan/poo/mop display-poo) :clan/crypto/keccak
-  :clan/base :clan/decimal :clan/ports :clan/io :clan/path-config :clan/json
+  :clan/base :clan/concurrency :clan/debug :clan/decimal :clan/exception
+  :clan/io :clan/json :clan/path-config :clan/ports
+  :clan/poo/poo :clan/poo/io (only-in :clan/poo/mop display-poo-ln) :clan/crypto/keccak
   :mukn/ethereum/ethereum :mukn/ethereum/known-addresses :mukn/ethereum/json-rpc
   :mukn/ethereum/batch-send :mukn/ethereum/network-config :mukn/ethereum/assets
   :mukn/ethereum/signing :mukn/ethereum/hex :mukn/ethereum/transaction :mukn/ethereum/types
   :mukn/ethereum/t/signing-test
-  :mukn/ethereum/t/transaction-integrationtest
-  :mukn/ethereum/t/batch-send-integrationtest
+  :mukn/ethereum/t/50-batch-send-integrationtest
   ../compiler/passes
   ../compiler/multipass
   ../compiler/syntax-context
@@ -43,43 +35,54 @@ $ gxi
 
 (def buy-sig-integrationtest
   (test-suite "integration test for ethereum/buy-sig"
+    (DBG "Ensure participants funded")
+    (ensure-addresses-prefunded)
+    (DBG "DONE")
     (test-case "buy sig parses"
       (def program (parse-compiler-output compiler-output))
 
     ;; TODO: run buyer and seller step in separate threads, using posted transactions to progress their state
     (test-case "buy sig executes"
+      (ignore-errors (delete-file (run-path "contract-handshake.json"))) ;; TODO: do it better
       (def contract (make-Contract
         program: program
         participants: participants
         arguments: arguments
+        initial-timer-start: (+ (eth_blockNumber) (ethereum-timeout-in-blocks))
         timeout: 20))
 
-      (def environment #f)
-
-      ;; TODO: erase run/contract-handshake.json from filesystem
-
       (displayln "\nEXECUTING BUYER THREAD ...")
-      (spawn-thread (lambda ()
-        (def buyer-runtime (make-Runtime 'Buyer contract))
-        {execute buyer-runtime}
-        (displayln "buyer finished")
-        (set! environment (@ buyer-runtime environment))))
+      (def buyer-thread
+        (spawn/name/logged "Buyer"
+         (lambda ()
+           (def buyer-runtime
+             (make-Runtime role: 'Buyer
+                           contract: contract
+                           current-code-block-label: 'begin0 ;; TODO: grab the start label from the compilation output, instead of 'begin0
+                           current-label: 'begin)) ;; TODO: grab the start label from the compilation output, instead of 'begins
+           {execute buyer-runtime}
+           (displayln "buyer finished")
+           (@ buyer-runtime environment))))
 
       (while (not (file-exists? "run/contract-handshake.json"))
         (displayln "waiting for contract handshake ...")
         (thread-sleep! 1))
 
       (displayln "\nEXECUTING SELLER THREAD ...")
-      (spawn-thread (lambda ()
-        (def seller-runtime (make-Runtime 'Seller contract))
-        {execute seller-runtime}
-        (displayln "seller finished")))
+      (def seller-thread
+        (spawn/name/logged "Seller"
+         (lambda ()
+           (def seller-runtime
+             (make-Runtime role: 'Seller
+                           contract: contract
+                           current-code-block-label: 'begin0 ;; TODO: grab the start label from the compilation output, instead of 'begin0
+                           current-label: 'begin)) ;; TODO: grab the start label from the compilation output, instead of 'begins
+           {execute seller-runtime}
+           (displayln "seller finished"))))
 
-      (while (not environment)
-        (displayln "waiting for buyer to finish ...")
-        (thread-sleep! 1))
+      (def environment (thread-join! buyer-thread))
 
       (def signature (hash-get environment 'signature))
-      (display-poo
+      (display-poo-ln
           ["Signature extracted from contract logs: " Signature signature
-          "valid?: " (message-signature-valid? seller-address signature digest)])))))
+           "valid?: " (message-signature-valid? seller-address signature digest)])))))

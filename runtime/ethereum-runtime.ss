@@ -1,10 +1,12 @@
 (export #t)
 
 (import
-  :gerbil/gambit/bytes
+  :gerbil/gambit/bytes :gerbil/gambit/threads
   :std/iter :std/sugar
-  :clan/exception :clan/json :clan/poo/io :clan/poo/mop :clan/pure/dict/assq :clan/persist/content-addressing
-  :mukn/ethereum/ethereum :mukn/ethereum/network-config  :mukn/ethereum/json-rpc
+  :clan/exception :clan/json :clan/path-config :clan/pure/dict/assq
+  :clan/poo/poo :clan/poo/io :clan/poo/mop
+  :clan/persist/content-addressing
+  :mukn/ethereum/hex :mukn/ethereum/ethereum :mukn/ethereum/network-config :mukn/ethereum/json-rpc
   :mukn/ethereum/transaction :mukn/ethereum/tx-tracker :mukn/ethereum/watch
   :mukn/ethereum/contract-runtime :mukn/ethereum/contract-config
   ./program
@@ -13,26 +15,31 @@
   ../compiler/project/runtime-2)
 
 ;; PARTICIPANT RUNTIME
-(defclass Runtime (role contract contract-status current-code-block-label current-label environment message)
+
+;; WAS: (role contract contract-status current-code-block-label current-label environment message)
+(defclass Runtime
+  (role contract contract-config status processed-events unprocessed-events
+        current-code-block-label current-label environment message)
   constructor: :init!
   transparent: #t)
 
 (defmethod {:init! Runtime}
-  (λ (self role contract
-        (ccbl 'begin0)
-        (cs (ContractStatus-NotYetDeployed (void)))
-        (cl 'begin)
-        (e (make-hash-table))
-        (m (make-Message))
-        (ib #f))
+  (λ (self
+      role: role contract: contract
+      current-code-block-label: current-code-block-label ;; TODO: grab the start label from the compilation output, instead of 'begin0
+      current-label: current-label) ;; TODO: grab the start label from the compilation output, instead of 'begin
     (set! (@ self role) role)
     (set! (@ self contract) contract)
-    (set! (@ self contract-status) cs)
     ;; TODO: extract initial code block label from contract compiler output
-    (set! (@ self current-code-block-label) ccbl)
-    (set! (@ self current-label) cl)
-    (set! (@ self environment) e)
-    (set! (@ self message) m)
+    (set! (@ self current-code-block-label) current-code-block-label)
+    (set! (@ self current-label) current-label)
+
+    (set! (@ self contract-config) #f)
+    (set! (@ self status) 'running) ;; (Enum running stopped completed aborted)
+    (set! (@ self processed-events) '())
+    (set! (@ self unprocessed-events) '())
+    (set! (@ self environment) (make-hash-table))
+    (set! (@ self message) (make-Message))
     {initialize-environment self}))
 
 (defmethod {execute Runtime}
@@ -67,10 +74,13 @@
     (equal? (@ self role) (code-block-participant current-code-block))))
 
 (defmethod {watch Runtime}
+  ;; TODO: consult unprocessed log objects first, if none is available, then use getLogs
+  ;; TODO: be able to split getLogs into smaller requests if it a bigger request times out.
+  ;; TODO: (optional) push all the previously processed log objects to the processed list after processing
   (λ (self contract-address from-block)
     (let/cc return
-      (def callback (λ (log) (return log)))
-      (def to-block (+ from-block (@ (@ self contract) timeout)))
+      (def callback (λ (log) (return log))) ;; TODO: handle multiple log entries!!!
+      (def to-block (+ from-block (ethereum-timeout-in-blocks))) ;; TODO: get the timeout that from the agreement
       (watch-contract callback contract-address from-block to-block))))
 
 (define-type ContractStatus
@@ -82,77 +92,76 @@
 
 (defmethod {receive Runtime}
   (λ (self)
-    (match (@ self contract-status)
-      ((ContractStatus-NotYetDeployed _)
-        (displayln "verifying contract config ...")
-        (let*
-          ((contract-handshake {read-handshake self})
-           (initial-block (.@ contract-handshake initial-block))
-           (contract-config (.@ contract-handshake contract-config))
-           (create-pretx {prepare-create-contract-transaction self initial-block}))
-            (verify-contract-config contract-config create-pretx)
-            (set! (@ self contract-status)
-              (ContractStatus-Active
-                (vector initial-block (eth_getTransactionReceipt (.@ contract-config creation-hash)))))))
-
-      ((ContractStatus-Active (vector initial-block tx-receipt))
-        ;; TODO: handle multiple logs and also handle multiple events within the same block
-        (displayln "watching for new transaction ...")
-        (let*
+    (def role (@ self role))
+    (def contract-config (@ self contract-config))
+    (when (eq? (@ self status) 'running)
+      (if contract-config
+        (let ()
+          (displayln role ": Watching for new transaction ...")
           ;; TODO: `from` should be calculated using the deadline and not necessarily the previous tx,
           ;; since it may or not be setting the deadline
-          ((from (.@ tx-receipt blockNumber))
-            (new-tx-receipt {watch self (.@ tx-receipt contractAddress) from})
-            (log-data (.@ new-tx-receipt data)))
-          (set! (@ self contract-status) (ContractStatus-Active (vector initial-block new-tx-receipt)))
-          (set! (@ (@ self message) inbox) (open-input-u8vector log-data))))
-
-      ((ContractStatus-Complete _)
-        (void)))))
+          (display-poo-ln role ": contract-config=" ContractConfig contract-config)
+          (def from (.@ contract-config creation-block))
+          (def new-log-object {watch self (.@ contract-config contract-address) from})
+          ;; TODO: handle the case when there is no log objects
+          (display-poo-ln role ": New TX: " (Maybe LogObject) new-log-object)
+          (def log-data (.@ new-log-object data))
+          ;; TODO: process the data in the same method?
+          (set! (@ (@ self message) inbox) (open-input-u8vector log-data)))
+        (let ()
+          (displayln role ": Reading contract handshake ...")
+          (def contract-handshake {read-handshake self})
+          (display-poo-ln role ": contract-handshake: " ContractHandshake contract-handshake)
+          (displayln role ": Verifying contract config ...")
+          (def-slots (contract-config) contract-handshake)
+          (def contract (@ self contract))
+          (def create-pretx {prepare-create-contract-transaction self (@ contract initial-timer-start)})
+          (verify-contract-config contract-config create-pretx)
+          (set! (@ self contract-config) contract-config))))))
 
 (defmethod {read-handshake Runtime}
   (λ (self)
-    (def handshake-json (json<-string (string<-json (read-file-json "run/contract-handshake.json"))))
+    (def handshake-json (read-file-json (run-path "contract-handshake.json")))
     (<-json ContractHandshake handshake-json)))
 
 (defmethod {publish Runtime}
   (λ (self)
-    (match (@ self contract-status)
+    (def role (@ self role))
+    (def contract-config (@ self contract-config))
+    (when (eq? (@ self status) 'running)
+      (if (not contract-config)
+        (let ()
+          (displayln role ": deploying contract ...")
+          {deploy-contract self})
+        (let ()
+          ;; TODO: Verify asset transfers using previous transaction and balances
+          ;; recorded in Message's asset-transfer table during interpretation. Probably
+          ;; requires getting TransactionInfo using the TransactionReceipt.
+          (displayln "publishing message ...")
+          (def contract-address (.@ contract-config contract-address))
+          (def contract (@ self contract))
+          (def timer-start (@ contract initial-timer-start))
+          (def message (@ self message))
+          (def outbox (@ message outbox))
+          (def message-pretx {prepare-call-function-transaction self outbox timer-start contract-address})
+          (def new-tx-receipt (post-transaction message-pretx))
+          {reset message})))))
 
-      ((ContractStatus-NotYetDeployed _)
-        (displayln "deploying contract ...")
-        {deploy-contract self})
-
-      ;; TODO: Verify asset transfers using previous transaction and balances
-      ;; recorded in Message's asset-transfer table during interpretation. Probably
-      ;; requires getting TransactionInfo using the TransactionReceipt.
-      ((ContractStatus-Active (vector initial-block tx-receipt))
-        (displayln "publishing message ...")
-        (let*
-          ((contract-address (.@ tx-receipt contractAddress))
-            (message (@ self message))
-            (outbox (@ message outbox))
-            (message-pretx {prepare-call-function-transaction self outbox initial-block contract-address}))
-          (begin
-            (def new-tx-receipt (post-transaction message-pretx))
-            {reset message}
-            (set! (@ self contract-status) (ContractStatus-Active (vector initial-block new-tx-receipt))))))
-
-      ((ContractStatus-Complete _)
-        (void)))))
+(def (sexp<-state state) (map (match <> ([t . v] (sexp<- t v))) state))
 
 (defmethod {add-to-environment Runtime}
   (λ (self name value)
     (hash-put! (@ self environment) name value)))
 
 (defmethod {prepare-create-contract-transaction Runtime}
-  (λ (self initial-block)
+  (λ (self timer-start)
     (def sender-address {get-active-participant self})
     (def next (code-block-exit {get-current-code-block self}))
     (defvalues (contract-runtime-bytes contract-runtime-labels)
       {generate-consensus-runtime (@ self contract)})
+    (def contract (@ self contract))
     (def initial-state
-      {create-frame-variables (@ self contract) initial-block contract-runtime-labels next})
+      {create-frame-variables contract (@ contract initial-timer-start) contract-runtime-labels next})
     (def initial-state-digest
       (digest-product-f initial-state))
     (def contract-bytes
@@ -162,30 +171,31 @@
 
 (defmethod {deploy-contract Runtime}
   (λ (self)
-    (def timeoutInBlocks (ethereum-timeout-in-blocks))
-    (def initial-block (+ (eth_blockNumber) timeoutInBlocks))
-    (def pretx {prepare-create-contract-transaction self initial-block})
-    (display-poo ["Deploying contract... " "timeoutInBlocks: " timeoutInBlocks
-                  "initial-block: " initial-block "\n"])
+    (def role (@ self role))
+    (def contract (@ self contract))
+    (def timer-start (@ contract initial-timer-start))
+    (def pretx {prepare-create-contract-transaction self timer-start})
+    (display-poo-ln role ": Deploying contract... "
+                    "timer-start: " timer-start)
     (def receipt (post-transaction pretx))
     (def contract-config (contract-config<-creation-receipt receipt))
-    (display-poo ["Contract config: " ContractConfig contract-config "\n"])
+    (display-poo-ln role ": Contract config: " ContractConfig contract-config)
     (verify-contract-config contract-config pretx)
-    (def handshake (new ContractHandshake initial-block contract-config))
-    (display-poo ["Handshake: " ContractHandshake handshake "\n"])
+    (def handshake (new ContractHandshake timer-start contract-config))
+    (display-poo-ln role ": Handshake: " ContractHandshake handshake)
     ;; TODO: display at terminal for user to copy paste and send to
     ;; other participants through outside channel
-    (write-file-json "run/contract-handshake.json" (json<- ContractHandshake handshake))
-    (set! (@ self contract-status) (ContractStatus-Active (vector initial-block receipt)))))
+    (write-file-json (run-path "contract-handshake.json") (json<- ContractHandshake handshake))
+    (set! (@ self contract-config) contract-config)))
 
 ;; See gerbil-ethereum/contract-runtime.ss for spec.
 (defmethod {prepare-call-function-transaction Runtime}
-  (λ (self outbox initial-block contract-address)
+  (λ (self outbox timer-start contract-address)
     (def sender-address {get-active-participant self})
     (defvalues (_ contract-runtime-labels)
       {generate-consensus-runtime (@ self contract)})
     (def frame-variables
-      {create-frame-variables (@ self contract) initial-block contract-runtime-labels (@ self current-code-block-label)})
+      {create-frame-variables (@ self contract) timer-start contract-runtime-labels (@ self current-code-block-label)})
     (def frame-variable-bytes (marshal-product-f frame-variables))
     (def frame-length (bytes-length frame-variable-bytes))
     (def out (open-output-u8vector))
@@ -343,7 +353,8 @@
 
 (define-type ContractHandshake
   (Record
-   initial-block: [Block]
+   ;;agreement: [Contract]
+   timer-start: [Block]
    contract-config: [ContractConfig]))
 
 ;; MESSAGE

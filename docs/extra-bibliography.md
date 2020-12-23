@@ -1,5 +1,7 @@
 # Bibliography about other Relevant Technology
 
+"You can save hours reading papers with months of hard work on your project."
+
 This document has plenty of pointers to other technology outside of Glow.
 Mostly useful for people implementing or designing Glow,
 or who want to understand the wider context.
@@ -19,8 +21,6 @@ Other non-Lisp types of interest?
 * [Cedille](https://cedille.github.io/), with its "extrinsic" (Curry-style) types as annotations
   to untyped terms (vs intrinsic / Church style as parts of the term).
 * [Caledon](https://github.com/mmirman/caledon), [Habit](http://www.habit-lang.org), [Tyrade](https://github.com/willcrichton/tyrade)
-
-
 * LEAN, Idris, Coq, Agda, F*, ATS, NuPRL, Isabelle, HOL, Epigram, Cayenne.
 
 ### Compilers
@@ -32,6 +32,10 @@ Other non-Lisp types of interest?
 * Daniel Patterson on [proving a compiler fully abstract](https://dbp.io/essays/2018-04-19-how-to-prove-a-compiler-fully-abstract.html)
 * Abstract Abstract Machines, Virtual Virtual Machines...
 * [Language Oriented Programming in Racket, a cultural anthropology](https://gumroad.com/l/lop-in-racket-cultural-anthro)
+
+### Other Lisp code of interest
+
+* [Nyxt browser](https://github.com/atlas-engineer/nyxt)
 
 ### Debugging
 
@@ -202,3 +206,5 @@ Other non-Lisp types of interest?
 * [RGB](https://rgb-org.github.io/)
 * [Kleros](https://kleros.io)
 * [Ergo](https://ergoplatform.org/en/)
+
+Integrate old documents such as the [Legicash FaCTS bibliography](https://github.com/AlacrisIO/legicash-facts/blob/master/bibliography.md) and from the Alacrity archive: [language scope](https://github.com/AlacrisIO/alacrity/blob/master/archive/language-scope.md), [competition](https://github.com/AlacrisIO/alacrity/blob/master/archive/competition.md), [state channels](https://github.com/AlacrisIO/alacrity/blob/master/archive/StateChannel.sol).
