@@ -67,6 +67,9 @@
   :mukn/glow/compiler/desugar/desugar
   :mukn/glow/compiler/typecheck/typecheck
   :mukn/glow/compiler/anf/anf
+  :mukn/glow/runtime/ethereum-contract
+  :mukn/glow/runtime/ethereum-runtime
+
   ;;:mukn/glow/compiler/checkpointify/checkpointify
   :clan/crypto/keccak :clan/crypto/secp256k1
   :mukn/ethereum/hex :mukn/ethereum/abi :mukn/ethereum/types :mukn/ethereum/ethereum
