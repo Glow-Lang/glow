@@ -3,7 +3,7 @@
 (import
   :std/iter :std/sugar :std/misc/hash :std/misc/list :std/misc/number :std/srfi/1
   :clan/syntax
-  :mukn/ethereum/assembly :mukn/ethereum/ethereum
+  :mukn/ethereum/assembly :mukn/ethereum/ethereum :mukn/ethereum/assets
   :mukn/ethereum/signing :mukn/ethereum/contract-runtime
   ./program
   ../compiler/project/runtime-2)
@@ -129,6 +129,8 @@
   (λ (self variable-name)
     (def type {lookup-type (@ self program) variable-name})
     (def argument-length (param-length type))
+    (when (hash-key? (@ self variable-offsets) variable-name)
+      (error "variable already added!" variable-name))
     (hash-put! (@ self variable-offsets)
       variable-name (post-increment! (@ self params-end) argument-length))))
 
@@ -137,7 +139,6 @@
 (defmethod {generate-consensus-code Contract}
   (λ (self)
     (def consensus-interaction {get-interaction (@ self program) #f})
-    {compute-parameter-offsets self}
     (&begin*
      (append-map (match <> ([checkpoint . code-block]
                             {generate-consensus-code-block self checkpoint code-block}))
@@ -196,11 +197,9 @@
        [])
 
       (['consensus:withdraw participant amount]
-       [])
-      ;; TODO: uncomment once issue with EVM bytecode is fixed
-      ;; [{load-immediate-variable self amount Ether}
-      ;; {load-immediate-variable self participant Address}
-      ;;  &withdraw!])
+       [{load-immediate-variable self amount Ether}
+        {load-immediate-variable self participant Address}
+        &withdraw!])
 
       (['expect-deposited amount]
        ;; TODO: implement
