@@ -16,10 +16,17 @@
 
 ;; PARTICIPANT RUNTIME
 
-;; WAS: (role contract contract-status current-code-block-label current-label environment message)
 (defclass Runtime
-  (role contract contract-config status processed-events unprocessed-events
-        current-code-block-label current-label environment message)
+  (role ;; : Symbol
+   contract ;; : Contract
+   contract-config ;; : ContractConfig
+   status ;; (Enum running completed aborted stopped)
+   processed-events ;; : (List LogObjects) ;; ???
+   unprocessed-events ;; : (List LogObjects) ;; ???
+   current-code-block-label ;; : Symbol
+   current-label ;; : Symbol
+   environment ;; : (Table (Or DependentPair Any) <- Symbol) ;; TODO: have it always typed???
+   message) ;; : Message ;; byte buffer?
   constructor: :init!
   transparent: #t)
 
@@ -42,6 +49,7 @@
     (set! (@ self message) (make-Message))
     {initialize-environment self}))
 
+;; <- Runtime
 (defmethod {execute Runtime}
   (λ (self)
     (with-logged-exceptions ()
@@ -68,11 +76,15 @@
           (set! (@ self current-code-block-label) exit)
           {execute self})))))
 
+;; Bool <- Runtime
 (defmethod {is-active-participant? Runtime}
   (λ (self)
     (def current-code-block {get-current-code-block self})
     (equal? (@ self role) (code-block-participant current-code-block))))
 
+;; TODO: everything about this function, from the timer-start and/or wherever we left off
+;; to timeout or (indefinite future if no timeout???)
+;; : LogObject <- Runtime Address Block
 (defmethod {watch Runtime}
   ;; TODO: consult unprocessed log objects first, if none is available, then use getLogs
   ;; TODO: be able to split getLogs into smaller requests if it a bigger request times out.
@@ -83,13 +95,7 @@
       (def to-block (+ from-block (ethereum-timeout-in-blocks))) ;; TODO: get the timeout that from the agreement
       (watch-contract callback contract-address from-block to-block))))
 
-(define-type ContractStatus
-  (Sum
-    NotYetDeployed: Unit
-    Active: (Tuple Quantity TransactionReceipt)
-    Complete: Unit))
-(define-sum-constructors ContractStatus NotYetDeployed Active Complete)
-
+;; <- Runtime
 (defmethod {receive Runtime}
   (λ (self)
     (def role (@ self role))
@@ -119,11 +125,14 @@
           (verify-contract-config contract-config create-pretx)
           (set! (@ self contract-config) contract-config))))))
 
+;; TODO: have parametrized I/O with UI
+;; : ContractHandshake <- Runtime
 (defmethod {read-handshake Runtime}
   (λ (self)
     (def handshake-json (read-file-json (run-path "contract-handshake.json")))
     (<-json ContractHandshake handshake-json)))
 
+;; <- Runtime
 (defmethod {publish Runtime}
   (λ (self)
     (def role (@ self role))
@@ -147,12 +156,16 @@
           (def new-tx-receipt (post-transaction message-pretx))
           {reset message})))))
 
+;; Sexp <- State
 (def (sexp<-state state) (map (match <> ([t . v] (sexp<- t v))) state))
 
+;; TODO: include type output, too, looked up in type table.
+;; <- Runtime Symbol Value
 (defmethod {add-to-environment Runtime}
   (λ (self name value)
     (hash-put! (@ self environment) name value)))
 
+;; PreTransaction <- Runtime Block
 (defmethod {prepare-create-contract-transaction Runtime}
   (λ (self timer-start)
     (def sender-address {get-active-participant self})
@@ -169,6 +182,7 @@
     (create-contract sender-address contract-bytes
       value: {compute-participant-dues (@ self message) sender-address})))
 
+;; PreTransaction <- Runtime Block
 (defmethod {deploy-contract Runtime}
   (λ (self)
     (def role (@ self role))
@@ -189,6 +203,7 @@
     (set! (@ self contract-config) contract-config)))
 
 ;; See gerbil-ethereum/contract-runtime.ss for spec.
+;; PreTransaction <- Runtime Message.Outbox Block Address
 (defmethod {prepare-call-function-transaction Runtime}
   (λ (self outbox timer-start contract-address)
     (def sender-address {get-active-participant self})
@@ -209,6 +224,7 @@
       value: {compute-participant-dues (@ self message) sender-address}
       gas: 800000)))
 
+;; CodeBlock <- Runtime
 (defmethod {get-current-code-block Runtime}
   (λ (self)
     (def contract (@ self contract))
@@ -218,6 +234,7 @@
 
 ;; TODO: map alpha-converted names to names in original source when displaying to user
 ;;       using the alpha-back-table
+;; <- Runtime
 (defmethod {initialize-environment Runtime}
   (λ (self)
     (def contract (@ self contract))
@@ -226,6 +243,7 @@
     (for ((values key [_ . value]) (in-hash (@ contract arguments)))
       {add-to-environment self key value})))
 
+;; Any <- Runtime
 (defmethod {reduce-expression Runtime}
   (λ (self expression)
     (cond
@@ -245,26 +263,28 @@
      (else
       expression))))
 
+;; Symbol <- Runtime
 (defmethod {get-active-participant Runtime}
   (λ (self)
     (def contract (@ self contract))
     (hash-get (@ contract participants) (@ self role))))
 
+;; Bytes <- (List DependentPair)
 (def (marshal-product-f fields)
   (def out (open-output-u8vector))
   (marshal-product-to fields out)
   (get-output-u8vector out))
 
+;; <- (List DependentPair) BytesOutputPort
 (def (marshal-product-to fields port)
   (for ((p fields))
     (with (([t . v] p)) (marshal t v port))))
 
+;; : Digest <- (List DependentPair)
 (def (digest-product-f fields)
-  (def out (open-output-u8vector))
-  (for ((field fields))
-    (with (([t . v] field)) (marshal t v out)))
   (digest<-bytes (marshal-product-f fields)))
 
+;; : <- Runtime ProjectStatement
 (defmethod {interpret-participant-statement Runtime}
   (λ (self statement)
     (match statement
@@ -354,11 +374,14 @@
 (define-type ContractHandshake
   (Record
    ;;agreement: [Contract]
-   timer-start: [Block]
+   timer-start: [Block] ;; TODO: should be included in the Contract already
    contract-config: [ContractConfig]))
 
-;; MESSAGE
-(defclass Message (inbox outbox asset-transfers)
+;; MESSAGE ;; TODO: more like CommunicationState
+(defclass Message
+  (inbox ;; : BytesInputPort
+   outbox ;; : (Table DependentPair <- Symbol) ;; TODO: just have a BytesOutputPort ?
+   asset-transfers) ;; : (Alist Z <- Address)
   constructor: :init!
   transparent: #t)
 
@@ -368,22 +391,24 @@
     (set! (@ self outbox) o)
     (set! (@ self asset-transfers) at)))
 
+;; <- Message
 (defmethod {reset Message}
   (λ (self)
     (set! (@ self inbox) #f)
     (hash-clear! (@ self outbox))))
 
+;; <- Message Symbol t:Type t
 (defmethod {add-to-published Message}
   (λ (self name type value)
     (hash-put! (@ self outbox) name [type . value])))
 
-;; expect-published : Sym TypeMethods -> Any
+;; expect-published : t <- Symbol t:Type
 (defmethod {expect-published Message}
   (λ (self name type)
     ;; ignore name, by order not by name
     (unmarshal type (@ self inbox))))
 
-;; add-to-withdraw : Address Nat -> Void
+;; add-to-withdraw : <- Address Nat
 (defmethod {add-to-withdraw Message}
   (λ (self address amount)
     (def mat (@ self asset-transfers))
@@ -391,7 +416,7 @@
     (def mat3 (assq-update mat2 #f (cut - <> amount) 0))
     (set! (@ self asset-transfers) mat3)))
 
-;; add-to-deposit : Nat -> Void
+;; add-to-deposit : <- Nat
 (defmethod {add-to-deposit Message}
   (λ (self address amount)
     (def mat (@ self asset-transfers))
@@ -399,7 +424,7 @@
     (def mat3 (assq-update mat2 #f (cut + <> amount) 0))
     (set! (@ self asset-transfers) mat3)))
 
-;; expect-deposited : Nat -> Void
+;; expect-deposited : <- Nat
 (defmethod {expect-deposited Message}
   (λ (self address amount)
     (def mat (@ self asset-transfers))
@@ -407,7 +432,7 @@
     (def mat3 (assq-update mat2 #f (cut - <> amount) 0))
     (set! (@ self asset-transfers) mat3)))
 
-;; expect-withdrawn : Address Nat -> Void
+;; expect-withdrawn : <- Address Nat
 (defmethod {expect-withdrawn Message}
   (λ (self address amount)
     (def mat (@ self asset-transfers))
@@ -415,6 +440,7 @@
     (def mat3 (assq-update mat2 #f (cut + <> amount) 0))
     (set! (@ self asset-transfers) mat3)))
 
+;; : Nat <- Message Symbol
 (defmethod {compute-participant-dues Message}
   (λ (self participant)
     (def asset-transfers (@ self asset-transfers))

@@ -7,10 +7,19 @@
   :mukn/ethereum/ethereum
   ../compiler/typecheck/type)
 
-(defclass Program (name argument-names interactions compiler-output)
+;; (deftype Interaction (Table CodeBlock <- Symbol))
+
+(defclass Program
+  (name ;; : String
+   argument-names ;; : (List Symbol)
+   interactions ;; : (Table Interaction <- (OrFalse Symbol))
+   compiler-output) ;; : (Table Sexp <- Symbol) ;; S-expression returned by the project pass.
   constructor: :init!
   transparent: #t)
 
+;; Takes the S-expression from the project pass and creates a Program
+;; by finding the code-blocks that are transaction boundaries
+;; <- Sexp
 (def (parse-compiler-output output)
   (def program (extract-program (hash-ref output 'project.sexp)))
   (set! (@ program compiler-output) output)
@@ -22,11 +31,14 @@
     (set! (@ self argument-names) an)
     (set! (@ self interactions) i)))
 
+;; Interaction <- Program Symbol
 (defmethod {get-interaction Program}
   (λ (self participant)
     (hash-get (@ self interactions) participant)))
 
 ;; TODO: use typemethods table for custom data types
+;; Runtime type descriptor from alpha-converted symbol
+;; : Type <- Program Symbol
 (defmethod {lookup-type Program}
   (λ (self variable-name)
     (def type-table (hash-ref (@ self compiler-output) 'typetable.sexp))
@@ -40,16 +52,23 @@
         ((type:tuple ts) (apply Tuple (map type-methods ts)))))
     (type-methods (hash-get type-table variable-name))))
 
-(defclass ParseContext (current-participant current-label code)
+;; context to parse compiler output and locate labels
+(defclass ParseContext
+  (current-participant ;; : (OrFalse Symbol)
+   current-label ;; : (OrFalse Symbol)
+   code) ;; : Interaction
   constructor: :init!
   transparent: #t)
 
 (defmethod {:init! ParseContext}
-  (λ (self (cp #f) (cl 'begin0) (c (make-hash-table)))
-    (set! (@ self current-participant) cp)
-    (set! (@ self current-label) cl)
-    (set! (@ self code) c)))
+  (λ (self (current-participant #f) ;; : (OrFalse Symbol)
+           (current-label 'begin0) ;; : (OrFalse Symbol) ;; TODO: do NOT hardwire begin0
+           (code (make-hash-table))) ;; Interaction
+    (set! (@ self current-participant) current-participant)
+    (set! (@ self current-label) current-label)
+    (set! (@ self code) code)))
 
+;; ParseContext <- ParseContext Sexp
 (defmethod {add-statement ParseContext}
   (λ (self statement)
     (match (hash-get (@ self code) (@ self current-label))
@@ -60,8 +79,14 @@
       (#f
         self))))
 
-(defstruct code-block (participant statements exit) transparent: #t)
+;; TODO: rename to CodeBlock ?
+(defstruct code-block
+  (participant ;; : (OrFalse Symbol)
+   statements ;; : (List Sexp)
+   exit) ;; (OrFalse Symbol)
+  transparent: #t)
 
+;; <- ParseContext (OrFalse Symbol)
 (defmethod {set-participant ParseContext}
   (λ (self new-participant)
     (unless (and (@ self current-participant) (equal? new-participant (@ self current-participant)))
@@ -82,10 +107,9 @@
           (#f
             (begin
               (set! (@ self current-participant) new-participant)
-              (hash-put! contract (@ self current-label) (make-code-block new-participant [] #f))
-              self)))))))
+              (hash-put! contract (@ self current-label) (make-code-block new-participant [] #f)))))))))
 
-
+;; Program <- Sexp
 (def (extract-program statements)
   (def program (make-Program))
   (for ((statement (syntax->datum statements)))
@@ -111,6 +135,7 @@
         (error "Unrecognized program statement: " statement))))
   program)
 
+;; : Interaction <- Symbol (List Sexp)
 (def (process-program name body)
   (def parse-context (make-ParseContext))
   (for-each! body (λ (statement)
