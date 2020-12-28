@@ -2,14 +2,16 @@
 
 (import
   :std/iter :std/sugar :std/misc/hash :std/misc/list :std/misc/number :std/srfi/1
-  :clan/syntax
-  :mukn/ethereum/assembly :mukn/ethereum/ethereum :mukn/ethereum/assets
-  :mukn/ethereum/signing :mukn/ethereum/contract-runtime
+  :clan/number :clan/syntax :clan/poo/io
+  :mukn/ethereum/hex :mukn/ethereum/types :mukn/ethereum/ethereum :mukn/ethereum/signing
+  :mukn/ethereum/assembly :mukn/ethereum/contract-runtime :mukn/ethereum/assets
   ./program
   ../compiler/project/runtime-2)
 
 ;; (deftype DependentPair (Pair t:Type Value:t))
 
+;; TODO: re-compute for each code-block
+;; TODO: key variable-offsets with (Pair frame:Symbol variable:Symbol), or move it to CodeBlock!
 (defclass Contract
   (program ;; : Program ;; from program.ss
    participants ;; : (Table Address <- Symbol)
@@ -56,7 +58,9 @@
          &simple-contract-prelude
          &define-simple-logging
          (&define-check-participant-or-timeout)
-         (&define-end-contract)
+         ;; NB: you can use #t below to debug with remix.ethereum.org. Do NOT commit that!
+         ;; TODO: maybe we should have some more formal debugging mode parameter?
+         (&define-end-contract debug: #f)
          {generate-consensus-code self}
          [&label 'brk-start@ (unbox (brk-start))])))))
 
@@ -111,16 +115,18 @@
 (defmethod {trivial-expression Contract}
   (λ (self expr)
     (def type {lookup-type (@ self program) expr})
+    (def len (param-length type))
     (cond
-      ((symbol? expr)
-       (cond ((member (.@ type sexp) '(Signature (Tuple UInt256 UInt256)))
-              {lookup-variable-offset self expr type})
-             (else
-              {load-immediate-variable self expr type})))
-      ((integer? expr)
-       expr)
-      (else
-       (error 'trivial-expression "unknown" expr type)))))
+     ((zero? len) 0) ;; TODO: have a more general notion of singleton/unit type, not only 0-valued?
+     ((<= len 32) ;; TODO: have a more general notion of immediate vs boxed type?
+      (if (symbol? expr)
+        {load-immediate-variable self expr type} ;; reading a variable
+        (nat<-bytes (bytes<- type expr)))) ;; constant
+     (else
+      (if (symbol? expr)
+        {lookup-variable-offset self expr type} ;; referring to a variable by offset
+        ;; TODO: store the data in a variable (temporary, if needed) --- do that in ANF after typesetting.
+        (error "trivial-expression: oversize constant" (.@ type sexp) expr))))))
 
 ;; TODO: params-end should be the MAX of each frame's params-end.
 ;; Updates variable offsets to account for new local variable, and increments params-end
@@ -129,10 +135,11 @@
   (λ (self variable-name)
     (def type {lookup-type (@ self program) variable-name})
     (def argument-length (param-length type))
-    (when (hash-key? (@ self variable-offsets) variable-name)
-      (error "variable already added!" variable-name))
-    (hash-put! (@ self variable-offsets)
-      variable-name (post-increment! (@ self params-end) argument-length))))
+    (def offsets (@ self variable-offsets))
+    ;; A same variable can be computed in many branches of a code-block;
+    ;; just keep the existing offset if the variable was already seen.
+    (unless (hash-key? offsets variable-name)
+      (hash-put! offsets variable-name (post-increment! (@ self params-end) argument-length)))))
 
 ;; Directives to generate the entire bytecode for the contract (minus header / footer)
 ;; Directive <- Contract
@@ -172,38 +179,38 @@
            must-act: {lookup-variable-offset self new-participant}
            or-end-in-favor-of: {lookup-variable-offset self other-participant})]))
 
+      ;; TODO: support the fact that the "immediate continuation" for an expression
+      ;; may be not just def, but also ignore or return
       (['def variable-name expression]
        {add-local-variable-to-frame self variable-name}
-       (match expression
-         (['expect-published published-variable-name]
-          [{lookup-variable-offset self variable-name} &read-published-data-to-mem])
-         ;; TODO: digest
-         (['@app 'isValidSignature participant digest signature]
-          [{load-immediate-variable self participant Address}
-           {load-immediate-variable self digest Digest}
-           ;; signatures are passed by reference, not by value
-           {lookup-variable-offset self signature}
-           &isValidSignature])
-         (['@app '< a b]
-          [{trivial-expression self a}
-           {trivial-expression self b}
-           LT])))
+       (let* ((type {lookup-type (@ self program) variable-name})
+              (len (and type (param-length type))))
+         (match expression
+           (['expect-published published-variable-name]
+            [len {lookup-variable-offset self variable-name} &read-published-data-to-mem])
+           ;; TODO: digest
+           (['@app 'isValidSignature participant digest signature]
+            [{load-immediate-variable self participant Address}
+             {load-immediate-variable self digest Digest}
+             ;; signatures are passed by reference, not by value
+             {lookup-variable-offset self signature}
+             &isValidSignature
+             (&mstoreat {lookup-variable-offset self variable-name} 1)])
+           (['@app '< a b]
+            [{trivial-expression self a}
+             {trivial-expression self b}
+             LT]))))
 
       (['require! variable-name]
        [{load-immediate-variable self variable-name Bool} &require!])
 
       (['expect-deposited amount]
-       ;; TODO: check that this amount was deposited by the active participant
-       [])
+       [{load-immediate-variable self amount Ether} &deposit!])
 
       (['consensus:withdraw participant amount]
        [{load-immediate-variable self amount Ether}
         {load-immediate-variable self participant Address}
         &withdraw!])
-
-      (['expect-deposited amount]
-       ;; TODO: implement
-       [])
 
       (['@label 'end0]
        [&end-contract!])
