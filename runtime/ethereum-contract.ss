@@ -54,7 +54,7 @@
       (def consensus-code {generate-consensus-code self})
       (assemble
         (&begin
-        &simple-contract-prelude
+        (&simple-contract-prelude)
         &define-simple-logging
         (&define-check-participant-or-timeout)
         ;; NB: you can use #t below to debug with remix.ethereum.org. Do NOT commit that!
