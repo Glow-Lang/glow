@@ -50,18 +50,18 @@
 ;; : Bytes (Table Offset <- Symbol) <- Contract
 (defmethod {generate-consensus-runtime Contract}
   (λ (self)
-    (set! (@ self variable-offsets) (make-hash-table))
     (parameterize ((brk-start (box params-start@)))
-      (assemble
-        (&begin
-         &simple-contract-prelude
-         &define-simple-logging
-         (&define-check-participant-or-timeout)
-         ;; NB: you can use #t below to debug with remix.ethereum.org. Do NOT commit that!
-         ;; TODO: maybe we should have some more formal debugging mode parameter?
-         (&define-end-contract debug: #f)
-         {generate-consensus-code self}
-         [&label 'brk-start@ (unbox (brk-start))])))))
+      (def consensus-code {generate-consensus-code self})
+        (assemble
+          (&begin
+          &simple-contract-prelude
+          &define-simple-logging
+          (&define-check-participant-or-timeout)
+          ;; NB: you can use #t below to debug with remix.ethereum.org. Do NOT commit that!
+          ;; TODO: maybe we should have some more formal debugging mode parameter?
+          (&define-end-contract debug: #f)
+          consensus-code
+          [&label 'brk-start@ (unbox (brk-start))])))))
 
 ;; : Bytes (Table Offset <- Symbol) <- Contract
 (defmethod {make-checkpoint-label Contract}
@@ -144,6 +144,7 @@
 (defmethod {generate-consensus-code Contract}
   (λ (self)
     (def consensus-interaction {get-interaction (@ self program) #f})
+    (set! (@ self variable-offsets) (make-hash-table))
     (&begin*
      (append-map (match <> ([checkpoint . code-block]
                             {generate-consensus-code-block self checkpoint code-block}))
@@ -161,7 +162,6 @@
       (append-map (λ (statement) {interpret-consensus-statement self checkpoint statement})
                  checkpoint-statements)...])
     (register-frame-size (@ self params-end))
-    (displayln "brk-start: " (unbox (brk-start)))
     directives))
 
 ;; ASSUMING a two-participant contract, find the other participant for use in timeouts.
@@ -209,7 +209,7 @@
        [{load-immediate-variable self current-checkpoint variable-name Bool} &require!])
 
       (['expect-deposited amount]
-       [{load-immediate-variable self amount Ether} &deposit!])
+       [{load-immediate-variable self current-checkpoint amount Ether} &deposit!])
 
       (['consensus:withdraw participant amount]
        [{load-immediate-variable self current-checkpoint amount Ether}
