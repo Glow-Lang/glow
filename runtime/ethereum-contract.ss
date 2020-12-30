@@ -10,7 +10,6 @@
 
 ;; (deftype DependentPair (Pair t:Type Value:t))
 
-;; TODO: re-compute for each code-block
 ;; TODO: key variable-offsets with (Pair frame:Symbol variable:Symbol), or move it to CodeBlock!
 (defclass Contract
   (program ;; : Program ;; from program.ss
@@ -134,10 +133,13 @@
   (λ (self code-block-label variable-name)
     (def type {lookup-type (@ self program) variable-name})
     (def argument-length (param-length type))
-    ;(when (hash-key? (@ self variable-offsets) variable-name)
-    ;  (error "variable already added!" variable-name))
-    (hash-put! (hash-get (@ self variable-offsets) code-block-label)
-      variable-name (post-increment! (@ self params-end) argument-length))))
+    (def code-block-variable-offsets (hash-get (@ self variable-offsets) code-block-label))
+    ;; The same variable can be bound in several branches of an if or match expression, and
+    ;; because of the ANF transformation we can assume the previously assigned offset is
+    ;; correct already.
+    (unless (hash-key? code-block-variable-offsets variable-name)
+      (hash-put! code-block-variable-offsets variable-name
+        (post-increment! (@ self params-end) argument-length)))))
 
 ;; Directives to generate the entire bytecode for the contract (minus header / footer)
 ;; Directive <- Contract
