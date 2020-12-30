@@ -103,8 +103,10 @@ let
 
   maybeOverrideDep = name:
     let path = ./dep + "/${name}";
-        json = builtins.fromJSON (builtins.readFile "${path}/github.json");
-        pre-src = path-src (nix-thunk.thunkSource path) // json; in
+        pre-src = path-src (nix-thunk.thunkSource path) //
+                  (if builtins.pathExists path then
+                     builtins.fromJSON (builtins.readFile "${path}/github.json")
+                  else {}); in
         overrideSrcIfShaDiff name pre-src;
 
   config = {
