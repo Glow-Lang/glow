@@ -207,8 +207,8 @@
              &isValidSignature
              (&mstoreat {lookup-variable-offset self code-block-label variable-name} 1)])
            (['@app '< a b]
-            [{trivial-expression self a}
-             {trivial-expression self b}
+            [{trivial-expression self code-block-label a}
+             {trivial-expression self code-block-label b}
              LT]))))
 
       (['require! variable-name]
