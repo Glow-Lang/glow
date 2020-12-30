@@ -84,5 +84,5 @@
 
       (def signature (hash-get environment 'signature))
       (display-poo-ln
-          ["Signature extracted from contract logs: " Signature signature
+          ["Signature extracted from contract logs: " Signature (json<- Signature signature)
            "valid?: " (message-signature-valid? seller-address signature digest)])))))

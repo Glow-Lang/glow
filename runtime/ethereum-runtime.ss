@@ -222,6 +222,8 @@
     (def message-bytes (get-output-u8vector out))
     (call-function sender-address contract-address message-bytes
       value: {compute-participant-dues (@ self message) sender-address}
+      ;; default should be (void), i.e. ask for an automatic estimate,
+      ;; unless we want to force the TX to happen
       gas: 800000)))
 
 ;; CodeBlock <- Runtime
@@ -243,16 +245,25 @@
     (for ((values key [_ . value]) (in-hash (@ contract arguments)))
       {add-to-environment self key value})))
 
+;; TODO: use the one in std/misc/hash after this PR gets merged: https://github.com/vyzo/gerbil/pull/588
+(def %none '(none))
+(def (hash-ref/default hash key default)
+  (def v (hash-ref hash key %none))
+  (if (eq? v %none)
+    (default)
+    v))
+
+;; TODO: make sure everything always has a type ???
 ;; Any <- Runtime
 (defmethod {reduce-expression Runtime}
   (λ (self expression)
     (cond
      ((symbol? expression)
-      (match (hash-get (@ self environment) expression)
+      (match (hash-ref/default
+              (@ self environment) expression
+              (cut error "variable missing from execution environment" expression))
         ([type . value]
           value)
-        (#f
-          (error (string-append expression " is missing from execution environment")))
         (value
           value)))
      ((boolean? expression) expression)
@@ -348,9 +359,8 @@
                 (cons {lookup-type (@ (@ self contract) program) e}
                       {reduce-expression self e}))))
             (['sign digest-variable]
-              (let
-                ((this-participant {get-active-participant self})
-                 (digest {reduce-expression self digest-variable}))
+              (let ((this-participant {get-active-participant self})
+                    (digest {reduce-expression self digest-variable}))
                 (make-message-signature (secret-key<-address this-participant) digest)))
             (['input 'Nat tag]
              (let ((tagv {reduce-expression self tag}))
@@ -360,10 +370,11 @@
       (['require! variable-name]
         (match {reduce-expression self variable-name}
           (#t (void))
+          ;; TODO: include debugging information when something fails!
           (#f
-            (error "Assertion failed"))
+           (error "Assertion failed"))
           (else
-            (error "Assertion failed, variable is not a Boolean" variable-name))))
+           (error "Assertion failed, variable is not a Boolean" variable-name))))
 
       (['return ['@tuple]]
         (void))

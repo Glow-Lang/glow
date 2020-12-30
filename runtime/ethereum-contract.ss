@@ -2,19 +2,20 @@
 
 (import
   :std/iter :std/sugar :std/misc/hash :std/misc/list :std/misc/number :std/srfi/1
-  :clan/syntax
-  :mukn/ethereum/assembly :mukn/ethereum/ethereum :mukn/ethereum/assets
-  :mukn/ethereum/signing :mukn/ethereum/contract-runtime
+  :clan/number :clan/syntax :clan/poo/io
+  :mukn/ethereum/hex :mukn/ethereum/types :mukn/ethereum/ethereum :mukn/ethereum/signing
+  :mukn/ethereum/assembly :mukn/ethereum/contract-runtime :mukn/ethereum/assets
   ./program
   ../compiler/project/runtime-2)
 
 ;; (deftype DependentPair (Pair t:Type Value:t))
 
+;; TODO: key variable-offsets with (Pair frame:Symbol variable:Symbol), or move it to CodeBlock!
 (defclass Contract
   (program ;; : Program ;; from program.ss
    participants ;; : (Table Address <- Symbol)
    arguments ;; : (Table DependentPair <- Symbol)
-   variable-offsets ;; : (Table Offset <- Symbol)
+   variable-offsets ;; : (Table (Table Offset <- Symbol) <- Symbol)
    params-end ;; : Offset
    initial-timer-start ;; : Block
    timeout) ;; : Block
@@ -24,9 +25,9 @@
 
 ;; : Frame <- Contract Block (Table Offset <- Symbol) Symbol
 (defmethod {create-frame-variables Contract}
-  (λ (self timer-start contract-runtime-labels checkpoint)
+  (λ (self timer-start contract-runtime-labels code-block-label)
     (def checkpoint-location
-      (hash-get contract-runtime-labels {make-checkpoint-label self checkpoint}))
+      (hash-get contract-runtime-labels {make-checkpoint-label self code-block-label}))
     ;; TODO: ensure keys are sorted in both hash-values
     [[UInt16 . checkpoint-location]
      [Block . timer-start]
@@ -48,17 +49,18 @@
 ;; : Bytes (Table Offset <- Symbol) <- Contract
 (defmethod {generate-consensus-runtime Contract}
   (λ (self)
-    (set! (@ self params-end) #f)
-    {compute-parameter-offsets self}
     (parameterize ((brk-start (box params-start@)))
+      (def consensus-code {generate-consensus-code self})
       (assemble
         (&begin
-         &simple-contract-prelude
-         &define-simple-logging
-         (&define-check-participant-or-timeout)
-         (&define-end-contract)
-         {generate-consensus-code self}
-         [&label 'brk-start@ (unbox (brk-start))])))))
+        (&simple-contract-prelude)
+        &define-simple-logging
+        (&define-check-participant-or-timeout)
+        ;; NB: you can use #t below to debug with remix.ethereum.org. Do NOT commit that!
+        ;; TODO: maybe we should have some more formal debugging mode parameter?
+        (&define-end-contract debug: #f)
+        consensus-code
+        [&label 'brk-start@ (unbox (brk-start))])))))
 
 ;; : Bytes (Table Offset <- Symbol) <- Contract
 (defmethod {make-checkpoint-label Contract}
@@ -66,8 +68,8 @@
     (symbolify (@ self program name) "--" checkpoint)))
 
 ;; <- Contract
-(defmethod {compute-parameter-offsets Contract}
-  (λ (self)
+(defmethod {compute-variable-offsets Contract}
+  (λ (self code-block-label)
     (def frame-variables (make-hash-table))
     ;; Initial offset computed by global registers, see :mukn/ethereum/contract-runtime
     (def start params-start@)
@@ -83,14 +85,14 @@
                    (hash-put! frame-variables
                               variable (post-increment! start argument-length)))))
               (hash->list/sort (@ self arguments) symbol<?))
-    (set! (@ self variable-offsets) frame-variables)
+    (hash-put! (@ self variable-offsets) code-block-label frame-variables)
     (set! (@ self params-end) start)))
 
 ;; Offset <- Contract Symbol
 (defmethod {lookup-variable-offset Contract}
-  (λ (self variable-name)
+  (λ (self code-block-label variable-name)
     (def offset
-      (hash-get (@ self variable-offsets) variable-name))
+      (hash-get (hash-get (@ self variable-offsets) code-block-label) variable-name))
     (if offset
       offset
       (error "No offset for variable: " variable-name))))
@@ -98,9 +100,9 @@
 ;; Assembly directives to load an immediate variable (i.e. for unboxed type) onto the stack
 ;; : Directives <- Contract Symbol Type
 (defmethod {load-immediate-variable Contract}
-  (λ (self variable-name variable-type)
+  (λ (self code-block-label variable-name variable-type)
     (&mloadat
-      {lookup-variable-offset self variable-name}
+      {lookup-variable-offset self code-block-label variable-name}
       (param-length variable-type))))
 
 ;; Directives to load onto stack a representation for a trivial expression
@@ -109,49 +111,60 @@
 ;; otherwise place a constant on the stack
 ;; : Directives <- Contract
 (defmethod {trivial-expression Contract}
-  (λ (self expr)
+  (λ (self code-block-label expr)
     (def type {lookup-type (@ self program) expr})
+    (def len (param-length type))
     (cond
-      ((symbol? expr)
-       (cond ((member (.@ type sexp) '(Signature (Tuple UInt256 UInt256)))
-              {lookup-variable-offset self expr type})
-             (else
-              {load-immediate-variable self expr type})))
-      ((integer? expr)
-       expr)
-      (else
-       (error 'trivial-expression "unknown" expr type)))))
+     ((zero? len) 0) ;; TODO: have a more general notion of singleton/unit type, not only 0-valued?
+     ((<= len 32) ;; TODO: have a more general notion of immediate vs boxed type?
+      (if (symbol? expr)
+        {load-immediate-variable self code-block-label expr type} ;; reading a variable
+        (nat<-bytes (bytes<- type expr)))) ;; constant
+     (else
+      (if (symbol? expr)
+        {lookup-variable-offset self code-block-label expr type} ;; referring to a variable by offset
+        ;; TODO: store the data in a variable (temporary, if needed) --- do that in ANF after typesetting.
+        (error "trivial-expression: oversize constant" (.@ type sexp) expr))))))
 
 ;; TODO: params-end should be the MAX of each frame's params-end.
 ;; Updates variable offsets to account for new local variable, and increments params-end
 ;; <- Contract Symbol
 (defmethod {add-local-variable-to-frame Contract}
-  (λ (self variable-name)
+  (λ (self code-block-label variable-name)
     (def type {lookup-type (@ self program) variable-name})
     (def argument-length (param-length type))
-    (when (hash-key? (@ self variable-offsets) variable-name)
-      (error "variable already added!" variable-name))
-    (hash-put! (@ self variable-offsets)
-      variable-name (post-increment! (@ self params-end) argument-length))))
+    (def code-block-variable-offsets (hash-get (@ self variable-offsets) code-block-label))
+    ;; The same variable can be bound in several branches of an if or match expression, and
+    ;; because of the ANF transformation we can assume the previously assigned offset is
+    ;; correct already.
+    (unless (hash-key? code-block-variable-offsets variable-name)
+      (hash-put! code-block-variable-offsets variable-name
+        (post-increment! (@ self params-end) argument-length)))))
 
 ;; Directives to generate the entire bytecode for the contract (minus header / footer)
 ;; Directive <- Contract
 (defmethod {generate-consensus-code Contract}
   (λ (self)
     (def consensus-interaction {get-interaction (@ self program) #f})
+    (set! (@ self variable-offsets) (make-hash-table))
     (&begin*
-     (append-map (match <> ([checkpoint . code-block]
-                            {generate-consensus-code-block self checkpoint code-block}))
+     (append-map (match <> ([code-block-label . code-block]
+                            {generate-consensus-code-block self code-block-label code-block}))
                  (hash->list/sort consensus-interaction symbol<?)))))
 
 ;; Directives from a code block
 ;; (List Directive) <- Contract Symbol CodeBlock
 (defmethod {generate-consensus-code-block Contract}
-  (λ (self checkpoint code-block)
+  (λ (self code-block-label code-block)
     (def checkpoint-statements (code-block-statements code-block))
-    [[&jumpdest {make-checkpoint-label self checkpoint}]
-     (append-map (λ (statement) {interpret-consensus-statement self statement})
-                 checkpoint-statements)...]))
+    (set! (@ self params-end) #f)
+    {compute-variable-offsets self code-block-label}
+    (def directives
+      [[&jumpdest {make-checkpoint-label self code-block-label}]
+      (append-map (λ (statement) {interpret-consensus-statement self code-block-label statement})
+                 checkpoint-statements)...])
+    (register-frame-size (@ self params-end))
+    directives))
 
 ;; ASSUMING a two-participant contract, find the other participant for use in timeouts.
 ;; Symbol <- Contract Symbol
@@ -163,47 +176,47 @@
 
 ;; (List Directive) <- Contract Sexp
 (defmethod {interpret-consensus-statement Contract}
-  (λ (self statement)
+  (λ (self code-block-label statement)
     (match statement
       (['set-participant new-participant]
        ;; TODO: support more than two participants
        (let (other-participant {find-other-participant self new-participant})
          [(&check-participant-or-timeout!
-           must-act: {lookup-variable-offset self new-participant}
-           or-end-in-favor-of: {lookup-variable-offset self other-participant})]))
+           must-act: {lookup-variable-offset self code-block-label new-participant}
+           or-end-in-favor-of: {lookup-variable-offset self code-block-label other-participant})]))
 
+      ;; TODO: support the fact that the "immediate continuation" for an expression
+      ;; may be not just def, but also ignore or return
       (['def variable-name expression]
-       {add-local-variable-to-frame self variable-name}
-       (match expression
-         (['expect-published published-variable-name]
-          [{lookup-variable-offset self variable-name} &read-published-data-to-mem])
-         ;; TODO: digest
-         (['@app 'isValidSignature participant digest signature]
-          [{load-immediate-variable self participant Address}
-           {load-immediate-variable self digest Digest}
-           ;; signatures are passed by reference, not by value
-           {lookup-variable-offset self signature}
-           &isValidSignature])
-         (['@app '< a b]
-          [{trivial-expression self a}
-           {trivial-expression self b}
-           LT])))
+       {add-local-variable-to-frame self code-block-label variable-name}
+       (let* ((type {lookup-type (@ self program) variable-name})
+              (len (and type (param-length type))))
+         (match expression
+           (['expect-published published-variable-name]
+            [len {lookup-variable-offset self code-block-label variable-name} &read-published-data-to-mem])
+           ;; TODO: digest
+           (['@app 'isValidSignature participant digest signature]
+            [{load-immediate-variable self code-block-label participant Address}
+             {load-immediate-variable self code-block-label digest Digest}
+             ;; signatures are passed by reference, not by value
+             {lookup-variable-offset self code-block-label signature}
+             &isValidSignature
+             (&mstoreat {lookup-variable-offset self code-block-label variable-name} 1)])
+           (['@app '< a b]
+            [{trivial-expression self a}
+             {trivial-expression self b}
+             LT]))))
 
       (['require! variable-name]
-       [{load-immediate-variable self variable-name Bool} &require!])
+       [{load-immediate-variable self code-block-label variable-name Bool} &require!])
 
       (['expect-deposited amount]
-       ;; TODO: check that this amount was deposited by the active participant
-       [])
+       [{load-immediate-variable self code-block-label amount Ether} &deposit!])
 
       (['consensus:withdraw participant amount]
-       [{load-immediate-variable self amount Ether}
-        {load-immediate-variable self participant Address}
+       [{load-immediate-variable self code-block-label amount Ether}
+        {load-immediate-variable self code-block-label participant Address}
         &withdraw!])
-
-      (['expect-deposited amount]
-       ;; TODO: implement
-       [])
 
       (['@label 'end0]
        [&end-contract!])
