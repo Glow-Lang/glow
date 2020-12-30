@@ -36,15 +36,16 @@
     options: [AgreementOptions] ;; See above
     code-digest: [Digest]))) ;; Make it the digest of Glow source code (in the future, including all Glow libraries transitively used)
 
-(define-type AgreementHandshake ;; TODO: Use that instead of ContractHandshake
+(define-type AgreementHandshake
   (Record
    agreement: [InteractionAgreement]
    contract-config: [ContractConfig]))
+;; timer-start = (.@ agreement-handshake agreement options maxInitialBlock)
 
 (define-type IOContext
   (instance Class
-    slots: (.o send-handshake: (.o type: (Fun Unit <- ContractHandshake))
-               receive-handshake: (.o type: (Fun ContractHandshake <-)))))
+    slots: (.o send-handshake: (.o type: (Fun Unit <- AgreementHandshake))
+               receive-handshake: (.o type: (Fun AgreementHandshake <-)))))
 
 ;; TODO: make an alternate version of io-context that
 ;;       displays at the terminal for the user to copy/paste and send to
@@ -52,20 +53,23 @@
 (.def io-context:special-file
   send-handshake:
   (lambda (handshake)
-    (write-file-json (run-path "contract-handshake.json") (json<- ContractHandshake handshake)))
+    (write-file-json (run-path "agreement-handshake.json") (json<- AgreementHandshake handshake)))
   receive-handshake:
   (lambda ()
-    (def contract-handshake.json (run-path "contract-handshake.json"))
-    (while (not (file-exists? contract-handshake.json))
-      (displayln "waiting for contract handshake ...")
+    (def agreement-handshake.json (run-path "agreement-handshake.json"))
+    (while (not (file-exists? agreement-handshake.json))
+      (displayln "waiting for agreement handshake ...")
       (thread-sleep! 1))
-    (def handshake-json (read-file-json contract-handshake.json))
-    (<-json ContractHandshake handshake-json)))
+    (def handshake-json (read-file-json agreement-handshake.json))
+    (<-json AgreementHandshake handshake-json)))
 
 ;; PARTICIPANT RUNTIME
 
+;; TODO: derive the contract from the agreement,
+;;       check that the code-digest in the agreement matches
 (defclass Runtime
   (role ;; : Symbol
+   agreement ;; : InteractionAgreement
    contract ;; : Contract
    contract-config ;; : ContractConfig
    status ;; (Enum running completed aborted stopped)
@@ -81,11 +85,14 @@
 
 (defmethod {:init! Runtime}
   (λ (self
-      role: role contract: contract
+      role: role
+      agreement: agreement
+      contract: contract
       current-code-block-label: current-code-block-label ;; TODO: grab the start label from the compilation output, instead of 'begin0
       current-label: current-label ;; TODO: grab the start label from the compilation output, instead of 'begin
       io-context: (io-context io-context:special-file))
     (set! (@ self role) role)
+    (set! (@ self agreement) agreement)
     (set! (@ self contract) contract)
     ;; TODO: extract initial code block label from contract compiler output
     (set! (@ self current-code-block-label) current-code-block-label)
@@ -167,16 +174,19 @@
           (set! (@ (@ self message) inbox) (open-input-u8vector log-data)))
         (let ()
           (displayln role ": Reading contract handshake ...")
-          (def contract-handshake {read-handshake self})
-          (display-poo-ln role ": contract-handshake: " ContractHandshake contract-handshake)
+          (def agreement-handshake {read-handshake self})
+          (display-poo-ln role ": agreement-handshake: " AgreementHandshake agreement-handshake)
           (displayln role ": Verifying contract config ...")
-          (def-slots (contract-config) contract-handshake)
+          (def-slots (agreement contract-config) agreement-handshake)
+          ;; check that the agreement part matches
+          (assert! (equal? (json<- InteractionAgreement (@ self agreement))
+                           (json<- InteractionAgreement agreement)))
           (def contract (@ self contract))
           (def create-pretx {prepare-create-contract-transaction self (@ contract initial-timer-start)})
           (verify-contract-config contract-config create-pretx)
           (set! (@ self contract-config) contract-config))))))
 
-;; : ContractHandshake <- Runtime
+;; : AgreementHandshake <- Runtime
 (defmethod {read-handshake Runtime}
   (λ (self)
     (def io-context (@ self io-context))
@@ -236,6 +246,7 @@
 (defmethod {deploy-contract Runtime}
   (λ (self)
     (def role (@ self role))
+    (def agreement (@ self agreement))
     (def contract (@ self contract))
     (def timer-start (@ contract initial-timer-start))
     (def pretx {prepare-create-contract-transaction self timer-start})
@@ -245,8 +256,8 @@
     (def contract-config (contract-config<-creation-receipt receipt))
     (display-poo-ln role ": Contract config: " ContractConfig contract-config)
     (verify-contract-config contract-config pretx)
-    (def handshake (new ContractHandshake timer-start contract-config))
-    (display-poo-ln role ": Handshake: " ContractHandshake handshake)
+    (def handshake (new AgreementHandshake agreement contract-config))
+    (display-poo-ln role ": Handshake: " AgreementHandshake handshake)
     {send-contract-handshake self handshake}
     (set! (@ self contract-config) contract-config)))
 
@@ -434,12 +445,6 @@
 
       (['@label name]
         (set! (@ self current-label) name)))))
-
-(define-type ContractHandshake
-  (Record
-   ;;agreement: [Contract]
-   timer-start: [Block] ;; TODO: should be included in the Contract already
-   contract-config: [ContractConfig]))
 
 ;; MESSAGE ;; TODO: more like CommunicationState
 (defclass Message
