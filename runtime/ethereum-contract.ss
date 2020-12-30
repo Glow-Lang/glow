@@ -25,12 +25,16 @@
 
 ;; : Frame <- Contract Block (Table Offset <- Symbol) Symbol
 (defmethod {create-frame-variables Contract}
-  (λ (self timer-start contract-runtime-labels code-block-label)
+  (λ (self timer-start contract-runtime-labels code-block-label code-block-participant)
     (def checkpoint-location
       (hash-get contract-runtime-labels {make-checkpoint-label self code-block-label}))
+    (def active-participant-offset
+      {lookup-variable-offset self code-block-label code-block-participant})
     ;; TODO: ensure keys are sorted in both hash-values
     [[UInt16 . checkpoint-location]
      [Block . timer-start]
+     ;; [UInt16 . active-participant-offset]
+     ;; TODO: designate participant addresses as global variables that are stored outside of frames
      (map (lambda (kv) (cons Address (cdr kv))) (hash->list/sort (@ self participants) symbol<?))...
      (map cdr (hash->list/sort (@ self arguments) symbol<?))...]))
 
