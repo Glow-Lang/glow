@@ -44,17 +44,19 @@
     ;; TODO: run buyer and seller step in separate threads, using posted transactions to progress their state
     (test-case "buy sig executes"
       (ignore-errors (delete-file (run-path "contract-handshake.json"))) ;; TODO: do it better
-      (def contract (make-Contract
-        program: program
-        participants: participants
-        arguments: arguments
-        initial-timer-start: (+ (eth_blockNumber) (ethereum-timeout-in-blocks))
-        timeout: 20))
+      (def initial-timer-start (+ (eth_blockNumber) (ethereum-timeout-in-blocks)))
+      (def timeout 20)
 
       (displayln "\nEXECUTING BUYER THREAD ...")
       (def buyer-thread
         (spawn/name/logged "Buyer"
          (lambda ()
+           (def contract (make-Contract
+                          program: program
+                          participants: participants
+                          arguments: arguments
+                          initial-timer-start: initial-timer-start
+                          timeout: timeout))
            (def buyer-runtime
              (make-Runtime role: 'Buyer
                            contract: contract
@@ -64,14 +66,16 @@
            (displayln "buyer finished")
            (@ buyer-runtime environment))))
 
-      (while (not (file-exists? "run/contract-handshake.json"))
-        (displayln "waiting for contract handshake ...")
-        (thread-sleep! 1))
-
       (displayln "\nEXECUTING SELLER THREAD ...")
       (def seller-thread
         (spawn/name/logged "Seller"
          (lambda ()
+           (def contract (make-Contract
+                          program: program
+                          participants: participants
+                          arguments: arguments
+                          initial-timer-start: initial-timer-start
+                          timeout: timeout))
            (def seller-runtime
              (make-Runtime role: 'Seller
                            contract: contract
