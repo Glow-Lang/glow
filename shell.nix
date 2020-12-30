@@ -22,11 +22,12 @@ in
 
       ${glow-lang.postConfigure}
       ${lib.optionalString ethereum
-        ''export GERBIL_ETHEREUM_SRC=${gerbil-ethereum.src}
-        export GERBIL_LOADPATH="$PWD:${gerbilLoadPath ([(if precompile then glow-lang else "$out")] ++ glow-lang.passthru.pre-pkg.gerbilInputs)}:$GERBIL_ETHEREUM_SRC"''}
+        ''export GERBIL_ETHEREUM_SRC="${glow-lang.passthru.pre-pkg.gerbilEthereumSrc}"''}
+      export GERBIL_LOADPATH="${glow-lang.passthru.pre-pkg.testGerbilLoadPath}"
+      PATH="${glow-lang.out}/bin:$PATH"
+      GERBIL_APPLICATION_HOME="$PWD"
+      GERBIL_APPLICATION_SOURCE="$PWD"
+      GLOW_HOME="$PWD"
+      GLOW_SRC="$PWD"
     '';
-    GERBIL_APPLICATION_HOME = "${glow-lang.src}";
-    GERBIL_APPLICATION_SOURCE = "${glow-lang.src}";
-    GLOW_HOME = "${glow-lang.src}";
-    GLOW_SRC = "${glow-lang.src}";
   }
