@@ -163,16 +163,20 @@
     (def checkpoint-statements (code-block-statements code-block))
     (set! (@ self params-end) #f)
     {compute-variable-offsets self code-block-label}
-    (def directives
+    (def code-block-directives
       [[&jumpdest {make-checkpoint-label self code-block-label}]
-      (append-map (λ (statement) {interpret-consensus-statement self code-block-label statement})
+       (&check-timeout!)
+       (append-map (λ (statement) {interpret-consensus-statement self code-block-label statement})
                  checkpoint-statements)...])
     (register-frame-size (@ self params-end))
-    (def end-statement
+    (def end-code-block-directive
       (if (equal? code-block-label {get-last-code-block-label (@ self program)})
         &end-contract!
-        (&begin STOP)))
-    (snoc end-statement directives)))
+        (&begin
+          &start-timer!
+          ;; TODO: Store call frame in storage before committing. See targets defined in contract-runtime/&define-tail-call
+          STOP)))
+    (snoc end-code-block-directive code-block-directives)))
 
 ;; ASSUMING a two-participant contract, find the other participant for use in timeouts.
 ;; Symbol <- Contract Symbol
