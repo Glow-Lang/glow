@@ -171,7 +171,7 @@
     (def end-statement
       (if (equal? code-block-label {get-last-code-block-label (@ self program)})
         &end-contract!
-        (&begin 0 RETURN)))
+        (&begin STOP)))
     (snoc end-statement directives)))
 
 ;; ASSUMING a two-participant contract, find the other participant for use in timeouts.
