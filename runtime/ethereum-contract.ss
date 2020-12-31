@@ -168,7 +168,11 @@
       (append-map (λ (statement) {interpret-consensus-statement self code-block-label statement})
                  checkpoint-statements)...])
     (register-frame-size (@ self params-end))
-    directives))
+    (def end-statement
+      (if (equal? code-block-label {get-last-code-block-label (@ self program)})
+        &end-contract!
+        (&begin 0 RETURN)))
+    (snoc end-statement directives)))
 
 ;; ASSUMING a two-participant contract, find the other participant for use in timeouts.
 ;; Symbol <- Contract Symbol
@@ -222,11 +226,11 @@
         {load-immediate-variable self code-block-label participant Address}
         &withdraw!])
 
-      (['@label 'end0]
-       [&end-contract!])
+      (['return _]
+        [])
 
-      (['return ['@tuple]]
-       [])
+      (['@label _]
+        [])
 
       (else
        (error "Contract does not recognize consensus statement: " statement)))))

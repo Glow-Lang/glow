@@ -149,3 +149,11 @@
       (else
         {add-statement parse-context statement}))))
   (@ parse-context code))
+
+(defmethod {get-last-code-block-label Program}
+  (lambda (self)
+    (def consensus-interaction (hash-get (@ self interactions) #f))
+    (let/cc return
+      (for ((values label code-block) (in-hash consensus-interaction))
+        (when (equal? (code-block-exit code-block) #f)
+          (return label))))))
