@@ -165,7 +165,7 @@
     {compute-variable-offsets self code-block-label}
     (def code-block-directives
       [[&jumpdest {make-checkpoint-label self code-block-label}]
-       (&check-timeout!)
+       (&check-timeout! timeout: (@ self timeout))
        (append-map (λ (statement) {interpret-consensus-statement self code-block-label statement})
                  checkpoint-statements)...])
     (register-frame-size (@ self params-end))

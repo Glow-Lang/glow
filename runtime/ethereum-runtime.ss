@@ -93,7 +93,7 @@
   (λ (self contract-address from-block)
     (let/cc return
       (def callback (λ (log) (return log))) ;; TODO: handle multiple log entries!!!
-      (def to-block (+ from-block (ethereum-timeout-in-blocks))) ;; TODO: get the timeout that from the agreement
+      (def to-block (+ from-block (@ (@ self contract) timeout)))
       (watch-contract callback contract-address from-block to-block))))
 
 ;; <- Runtime
