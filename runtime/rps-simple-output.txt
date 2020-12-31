@@ -1,0 +1,145 @@
+(Program
+  name: 'rockPaperScissors
+
+  argument-names: ['wagerAmount]
+
+  interactions:
+    (hash
+      (#f
+        (hash
+          (begin0
+            (code-block 'A
+              [['def 'commitment ['expect-published ['quote 'commitment]]]
+               ['expect-deposited 'wagerAmount]]
+              'cp0))
+          (cp0
+            (code-block 'B
+              [['set-participant 'B]
+               ['def 'handB ['expect-published ['quote 'handB]]]
+               ['expect-deposited 'wagerAmount]
+               ['def 'tmp0 ['@app '< 'handB 3]]
+               ['require! 'tmp0]]
+              'cp1))
+          (cp1
+            (code-block 'A
+              [['set-participant 'A]
+               ['def 'salt ['expect-published ['quote 'salt]]]
+               ['def 'handA ['expect-published ['quote 'handA]]]
+               ['def 'tmp1 ['@app '< 'handA 3]]
+               ['require! 'tmp1]
+               ['def 'tmp2 ['digest 'salt 'handA]]
+               ['def 'tmp3 ['== 'commitment 'tmp2]]
+               ['require! 'tmp3]
+               ['def 'tmp4 ['@app '- 4 'handB]]
+               ['def 'tmp5 ['@app '+ 'handA 'tmp4]]
+               ['def 'outcome ['@app 'mod 'tmp5 3]]
+               ['@label 'begin-switch]
+               ['switch 'outcome
+                [2
+                  ['def 'tmp6 ['@app '* 2 'wagerAmount]]
+                  ['consensus:withdraw 'A 'tmp6]]
+                [0
+                  ['def 'tmp7 ['@app '* 2 'wagerAmount]]
+                  ['consensus:withdraw 'B 'tmp7]]
+                [1
+                  ['consensus:withdraw 'A 'wagerAmount]
+                  ['consensus:withdraw 'B 'wagerAmount]]]
+              ['@label 'end-switch]
+              ['return 'outcome]
+              ['@label 'end0]]
+             #f))))
+
+      (A
+        (hash
+          (begin0
+            (code-block 'A
+              [['def 'handA ['input 'Nat "First player, pick your hand: 0 (Rock), 1 (Paper), 2 (Scissors)"]]
+               ['def 'tmp ['@app '< 'handA 3]]
+               ['require! 'tmp]
+               ['def 'salt ['@app 'randomUInt256]]
+               ['def 'commitment ['digest 'salt 'handA]]
+               ['add-to-publish ['quote 'commitment] 'commitment]
+               ['add-to-deposit 'wagerAmount]]
+              'cp0))
+
+          (cp0
+            (code-block 'B
+              [['set-participant 'B]
+               ['def 'handB ['expect-published ['quote 'handB]]]
+               ['expect-deposited 'wagerAmount]
+               ['def 'tmp0 ['@app '< 'handB 3]]
+               ['require! 'tmp0]]
+              'cp1))
+          (cp1
+            (code-block 'A
+              [['set-participant 'A]
+               ['add-to-publish ['quote 'salt] 'salt]
+               ['add-to-publish ['quote 'handA] 'handA]
+               ['def 'tmp1 ['@app '< 'handA 3]]
+               ['require! 'tmp1]
+               ['def 'tmp2 ['digest 'salt 'handA]]
+               ['def 'tmp3 ['== 'commitment 'tmp2]]
+               ['require! 'tmp3]
+               ['def 'tmp4 ['@app '- 4 'handB]]
+               ['def 'tmp5 ['@app '+ 'handA 'tmp4]]
+               ['def 'outcome ['@app 'mod 'tmp5 3]]
+               ['@label 'begin-switch]
+               ['switch 'outcome
+                [2
+                  ['def 'tmp6 ['@app '* 2 'wagerAmount]]
+                  ['participant:withdraw 'A 'tmp6]]
+                [0
+                  ['def 'tmp7 ['@app '* 2 'wagerAmount]]
+                  ['participant:withdraw 'B 'tmp7]]
+                [1
+                  ['participant:withdraw 'A 'wagerAmount]
+                  ['participant:withdraw 'B 'wagerAmount]]]
+               ['@label 'end-switch]
+               ['return 'outcome]
+               ['@label 'end0]]
+              #f))))
+
+      (B
+        (hash
+          (begin0
+            (code-block 'A
+              [['def 'commitment ['expect-published ['quote 'commitment]]]
+               ['expect-deposited 'wagerAmount]]
+              'cp0)
+          (cp0
+            (code-block 'B
+              [['set-participant 'B]
+               ['def 'handB ['input 'Nat "Second player, pick your hand: 0 (Rock), 1 (Paper), 2 (Scissors)"]]
+               ['add-to-publish ['quote 'handB] 'handB]
+               ['add-to-deposit 'wagerAmount] ['def 'tmp0 ['@app '< 'handB 3]]
+               ['require! 'tmp0]]
+              'cp1))
+
+          (cp1
+            (code-block 'A
+              [['set-participant 'A]
+               ['def 'salt ['expect-published ['quote 'salt]]]
+               ['def 'handA ['expect-published ['quote 'handA]]]
+               ['def 'tmp1 ['@app '< 'handA 3]]
+               ['require! 'tmp1]
+               ['def 'tmp2 ['digest 'salt 'handA]]
+               ['def 'tmp3 ['== 'commitment 'tmp2]]
+               ['require! 'tmp3]
+               ['def 'tmp4 ['@app '- 4 'handB]]
+               ['def 'tmp5 ['@app '+ 'handA 'tmp4]]
+               ['def 'outcome ['@app 'mod 'tmp5 3]]
+               ['@label 'begin-switch]
+               ['switch 'outcome
+                [2
+                  ['def 'tmp6 ['@app '* 2 'wagerAmount]]
+                  ['participant:withdraw 'A 'tmp6]]
+                [0
+                  ['def 'tmp7 ['@app '* 2 'wagerAmount]]
+                  ['participant:withdraw 'B 'tmp7]]
+                [1
+                  ['participant:withdraw 'A 'wagerAmount]
+                  ['participant:withdraw 'B 'wagerAmount]]]
+               ['@label 'end-switch]
+               ['return 'outcome]
+               ['@label 'end0]]
+              #f))))))
