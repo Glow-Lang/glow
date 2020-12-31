@@ -126,7 +126,7 @@
         (nat<-bytes (bytes<- type expr)))) ;; constant
      (else
       (if (symbol? expr)
-        {lookup-variable-offset self code-block-label expr type} ;; referring to a variable by offset
+        {lookup-variable-offset self code-block-label expr} ;; referring to a variable by offset
         ;; TODO: store the data in a variable (temporary, if needed) --- do that in ANF after typesetting.
         (error "trivial-expression: oversize constant" (.@ type sexp) expr))))))
 
