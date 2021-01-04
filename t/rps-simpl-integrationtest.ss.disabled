@@ -50,8 +50,6 @@ input UInt256: First player, pick your hand: 0 (Rock), 1 (Paper), 2 (Scissors)
     (test-case "rps_simpl parses"
       (def program (parse-compiler-output compiler-output))
 
-    (write-file "runtime/rps-simple-output.txt" program)
-
     ;; TODO: run A and B step in separate threads, using posted transactions to progress their state
     (test-case "rps_simpl executes"
       (def contract (make-Contract
