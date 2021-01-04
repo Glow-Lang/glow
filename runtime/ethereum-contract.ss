@@ -25,12 +25,16 @@
 
 ;; : Frame <- Contract Block (Table Offset <- Symbol) Symbol
 (defmethod {create-frame-variables Contract}
-  (λ (self timer-start contract-runtime-labels code-block-label)
+  (λ (self timer-start contract-runtime-labels code-block-label code-block-participant)
     (def checkpoint-location
       (hash-get contract-runtime-labels {make-checkpoint-label self code-block-label}))
+    (def active-participant-offset
+      {lookup-variable-offset self code-block-label code-block-participant})
     ;; TODO: ensure keys are sorted in both hash-values
     [[UInt16 . checkpoint-location]
      [Block . timer-start]
+     ;; [UInt16 . active-participant-offset]
+     ;; TODO: designate participant addresses as global variables that are stored outside of frames
      (map (lambda (kv) (cons Address (cdr kv))) (hash->list/sort (@ self participants) symbol<?))...
      (map cdr (hash->list/sort (@ self arguments) symbol<?))...]))
 
@@ -122,7 +126,7 @@
         (nat<-bytes (bytes<- type expr)))) ;; constant
      (else
       (if (symbol? expr)
-        {lookup-variable-offset self code-block-label expr type} ;; referring to a variable by offset
+        {lookup-variable-offset self code-block-label expr} ;; referring to a variable by offset
         ;; TODO: store the data in a variable (temporary, if needed) --- do that in ANF after typesetting.
         (error "trivial-expression: oversize constant" (.@ type sexp) expr))))))
 
@@ -159,12 +163,20 @@
     (def checkpoint-statements (code-block-statements code-block))
     (set! (@ self params-end) #f)
     {compute-variable-offsets self code-block-label}
-    (def directives
+    (def code-block-directives
       [[&jumpdest {make-checkpoint-label self code-block-label}]
-      (append-map (λ (statement) {interpret-consensus-statement self code-block-label statement})
+       (&check-timeout! timeout: (@ self timeout))
+       (append-map (λ (statement) {interpret-consensus-statement self code-block-label statement})
                  checkpoint-statements)...])
     (register-frame-size (@ self params-end))
-    directives))
+    (def end-code-block-directive
+      (if (equal? code-block-label {get-last-code-block-label (@ self program)})
+        &end-contract!
+        (&begin
+          &start-timer!
+          ;; TODO: Store call frame in storage before committing. See targets defined in contract-runtime/&define-tail-call
+          STOP)))
+    (snoc end-code-block-directive code-block-directives)))
 
 ;; ASSUMING a two-participant contract, find the other participant for use in timeouts.
 ;; Symbol <- Contract Symbol
@@ -203,8 +215,8 @@
              &isValidSignature
              (&mstoreat {lookup-variable-offset self code-block-label variable-name} 1)])
            (['@app '< a b]
-            [{trivial-expression self a}
-             {trivial-expression self b}
+            [{trivial-expression self code-block-label a}
+             {trivial-expression self code-block-label b}
              LT]))))
 
       (['require! variable-name]
@@ -218,11 +230,11 @@
         {load-immediate-variable self code-block-label participant Address}
         &withdraw!])
 
-      (['@label 'end0]
-       [&end-contract!])
+      (['return _]
+        [])
 
-      (['return ['@tuple]]
-       [])
+      (['@label _]
+        [])
 
       (else
        (error "Contract does not recognize consensus statement: " statement)))))

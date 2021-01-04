@@ -5,6 +5,7 @@
   <expander-runtime>
   :mukn/ethereum/types
   :mukn/ethereum/ethereum
+  :mukn/ethereum/signing
   ../compiler/typecheck/type)
 
 ;; (deftype Interaction (Table CodeBlock <- Symbol))
@@ -46,6 +47,7 @@
       (match t
         ((type:name 'Bool) Bool)
         ((type:name 'Digest) Digest)
+        ((type:name 'Participant) Address)
         ((type:name-subtype 'Nat _) UInt256)
         ((type:name sym) (eval sym))
         ((type:name-subtype sym _) (eval sym))
@@ -147,3 +149,11 @@
       (else
         {add-statement parse-context statement}))))
   (@ parse-context code))
+
+(defmethod {get-last-code-block-label Program}
+  (lambda (self)
+    (def consensus-interaction (hash-get (@ self interactions) #f))
+    (let/cc return
+      (for ((values label code-block) (in-hash consensus-interaction))
+        (when (equal? (code-block-exit code-block) #f)
+          (return label))))))

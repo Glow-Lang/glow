@@ -2,7 +2,7 @@
 
   name: 'payForSignature
 
-  arguments: ['digest0 'price]
+  argument-names: ['digest0 'price]
 
   interactions:
     (hash
