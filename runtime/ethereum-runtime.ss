@@ -26,7 +26,8 @@
    current-code-block-label ;; : Symbol
    current-label ;; : Symbol
    environment ;; : (Table (Or DependentPair Any) <- Symbol) ;; TODO: have it always typed???
-   message) ;; : Message ;; byte buffer?
+   message ;; : Message ;; byte buffer?
+   timer-start) ;; Block) ;;
   constructor: :init!
   transparent: #t)
 
@@ -92,7 +93,7 @@
   (λ (self contract-address from-block)
     (let/cc return
       (def callback (λ (log) (return log))) ;; TODO: handle multiple log entries!!!
-      (def to-block (+ from-block (ethereum-timeout-in-blocks))) ;; TODO: get the timeout that from the agreement
+      (def to-block (+ from-block (@ (@ self contract) timeout)))
       (watch-contract callback contract-address from-block to-block))))
 
 ;; <- Runtime
@@ -112,6 +113,7 @@
           ;; TODO: handle the case when there is no log objects
           (display-poo-ln role ": New TX: " (Maybe LogObject) new-log-object)
           (def log-data (.@ new-log-object data))
+          (set! (@ self timer-start) (.@ new-log-object blockNumber))
           ;; TODO: process the data in the same method?
           (set! (@ (@ self message) inbox) (open-input-u8vector log-data)))
         (let ()
@@ -119,9 +121,10 @@
           (def contract-handshake {read-handshake self})
           (display-poo-ln role ": contract-handshake: " ContractHandshake contract-handshake)
           (displayln role ": Verifying contract config ...")
-          (def-slots (contract-config) contract-handshake)
+          (def-slots (timer-start contract-config) contract-handshake)
           (def contract (@ self contract))
-          (def create-pretx {prepare-create-contract-transaction self (@ contract initial-timer-start)})
+          (set! (@ self timer-start) timer-start)
+          (def create-pretx {prepare-create-contract-transaction self})
           (verify-contract-config contract-config create-pretx)
           (set! (@ self contract-config) contract-config))))))
 
@@ -149,10 +152,9 @@
           (displayln "publishing message ...")
           (def contract-address (.@ contract-config contract-address))
           (def contract (@ self contract))
-          (def timer-start (@ contract initial-timer-start))
           (def message (@ self message))
           (def outbox (@ message outbox))
-          (def message-pretx {prepare-call-function-transaction self outbox timer-start contract-address})
+          (def message-pretx {prepare-call-function-transaction self outbox contract-address})
           (def new-tx-receipt (post-transaction message-pretx))
           {reset message})))))
 
@@ -167,14 +169,16 @@
 
 ;; PreTransaction <- Runtime Block
 (defmethod {prepare-create-contract-transaction Runtime}
-  (λ (self timer-start)
+  (λ (self)
     (def sender-address {get-active-participant self})
-    (def next (code-block-exit {get-current-code-block self}))
+    (def code-block {get-current-code-block self})
+    (def next (code-block-exit code-block))
+    (def participant (code-block-participant code-block))
     (defvalues (contract-runtime-bytes contract-runtime-labels)
       {generate-consensus-runtime (@ self contract)})
     (def contract (@ self contract))
     (def initial-state
-      {create-frame-variables contract (@ contract initial-timer-start) contract-runtime-labels next})
+      {create-frame-variables contract (@ contract initial-timer-start) contract-runtime-labels next participant})
     (def initial-state-digest
       (digest-product-f initial-state))
     (def contract-bytes
@@ -188,7 +192,7 @@
     (def role (@ self role))
     (def contract (@ self contract))
     (def timer-start (@ contract initial-timer-start))
-    (def pretx {prepare-create-contract-transaction self timer-start})
+    (def pretx {prepare-create-contract-transaction self})
     (display-poo-ln role ": Deploying contract... "
                     "timer-start: " timer-start)
     (def receipt (post-transaction pretx))
@@ -205,12 +209,17 @@
 ;; See gerbil-ethereum/contract-runtime.ss for spec.
 ;; PreTransaction <- Runtime Message.Outbox Block Address
 (defmethod {prepare-call-function-transaction Runtime}
-  (λ (self outbox timer-start contract-address)
+  (λ (self outbox contract-address)
     (def sender-address {get-active-participant self})
     (defvalues (_ contract-runtime-labels)
       {generate-consensus-runtime (@ self contract)})
     (def frame-variables
-      {create-frame-variables (@ self contract) timer-start contract-runtime-labels (@ self current-code-block-label)})
+      {create-frame-variables
+        (@ self contract)
+        (@ self timer-start)
+        contract-runtime-labels
+        (@ self current-code-block-label)
+        (@ self role)})
     (def frame-variable-bytes (marshal-product-f frame-variables))
     (def frame-length (bytes-length frame-variable-bytes))
     (def out (open-output-u8vector))
