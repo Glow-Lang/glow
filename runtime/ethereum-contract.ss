@@ -35,7 +35,7 @@
      [Block . timer-start]
      ;; [UInt16 . active-participant-offset]
      ;; TODO: designate participant addresses as global variables that are stored outside of frames
-     (map (lambda (kv) (cons Address (cdr kv))) (hash->list/sort (@ self participants) symbol<?))...
+     (map (λ (kv) (cons Address (cdr kv))) (hash->list/sort (@ self participants) symbol<?))...
      (map cdr (hash->list/sort (@ self arguments) symbol<?))...]))
 
 ;; Block <- Frame
@@ -236,5 +236,43 @@
       (['@label _]
         [])
 
+      (['switch value cases ...]
+        (let*
+          ((comparison-value {trivial-expression self code-block-label value})
+           (interpreted-cases (map (λ (case)
+             (let (interpreted-statements {interpret-consensus-statement self code-block-label (cdr cases)})
+              [(car case) interpreted-statements])) cases)))
+        (&switch comparison-value interpreted-cases)))
+
       (else
        (error "Contract does not recognize consensus statement: " statement)))))
+
+(def (&switch comparison-value cases)
+  (def reducer
+    (λ (current-case next-case)
+      (match current-case
+        ([case-value case-code-block]
+          (&if (&begin comparison-value case-value EQ)
+            (&begin* case-code-block)
+            next-case))
+        (else
+          (error "Invalid case in switch expression: " current-case)))))
+  (def nested-ifs (cps-foldl reducer cases))
+  (nested-ifs (&begin 0 DUP1 REVERT)))
+
+;; TODO: Is this actually useful? As is, still impenetrable.
+(def (cps-foldl reducer lst)
+  (foldl
+    (λ (cur continuation)
+      (λ (next) (continuation (reducer cur next))))
+    identity
+    lst))
+
+(def (&if &cond &then &else)
+  (def then-label (generate-label "&then"))
+  (def endif-label (generate-label "&endif"))
+  (&begin
+    &cond [&jumpi2 then-label]
+    &else [&jump2 endif-label]
+    [&label then-label] &then
+    [&label endif-label]))
