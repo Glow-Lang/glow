@@ -373,7 +373,9 @@
                 (make-message-signature (secret-key<-address this-participant) digest)))
             (['input 'Nat tag]
              (let ((tagv {reduce-expression self tag}))
-               (input UInt256 tagv)))))
+               (input UInt256 tagv)))
+            (else
+              {reduce-expression self expression})))
           {add-to-environment self variable-name variable-value}))
 
       (['require! variable-name]
@@ -389,7 +391,14 @@
         (void))
 
       (['@label name]
-        (set! (@ self current-label) name)))))
+        (set! (@ self current-label) name))
+
+      (['switch variable-name cases ...]
+        (let*
+          ((variable-value {reduce-expression self variable-name})
+           (matching-case (find (λ (case) (equal? {reduce-expression self (car case)} variable-value)) cases)))
+        (for (case-statement (cdr matching-case))
+          {interpret-participant-statement self case-statement})))))))
 
 (define-type ContractHandshake
   (Record
