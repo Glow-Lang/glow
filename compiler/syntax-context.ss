@@ -6,7 +6,6 @@
   (rename-in :gerbil/core (lambda λ))
   :gerbil/core
   :std/sugar
-  (only-in :clan/poo/mop new)
   ;;:clan/base
   :mukn/glow/runtime/context
   )
@@ -16,4 +15,3 @@
   ;;@ @interaction @publicly @verifiably interaction verifiably publicly
   λ assert! new
   (import: :gerbil/core))
-
