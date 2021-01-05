@@ -235,6 +235,10 @@
   (lambda (self code-block-label variable-name expression)
     (def type {lookup-type (@ self program) variable-name})
     (def len (and type (param-length type)))
+    (def (binary-operator op a b)
+      [{trivial-expression self code-block-label b}
+       {trivial-expression self code-block-label a}
+       op])
     (match expression
       (['expect-published published-variable-name]
         [len {lookup-variable-offset self code-block-label variable-name} &read-published-data-to-mem])
@@ -246,10 +250,20 @@
           {lookup-variable-offset self code-block-label signature}
           &isValidSignature
           (&mstoreat {lookup-variable-offset self code-block-label variable-name} 1)])
+      (['== a b]
+        (binary-operator EQ a b))
       (['@app '< a b]
-        [{trivial-expression self code-block-label a}
-          {trivial-expression self code-block-label b}
-          LT]))))
+        (binary-operator LT a b))
+      (['@app '> a b]
+        (binary-operator GT a b))
+      (['@app '+ a b]
+        (binary-operator ADD a b))
+      (['@app '- a b]
+        (binary-operator SUB a b))
+      (['@app '* a b]
+        (binary-operator MUL a b))
+      (['@app '/ a b]
+        (binary-operator DIV a b)))))
 
 (def (&switch comparison-value cases)
   (def reducer
