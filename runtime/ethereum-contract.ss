@@ -201,23 +201,7 @@
       ;; may be not just def, but also ignore or return
       (['def variable-name expression]
        {add-local-variable-to-frame self code-block-label variable-name}
-       (let* ((type {lookup-type (@ self program) variable-name})
-              (len (and type (param-length type))))
-         (match expression
-           (['expect-published published-variable-name]
-            [len {lookup-variable-offset self code-block-label variable-name} &read-published-data-to-mem])
-           ;; TODO: digest
-           (['@app 'isValidSignature participant digest signature]
-            [{load-immediate-variable self code-block-label participant Address}
-             {load-immediate-variable self code-block-label digest Digest}
-             ;; signatures are passed by reference, not by value
-             {lookup-variable-offset self code-block-label signature}
-             &isValidSignature
-             (&mstoreat {lookup-variable-offset self code-block-label variable-name} 1)])
-           (['@app '< a b]
-            [{trivial-expression self code-block-label a}
-             {trivial-expression self code-block-label b}
-             LT]))))
+       {interpret-consensus-expression self code-block-label variable-name expression})
 
       (['require! variable-name]
        [{load-immediate-variable self code-block-label variable-name Bool} &require!])
@@ -246,6 +230,26 @@
 
       (else
        (error "Contract does not recognize consensus statement: " statement)))))
+
+(defmethod {interpret-consensus-expression Contract}
+  (lambda (self code-block-label variable-name expression)
+    (def type {lookup-type (@ self program) variable-name})
+    (def len (and type (param-length type)))
+    (match expression
+      (['expect-published published-variable-name]
+        [len {lookup-variable-offset self code-block-label variable-name} &read-published-data-to-mem])
+      ;; TODO: digest
+      (['@app 'isValidSignature participant digest signature]
+        [{load-immediate-variable self code-block-label participant Address}
+          {load-immediate-variable self code-block-label digest Digest}
+          ;; signatures are passed by reference, not by value
+          {lookup-variable-offset self code-block-label signature}
+          &isValidSignature
+          (&mstoreat {lookup-variable-offset self code-block-label variable-name} 1)])
+      (['@app '< a b]
+        [{trivial-expression self code-block-label a}
+          {trivial-expression self code-block-label b}
+          LT]))))
 
 (def (&switch comparison-value cases)
   (def reducer
