@@ -398,7 +398,7 @@
           ((variable-value {reduce-expression self variable-name})
            (matching-case (find (λ (case) (equal? {reduce-expression self (car case)} variable-value)) cases)))
         (for (case-statement (cdr matching-case))
-          {interpret-participant-statement self case-statement})))))))
+          {interpret-participant-statement self case-statement}))))))
 
 (define-type ContractHandshake
   (Record
