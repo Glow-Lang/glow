@@ -8,10 +8,10 @@
   (rename-in :gerbil/core (lambda λ))
   :gerbil/core
   :std/sugar
-  (only-in :clan/poo/mop new)
   ;;:clan/base
   )
 
 (defrule (dummies x ...) (begin (def (x) #f) ...))
+(dummies new)
 ;;(dummies @make-interaction)
 ;;(dummies @ @interaction @make-interaction @publicly @verifiably interaction verifiably publicly)

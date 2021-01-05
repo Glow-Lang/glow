@@ -45,10 +45,10 @@
   :clan/subprocess :clan/syntax
   :clan/temporary-files
   :clan/vector :clan/versioning :clan/watch :clan/with-id
-  :clan/persist/db :clan/persist/persist
+  :clan/persist/db :clan/persist/persist :clan/persist/content-addressing
 
   ;; POO
-  :clan/poo/poo :clan/poo/io
+  :clan/poo/poo :clan/poo/io :clan/poo/debug
   (prefix-in :clan/poo/mop poo.) (prefix-in :clan/poo/type poo.)
   (only-in :clan/poo/mop
            Type Type. Class Class. Slot Lens Function Fun

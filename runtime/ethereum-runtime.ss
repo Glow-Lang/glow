@@ -199,7 +199,7 @@
     (def contract-config (contract-config<-creation-receipt receipt))
     (display-poo-ln role ": Contract config: " ContractConfig contract-config)
     (verify-contract-config contract-config pretx)
-    (def handshake (new ContractHandshake timer-start contract-config))
+    (def handshake (.new ContractHandshake timer-start contract-config))
     (display-poo-ln role ": Handshake: " ContractHandshake handshake)
     ;; TODO: display at terminal for user to copy paste and send to
     ;; other participants through outside channel
