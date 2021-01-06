@@ -4,7 +4,7 @@
   :gerbil/gambit/bytes :gerbil/gambit/threads
   :std/iter :std/sugar
   :clan/exception :clan/json :clan/path-config :clan/pure/dict/assq
-  :clan/poo/poo :clan/poo/io :clan/poo/mop
+  :clan/poo/poo :clan/poo/io :clan/poo/mop :clan/poo/type
   :clan/persist/content-addressing
   :mukn/ethereum/hex :mukn/ethereum/ethereum :mukn/ethereum/network-config :mukn/ethereum/json-rpc
   :mukn/ethereum/transaction :mukn/ethereum/tx-tracker :mukn/ethereum/watch
@@ -14,10 +14,62 @@
   ../compiler/method-resolve/method-resolve
   ../compiler/project/runtime-2)
 
+;; NB: Whichever function exports data end-users / imports from them should make sure to put in a Json array (Scheme list) prepend by the name of the type. And/or we may have a {"": "InteractionAgreement" ...} field with this asciibetically always-first name. Maybe such function belongs to gerbil-poo, too.
+
+(define-type Tokens (MonomorphicPoo Nat))
+
+(define-type AgreementOptions
+  (Record
+   blockchain: [String] ;; e.g. "Cardano KEVM Testnet", as per ethereum_networks.json
+   escrowAmount: [(Maybe Tokens) default: (void)] ;; not meaningful for all contracts
+   timeoutInBlocks: [Nat]
+   maxInitialBlock: [Nat]))
+
+(define-type InteractionAgreement
+  (.+
+   (Record
+    glow-version: [String] ;; e.g. "Glow v0.0-560-gda782c9 on Gerbil-ethereum v0.0-83-g6568bc6" ;; TODO: have a function to compute that from versioning.ss
+    interaction: [String] ;; e.g. "mukn/glow/examples/buy_sig#payForSignature", fully qualified Gerbil symbol
+    participants: [(MonomorphicPoo Address)] ;; e.g. {Buyer: alice Seller: bob}
+    parameters: [Json] ;; This Json object to be decoded according to a type descriptor from the interaction (dependent types yay!)
+    reference: [(MonomorphicPoo Json)] ;; Arbitrary reference objects from each participant, with some conventional size limits on the Json string.
+    options: [AgreementOptions] ;; See above
+    code-digest: [Digest]))) ;; Make it the digest of Glow source code (in the future, including all Glow libraries transitively used)
+
+(define-type AgreementHandshake
+  (Record
+   agreement: [InteractionAgreement]
+   contract-config: [ContractConfig]))
+;; timer-start = (.@ agreement-handshake agreement options maxInitialBlock)
+
+(define-type IOContext
+  (instance Class
+    slots: (.o send-handshake: (.o type: (Fun Unit <- AgreementHandshake))
+               receive-handshake: (.o type: (Fun AgreementHandshake <-)))))
+
+;; TODO: make an alternate version of io-context that
+;;       displays at the terminal for the user to copy/paste and send to
+;;       other participants through an outside channel
+(.def io-context:special-file
+  send-handshake:
+  (lambda (handshake)
+    (write-file-json (run-path "agreement-handshake.json") (json<- AgreementHandshake handshake)))
+  receive-handshake:
+  (lambda ()
+    (def agreement-handshake.json (run-path "agreement-handshake.json"))
+    (while (not (file-exists? agreement-handshake.json))
+      (displayln "waiting for agreement handshake ...")
+      (thread-sleep! 1))
+    (def handshake-json (read-file-json agreement-handshake.json))
+    (<-json AgreementHandshake handshake-json)))
+
 ;; PARTICIPANT RUNTIME
 
+;; TODO: derive the contract from the agreement,
+;;       check that the code-digest in the agreement matches
 (defclass Runtime
   (role ;; : Symbol
+   agreement ;; : InteractionAgreement
    contract ;; : Contract
    contract-config ;; : ContractConfig
    status ;; (Enum running completed aborted stopped)
@@ -27,16 +79,21 @@
    current-label ;; : Symbol
    environment ;; : (Table (Or DependentPair Any) <- Symbol) ;; TODO: have it always typed???
    message ;; : Message ;; byte buffer?
-   timer-start) ;; Block) ;;
+   timer-start ;; Block ;;
+   io-context) ; : IOContext
   constructor: :init!
   transparent: #t)
 
 (defmethod {:init! Runtime}
   (λ (self
-      role: role contract: contract
+      role: role
+      agreement: agreement
+      contract: contract
       current-code-block-label: current-code-block-label ;; TODO: grab the start label from the compilation output, instead of 'begin0
-      current-label: current-label) ;; TODO: grab the start label from the compilation output, instead of 'begin
+      current-label: current-label ;; TODO: grab the start label from the compilation output, instead of 'begin
+      io-context: (io-context io-context:special-file))
     (set! (@ self role) role)
+    (set! (@ self agreement) agreement)
     (set! (@ self contract) contract)
     ;; TODO: extract initial code block label from contract compiler output
     (set! (@ self current-code-block-label) current-code-block-label)
@@ -48,6 +105,7 @@
     (set! (@ self unprocessed-events) '())
     (set! (@ self environment) (make-hash-table))
     (set! (@ self message) (make-Message))
+    (set! (@ self io-context) io-context)
     {initialize-environment self}))
 
 ;; <- Runtime
@@ -118,22 +176,25 @@
           (set! (@ (@ self message) inbox) (open-input-u8vector log-data)))
         (let ()
           (displayln role ": Reading contract handshake ...")
-          (def contract-handshake {read-handshake self})
-          (display-poo-ln role ": contract-handshake: " ContractHandshake contract-handshake)
+          (def agreement-handshake {read-handshake self})
+          (display-poo-ln role ": agreement-handshake: " AgreementHandshake agreement-handshake)
           (displayln role ": Verifying contract config ...")
-          (def-slots (timer-start contract-config) contract-handshake)
+          (def-slots (agreement contract-config) agreement-handshake)
+          ;; check that the agreement part matches
+          (assert! (equal? (json<- InteractionAgreement (@ self agreement))
+                           (json<- InteractionAgreement agreement)))
+          (def timer-start (.@ agreement options maxInitialBlock))
           (def contract (@ self contract))
           (set! (@ self timer-start) timer-start)
           (def create-pretx {prepare-create-contract-transaction self})
           (verify-contract-config contract-config create-pretx)
           (set! (@ self contract-config) contract-config))))))
 
-;; TODO: have parametrized I/O with UI
-;; : ContractHandshake <- Runtime
+;; : AgreementHandshake <- Runtime
 (defmethod {read-handshake Runtime}
   (λ (self)
-    (def handshake-json (read-file-json (run-path "contract-handshake.json")))
-    (<-json ContractHandshake handshake-json)))
+    (def io-context (@ self io-context))
+    (.call io-context receive-handshake)))
 
 ;; <- Runtime
 (defmethod {publish Runtime}
@@ -190,6 +251,7 @@
 (defmethod {deploy-contract Runtime}
   (λ (self)
     (def role (@ self role))
+    (def agreement (@ self agreement))
     (def contract (@ self contract))
     (def timer-start (@ contract initial-timer-start))
     (def pretx {prepare-create-contract-transaction self})
@@ -199,12 +261,15 @@
     (def contract-config (contract-config<-creation-receipt receipt))
     (display-poo-ln role ": Contract config: " ContractConfig contract-config)
     (verify-contract-config contract-config pretx)
-    (def handshake (.new ContractHandshake timer-start contract-config))
-    (display-poo-ln role ": Handshake: " ContractHandshake handshake)
-    ;; TODO: display at terminal for user to copy paste and send to
-    ;; other participants through outside channel
-    (write-file-json (run-path "contract-handshake.json") (json<- ContractHandshake handshake))
+    (def handshake (.new AgreementHandshake agreement contract-config))
+    (display-poo-ln role ": Handshake: " AgreementHandshake handshake)
+    {send-contract-handshake self handshake}
     (set! (@ self contract-config) contract-config)))
+
+(defmethod {send-contract-handshake Runtime}
+  (lambda (self handshake)
+    (def io-context (@ self io-context))
+    (.call io-context send-handshake handshake)))
 
 ;; See gerbil-ethereum/contract-runtime.ss for spec.
 ;; PreTransaction <- Runtime Message.Outbox Block Address
@@ -399,12 +464,6 @@
            (matching-case (find (λ (case) (equal? {reduce-expression self (car case)} variable-value)) cases)))
         (for (case-statement (cdr matching-case))
           {interpret-participant-statement self case-statement}))))))
-
-(define-type ContractHandshake
-  (Record
-   ;;agreement: [Contract]
-   timer-start: [Block] ;; TODO: should be included in the Contract already
-   contract-config: [ContractConfig]))
 
 ;; MESSAGE ;; TODO: more like CommunicationState
 (defclass Message

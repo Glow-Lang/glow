@@ -6,6 +6,8 @@
   :clan/base :clan/concurrency :clan/debug :clan/decimal :clan/exception
   :clan/io :clan/json :clan/path-config :clan/ports
   :clan/poo/poo :clan/poo/io (only-in :clan/poo/mop display-poo-ln) :clan/crypto/keccak
+  :clan/persist/content-addressing
+  :clan/versioning
   :mukn/ethereum/ethereum :mukn/ethereum/known-addresses :mukn/ethereum/json-rpc
   :mukn/ethereum/batch-send :mukn/ethereum/network-config :mukn/ethereum/assets
   :mukn/ethereum/signing :mukn/ethereum/hex :mukn/ethereum/transaction :mukn/ethereum/types
@@ -31,7 +33,30 @@
     (digest0 [Digest . digest])
     (price [Ether . one-ether-in-wei])))
 
-(def compiler-output (run-passes (source-path "examples/buy_sig.glow") pass: 'project show?: #f))
+;; Should `timeout` be the value of `(ethereum-timeout-in-blocks)`,
+;; or should it be the `timeoutInBlocks` field of the entry in `config/ethereum_networks.json`?
+(def timeout (ethereum-timeout-in-blocks))
+(def initial-timer-start (+ (eth_blockNumber) timeout))
+
+(def buy_sig.glow (source-path "examples/buy_sig.glow"))
+
+(def agreement
+  (.o
+    glow-version: (software-identifier)
+    interaction: "mukn/glow/examples/buy_sig#payForSignature"
+    participants: (.o Buyer: buyer-address Seller: seller-address)
+    parameters: (hash
+                  (digest0 (json<- Digest digest))
+                  (price (json<- Ether one-ether-in-wei)))
+    reference: (.o Buyer: "Purchase #42"
+                   Seller: "Sale #101")
+    options: (.o blockchain: "Private Ethereum Testnet" ;; the `name` field of an entry in `config/ethereum_networks.json`
+                 escrowAmount: (void) ;; not meaningful for buy_sig in particular
+                 timeoutInBlocks: timeout ; should be the `timeoutInBlocks` field of the same entry in `config/ethereum_networks.json`
+                 maxInitialBlock: initial-timer-start)
+    code-digest: (digest<-file buy_sig.glow)))
+
+(def compiler-output (run-passes buy_sig.glow pass: 'project show?: #f))
 
 (def buy-sig-integrationtest
   (test-suite "integration test for ethereum/buy-sig"
@@ -44,19 +69,20 @@
     ;; TODO: run buyer and seller step in separate threads, using posted transactions to progress their state
     (test-case "buy sig executes"
       (ignore-errors (delete-file (run-path "contract-handshake.json"))) ;; TODO: do it better
-      (def contract (make-Contract
-        program: program
-        participants: participants
-        arguments: arguments
-        initial-timer-start: (+ (eth_blockNumber) (ethereum-timeout-in-blocks))
-        timeout: 20))
 
       (displayln "\nEXECUTING BUYER THREAD ...")
       (def buyer-thread
         (spawn/name/logged "Buyer"
          (lambda ()
+           (def contract (make-Contract
+                          program: program
+                          participants: participants
+                          arguments: arguments
+                          initial-timer-start: initial-timer-start
+                          timeout: timeout))
            (def buyer-runtime
              (make-Runtime role: 'Buyer
+                           agreement: agreement
                            contract: contract
                            current-code-block-label: 'begin0 ;; TODO: grab the start label from the compilation output, instead of 'begin0
                            current-label: 'begin)) ;; TODO: grab the start label from the compilation output, instead of 'begins
@@ -64,16 +90,19 @@
            (displayln "buyer finished")
            (@ buyer-runtime environment))))
 
-      (while (not (file-exists? "run/contract-handshake.json"))
-        (displayln "waiting for contract handshake ...")
-        (thread-sleep! 1))
-
       (displayln "\nEXECUTING SELLER THREAD ...")
       (def seller-thread
         (spawn/name/logged "Seller"
          (lambda ()
+           (def contract (make-Contract
+                          program: program
+                          participants: participants
+                          arguments: arguments
+                          initial-timer-start: initial-timer-start
+                          timeout: timeout))
            (def seller-runtime
              (make-Runtime role: 'Seller
+                           agreement: agreement
                            contract: contract
                            current-code-block-label: 'begin0 ;; TODO: grab the start label from the compilation output, instead of 'begin0
                            current-label: 'begin)) ;; TODO: grab the start label from the compilation output, instead of 'begins
