@@ -152,11 +152,13 @@ Other non-Lisp types of interest?
 
 * [Fluence](https://fluence.network/)
 
-### Trezor (Hard Wallet)
+### Hard Wallet
 
-* [Trezor](https://wiki.trezor.io/Developers_guide)
+* Ledger
+* [Trezor](https://wiki.trezor.io/Developers_guide), distant second
+* KeepKey, distant third
 
-### Wallets and chats
+### Soft Wallets and chats
 
 * [Status](https://status.im/developer_tools/)
 * [MetaMask](https://metamask.io/)
@@ -198,6 +200,11 @@ Other non-Lisp types of interest?
 ### Documentation
 
 * [The documentation system, by David Laing](https://documentation.divio.com/)
+
+### Visualization
+
+* [ggplot](https://ggplot2.tidyverse.org/) and the grammar of graphics for statistical data
+
 
 ### More...
 

@@ -5,18 +5,6 @@ and other incomplete projects.
 
 ## Benchmark Contracts
 
-### Rock, Papers, Scissors
-
-File [rps.glow](rps.glow) specifies this very simple two-person game,
-to illustrate our conflict resolution mechanisms on the simplest adversarial system possible.
-
-File [rps-min.glow](rps-min.glow) is essentially the same, stripped to the bare essential,
-so that we can compare the complexity of this application with Glow vs another combination of languages.
-
-Required Features:
-- Compiler front-end
-- Support for specifying the safety with assertions.
-
 ### Selling a signature
 
 [buy_sig.glow](buy_sig.glow): selling signatures that can be used on the same chain,
@@ -30,7 +18,21 @@ Required Features:
 [coinflip.glow](coinflip.glow): Simple gambling contract, even simpler than Rock, Paper, Scissors.
 Less fun, though.
 
-Required Features: same as RPS above.
+Required Features:
+- Compiler front-end
+- Support for specifying the safety with assertions.
+
+### Rock, Papers, Scissors
+
+File [rps.glow](rps.glow) specifies this very simple two-person game,
+to illustrate our conflict resolution mechanisms on the simplest adversarial system possible.
+
+File [rps-min.glow](rps-min.glow) is essentially the same, stripped to the bare essential,
+so that we can compare the complexity of this application with Glow vs another combination of languages.
+
+Required Features:
+- Same as Coin-Flip
+- Support for user-defined data types and "small" functions
 
 ### Dead-man Switch
 
