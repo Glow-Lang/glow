@@ -2,6 +2,8 @@
 
 (import
   :std/test :mukn/ethereum/assembly
+  :std/format :std/sugar
+  :clan/poo/poo :clan/persist/content-addressing :clan/versioning
   ../ethereum-runtime
   ../ethereum-contract
   ../program)
@@ -10,8 +12,22 @@
   participants: (make-hash-table)
   arguments: (make-hash-table)))
 
+(def test-agreement
+  (.o
+    glow-version: (software-identifier)
+    interaction: (format "mukn/glow/examples/test#~a" (@ test-contract program name))
+    participants: (.o)
+    parameters: (hash)
+    reference: (.o)
+    options: (.o blockchain: "Private Ethereum Testnet" ;; the `name` field of an entry in `config/ethereum_networks.json`
+                 escrowAmount: (void) ;; not meaningful for buy_sig in particular
+                 timeoutInBlocks: (@ test-contract timeout)
+                 maxInitialBlock: (@ test-contract initial-timer-start))
+    code-digest: (digest<-string (@ test-contract program name))))
+
 (def test-runtime (make-Runtime
   role: 'Test
+  agreement: test-agreement
   contract: test-contract
   current-code-block-label: 'begin
   current-label: 'begin0))
