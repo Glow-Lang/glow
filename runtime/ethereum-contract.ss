@@ -231,6 +231,10 @@
       (else
        (error "Contract does not recognize consensus statement: " statement)))))
 
+(def (typed-directive<-trivial-expr Contract code-block-label expr)
+  (def program (@ Contract program))
+  (cons {lookup-type program expr} {trivial-expression Contract code-block-label expr}))
+
 (defmethod {interpret-consensus-expression Contract}
   (lambda (self code-block-label variable-name expression)
     (def type {lookup-type (@ self program) variable-name})
@@ -242,7 +246,6 @@
     (match expression
       (['expect-published published-variable-name]
         [len {lookup-variable-offset self code-block-label variable-name} &read-published-data-to-mem])
-      ;; TODO: digest
       (['@app 'isValidSignature participant digest signature]
         [{load-immediate-variable self code-block-label participant Address}
           {load-immediate-variable self code-block-label digest Digest}
@@ -250,6 +253,8 @@
           {lookup-variable-offset self code-block-label signature}
           &isValidSignature
           (&mstoreat {lookup-variable-offset self code-block-label variable-name} 1)])
+      (['@app 'digest . exprs]
+       (&digest<-tvps (map (cut typed-directive<-trivial-expr self code-block-label <>) exprs)))
       (['== a b]
         (binary-operator EQ a b))
       (['@app '< a b]
