@@ -4,12 +4,15 @@ let coinFlip = (wagerAmount) => {
     @A assert! canReach(A_wins);
     @A let randA = randomUInt256();
     @A @verifiably let commitment = digest(randA);
-    @A publish! commitment; @A deposit! wagerAmount;
+    publish! A -> commitment; deposit! A -> wagerAmount;
     @B assert! canReach(B_wins);
-    @A let randB = randomUInt256();
-    @B publish! randB; @B deposit! wagerAmount;
-    @A publish! randA;
+    @B let randB = randomUInt256();
+    publish! B -> randB; deposit! B -> wagerAmount;
+    publish! A -> randA;
     verify! commitment;
-    if (bitwiseAnd(bitwiseXor(randA, randB), 1) == 0) {
-    A_wins: withdraw! A <- 2*wagerAmount } else {
-    B_wins: withdraw! B <- 2*wagerAmount }}
+    if (((randA ^^^ randB) &&& 1) == 0) {
+        A_wins: withdraw! A <- 2*wagerAmount
+    } else {
+        B_wins: withdraw! B <- 2*wagerAmount
+    }
+};
