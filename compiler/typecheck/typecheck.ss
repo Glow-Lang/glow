@@ -677,6 +677,12 @@
    ('mod (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Int type:Nat] type:Nat))))
    ('sqr (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Int] type:Int))))
    ('sqrt (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Int] type:Int))))
+   ('bitwise-not (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Int] type:Int))))
+   ('bitwise-and (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Int type:Int] type:Int))))
+   ('bitwise-or (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Int type:Int] type:Int))))
+   ('bitwise-xor (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Int type:Int] type:Int))))
+   ('bitwise-shift-right (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Int type:Int] type:Int))))
+   ('bitwise-shift-left (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Int type:Int] type:Int))))
    ;; TODO: make polymorphic
    ('member (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Int (type:listof type:Int)] type:Bool))))
    ('randomUInt256 (entry:known #f (typing-scheme empty-symdict (type:arrow [] type:Nat))))
