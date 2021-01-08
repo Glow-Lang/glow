@@ -46,6 +46,7 @@
 (def init-syms
   '(Unit Int Nat Bool Bytes Digest Assets Signature
     not <= < > >= + - * / mod sqr sqrt
+    bitwise-not bitwise-and bitwise-or bitwise-xor bitwise-shift-right bitwise-shift-left
     member
     randomUInt256 isValidSignature
     canReach mustReach))
