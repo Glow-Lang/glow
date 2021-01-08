@@ -11,5 +11,10 @@
                             (type:var 'wagerAmount1)
                             (type:var 'wagerAmount2)
                             (type:var 'wagerAmount3)
+                            (type:name 'Int)))
+                    (ntype:intersection
+                     (@list (type:var 'escrowAmount0)
+                            (type:var 'escrowAmount1)
+                            (type:var 'escrowAmount2)
                             (type:name 'Int))))
              (type:tuple (@list)))))))

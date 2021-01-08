@@ -1,19 +1,20 @@
 #lang glow
-// TODO: insert escrow? in the source, in a compiler pass, or at deployment?
+// TODO: insert escrow in a compiler pass
 @interaction([A, B])
-let coinFlip = (wagerAmount) => {
+let coinFlip = (wagerAmount, escrowAmount) => {
     // @A assert! canReach(A_wins);
     @A let randA = randomUInt256();
     @A @verifiably let commitment = digest(randA);
-    publish! A -> commitment; deposit! A -> wagerAmount;
+    publish! A -> commitment; deposit! A -> wagerAmount + escrowAmount;
     // @B assert! canReach(B_wins);
     @B let randB = randomUInt256();
     publish! B -> randB; deposit! B -> wagerAmount;
     publish! A -> randA;
     verify! commitment;
     if (((randA ^^^ randB) &&& 1) == 0) {
-        withdraw! A <- 2*wagerAmount
+        withdraw! A <- 2*wagerAmount + escrowAmount
     } else {
-        withdraw! B <- 2*wagerAmount
+        withdraw! B <- 2*wagerAmount;
+        withdraw! A <- escrowAmount
     }
 };

@@ -1,12 +1,12 @@
 (@module
 (@ (interaction (@list A B))
  (def coinFlip
-  (λ (wagerAmount)
+  (λ (wagerAmount escrowAmount)
     ; (@ A (assert! (@app canReach A_wins)))
     (@ A (def randA (@app randomUInt256)))
     (@ A (@ verifiably (def commitment (digest randA))))
     (publish! A commitment)
-    (deposit! A wagerAmount)
+    (deposit! A (+ wagerAmount escrowAmount))
     ; (@ B (assert! (@app canReach B_wins)))
     (@ B (def randB (@app randomUInt256)))
     (publish! B randB)
@@ -14,5 +14,7 @@
     (publish! A randA)
     (verify! commitment)
     (if (== (bitwise-and (bitwise-xor randA randB) 1) 0)
-        (withdraw! A (* 2 wagerAmount))
-        (withdraw! B (* 2 wagerAmount)))))))
+        (withdraw! A (+ (* 2 wagerAmount) escrowAmount))
+        (block
+          (withdraw! B (* 2 wagerAmount))
+          (withdraw! A escrowAmount)))))))
