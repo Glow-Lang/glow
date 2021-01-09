@@ -17,7 +17,7 @@
   :std/actor :std/coroutine
   :std/debug/heap :std/debug/memleak :std/debug/threads
   :std/error :std/format :std/getopt :std/iter :std/logger
-  :std/misc/bytes :std/misc/deque :std/misc/hash :std/misc/list
+  :std/misc/bytes :std/misc/deque :std/misc/hash :std/misc/list :std/misc/number
   :std/misc/ports :std/misc/process :std/misc/queue :std/misc/repr :std/misc/string
   :std/net/request :std/net/websocket
   :std/pregexp :std/sort
