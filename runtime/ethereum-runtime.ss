@@ -4,7 +4,7 @@
   :gerbil/gambit/bytes :gerbil/gambit/threads
   :std/iter :std/sugar
   :clan/exception :clan/json :clan/path-config :clan/pure/dict/assq
-  :clan/poo/poo :clan/poo/io :clan/poo/mop :clan/poo/type
+  :clan/poo/poo :clan/poo/io :clan/poo/mop :clan/poo/type :clan/poo/debug
   :clan/persist/content-addressing
   :mukn/ethereum/hex :mukn/ethereum/ethereum :mukn/ethereum/network-config :mukn/ethereum/json-rpc
   :mukn/ethereum/transaction :mukn/ethereum/tx-tracker :mukn/ethereum/watch
@@ -51,6 +51,10 @@
 ;;       displays at the terminal for the user to copy/paste and send to
 ;;       other participants through an outside channel
 (.def io-context:special-file
+  setup:
+  (lambda () (ignore-errors (delete-file (run-path "agreement-handshake.json"))))
+  teardown:
+  (lambda () (ignore-errors (delete-file (run-path "agreement-handshake.json"))))
   send-handshake:
   (lambda (handshake)
     (write-file-json (run-path "agreement-handshake.json") (json<- AgreementHandshake handshake)))
@@ -151,7 +155,7 @@
   (λ (self contract-address from-block)
     (let/cc return
       (def callback (λ (log) (return log))) ;; TODO: handle multiple log entries!!!
-      (def to-block (+ from-block (@ (@ self contract) timeout)))
+      (def to-block (+ from-block (@ self contract timeout)))
       (watch-contract callback contract-address from-block to-block))))
 
 ;; <- Runtime
@@ -181,8 +185,12 @@
           (displayln role ": Verifying contract config ...")
           (def-slots (agreement contract-config) agreement-handshake)
           ;; check that the agreement part matches
-          (assert! (equal? (json<- InteractionAgreement (@ self agreement))
-                           (json<- InteractionAgreement agreement)))
+          (unless (equal? (json<- InteractionAgreement (@ self agreement))
+                          (json<- InteractionAgreement agreement))
+            (DDT agreements-match:
+                 InteractionAgreement (@ self agreement)
+                 InteractionAgreement agreement)
+            (error "agreements don't match" (@ self agreement) agreement))
           (def timer-start (.@ agreement options maxInitialBlock))
           (def contract (@ self contract))
           (set! (@ self timer-start) timer-start)
@@ -235,9 +243,9 @@
     (def code-block {get-current-code-block self})
     (def next (code-block-exit code-block))
     (def participant (code-block-participant code-block))
-    (defvalues (contract-runtime-bytes contract-runtime-labels)
-      {generate-consensus-runtime (@ self contract)})
     (def contract (@ self contract))
+    (defvalues (contract-runtime-bytes contract-runtime-labels)
+      {generate-consensus-runtime contract})
     (def initial-state
       {create-frame-variables contract (@ contract initial-timer-start) contract-runtime-labels next participant})
     (def initial-state-digest
@@ -314,6 +322,7 @@
 (defmethod {initialize-environment Runtime}
   (λ (self)
     (def contract (@ self contract))
+    (.call (@ self io-context) setup) ;; NB: putting this call before the def above crashes gxc(!)
     (for ((values key value) (in-hash (@ contract participants)))
       {add-to-environment self key value})
     (for ((values key [_ . value]) (in-hash (@ contract arguments)))
@@ -401,14 +410,14 @@
       (['add-to-publish ['quote publish-name] variable-name]
         (let
           ((publish-value {reduce-expression self variable-name})
-           (publish-type {lookup-type (@ (@ self contract) program) variable-name}))
+           (publish-type {lookup-type (@ self contract program) variable-name}))
           {add-to-published (@ self message) publish-name publish-type publish-value}))
 
       (['def variable-name expression]
         (let (variable-value
           (match expression
             (['expect-published ['quote publish-name]]
-              (let (publish-type {lookup-type (@ (@ self contract) program) publish-name})
+              (let (publish-type {lookup-type (@ self contract program) publish-name})
                 {expect-published (@ self message) publish-name publish-type}))
             (['@app 'isValidSignature address-variable digest-variable signature-variable]
               (let
@@ -430,7 +439,7 @@
             (['digest . es]
              (digest
               (for/collect ((e es))
-                (cons {lookup-type (@ (@ self contract) program) e}
+                (cons {lookup-type (@ self contract program) e}
                       {reduce-expression self e}))))
             (['sign digest-variable]
               (let ((this-participant {get-active-participant self})

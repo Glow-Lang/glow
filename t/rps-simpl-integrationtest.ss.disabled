@@ -42,6 +42,8 @@ input UInt256: First player, pick your hand: 0 (Rock), 1 (Paper), 2 (Scissors)
 
 (def compiler-output (run-passes (source-path "examples/rps_simpl.sexp") pass: 'project show?: #f))
 
+(def initial-block (eth_blockNumber))
+
 (def rps-simpl-integrationtest
   (test-suite "integration test for ethereum/rps_simpl"
     (DBG "Ensure participants funded")
@@ -56,7 +58,7 @@ input UInt256: First player, pick your hand: 0 (Rock), 1 (Paper), 2 (Scissors)
         program: program
         participants: participants
         arguments: arguments
-        initial-timer-start: (+ (eth_blockNumber) (ethereum-timeout-in-blocks))
+        initial-timer-start: (+ initial-block (ethereum-timeout-in-blocks))
         timeout: 20))
 
       (def environment #f)

@@ -5,10 +5,11 @@
   :std/format :std/srfi/1 :std/test :std/sugar :std/iter :std/text/json :std/misc/ports
   :clan/base :clan/concurrency :clan/debug :clan/decimal :clan/exception
   :clan/io :clan/json :clan/path-config :clan/ports
-  :clan/poo/poo :clan/poo/io (only-in :clan/poo/mop display-poo-ln) :clan/crypto/keccak
+  :clan/poo/poo :clan/poo/io :clan/poo/debug
+  :clan/crypto/keccak
   :clan/persist/content-addressing
   :clan/versioning
-  :mukn/ethereum/ethereum :mukn/ethereum/known-addresses :mukn/ethereum/json-rpc
+  :mukn/ethereum/types :mukn/ethereum/ethereum :mukn/ethereum/known-addresses :mukn/ethereum/json-rpc
   :mukn/ethereum/batch-send :mukn/ethereum/network-config :mukn/ethereum/assets
   :mukn/ethereum/signing :mukn/ethereum/hex :mukn/ethereum/transaction :mukn/ethereum/types
   :mukn/ethereum/t/signing-test
