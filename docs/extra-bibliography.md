@@ -205,6 +205,9 @@ Other non-Lisp types of interest?
 
 * [ggplot](https://ggplot2.tidyverse.org/) and the grammar of graphics for statistical data
 
+### Consensus Algorithms
+
+* Improve performance with [Compartmentalization](https://mwhittaker.github.io/publications/compartmentalized_paxos.html) (see [this summary](https://twitter.com/judofyr/status/1288929031816204294))
 
 ### More...
 
