@@ -69,6 +69,7 @@
   :mukn/glow/compiler/anf/anf
   :mukn/glow/runtime/ethereum-contract
   :mukn/glow/runtime/ethereum-runtime
+  :mukn/glow/runtime/cli
 
   ;;:mukn/glow/compiler/checkpointify/checkpointify
   :clan/crypto/keccak :clan/crypto/secp256k1
