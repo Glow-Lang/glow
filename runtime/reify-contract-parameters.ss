@@ -15,8 +15,7 @@ $ gxi
 In the Buyer terminal:
 > (import :mukn/ethereum/t/50-batch-send-integrationtest)
 > (ensure-addresses-prefunded)
-> (def block (eth_blockNumber))
-> block
+> (def block (eth_blockNumber)) block
 In the Seller terminal:
 > (ensure-ethereum-connection "pet")
 > (ensure-db-connection (run-path "testdb-bob"))
@@ -34,7 +33,7 @@ In both terminals:
                    Seller: "Sale #101")
     options: (.o blockchain: "Private Ethereum Testnet"
                  escrowAmount: (void)
-                 timeoutInBlocks: (ethereum-timeout-in-blocks)
+                 timeoutInBlocks: (* 10 (ethereum-timeout-in-blocks))
                  maxInitialBlock: (+ block timeoutInBlocks))
     code-digest: (digest<-file (source-path "examples/buy_sig.glow"))))
 In the Buyer terminal:
@@ -44,6 +43,7 @@ In the Seller terminal:
 |#
 
 (import :std/iter
+        :std/format
         :std/pregexp
         :std/misc/string
         :std/text/json
@@ -93,7 +93,6 @@ In the Seller terminal:
          ((cons k v)
           ; TODO: change surface names to alpha-converted names
           (def t {lookup-type program k})
-          ; TODO: change JSON values into TypeValuePairs
           (cons k (cons t (<-json t v))))))))
   (make-Contract
     program: program
@@ -102,18 +101,9 @@ In the Seller terminal:
     initial-timer-start: (.@ a options maxInitialBlock)
     timeout: (.@ a options timeoutInBlocks)))
 
-;; run : Symbol InteractionAgreement -> ???
+;; run : Symbol InteractionAgreement -> [Hashof Symbol Any]
 (def (run role a)
   (def contract (interaction-agreement->contract a))
-  ; ???, depends on whether the given role goes first
-  ; if the given role goes first, then:
-  ;   deploy the contract, output the AgreementHandshake
-  ; otherwise:
-  ;   wait for the one who does go first
-  ;   to give the AgreementHandshake
-  ; --------------------------------
-  ;; TODO: in runtime add a Poo object IOContext to handle
-  ;;       exchanging AgreementHandshake instead of a `contract-handshake.json` file
   (def runtime
     (make-Runtime role: role
                   agreement: a
@@ -122,7 +112,9 @@ In the Seller terminal:
                   current-label: 'begin ;; TODO: grab the start label from the compilation output, instead of 'begins
                   io-context: io-context:terminal))
   {execute runtime}
-  ())
+  (printf "~a finished\n" role)
+  ;; TODO: change alpha-converted names to surface names for printing to the user
+  (@ runtime environment))
 
 ;; --------------------------------------------------------
 
