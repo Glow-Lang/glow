@@ -38,22 +38,10 @@
     [1 ['def 'result 1]]
     [2 ['def 'result 2]]])
 
-(def (switch-consensus-statement value)
-  (assemble
-    (&switch value
-      [[0 [0]]
-       [1 [1]]
-       [2 [2]]])))
-
 (def runtime-interpreter-test
   (test-suite "Test runtime interpreter"
 
     (test-case "interpret-participant-switch-statement"
       (def expected-result 0)
       {interpret-participant-statement test-runtime (switch-participant-statement expected-result)}
-      (check-equal? expected-result (hash-get (@ test-runtime environment) 'result)))
-
-    (test-case "interpret-consensus-switch-statement"
-      (def expected-result 1)
-      (displayln (switch-consensus-statement expected-result))
-      (check-equal? #t #t))))
+      (check-equal? expected-result (hash-get (@ test-runtime environment) 'result)))))
