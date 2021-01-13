@@ -35,7 +35,7 @@
 
 ;; Should `timeout` be the value of `(ethereum-timeout-in-blocks)`,
 ;; or should it be the `timeoutInBlocks` field of the entry in `config/ethereum_networks.json`?
-(def timeout (ethereum-timeout-in-blocks))
+(def timeout (* (ethereum-timeout-in-blocks) 2))
 (def initial-timer-start (+ (eth_blockNumber) timeout))
 
 (def coin_flip.glow (source-path "examples/coinflip.glow"))
@@ -73,9 +73,7 @@
            (def contract (make-Contract
                           program: program
                           participants: participants
-                          arguments: arguments
-                          initial-timer-start: initial-timer-start
-                          timeout: timeout))
+                          arguments: arguments))
            (def a-runtime
              (make-Runtime role: 'A
                            agreement: agreement
@@ -93,9 +91,7 @@
            (def contract (make-Contract
                           program: program
                           participants: participants
-                          arguments: arguments
-                          initial-timer-start: initial-timer-start
-                          timeout: timeout))
+                          arguments: arguments))
            (def b-runtime
              (make-Runtime role: 'B
                            agreement: agreement

@@ -78,9 +78,7 @@
            (def contract (make-Contract
                           program: program
                           participants: participants
-                          arguments: arguments
-                          initial-timer-start: initial-timer-start
-                          timeout: timeout))
+                          arguments: arguments))
            (def buyer-runtime
              (make-Runtime role: 'Buyer
                            agreement: agreement
@@ -98,9 +96,7 @@
            (def contract (make-Contract
                           program: program
                           participants: participants
-                          arguments: arguments
-                          initial-timer-start: initial-timer-start
-                          timeout: timeout))
+                          arguments: arguments))
            (def seller-runtime
              (make-Runtime role: 'Seller
                            agreement: agreement
