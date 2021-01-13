@@ -1,7 +1,7 @@
 (export #t)
 
 (import
-  :std/iter :std/sugar :std/misc/hash :std/misc/list :std/misc/number :std/srfi/1
+  :std/iter :std/sugar :std/misc/hash :std/misc/list :std/misc/number :std/srfi/1 :std/sort
   :clan/number :clan/syntax :clan/poo/io
   :mukn/ethereum/hex :mukn/ethereum/types :mukn/ethereum/ethereum :mukn/ethereum/signing
   :mukn/ethereum/assembly :mukn/ethereum/contract-runtime :mukn/ethereum/assets
@@ -16,9 +16,7 @@
    participants ;; : (Table Address <- Symbol)
    arguments ;; : (Table DependentPair <- Symbol)
    variable-offsets ;; : (Table (Table Offset <- Symbol) <- Symbol)
-   params-end ;; : Offset
-   initial-timer-start ;; : Block
-   timeout) ;; : Block
+   params-end) ;; : Offset
   transparent: #t)
 
 ;; (deftype Frame (List DependentPair))
@@ -36,6 +34,7 @@
      ;; [UInt16 . active-participant-offset]
      ;; TODO: designate participant addresses as global variables that are stored outside of frames
      (map (λ (kv) (cons Address (cdr kv))) (hash->list/sort (@ self participants) symbol<?))...
+     ;; TODO: The should be pulled from the live variable map, not from the arguments map.
      (map cdr (hash->list/sort (@ self arguments) symbol<?))...]))
 
 ;; Block <- Frame
@@ -52,9 +51,9 @@
 ;; participant.
 ;; : Bytes (Table Offset <- Symbol) <- Contract
 (defmethod {generate-consensus-runtime Contract}
-  (λ (self)
+  (λ (self timeout)
     (parameterize ((brk-start (box params-start@)))
-      (def consensus-code {generate-consensus-code self})
+      (def consensus-code {generate-consensus-code self timeout})
       (assemble
         (&begin
         (&simple-contract-prelude)
@@ -83,12 +82,14 @@
                    (hash-put! frame-variables
                               role (post-increment! start parameter-length)))))
               (hash->list/sort (@ self participants) symbol<?))
-    (for-each (match <>
-                ([variable type . value]
-                 (let (argument-length (param-length type))
-                   (hash-put! frame-variables
-                              variable (post-increment! start argument-length)))))
-              (hash->list/sort (@ self arguments) symbol<?))
+    (def live-variables (sort {lookup-live-variables (@ self program) code-block-label} symbol<?))
+    (for-each
+      (λ (live-variable)
+        (let (type {lookup-type (@ self program) live-variable})
+          (unless (hash-get frame-variables live-variable)
+            (let (parameter-length (param-length type))
+              (hash-put! frame-variables live-variable (post-increment! start parameter-length))))))
+      live-variables)
     (hash-put! (@ self variable-offsets) code-block-label frame-variables)
     (set! (@ self params-end) start)))
 
@@ -148,24 +149,24 @@
 ;; Directives to generate the entire bytecode for the contract (minus header / footer)
 ;; Directive <- Contract
 (defmethod {generate-consensus-code Contract}
-  (λ (self)
+  (λ (self timeout)
     (def consensus-interaction {get-interaction (@ self program) #f})
     (set! (@ self variable-offsets) (make-hash-table))
     (&begin*
      (append-map (match <> ([code-block-label . code-block]
-                            {generate-consensus-code-block self code-block-label code-block}))
+                            {generate-consensus-code-block self code-block-label code-block timeout}))
                  (hash->list/sort consensus-interaction symbol<?)))))
 
 ;; Directives from a code block
 ;; (List Directive) <- Contract Symbol CodeBlock
 (defmethod {generate-consensus-code-block Contract}
-  (λ (self code-block-label code-block)
+  (λ (self code-block-label code-block timeout)
     (def checkpoint-statements (code-block-statements code-block))
     (set! (@ self params-end) #f)
     {compute-variable-offsets self code-block-label}
     (def code-block-directives
       [[&jumpdest {make-checkpoint-label self code-block-label}]
-       (&check-timeout! timeout: (@ self timeout))
+       (&check-timeout! timeout: timeout)
        (append-map (λ (statement) {interpret-consensus-statement self code-block-label statement})
                  checkpoint-statements)...])
     (register-frame-size (@ self params-end))
@@ -224,9 +225,10 @@
         (let*
           ((comparison-value {trivial-expression self code-block-label value})
            (interpreted-cases (map (λ (case)
-             (let (interpreted-statements {interpret-consensus-statement self code-block-label (cdr cases)})
-              [(car case) interpreted-statements])) cases)))
-        (&switch comparison-value interpreted-cases)))
+             (let (interpreted-statements (map (λ (case-statement)
+                    {interpret-consensus-statement self code-block-label case-statement}) (cdr case)))
+              [(car case) (flatten1 interpreted-statements)])) cases)))
+        [(&switch comparison-value interpreted-cases)]))
 
       (else
        (error "Contract does not recognize consensus statement: " statement)))))
@@ -236,7 +238,7 @@
   (cons {lookup-type program expr} {trivial-expression Contract code-block-label expr}))
 
 (defmethod {interpret-consensus-expression Contract}
-  (lambda (self code-block-label variable-name expression)
+  (λ (self code-block-label variable-name expression)
     (def type {lookup-type (@ self program) variable-name})
     (def len (and type (param-length type)))
     (def (binary-operator op a b)
@@ -253,8 +255,8 @@
           {lookup-variable-offset self code-block-label signature}
           &isValidSignature
           (&mstoreat {lookup-variable-offset self code-block-label variable-name} 1)])
-      (['@app 'digest . exprs]
-       (&digest<-tvps (map (cut typed-directive<-trivial-expr self code-block-label <>) exprs)))
+      (['digest . exprs]
+        [(&digest<-tvps (map (cut typed-directive<-trivial-expr self code-block-label <>) exprs))])
       (['== a b]
         (binary-operator EQ a b))
       (['@app '< a b]
@@ -268,4 +270,8 @@
       (['@app '* a b]
         (binary-operator MUL a b))
       (['@app '/ a b]
-        (binary-operator DIV a b)))))
+        (binary-operator DIV a b))
+      (['@app 'bitwise-xor a b]
+        (binary-operator XOR a b))
+      (['@app 'bitwise-and a b]
+        (binary-operator AND a b)))))

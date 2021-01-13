@@ -39,7 +39,8 @@
 (define-type AgreementHandshake
   (Record
    agreement: [InteractionAgreement]
-   contract-config: [ContractConfig]))
+   contract-config: [ContractConfig]
+   published-data: [Bytes])) ;; Variables published by the first active participant inside the first code block.
 ;; timer-start = (.@ agreement-handshake agreement options maxInitialBlock)
 
 (define-type IOContext
@@ -83,7 +84,7 @@
    current-label ;; : Symbol
    environment ;; : (Table (Or DependentPair Any) <- Symbol) ;; TODO: have it always typed???
    message ;; : Message ;; byte buffer?
-   timer-start ;; Block ;;
+   timer-start ;; Block
    io-context) ; : IOContext
   constructor: :init!
   transparent: #t)
@@ -155,7 +156,7 @@
   (λ (self contract-address from-block)
     (let/cc return
       (def callback (λ (log) (return log))) ;; TODO: handle multiple log entries!!!
-      (def to-block (+ from-block (@ self contract timeout)))
+      (def to-block (+ from-block (.@ (@ self agreement) options timeoutInBlocks)))
       (watch-contract callback contract-address from-block to-block))))
 
 ;; <- Runtime
@@ -170,7 +171,8 @@
           ;; TODO: `from` should be calculated using the deadline and not necessarily the previous tx,
           ;; since it may or not be setting the deadline
           (display-poo-ln role ": contract-config=" ContractConfig contract-config)
-          (def from (.@ contract-config creation-block))
+          (def from (if (@ self timer-start) (@ self timer-start) (.@ contract-config creation-block)))
+          (displayln role ": watching from block " from)
           (def new-log-object {watch self (.@ contract-config contract-address) from})
           ;; TODO: handle the case when there is no log objects
           (display-poo-ln role ": New TX: " (Maybe LogObject) new-log-object)
@@ -183,7 +185,7 @@
           (def agreement-handshake {read-handshake self})
           (display-poo-ln role ": agreement-handshake: " AgreementHandshake agreement-handshake)
           (displayln role ": Verifying contract config ...")
-          (def-slots (agreement contract-config) agreement-handshake)
+          (def-slots (agreement contract-config published-data) agreement-handshake)
           ;; check that the agreement part matches
           (unless (equal? (json<- InteractionAgreement (@ self agreement))
                           (json<- InteractionAgreement agreement))
@@ -191,12 +193,11 @@
                  InteractionAgreement (@ self agreement)
                  InteractionAgreement agreement)
             (error "agreements don't match" (@ self agreement) agreement))
-          (def timer-start (.@ agreement options maxInitialBlock))
-          (def contract (@ self contract))
-          (set! (@ self timer-start) timer-start)
+          (set! (@ self timer-start) (.@ agreement options maxInitialBlock))
           (def create-pretx {prepare-create-contract-transaction self})
           (verify-contract-config contract-config create-pretx)
-          (set! (@ self contract-config) contract-config))))))
+          (set! (@ self contract-config) contract-config)
+          (set! (@ self message inbox) (open-input-u8vector published-data)))))))
 
 ;; : AgreementHandshake <- Runtime
 (defmethod {read-handshake Runtime}
@@ -213,18 +214,31 @@
       (if (not contract-config)
         (let ()
           (displayln role ": deploying contract ...")
-          {deploy-contract self})
+          (def outbox (@ self message outbox))
+          (def out (open-output-u8vector))
+          (for ([type . value] (hash-values outbox))
+            (marshal type value out))
+          (def published-data (get-output-u8vector out))
+          ;; TODO: Add published data to initial frame variables.
+          {deploy-contract self}
+          (def contract-config (@ self contract-config))
+          (def agreement (@ self agreement))
+          (def handshake (.new AgreementHandshake agreement contract-config published-data))
+          (display-poo-ln role ": Handshake: " AgreementHandshake handshake)
+          {send-contract-handshake self handshake})
         (let ()
           ;; TODO: Verify asset transfers using previous transaction and balances
           ;; recorded in Message's asset-transfer table during interpretation. Probably
           ;; requires getting TransactionInfo using the TransactionReceipt.
-          (displayln "publishing message ...")
+          (displayln role ": publishing message ...")
           (def contract-address (.@ contract-config contract-address))
           (def contract (@ self contract))
           (def message (@ self message))
           (def outbox (@ message outbox))
           (def message-pretx {prepare-call-function-transaction self outbox contract-address})
           (def new-tx-receipt (post-transaction message-pretx))
+          (display-poo-ln role ": Tx Receipt: " TransactionReceipt new-tx-receipt)
+          (set! (@ self timer-start) (.@ new-tx-receipt blockNumber))
           {reset message})))))
 
 ;; Sexp <- State
@@ -245,9 +259,9 @@
     (def participant (code-block-participant code-block))
     (def contract (@ self contract))
     (defvalues (contract-runtime-bytes contract-runtime-labels)
-      {generate-consensus-runtime contract})
+      {generate-consensus-runtime contract (.@ (@ self agreement) options timeoutInBlocks)})
     (def initial-state
-      {create-frame-variables contract (@ contract initial-timer-start) contract-runtime-labels next participant})
+      {create-frame-variables contract (.@ (@ self agreement) options maxInitialBlock) contract-runtime-labels next participant})
     (def initial-state-digest
       (digest-product-f initial-state))
     (def contract-bytes
@@ -259,9 +273,8 @@
 (defmethod {deploy-contract Runtime}
   (λ (self)
     (def role (@ self role))
-    (def agreement (@ self agreement))
     (def contract (@ self contract))
-    (def timer-start (@ contract initial-timer-start))
+    (def timer-start (.@ (@ self agreement) options maxInitialBlock))
     (def pretx {prepare-create-contract-transaction self})
     (display-poo-ln role ": Deploying contract... "
                     "timer-start: " timer-start)
@@ -269,9 +282,6 @@
     (def contract-config (contract-config<-creation-receipt receipt))
     (display-poo-ln role ": Contract config: " ContractConfig contract-config)
     (verify-contract-config contract-config pretx)
-    (def handshake (.new AgreementHandshake agreement contract-config))
-    (display-poo-ln role ": Handshake: " AgreementHandshake handshake)
-    {send-contract-handshake self handshake}
     (set! (@ self contract-config) contract-config)))
 
 (defmethod {send-contract-handshake Runtime}
@@ -285,7 +295,7 @@
   (λ (self outbox contract-address)
     (def sender-address {get-active-participant self})
     (defvalues (_ contract-runtime-labels)
-      {generate-consensus-runtime (@ self contract)})
+      {generate-consensus-runtime (@ self contract) (.@ (@ self agreement) options timeoutInBlocks)})
     (def frame-variables
       {create-frame-variables
         (@ self contract)
@@ -303,10 +313,11 @@
     (marshal UInt8 1 out)
     (def message-bytes (get-output-u8vector out))
     (call-function sender-address contract-address message-bytes
-      value: {compute-participant-dues (@ self message) sender-address}
-      ;; default should be (void), i.e. ask for an automatic estimate,
+      value: {compute-participant-dues (@ self message) sender-address})))
+      ;; default gas value should be (void), i.e. ask for an automatic estimate,
       ;; unless we want to force the TX to happen
-      gas: 800000)))
+      ;; (gas: 800000))))
+
 
 ;; CodeBlock <- Runtime
 (defmethod {get-current-code-block Runtime}
@@ -414,42 +425,8 @@
           {add-to-published (@ self message) publish-name publish-type publish-value}))
 
       (['def variable-name expression]
-        (let (variable-value
-          (match expression
-            (['expect-published ['quote publish-name]]
-              (let (publish-type {lookup-type (@ self contract program) publish-name})
-                {expect-published (@ self message) publish-name publish-type}))
-            (['@app 'isValidSignature address-variable digest-variable signature-variable]
-              (let
-                ((address {reduce-expression self address-variable})
-                 (digest {reduce-expression self digest-variable})
-                 (signature {reduce-expression self signature-variable}))
-                (isValidSignature address digest signature)))
-            (['@app '< a b]
-              (let
-                ((av {reduce-expression self a})
-                 (bv {reduce-expression self b}))
-                (< av bv)))
-            (['@app 'randomUInt256]
-             (randomUInt256))
-            (['@tuple . es]
-             (list->vector
-              (for/collect ((e es))
-                {reduce-expression self e})))
-            (['digest . es]
-             (digest
-              (for/collect ((e es))
-                (cons {lookup-type (@ self contract program) e}
-                      {reduce-expression self e}))))
-            (['sign digest-variable]
-              (let ((this-participant {get-active-participant self})
-                    (digest {reduce-expression self digest-variable}))
-                (make-message-signature (secret-key<-address this-participant) digest)))
-            (['input 'Nat tag]
-             (let ((tagv {reduce-expression self tag}))
-               (input UInt256 tagv)))
-            (else
-              {reduce-expression self expression})))
+        (let
+          ((variable-value {interpret-participant-expression self expression}))
           {add-to-environment self variable-name variable-value}))
 
       (['require! variable-name]
@@ -473,6 +450,54 @@
            (matching-case (find (λ (case) (equal? {reduce-expression self (car case)} variable-value)) cases)))
         (for (case-statement (cdr matching-case))
           {interpret-participant-statement self case-statement}))))))
+
+(defmethod {interpret-participant-expression Runtime}
+  (λ (self expression)
+    (match expression
+      (['expect-published ['quote publish-name]]
+        (let (publish-type {lookup-type (@ self contract program) publish-name})
+          {expect-published (@ self message) publish-name publish-type}))
+      (['@app 'isValidSignature address-variable digest-variable signature-variable]
+        (let
+          ((address {reduce-expression self address-variable})
+            (digest {reduce-expression self digest-variable})
+            (signature {reduce-expression self signature-variable}))
+          (isValidSignature address digest signature)))
+      (['@app '< a b]
+        (let
+          ((av {reduce-expression self a})
+            (bv {reduce-expression self b}))
+          (< av bv)))
+      (['@app '+ a b]
+        (let
+          ((av {reduce-expression self a})
+            (bv {reduce-expression self b}))
+          (+ av bv)))
+      (['@app bitwise-xor a b]
+        (let
+          ((av {reduce-expression self a})
+            (bv {reduce-expression self b}))
+          (+ av bv)))
+      (['@app 'randomUInt256]
+        (randomUInt256))
+      (['@tuple . es]
+        (list->vector
+        (for/collect ((e es))
+          {reduce-expression self e})))
+      (['digest . es]
+        (digest
+        (for/collect ((e es))
+          (cons {lookup-type (@ self contract program) e}
+                {reduce-expression self e}))))
+      (['sign digest-variable]
+        (let ((this-participant {get-active-participant self})
+              (digest {reduce-expression self digest-variable}))
+          (make-message-signature (secret-key<-address this-participant) digest)))
+      (['input 'Nat tag]
+        (let ((tagv {reduce-expression self tag}))
+          (input UInt256 tagv)))
+      (else
+        {reduce-expression self expression}))))
 
 ;; MESSAGE ;; TODO: more like CommunicationState
 (defclass Message
