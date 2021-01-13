@@ -3,9 +3,9 @@
 (import
   :std/getopt :std/sugar
   :clan/json :clan/multicall :clan/path-config :clan/syntax
-  :clan/poo/mop
+  :clan/poo/debug
   :clan/persist/db
-  :mukn/ethereum/cli :mukn/ethereum/json-rpc
+  :mukn/ethereum/cli :mukn/ethereum/types :mukn/ethereum/json-rpc
   ./ethereum-runtime ./reify-contract-parameters
   )
 
@@ -36,11 +36,16 @@
   (def opt (getopt-parse gopt arguments))
   (defrule {symbol} (hash-get opt 'symbol))
   ;; TODO: validate role, with nice user-friendly error message
-  (def role (maybe-intern-symbol {role}))
+  (def role (string->symbol {role}))
   ;; TODO: validate agreement, with nice user-friendly error message
   (def agreement (<-json InteractionAgreement (json<-cli-input {agreement})))
   ;; TODO: validate ethereum network, with nice user-friendly error message
   (ensure-ethereum-connection {ethereum-network})
   ;; TODO: validate database, with nice user-friendly error message
   (ensure-db-connection {database})
+  (DDT start-interaction:
+       Symbol role
+       InteractionAgreement agreement
+       String {ethereum-network}
+       String {database})
   (run role agreement))
