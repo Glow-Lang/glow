@@ -41,6 +41,8 @@
 (def agreement-path (run-path "t/buy-sig-manualtest-agreement.json"))
 (def agreement-string (json-string<- InteractionAgreement agreement))
 
+(create-directory* (run-path "t"))
+
 (clobber-file agreement-path (cut write-json-ln (json<- InteractionAgreement agreement) <>))
 
 (ensure-addresses-prefunded)
