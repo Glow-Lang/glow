@@ -85,7 +85,7 @@
     (for-each
       (λ (live-variable)
         (let (type {lookup-type (@ self program) live-variable})
-          (when (and type (not (hash-get frame-variables live-variable)))
+          (unless (hash-get frame-variables live-variable)
             (let (parameter-length (param-length type))
               (hash-put! frame-variables live-variable (post-increment! start parameter-length))))))
       live-variables)

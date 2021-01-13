@@ -54,9 +54,7 @@
         ((type:name-subtype 'Nat _) UInt256)
         ((type:name sym) (eval sym))
         ((type:name-subtype sym _) (eval sym))
-        ((type:tuple ts) (apply Tuple (map type-methods ts)))
-        ;; TODO: How do we compute a variable offset from a function signature?
-        ((type:arrow _ _) #f)))
+        ((type:tuple ts) (apply Tuple (map type-methods ts)))))
     (type-methods (hash-get type-table variable-name))))
 
 ;; A conservative predicate that only returns true when the variable-name
