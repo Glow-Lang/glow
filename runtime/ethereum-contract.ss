@@ -34,6 +34,7 @@
      ;; [UInt16 . active-participant-offset]
      ;; TODO: designate participant addresses as global variables that are stored outside of frames
      (map (λ (kv) (cons Address (cdr kv))) (hash->list/sort (@ self participants) symbol<?))...
+     ;; TODO: The should be pulled from the live variable map, not from the arguments map.
      (map cdr (hash->list/sort (@ self arguments) symbol<?))...]))
 
 ;; Block <- Frame

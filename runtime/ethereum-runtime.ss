@@ -214,13 +214,14 @@
       (if (not contract-config)
         (let ()
           (displayln role ": deploying contract ...")
-          {deploy-contract self}
-          (def contract-config (@ self contract-config))
           (def outbox (@ self message outbox))
           (def out (open-output-u8vector))
           (for ([type . value] (hash-values outbox))
             (marshal type value out))
           (def published-data (get-output-u8vector out))
+          ;; TODO: Add published data to initial frame variables.
+          {deploy-contract self}
+          (def contract-config (@ self contract-config))
           (def agreement (@ self agreement))
           (def handshake (.new AgreementHandshake agreement contract-config published-data))
           (display-poo-ln role ": Handshake: " AgreementHandshake handshake)
