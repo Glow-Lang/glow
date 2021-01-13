@@ -1,7 +1,7 @@
 (export #t)
 
 (import
-  :std/iter :std/sugar :std/misc/hash :std/misc/list :std/misc/number :std/srfi/1
+  :std/iter :std/sugar :std/misc/hash :std/misc/list :std/misc/number :std/srfi/1 :std/sort
   :clan/number :clan/syntax :clan/poo/io
   :mukn/ethereum/hex :mukn/ethereum/types :mukn/ethereum/ethereum :mukn/ethereum/signing
   :mukn/ethereum/assembly :mukn/ethereum/contract-runtime :mukn/ethereum/assets
@@ -81,17 +81,11 @@
                    (hash-put! frame-variables
                               role (post-increment! start parameter-length)))))
               (hash->list/sort (@ self participants) symbol<?))
-    (for-each (match <>
-                ([variable type . value]
-                 (let (argument-length (param-length type))
-                   (hash-put! frame-variables
-                              variable (post-increment! start argument-length)))))
-              (hash->list/sort (@ self arguments) symbol<?))
-    (def live-variables {lookup-live-variables (@ self program) code-block-label})
+    (def live-variables (sort {lookup-live-variables (@ self program) code-block-label} symbol<?))
     (for-each
       (λ (live-variable)
         (let (type {lookup-type (@ self program) live-variable})
-          (when type
+          (when (and type (not (hash-get frame-variables live-variable)))
             (let (parameter-length (param-length type))
               (hash-put! frame-variables live-variable (post-increment! start parameter-length))))))
       live-variables)
