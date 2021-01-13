@@ -16,9 +16,7 @@
    participants ;; : (Table Address <- Symbol)
    arguments ;; : (Table DependentPair <- Symbol)
    variable-offsets ;; : (Table (Table Offset <- Symbol) <- Symbol)
-   params-end ;; : Offset
-   initial-timer-start ;; : Block
-   timeout) ;; : Block
+   params-end) ;; : Offset
   transparent: #t)
 
 ;; (deftype Frame (List DependentPair))
@@ -52,9 +50,9 @@
 ;; participant.
 ;; : Bytes (Table Offset <- Symbol) <- Contract
 (defmethod {generate-consensus-runtime Contract}
-  (λ (self)
+  (λ (self timeout)
     (parameterize ((brk-start (box params-start@)))
-      (def consensus-code {generate-consensus-code self})
+      (def consensus-code {generate-consensus-code self timeout})
       (assemble
         (&begin
         (&simple-contract-prelude)
@@ -156,24 +154,24 @@
 ;; Directives to generate the entire bytecode for the contract (minus header / footer)
 ;; Directive <- Contract
 (defmethod {generate-consensus-code Contract}
-  (λ (self)
+  (λ (self timeout)
     (def consensus-interaction {get-interaction (@ self program) #f})
     (set! (@ self variable-offsets) (make-hash-table))
     (&begin*
      (append-map (match <> ([code-block-label . code-block]
-                            {generate-consensus-code-block self code-block-label code-block}))
+                            {generate-consensus-code-block self code-block-label code-block timeout}))
                  (hash->list/sort consensus-interaction symbol<?)))))
 
 ;; Directives from a code block
 ;; (List Directive) <- Contract Symbol CodeBlock
 (defmethod {generate-consensus-code-block Contract}
-  (λ (self code-block-label code-block)
+  (λ (self code-block-label code-block timeout)
     (def checkpoint-statements (code-block-statements code-block))
     (set! (@ self params-end) #f)
     {compute-variable-offsets self code-block-label}
     (def code-block-directives
       [[&jumpdest {make-checkpoint-label self code-block-label}]
-       (&check-timeout! timeout: (@ self timeout))
+       (&check-timeout! timeout: timeout)
        (append-map (λ (statement) {interpret-consensus-statement self code-block-label statement})
                  checkpoint-statements)...])
     (register-frame-size (@ self params-end))

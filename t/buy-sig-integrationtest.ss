@@ -79,7 +79,6 @@
                           program: program
                           participants: participants
                           arguments: arguments
-                          initial-timer-start: initial-timer-start
                           timeout: timeout))
            (def buyer-runtime
              (make-Runtime role: 'Buyer
@@ -99,7 +98,6 @@
                           program: program
                           participants: participants
                           arguments: arguments
-                          initial-timer-start: initial-timer-start
                           timeout: timeout))
            (def seller-runtime
              (make-Runtime role: 'Seller
