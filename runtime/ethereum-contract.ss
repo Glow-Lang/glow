@@ -89,6 +89,14 @@
                    (hash-put! frame-variables
                               variable (post-increment! start argument-length)))))
               (hash->list/sort (@ self arguments) symbol<?))
+    (def live-variables {lookup-live-variables (@ self program) code-block-label})
+    (for-each
+      (λ (live-variable)
+        (let (type {lookup-type (@ self program) live-variable})
+          (when type
+            (let (parameter-length (param-length type))
+              (hash-put! frame-variables live-variable (post-increment! start parameter-length))))))
+      live-variables)
     (hash-put! (@ self variable-offsets) code-block-label frame-variables)
     (set! (@ self params-end) start)))
 
@@ -224,9 +232,10 @@
         (let*
           ((comparison-value {trivial-expression self code-block-label value})
            (interpreted-cases (map (λ (case)
-             (let (interpreted-statements {interpret-consensus-statement self code-block-label (cdr cases)})
-              [(car case) interpreted-statements])) cases)))
-        (&switch comparison-value interpreted-cases)))
+             (let (interpreted-statements (map (λ (case-statement)
+                    {interpret-consensus-statement self code-block-label case-statement}) (cdr case)))
+              [(car case) (flatten1 interpreted-statements)])) cases)))
+        [(&switch comparison-value interpreted-cases)]))
 
       (else
        (error "Contract does not recognize consensus statement: " statement)))))
@@ -236,7 +245,7 @@
   (cons {lookup-type program expr} {trivial-expression Contract code-block-label expr}))
 
 (defmethod {interpret-consensus-expression Contract}
-  (lambda (self code-block-label variable-name expression)
+  (λ (self code-block-label variable-name expression)
     (def type {lookup-type (@ self program) variable-name})
     (def len (and type (param-length type)))
     (def (binary-operator op a b)
@@ -253,8 +262,8 @@
           {lookup-variable-offset self code-block-label signature}
           &isValidSignature
           (&mstoreat {lookup-variable-offset self code-block-label variable-name} 1)])
-      (['@app 'digest . exprs]
-       (&digest<-tvps (map (cut typed-directive<-trivial-expr self code-block-label <>) exprs)))
+      (['digest . exprs]
+        [(&digest<-tvps (map (cut typed-directive<-trivial-expr self code-block-label <>) exprs))])
       (['== a b]
         (binary-operator EQ a b))
       (['@app '< a b]
@@ -268,4 +277,8 @@
       (['@app '* a b]
         (binary-operator MUL a b))
       (['@app '/ a b]
-        (binary-operator DIV a b)))))
+        (binary-operator DIV a b))
+      (['@app 'bitwise-xor a b]
+        (binary-operator XOR a b))
+      (['@app 'bitwise-and a b]
+        (binary-operator AND a b)))))

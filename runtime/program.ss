@@ -6,7 +6,8 @@
   :mukn/ethereum/types
   :mukn/ethereum/ethereum
   :mukn/ethereum/signing
-  ../compiler/typecheck/type)
+  ../compiler/typecheck/type
+  ../compiler/checkpointify/checkpointify)
 
 ;; (deftype Interaction (Table CodeBlock <- Symbol))
 
@@ -48,11 +49,20 @@
         ((type:name 'Bool) Bool)
         ((type:name 'Digest) Digest)
         ((type:name 'Participant) Address)
+        ((type:name 'Int) UInt256)
         ((type:name-subtype 'Nat _) UInt256)
         ((type:name sym) (eval sym))
         ((type:name-subtype sym _) (eval sym))
-        ((type:tuple ts) (apply Tuple (map type-methods ts)))))
+        ((type:tuple ts) (apply Tuple (map type-methods ts)))
+        ;; TODO: How do we compute a variable offset from a function signature?
+        ((type:arrow _ _) #f)))
     (type-methods (hash-get type-table variable-name))))
+
+;; : ListOf Symbol <- Program Symbol
+(defmethod {lookup-live-variables Program}
+  (λ (self code-block-label)
+    (def live-variable-table (hash-ref (@ self compiler-output) 'cpitable2.sexp))
+    (ci-variables-live (hash-get live-variable-table code-block-label))))
 
 ;; context to parse compiler output and locate labels
 (defclass ParseContext

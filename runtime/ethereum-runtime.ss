@@ -303,10 +303,11 @@
     (marshal UInt8 1 out)
     (def message-bytes (get-output-u8vector out))
     (call-function sender-address contract-address message-bytes
-      value: {compute-participant-dues (@ self message) sender-address}
-      ;; default should be (void), i.e. ask for an automatic estimate,
+      value: {compute-participant-dues (@ self message) sender-address})))
+      ;; default gas value should be (void), i.e. ask for an automatic estimate,
       ;; unless we want to force the TX to happen
-      gas: 800000)))
+      ;; (gas: 800000))))
+
 
 ;; CodeBlock <- Runtime
 (defmethod {get-current-code-block Runtime}
@@ -414,42 +415,8 @@
           {add-to-published (@ self message) publish-name publish-type publish-value}))
 
       (['def variable-name expression]
-        (let (variable-value
-          (match expression
-            (['expect-published ['quote publish-name]]
-              (let (publish-type {lookup-type (@ self contract program) publish-name})
-                {expect-published (@ self message) publish-name publish-type}))
-            (['@app 'isValidSignature address-variable digest-variable signature-variable]
-              (let
-                ((address {reduce-expression self address-variable})
-                 (digest {reduce-expression self digest-variable})
-                 (signature {reduce-expression self signature-variable}))
-                (isValidSignature address digest signature)))
-            (['@app '< a b]
-              (let
-                ((av {reduce-expression self a})
-                 (bv {reduce-expression self b}))
-                (< av bv)))
-            (['@app 'randomUInt256]
-             (randomUInt256))
-            (['@tuple . es]
-             (list->vector
-              (for/collect ((e es))
-                {reduce-expression self e})))
-            (['digest . es]
-             (digest
-              (for/collect ((e es))
-                (cons {lookup-type (@ self contract program) e}
-                      {reduce-expression self e}))))
-            (['sign digest-variable]
-              (let ((this-participant {get-active-participant self})
-                    (digest {reduce-expression self digest-variable}))
-                (make-message-signature (secret-key<-address this-participant) digest)))
-            (['input 'Nat tag]
-             (let ((tagv {reduce-expression self tag}))
-               (input UInt256 tagv)))
-            (else
-              {reduce-expression self expression})))
+        (let
+          ((variable-value {interpret-participant-expression self expression}))
           {add-to-environment self variable-name variable-value}))
 
       (['require! variable-name]
@@ -473,6 +440,54 @@
            (matching-case (find (λ (case) (equal? {reduce-expression self (car case)} variable-value)) cases)))
         (for (case-statement (cdr matching-case))
           {interpret-participant-statement self case-statement}))))))
+
+(defmethod {interpret-participant-expression Runtime}
+  (λ (self expression)
+    (match expression
+      (['expect-published ['quote publish-name]]
+        (let (publish-type {lookup-type (@ self contract program) publish-name})
+          {expect-published (@ self message) publish-name publish-type}))
+      (['@app 'isValidSignature address-variable digest-variable signature-variable]
+        (let
+          ((address {reduce-expression self address-variable})
+            (digest {reduce-expression self digest-variable})
+            (signature {reduce-expression self signature-variable}))
+          (isValidSignature address digest signature)))
+      (['@app '< a b]
+        (let
+          ((av {reduce-expression self a})
+            (bv {reduce-expression self b}))
+          (< av bv)))
+      (['@app '+ a b]
+        (let
+          ((av {reduce-expression self a})
+            (bv {reduce-expression self b}))
+          (+ av bv)))
+      (['@app bitwise-xor a b]
+        (let
+          ((av {reduce-expression self a})
+            (bv {reduce-expression self b}))
+          (+ av bv)))
+      (['@app 'randomUInt256]
+        (randomUInt256))
+      (['@tuple . es]
+        (list->vector
+        (for/collect ((e es))
+          {reduce-expression self e})))
+      (['digest . es]
+        (digest
+        (for/collect ((e es))
+          (cons {lookup-type (@ self contract program) e}
+                {reduce-expression self e}))))
+      (['sign digest-variable]
+        (let ((this-participant {get-active-participant self})
+              (digest {reduce-expression self digest-variable}))
+          (make-message-signature (secret-key<-address this-participant) digest)))
+      (['input 'Nat tag]
+        (let ((tagv {reduce-expression self tag}))
+          (input UInt256 tagv)))
+      (else
+        {reduce-expression self expression}))))
 
 ;; MESSAGE ;; TODO: more like CommunicationState
 (defclass Message
