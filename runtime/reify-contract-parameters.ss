@@ -40,15 +40,14 @@
      (for/collect ((p (hash->list (.@ a parameters))))
        (match p
          ((cons k v)
+          (def k* (if (symbol? k) k (string->symbol k)))
           ; TODO: change surface names to alpha-converted names
-          (def t {lookup-type program k})
-          (cons k (cons t (<-json t v))))))))
+          (def t {lookup-type program k*})
+          (cons k* (cons t (<-json t v))))))))
   (make-Contract
     program: program
     participants: participants
-    arguments: arguments
-    initial-timer-start: (.@ a options maxInitialBlock)
-    timeout: (.@ a options timeoutInBlocks)))
+    arguments: arguments))
 
 ;; run : Symbol InteractionAgreement -> [Hashof Symbol Any]
 (def (run role a)

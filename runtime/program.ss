@@ -55,7 +55,8 @@
         ((type:name sym) (eval sym))
         ((type:name-subtype sym _) (eval sym))
         ((type:tuple ts) (apply Tuple (map type-methods ts)))))
-    (type-methods (hash-get type-table variable-name))))
+    (def t (hash-get type-table variable-name))
+    (type-methods t)))
 
 ;; A conservative predicate that only returns true when the variable-name
 ;; is definitely a constant.
