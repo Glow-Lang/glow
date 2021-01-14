@@ -2,7 +2,11 @@
 
 (export #t)
 
-(import :mukn/glow/all-glow :clan/multicall :mukn/glow/version :clan/versioning :std/pregexp)
+(import
+  :std/pregexp
+  :clan/multicall :clan/versioning
+  :mukn/glow/all-glow
+  :mukn/glow/t/common :mukn/glow/compiler/syntax-context :mukn/ethereum/signing :mukn/ethereum/types)
 
 (define-entry-point (git-version)
   "Print the git version that Glow was compiled from"
