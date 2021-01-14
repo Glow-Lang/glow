@@ -164,6 +164,11 @@ Other non-Lisp types of interest?
 * [MetaMask](https://metamask.io/)
 * [Telegram](https://telegram.org/)
 
+### YubiKey
+
+* [Purse](https://github.com/drduh/Purse)
+
+
 ### Cryptographic primitives
 
 * multisig: Schnorr signatures, BLS signatures
@@ -217,4 +222,4 @@ Other non-Lisp types of interest?
 * [Kleros](https://kleros.io)
 * [Ergo](https://ergoplatform.org/en/)
 
-Integrate old documents such as the [Legicash FaCTS bibliography](https://github.com/AlacrisIO/legicash-facts/blob/master/bibliography.md) and from the Alacrity archive: [language scope](https://github.com/AlacrisIO/alacrity/blob/master/archive/language-scope.md), [competition](https://github.com/AlacrisIO/alacrity/blob/master/archive/competition.md), [state channels](https://github.com/AlacrisIO/alacrity/blob/master/archive/StateChannel.sol).
+Integrate old documents such as the [Legicash FaCTS bibliography](https://github.com/AlacrisIO/legicash-facts/blob/master/bibliography.md) and from the Alacrity archive: [language scope](https://github.com/AlacrisIO/alacrity/blob/master/archive/language-scope.md), [competition](https://github.com/AlacrisIO/alacrity/blob/master/archive/competition.md), [bootstrap plan](https://github.com/AlacrisIO/alacrity/blob/master/docs/bootstrap.md), [state channels](https://github.com/AlacrisIO/alacrity/blob/master/archive/StateChannel.sol).
