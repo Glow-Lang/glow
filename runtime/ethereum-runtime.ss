@@ -504,12 +504,7 @@
     (def participants (.@ agreement participants))
     ;; TODO better way to get the difference between two lists. Use sets instead?
     (def live-variables
-      (filter
-        (λ (variable-name)
-          (not (find
-            (λ (participant-name) (equal? variable-name participant-name))
-            (.all-slots participants))))
-        {lookup-live-variables (@ self program) code-block-label}))
+      (lset-difference equal? {lookup-live-variables (@ self program) code-block-label} (.all-slots participants)))
     ;; TODO: ensure keys are sorted in both hash-values
     [[UInt16 . checkpoint-location]
      [Block . timer-start]
@@ -562,18 +557,19 @@
     ;; Initial offset computed by global registers, see :mukn/ethereum/contract-runtime
     (def start params-start@)
     (def agreement (@ self agreement))
+    (def participants (.@ agreement participants))
     (for-each (λ (role)
                  (let (parameter-length (param-length Address))
                    (hash-put! frame-variables role (post-increment! start parameter-length))))
-              (.all-slots-sorted (.@ agreement participants)))
-    (def live-variables (sort {lookup-live-variables (@ self program) code-block-label} symbol<?))
+              (.all-slots-sorted participants))
+    (def live-variables
+      (lset-difference equal? {lookup-live-variables (@ self program) code-block-label} (.all-slots participants)))
     (for-each
       (λ (live-variable)
-        (let (type {lookup-type (@ self program) live-variable})
-          (unless (hash-get frame-variables live-variable)
-            (let (parameter-length (param-length type))
-              (hash-put! frame-variables live-variable (post-increment! start parameter-length))))))
-      live-variables)
+        (let* ((type {lookup-type (@ self program) live-variable})
+               (parameter-length (param-length type)))
+          (hash-put! frame-variables live-variable (post-increment! start parameter-length))))
+      (sort live-variables symbol<?))
     (hash-put! (@ self variable-offsets) code-block-label frame-variables)
     (set! (@ self params-end) start)))
 
