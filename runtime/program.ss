@@ -1,12 +1,14 @@
 (export #t)
 
 (import
-  :std/iter :std/misc/list :std/srfi/1 :clan/base
+  :std/iter :std/misc/list :std/srfi/1 :clan/base :clan/pure/dict/symdict
   <expander-runtime>
   :mukn/ethereum/types
   :mukn/ethereum/ethereum
   :mukn/ethereum/signing
-  ../compiler/typecheck/type)
+  (only-in ../compiler/alpha-convert/alpha-convert init-syms)
+  ../compiler/typecheck/type
+  ../compiler/checkpointify/checkpointify)
 
 ;; (deftype Interaction (Table CodeBlock <- Symbol))
 
@@ -48,11 +50,31 @@
         ((type:name 'Bool) Bool)
         ((type:name 'Digest) Digest)
         ((type:name 'Participant) Address)
+        ((type:name 'Int) UInt256)
         ((type:name-subtype 'Nat _) UInt256)
         ((type:name sym) (eval sym))
         ((type:name-subtype sym _) (eval sym))
         ((type:tuple ts) (apply Tuple (map type-methods ts)))))
     (type-methods (hash-get type-table variable-name))))
+
+;; A conservative predicate that only returns true when the variable-name
+;; is definitely a constant.
+;; Currently, it is a constant if it is in the `init-syms` or in the values in AlphaEnv,
+;; in the future, this may include variables that are defined in the first transaction and
+;; precompiled into the contract as first transaction deploys it.
+(defmethod {definitely-constant? Program}
+  (λ (self variable-name)
+    (or (and (memq variable-name init-syms) #t)
+        (let* ((alba (hash-ref (@ self compiler-output) 'albatable.sexp))
+               (alenv (hash-ref (@ self compiler-output) 'AlphaEnv)))
+          (symdict-has-key? alenv (hash-ref alba variable-name))))))
+
+;; : ListOf Symbol <- Program Symbol
+(defmethod {lookup-live-variables Program}
+  (λ (self code-block-label)
+    (def live-variable-table (hash-ref (@ self compiler-output) 'cpitable2.sexp))
+    (filter (λ (x) (not {definitely-constant? self x}))
+            (ci-variables-live (hash-get live-variable-table code-block-label)))))
 
 ;; context to parse compiler output and locate labels
 (defclass ParseContext

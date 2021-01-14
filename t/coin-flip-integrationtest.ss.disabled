@@ -21,94 +21,85 @@
   ../runtime/ethereum-contract
   ../runtime/ethereum-runtime)
 
-(def buyer-address alice)
-(def seller-address bob)
-(def digest (keccak256<-string "abcdefghijklmnopqrstuvwxyz012345"))
+(def a-address alice)
+(def b-address bob)
 
 (def participants
   (hash
-    (Buyer buyer-address)
-    (Seller seller-address)))
+    (A a-address)
+    (B b-address)))
 (def arguments
   (hash
-    (digest0 [Digest . digest])
-    (price [Ether . one-ether-in-wei])))
+    (wagerAmount [Ether . one-gwei-in-wei])
+    (escrowAmount [Ether . one-gwei-in-wei])))
 
 ;; Should `timeout` be the value of `(ethereum-timeout-in-blocks)`,
 ;; or should it be the `timeoutInBlocks` field of the entry in `config/ethereum_networks.json`?
-(def timeout (ethereum-timeout-in-blocks))
+(def timeout (* (ethereum-timeout-in-blocks) 2))
 (def initial-timer-start (+ (eth_blockNumber) timeout))
 
-(def buy_sig.glow (source-path "examples/buy_sig.glow"))
+(def coin_flip.glow (source-path "examples/coinflip.glow"))
 
 (def agreement
   (.o
     glow-version: (software-identifier)
-    interaction: "mukn/glow/examples/buy_sig#payForSignature"
-    participants: (.o Buyer: buyer-address Seller: seller-address)
+    interaction: "mukn/glow/examples/coinflip#coinFlip"
+    participants: (.o A: a-address B: b-address)
     parameters: (hash
-                  (digest0 (json<- Digest digest))
-                  (price (json<- Ether one-ether-in-wei)))
-    reference: (.o Buyer: "Purchase #42"
-                   Seller: "Sale #101")
+                  (wagerAmount (json<- Ether one-ether-in-wei)))
+    reference: (.o )
     options: (.o blockchain: "Private Ethereum Testnet" ;; the `name` field of an entry in `config/ethereum_networks.json`
                  escrowAmount: (void) ;; not meaningful for buy_sig in particular
                  timeoutInBlocks: timeout ; should be the `timeoutInBlocks` field of the same entry in `config/ethereum_networks.json`
                  maxInitialBlock: initial-timer-start)
-    code-digest: (digest<-file buy_sig.glow)))
+    code-digest: (digest<-file coin_flip.glow)))
 
-(def compiler-output (run-passes buy_sig.glow pass: 'project show?: #f))
+(def compiler-output (run-passes coin_flip.glow pass: 'project show?: #f))
 
-(def buy-sig-integrationtest
-  (test-suite "integration test for ethereum/buy-sig"
+(def coin-flip-integrationtest
+  (test-suite "integration test for ethereum/coin-flip"
     (DBG "Ensure participants funded")
     (ensure-addresses-prefunded)
     (DBG "DONE")
-    (test-case "buy sig parses"
-      (def program (parse-compiler-output compiler-output))
+    (def program (parse-compiler-output compiler-output))
 
-    ;; TODO: run buyer and seller step in separate threads, using posted transactions to progress their state
-    (test-case "buy sig executes"
+    (test-case "coin flip executes"
       (ignore-errors (delete-file (run-path "contract-handshake.json"))) ;; TODO: do it better
 
-      (displayln "\nEXECUTING BUYER THREAD ...")
-      (def buyer-thread
-        (spawn/name/logged "Buyer"
+      (displayln "\nEXECUTING A THREAD ...")
+      (def a-thread
+        (spawn/name/logged "A"
          (lambda ()
            (def contract (make-Contract
                           program: program
                           participants: participants
                           arguments: arguments))
-           (def buyer-runtime
-             (make-Runtime role: 'Buyer
+           (def a-runtime
+             (make-Runtime role: 'A
                            agreement: agreement
                            contract: contract
                            current-code-block-label: 'begin0 ;; TODO: grab the start label from the compilation output, instead of 'begin0
                            current-label: 'begin)) ;; TODO: grab the start label from the compilation output, instead of 'begins
-           {execute buyer-runtime}
-           (displayln "buyer finished")
-           (@ buyer-runtime environment))))
+           {execute a-runtime}
+           (displayln "a finished")
+           (@ a-runtime environment))))
 
-      (displayln "\nEXECUTING SELLER THREAD ...")
-      (def seller-thread
-        (spawn/name/logged "Seller"
+      (displayln "\nEXECUTING B THREAD ...")
+      (def b-thread
+        (spawn/name/logged "B"
          (lambda ()
            (def contract (make-Contract
                           program: program
                           participants: participants
                           arguments: arguments))
-           (def seller-runtime
-             (make-Runtime role: 'Seller
+           (def b-runtime
+             (make-Runtime role: 'B
                            agreement: agreement
                            contract: contract
                            current-code-block-label: 'begin0 ;; TODO: grab the start label from the compilation output, instead of 'begin0
                            current-label: 'begin)) ;; TODO: grab the start label from the compilation output, instead of 'begins
-           {execute seller-runtime}
-           (displayln "seller finished"))))
-
-      (def environment (thread-join! buyer-thread))
-
-      (def signature (hash-get environment 'signature))
-      (display-poo-ln
-          ["Signature extracted from contract logs: " Signature (json<- Signature signature)
-           "valid?: " (message-signature-valid? seller-address signature digest)])))))
+           {execute b-runtime}
+           (displayln "b finished"))))
+      (def environment (thread-join! b-thread))
+      (displayln (hash-keys environment))
+      (check-equal? #t #t))))
