@@ -83,10 +83,10 @@
    environment ;; : (Table (Or DependentPair Any) <- Symbol) ;; TODO: have it always typed???
    message ;; : Message ;; byte buffer?
    timer-start ;; Block
-   io-context
+   io-context ; : IOContext
    program ;; : Program ;; from program.ss
    variable-offsets ;; : (Table (Table Offset <- Symbol) <- Symbol)
-   params-end) ; : IOContext
+   params-end)
   constructor: :init!
   transparent: #t)
 
