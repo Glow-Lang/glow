@@ -5,7 +5,6 @@
   :std/format :std/sugar
   :clan/poo/poo :clan/persist/content-addressing :clan/versioning
   ../ethereum-runtime
-  ../ethereum-contract
   ../program)
 
 (def test-contract (make-Contract

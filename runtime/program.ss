@@ -14,7 +14,7 @@
 
 (defclass Program
   (name ;; : String
-   argument-names ;; : (List Symbol)
+   parameter-names ;; : (List Symbol)
    interactions ;; : (Table Interaction <- (OrFalse Symbol))
    compiler-output) ;; : (Table Sexp <- Symbol) ;; S-expression returned by the project pass.
   constructor: :init!
@@ -31,7 +31,7 @@
 (defmethod {:init! Program}
   (λ (self (n "") (an []) (i (make-hash-table)))
     (set! (@ self name) n)
-    (set! (@ self argument-names) an)
+    (set! (@ self parameter-names) an)
     (set! (@ self interactions) i)))
 
 ;; Interaction <- Program Symbol
@@ -139,9 +139,9 @@
   (def program (make-Program))
   (for ((statement (syntax->datum statements)))
     (match statement
-      (['def name ['@make-interaction [['@list participants ...]] argument-names labels interactions ...]]
+      (['def name ['@make-interaction [['@list participants ...]] parameter-names labels interactions ...]]
         (set! (@ program name) name)
-        (set! (@ program argument-names) argument-names)
+        (set! (@ program parameter-names) parameter-names)
         (def interactions-table (make-hash-table))
         (for ((values name body) (list->hash-table interactions))
           (hash-put! interactions-table name (process-program name body)))

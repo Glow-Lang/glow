@@ -18,16 +18,11 @@
   ../compiler/multipass
   ../compiler/syntax-context
   ../runtime/program
-  ../runtime/ethereum-contract
   ../runtime/ethereum-runtime)
 
 (def a-address alice)
 (def b-address bob)
 
-(def participants
-  (hash
-    (A a-address)
-    (B b-address)))
 (def arguments
   (hash
     (wagerAmount [Ether . one-gwei-in-wei])
@@ -70,16 +65,13 @@
       (def a-thread
         (spawn/name/logged "A"
          (lambda ()
-           (def contract (make-Contract
-                          program: program
-                          participants: participants
-                          arguments: arguments))
            (def a-runtime
              (make-Runtime role: 'A
                            agreement: agreement
-                           contract: contract
                            current-code-block-label: 'begin0 ;; TODO: grab the start label from the compilation output, instead of 'begin0
-                           current-label: 'begin)) ;; TODO: grab the start label from the compilation output, instead of 'begins
+                           current-label: 'begin
+                           program: program
+                           arguments: arguments)) ;; TODO: grab the start label from the compilation output, instead of 'begins
            {execute a-runtime}
            (displayln "a finished")
            (@ a-runtime environment))))
@@ -88,16 +80,13 @@
       (def b-thread
         (spawn/name/logged "B"
          (lambda ()
-           (def contract (make-Contract
-                          program: program
-                          participants: participants
-                          arguments: arguments))
            (def b-runtime
              (make-Runtime role: 'B
                            agreement: agreement
-                           contract: contract
                            current-code-block-label: 'begin0 ;; TODO: grab the start label from the compilation output, instead of 'begin0
-                           current-label: 'begin)) ;; TODO: grab the start label from the compilation output, instead of 'begins
+                           current-label: 'begin ;; TODO: grab the start label from the compilation output, instead of 'begins
+                           program: program
+                           arguments: arguments))
            {execute b-runtime}
            (displayln "b finished"))))
       (def environment (thread-join! b-thread))
