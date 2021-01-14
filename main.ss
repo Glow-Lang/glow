@@ -6,7 +6,9 @@
   :std/pregexp
   :clan/multicall :clan/versioning
   :mukn/glow/all-glow
-  :mukn/glow/t/common :mukn/glow/compiler/syntax-context :mukn/ethereum/signing :mukn/ethereum/types)
+  :mukn/glow/t/common :mukn/glow/compiler/syntax-context :mukn/ethereum/signing :mukn/ethereum/types
+  :mukn/ethereum/t/signing-test ;; TODO: find a cleaner way to enable test keys.
+  )
 
 (define-entry-point (git-version)
   "Print the git version that Glow was compiled from"
