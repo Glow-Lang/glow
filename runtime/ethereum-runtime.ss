@@ -339,14 +339,6 @@
     (for ((values key [_ . value]) (in-hash (@ contract arguments)))
       {add-to-environment self key value})))
 
-;; TODO: use the one in std/misc/hash after this PR gets merged: https://github.com/vyzo/gerbil/pull/588
-(def %none '(none))
-(def (hash-ref/default hash key default)
-  (def v (hash-ref hash key %none))
-  (if (eq? v %none)
-    (default)
-    v))
-
 ;; TODO: make sure everything always has a type ???
 ;; Any <- Runtime
 (defmethod {reduce-expression Runtime}
