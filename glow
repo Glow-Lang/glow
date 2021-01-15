@@ -1,3 +1,4 @@
 #!/bin/sh
 # This script starts a Glow compiler that was previously built into your Gerbil object cache.
-exec "${GERBIL_PATH:-$HOME/.gerbil}/bin/glowrun" "$@"
+# exec "${GERBIL_PATH:-$HOME/.gerbil}/bin/glowrun" "$@"
+exec gxi "$(dirname "$0")/main.ss" "$@"
