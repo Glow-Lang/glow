@@ -4,11 +4,11 @@
   :gerbil/gambit/bytes :gerbil/gambit/threads
   :std/iter :std/misc/hash :std/sugar :std/misc/number :std/misc/list :std/sort :std/srfi/1
   :clan/base :clan/exception :clan/json :clan/number :clan/path-config  :clan/syntax
-  :clan/poo/poo :clan/poo/io :clan/poo/mop :clan/poo/type :clan/poo/debug
+  :clan/poo/poo :clan/poo/io :clan/poo/debug
   :clan/persist/content-addressing
   :mukn/ethereum/hex :mukn/ethereum/ethereum :mukn/ethereum/network-config :mukn/ethereum/json-rpc
   :mukn/ethereum/transaction :mukn/ethereum/tx-tracker :mukn/ethereum/watch :mukn/ethereum/assets
-  :mukn/ethereum/contract-runtime :mukn/ethereum/contract-config :mukn/ethereum/assembly
+  :mukn/ethereum/contract-runtime :mukn/ethereum/contract-config :mukn/ethereum/assembly :mukn/ethereum/types
   ./program ./message
   ../compiler/method-resolve/method-resolve
   ../compiler/project/runtime-2)
@@ -33,7 +33,7 @@
     parameters: [Json] ;; This Json object to be decoded according to a type descriptor from the interaction (dependent types yay!)
     reference: [(MonomorphicPoo Json)] ;; Arbitrary reference objects from each participant, with some conventional size limits on the Json string.
     options: [AgreementOptions] ;; See above
-    code-digest: [Digest]))) ;; Make it the digest of Glow source code (in the future, including all Glow libraries transitively used)
+    code-digest: [Bytes]))) ;; Make it the digest of Glow source code (in the future, including all Glow libraries transitively used)
 
 (define-type AgreementHandshake
   (Record
@@ -180,13 +180,20 @@
           (def log-data (.@ new-log-object data))
           (set! (@ self timer-start) (.@ new-log-object blockNumber))
           ;; TODO: process the data in the same method?
-          (set! (@ (@ self message) inbox) (open-input-u8vector log-data)))
+          (set! (@ self message inbox) (open-input-u8vector log-data)))
         (let ()
           (displayln role ": Reading contract handshake ...")
           (def agreement-handshake {read-handshake self})
           (display-poo-ln role ": agreement-handshake: " AgreementHandshake agreement-handshake)
           (displayln role ": Verifying contract config ...")
           (def-slots (agreement contract-config published-data) agreement-handshake)
+          (DDT published-data:
+            Bytes published-data)
+          (def message (@ self message))
+          (set! (@ message inbox) (open-input-u8vector published-data))
+          ;; TODO: Execute contract until first change participant.
+          (DDT inbox:
+            Any (@ message inbox))
           ;; check that the agreement part matches
           (unless (equal? (json<- InteractionAgreement (@ self agreement))
                           (json<- InteractionAgreement agreement))
@@ -197,8 +204,7 @@
           (set! (@ self timer-start) (.@ agreement options maxInitialBlock))
           (def create-pretx {prepare-create-contract-transaction self})
           (verify-contract-config contract-config create-pretx)
-          (set! (@ self contract-config) contract-config)
-          (set! (@ self message inbox) (open-input-u8vector published-data)))))))
+          (set! (@ self contract-config) contract-config))))))
 
 ;; : AgreementHandshake <- Runtime
 (defmethod {read-handshake Runtime}
@@ -217,6 +223,7 @@
           (displayln role ": deploying contract ...")
           (def outbox (@ self message outbox))
           (def out (open-output-u8vector))
+          ;; TODO: Sort variables by name. hash-to-list/sort?
           (for ([type . value] (hash-values outbox))
             (marshal type value out))
           (def published-data (get-output-u8vector out))
@@ -386,6 +393,7 @@
 ;; : <- Runtime ProjectStatement
 (defmethod {interpret-participant-statement Runtime}
   (λ (self statement)
+    (displayln statement)
     (match statement
 
       (['set-participant new-participant]

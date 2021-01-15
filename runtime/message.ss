@@ -4,6 +4,7 @@
   :clan/base :clan/poo/io :clan/pure/dict/assq)
 
 ;; MESSAGE ;; TODO: more like CommunicationState
+;; TODO: Split this into ActiveBlockCtx and PassiveBlockCtx
 (defclass Message
   (inbox ;; : BytesInputPort
    outbox ;; : (Table DependentPair <- Symbol) ;; TODO: just have a BytesOutputPort ?
