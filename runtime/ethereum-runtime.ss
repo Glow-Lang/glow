@@ -2,7 +2,7 @@
 
 (import
   :gerbil/gambit/bytes :gerbil/gambit/threads
-  :std/iter :std/sugar
+  :std/iter :std/misc/hash :std/sugar
   :clan/exception :clan/json :clan/path-config :clan/pure/dict/assq
   :clan/poo/poo :clan/poo/io :clan/poo/mop :clan/poo/type :clan/poo/debug
   :clan/persist/content-addressing
