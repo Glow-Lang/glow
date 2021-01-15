@@ -223,11 +223,9 @@
           (displayln role ": deploying contract ...")
           (def outbox (@ self message outbox))
           (def out (open-output-u8vector))
-          ;; TODO: Sort variables by name. hash-to-list/sort?
-          (for ([type . value] (hash-values outbox))
+          (for ([type . value] outbox)
             (marshal type value out))
           (def published-data (get-output-u8vector out))
-          ;; TODO: Add published data to initial frame variables.
           {deploy-contract self}
           (def contract-config (@ self contract-config))
           (def agreement (@ self agreement))
@@ -313,7 +311,7 @@
     (def out (open-output-u8vector))
     (marshal UInt16 frame-length out)
     (marshal-product-to frame-variables out)
-    (for ([type . value] (hash-values outbox))
+    (for ([type . value] outbox)
       (marshal type value out))
     (marshal UInt8 1 out)
     (def message-bytes (get-output-u8vector out))

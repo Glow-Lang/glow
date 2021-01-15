@@ -1,19 +1,19 @@
 (export #t)
 
 (import
-  :clan/base :clan/poo/io :clan/pure/dict/assq)
+  :std/misc/list :clan/base :clan/poo/io :clan/pure/dict/assq)
 
 ;; MESSAGE ;; TODO: more like CommunicationState
 ;; TODO: Split this into ActiveBlockCtx and PassiveBlockCtx
 (defclass Message
   (inbox ;; : BytesInputPort
-   outbox ;; : (Table DependentPair <- Symbol) ;; TODO: just have a BytesOutputPort ?
+   outbox ;; : ListOf DependentPair ;; TODO: just have a BytesOutputPort ?
    asset-transfers) ;; : (Alist Z <- Address)
   constructor: :init!
   transparent: #t)
 
 (defmethod {:init! Message}
-  (λ (self (i #f) (o (make-hash-table)) (at []))
+  (λ (self (i #f) (o []) (at []))
     (set! (@ self inbox) i)
     (set! (@ self outbox) o)
     (set! (@ self asset-transfers) at)))
@@ -22,12 +22,13 @@
 (defmethod {reset Message}
   (λ (self)
     (set! (@ self inbox) #f)
-    (hash-clear! (@ self outbox))))
+    (set! (@ self outbox) [])))
 
 ;; <- Message Symbol t:Type t
 (defmethod {add-to-published Message}
   (λ (self name type value)
-    (hash-put! (@ self outbox) name [type . value])))
+    (def dependent-pair [type . value])
+    (set! (@ self outbox) (snoc dependent-pair (@ self outbox)))))
 
 ;; expect-published : t <- Symbol t:Type
 (defmethod {expect-published Message}
