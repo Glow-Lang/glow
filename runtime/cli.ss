@@ -6,8 +6,7 @@
   :clan/poo/debug
   :clan/persist/db
   :mukn/ethereum/cli :mukn/ethereum/types :mukn/ethereum/json-rpc
-  ./ethereum-runtime ./reify-contract-parameters
-  )
+  ./ethereum-runtime ./reify-contract-parameters)
 
 (def (json<-cli-input cli-input)
   (cond

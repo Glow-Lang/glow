@@ -57,7 +57,6 @@
   :clan/poo/trie
 
   ;; Glow
-  (for-template :mukn/glow/compiler/syntax-context)
   :mukn/glow/version
   :mukn/glow/path-config
   :mukn/glow/compiler/syntax-context
@@ -83,9 +82,6 @@
 
   ;; Testing Glow
   :mukn/glow/t/common
-  ;:mukn/glow/compiler/t/multipass-test
-  ;:mukn/glow/compiler/alpha-convert/t/alpha-convert-test
-  ;:mukn/glow/compiler/anf/t/anf-test
 )
 
 (import :clan/poo/brace)
@@ -97,5 +93,5 @@
 
 ;;(printf "Welcome, Glow hacker\n")
 
-;;(##set-debug-settings! 15 3)
-(##vector-set! ##stdout-port 37 (lambda (port) 218))
+;;(##set-debug-settings! 15 3) ;; TODO: remember what this is about
+(##vector-set! ##stdout-port 37 (lambda (port) 218)) ;; TODO: remember what this is about

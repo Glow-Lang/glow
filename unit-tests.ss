@@ -4,5 +4,6 @@
 
 (import :clan/testing)
 (init-test-environment!)
+(import :mukn/glow/all-glow)
 (import :mukn/glow/version :mukn/glow/t/common :mukn/glow/compiler/syntax-context :mukn/ethereum/signing :mukn/ethereum/types)
-(import :clan/debug)(DBG foo: (getenv "GERBIL_LOADPATH" #f) load-path)
+;;(import :clan/debug)(DBG foo: (getenv "GERBIL_LOADPATH" #f) load-path)
