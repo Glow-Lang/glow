@@ -3,8 +3,8 @@
 (import
   :gerbil/gambit/bytes :gerbil/gambit/threads
   :std/iter :std/misc/hash :std/sugar :std/misc/number :std/misc/list :std/sort :std/srfi/1
-  :clan/base :clan/exception :clan/json :clan/number :clan/path-config  :clan/syntax
-  :clan/poo/poo :clan/poo/io :clan/poo/debug
+  :clan/base :clan/exception :clan/json :clan/number :clan/path-config :clan/ports :clan/syntax
+  :clan/poo/poo :clan/poo/io :clan/poo/debug :clan/debug
   :clan/persist/content-addressing
   :mukn/ethereum/hex :mukn/ethereum/ethereum :mukn/ethereum/network-config :mukn/ethereum/json-rpc
   :mukn/ethereum/transaction :mukn/ethereum/tx-tracker :mukn/ethereum/watch :mukn/ethereum/assets
@@ -160,6 +160,46 @@
       (def to-block (+ from-block (.@ (@ self agreement) options timeoutInBlocks)))
       (watch-contract callback contract-address from-block to-block))))
 
+(def (run-passive-code-block/contract self role contract-config)
+  (displayln role ": Watching for new transaction ...")
+  ;; TODO: `from` should be calculated using the deadline and not necessarily the previous tx,
+  ;; since it may or not be setting the deadline
+  (display-poo-ln role ": contract-config=" ContractConfig contract-config)
+  (def from (if (@ self timer-start) (@ self timer-start) (.@ contract-config creation-block)))
+  (displayln role ": watching from block " from)
+  (def new-log-object {watch self (.@ contract-config contract-address) from})
+  ;; TODO: handle the case when there is no log objects
+  (display-poo-ln role ": New TX: " (Maybe LogObject) new-log-object)
+  (def log-data (.@ new-log-object data))
+  (set! (@ self timer-start) (.@ new-log-object blockNumber))
+  ;; TODO: process the data in the same method?
+  (set! (@ self message inbox) (open-input-u8vector log-data)))
+
+(def (run-passive-code-block/handshake self role)
+  (nest
+   (begin (displayln role ": Reading contract handshake ..."))
+   (let (agreement-handshake {read-handshake self}))
+   (begin
+     (displayln role ": Verifying contract config ...")
+     (force-current-outputs))
+   (with-slots (agreement contract-config published-data) agreement-handshake)
+   (let (message (@ self message)))
+   (begin
+     (set! (@ message inbox) (open-input-u8vector published-data))
+     ;; TODO: Execute contract until first change participant.
+     ;; Check that the agreement part matches
+     (unless (equal? (json<- InteractionAgreement (@ self agreement))
+                     (json<- InteractionAgreement agreement))
+       (DDT agreements-mismatch:
+            InteractionAgreement (@ self agreement)
+            InteractionAgreement agreement)
+       (error "agreements don't match" (@ self agreement) agreement))
+     (set! (@ self timer-start) (.@ agreement options maxInitialBlock)))
+   (let (create-pretx {prepare-create-contract-transaction self})
+     (verify-contract-config contract-config create-pretx)
+     (set! (@ self contract-config) contract-config))))
+
+;; TODO: rename to RunPassiveCodeBlock or something
 ;; <- Runtime
 (defmethod {receive Runtime}
   (λ (self)
@@ -167,44 +207,8 @@
     (def contract-config (@ self contract-config))
     (when (eq? (@ self status) 'running)
       (if contract-config
-        (let ()
-          (displayln role ": Watching for new transaction ...")
-          ;; TODO: `from` should be calculated using the deadline and not necessarily the previous tx,
-          ;; since it may or not be setting the deadline
-          (display-poo-ln role ": contract-config=" ContractConfig contract-config)
-          (def from (if (@ self timer-start) (@ self timer-start) (.@ contract-config creation-block)))
-          (displayln role ": watching from block " from)
-          (def new-log-object {watch self (.@ contract-config contract-address) from})
-          ;; TODO: handle the case when there is no log objects
-          (display-poo-ln role ": New TX: " (Maybe LogObject) new-log-object)
-          (def log-data (.@ new-log-object data))
-          (set! (@ self timer-start) (.@ new-log-object blockNumber))
-          ;; TODO: process the data in the same method?
-          (set! (@ self message inbox) (open-input-u8vector log-data)))
-        (let ()
-          (displayln role ": Reading contract handshake ...")
-          (def agreement-handshake {read-handshake self})
-          (display-poo-ln role ": agreement-handshake: " AgreementHandshake agreement-handshake)
-          (displayln role ": Verifying contract config ...")
-          (def-slots (agreement contract-config published-data) agreement-handshake)
-          (DDT published-data:
-            Bytes published-data)
-          (def message (@ self message))
-          (set! (@ message inbox) (open-input-u8vector published-data))
-          ;; TODO: Execute contract until first change participant.
-          (DDT inbox:
-            Any (@ message inbox))
-          ;; check that the agreement part matches
-          (unless (equal? (json<- InteractionAgreement (@ self agreement))
-                          (json<- InteractionAgreement agreement))
-            (DDT agreements-match:
-                 InteractionAgreement (@ self agreement)
-                 InteractionAgreement agreement)
-            (error "agreements don't match" (@ self agreement) agreement))
-          (set! (@ self timer-start) (.@ agreement options maxInitialBlock))
-          (def create-pretx {prepare-create-contract-transaction self})
-          (verify-contract-config contract-config create-pretx)
-          (set! (@ self contract-config) contract-config))))))
+        (run-passive-code-block/contract self role contract-config)
+        (run-passive-code-block/handshake self role)))))
 
 ;; : AgreementHandshake <- Runtime
 (defmethod {read-handshake Runtime}
@@ -502,6 +506,7 @@
 ;; : Frame <- Runtime Block (Table Offset <- Symbol) Symbol
 (defmethod {create-frame-variables Runtime}
   (λ (self timer-start contract-runtime-labels code-block-label code-block-participant)
+    (DBG c-f-v: code-block-label)
     (def checkpoint-location
       (hash-get contract-runtime-labels {make-checkpoint-label self code-block-label}))
     (def active-participant-offset
@@ -511,6 +516,7 @@
     ;; TODO better way to get the difference between two lists. Use sets instead?
     (def live-variables
       (lset-difference equal? {lookup-live-variables (@ self program) code-block-label} (.all-slots participants)))
+    (DBG live-variables: live-variables)
     ;; TODO: ensure keys are sorted in both hash-values
     [[UInt16 . checkpoint-location]
      [Block . timer-start]
