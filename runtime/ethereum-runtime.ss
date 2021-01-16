@@ -3,7 +3,7 @@
 (import
   :gerbil/gambit/bytes :gerbil/gambit/threads
   :std/iter :std/misc/hash :std/sugar :std/misc/number :std/misc/list :std/sort :std/srfi/1
-  :clan/base :clan/exception :clan/json :clan/number :clan/path-config :clan/ports :clan/syntax
+  :clan/base :clan/exception :clan/io :clan/json :clan/number :clan/path-config :clan/ports :clan/syntax
   :clan/poo/poo :clan/poo/io :clan/poo/debug :clan/debug
   :clan/persist/content-addressing
   :mukn/ethereum/hex :mukn/ethereum/ethereum :mukn/ethereum/network-config :mukn/ethereum/json-rpc
@@ -121,20 +121,11 @@
       (def ccbl (@ self current-code-block-label))
       (displayln "executing code block: " ccbl)
 
-      ;; non-active participants verify previous move
-      (unless {is-active-participant? self}
+      (if {is-active-participant? self}
+        {publish self}
         {receive self})
 
-      ;; interpreter
-      (def code-block {get-current-code-block self})
-      (for ((statement (code-block-statements code-block)))
-        {interpret-participant-statement self statement})
-
-      ;; active participants make next move
-      (when {is-active-participant? self}
-        {publish self})
-
-      (match (code-block-exit code-block)
+      (match (code-block-exit {get-current-code-block self})
         (#f
           (void)) ; contract finished
         (exit
@@ -173,7 +164,14 @@
   (def log-data (.@ new-log-object data))
   (set! (@ self timer-start) (.@ new-log-object blockNumber))
   ;; TODO: process the data in the same method?
-  (set! (@ self message inbox) (open-input-u8vector log-data)))
+  (set! (@ self message inbox) (open-input-u8vector log-data))
+  (interpret-current-code-block self))
+
+(def (interpret-current-code-block self)
+  (let (code-block {get-current-code-block self})
+    (for ((statement (code-block-statements code-block)))
+      {interpret-participant-statement self statement})))
+
 
 (def (run-passive-code-block/handshake self role)
   (nest
@@ -194,7 +192,8 @@
             InteractionAgreement (@ self agreement)
             InteractionAgreement agreement)
        (error "agreements don't match" (@ self agreement) agreement))
-     (set! (@ self timer-start) (.@ agreement options maxInitialBlock)))
+     (set! (@ self timer-start) (.@ agreement options maxInitialBlock))
+     (interpret-current-code-block self))
    (let (create-pretx {prepare-create-contract-transaction self})
      (verify-contract-config contract-config create-pretx)
      (set! (@ self contract-config) contract-config))))
@@ -221,15 +220,19 @@
   (λ (self)
     (def role (@ self role))
     (def contract-config (@ self contract-config))
+    (interpret-current-code-block self)
     (when (eq? (@ self status) 'running)
       (if (not contract-config)
         (let ()
           (displayln role ": deploying contract ...")
           (def outbox (@ self message outbox))
-          (def out (open-output-u8vector))
-          (for ([type . value] outbox)
-            (marshal type value out))
-          (def published-data (get-output-u8vector out))
+          (def published-data
+            (let (out (open-output-u8vector))
+              (for ([type . value] outbox)
+                (marshal type value out))
+              (def out2 (open-output-u8vector))
+              (marshal-sized16-bytes (get-output-u8vector out) out2)
+              (get-output-u8vector out2)))
           {deploy-contract self}
           (def contract-config (@ self contract-config))
           (def agreement (@ self agreement))
@@ -312,19 +315,19 @@
         (@ self role)})
     (def frame-variable-bytes (marshal-product-f frame-variables))
     (def frame-length (bytes-length frame-variable-bytes))
-    (def out (open-output-u8vector))
-    (marshal UInt16 frame-length out)
-    (marshal-product-to frame-variables out)
-    (for ([type . value] outbox)
-      (marshal type value out))
-    (marshal UInt8 1 out)
-    (def message-bytes (get-output-u8vector out))
+    (def message-bytes
+      (let (out (open-output-u8vector))
+        (marshal UInt16 frame-length out)
+        (marshal-product-to frame-variables out)
+        (for ([type . value] outbox)
+          (marshal type value out))
+        (marshal UInt8 1 out)
+        (get-output-u8vector out)))
     (call-function sender-address contract-address message-bytes
       value: {compute-participant-dues (@ self message) sender-address})))
       ;; default gas value should be (void), i.e. ask for an automatic estimate,
       ;; unless we want to force the TX to happen
       ;; (gas: 800000))))
-
 
 ;; CodeBlock <- Runtime
 (defmethod {get-current-code-block Runtime}
