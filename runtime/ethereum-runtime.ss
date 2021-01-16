@@ -226,10 +226,11 @@
         (let ()
           (displayln role ": deploying contract ...")
           (def outbox (@ self message outbox))
+          ;; TODO: Prepend length of each published variable rather than length of total payload.
           (def published-data
             (let (out (open-output-u8vector))
               (for ([type . value] outbox)
-                (marshal type value out))
+                (.marshal Bytes type value out))
               (def out2 (open-output-u8vector))
               (marshal-sized16-bytes (get-output-u8vector out) out2)
               (get-output-u8vector out2)))
