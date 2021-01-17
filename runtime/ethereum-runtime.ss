@@ -2,15 +2,14 @@
 
 (import
   :gerbil/gambit/bytes :gerbil/gambit/threads
-  :std/iter :std/misc/hash :std/sugar
-  :clan/exception :clan/json :clan/path-config :clan/pure/dict/assq
-  :clan/poo/poo :clan/poo/io :clan/poo/mop :clan/poo/type :clan/poo/debug
+  :std/iter :std/misc/hash :std/sugar :std/misc/number :std/misc/list :std/sort :std/srfi/1
+  :clan/base :clan/exception :clan/io :clan/json :clan/number :clan/path-config :clan/ports :clan/syntax
+  :clan/poo/poo :clan/poo/io :clan/poo/debug :clan/debug
   :clan/persist/content-addressing
   :mukn/ethereum/hex :mukn/ethereum/ethereum :mukn/ethereum/network-config :mukn/ethereum/json-rpc
-  :mukn/ethereum/transaction :mukn/ethereum/tx-tracker :mukn/ethereum/watch
-  :mukn/ethereum/contract-runtime :mukn/ethereum/contract-config
-  ./program
-  ./ethereum-contract
+  :mukn/ethereum/transaction :mukn/ethereum/tx-tracker :mukn/ethereum/watch :mukn/ethereum/assets
+  :mukn/ethereum/contract-runtime :mukn/ethereum/contract-config :mukn/ethereum/assembly :mukn/ethereum/types
+  ./program ./message
   ../compiler/method-resolve/method-resolve
   ../compiler/project/runtime-2)
 
@@ -34,7 +33,7 @@
     parameters: [Json] ;; This Json object to be decoded according to a type descriptor from the interaction (dependent types yay!)
     reference: [(MonomorphicPoo Json)] ;; Arbitrary reference objects from each participant, with some conventional size limits on the Json string.
     options: [AgreementOptions] ;; See above
-    code-digest: [Digest]))) ;; Make it the digest of Glow source code (in the future, including all Glow libraries transitively used)
+    code-digest: [Bytes]))) ;; Make it the digest of Glow source code (in the future, including all Glow libraries transitively used)
 
 (define-type AgreementHandshake
   (Record
@@ -53,14 +52,14 @@
 ;;       other participants through an outside channel
 (.def io-context:special-file
   setup:
-  (lambda () (ignore-errors (delete-file (run-path "agreement-handshake.json"))))
+  (λ () (ignore-errors (delete-file (run-path "agreement-handshake.json"))))
   teardown:
-  (lambda () (ignore-errors (delete-file (run-path "agreement-handshake.json"))))
+  (λ () (ignore-errors (delete-file (run-path "agreement-handshake.json"))))
   send-handshake:
-  (lambda (handshake)
+  (λ (handshake)
     (write-file-json (run-path "agreement-handshake.json") (json<- AgreementHandshake handshake)))
   receive-handshake:
-  (lambda ()
+  (λ ()
     (def agreement-handshake.json (run-path "agreement-handshake.json"))
     (while (not (file-exists? agreement-handshake.json))
       (displayln "waiting for agreement handshake ...")
@@ -75,7 +74,6 @@
 (defclass Runtime
   (role ;; : Symbol
    agreement ;; : InteractionAgreement
-   contract ;; : Contract
    contract-config ;; : ContractConfig
    status ;; (Enum running completed aborted stopped)
    processed-events ;; : (List LogObjects) ;; ???
@@ -85,7 +83,10 @@
    environment ;; : (Table (Or DependentPair Any) <- Symbol) ;; TODO: have it always typed???
    message ;; : Message ;; byte buffer?
    timer-start ;; Block
-   io-context) ; : IOContext
+   io-context ; : IOContext
+   program ;; : Program ;; from program.ss
+   variable-offsets ;; : (Table (Table Offset <- Symbol) <- Symbol)
+   params-end)
   constructor: :init!
   transparent: #t)
 
@@ -93,13 +94,12 @@
   (λ (self
       role: role
       agreement: agreement
-      contract: contract
       current-code-block-label: current-code-block-label ;; TODO: grab the start label from the compilation output, instead of 'begin0
       current-label: current-label ;; TODO: grab the start label from the compilation output, instead of 'begin
-      io-context: (io-context io-context:special-file))
+      io-context: (io-context io-context:special-file)
+      program: program)
     (set! (@ self role) role)
     (set! (@ self agreement) agreement)
-    (set! (@ self contract) contract)
     ;; TODO: extract initial code block label from contract compiler output
     (set! (@ self current-code-block-label) current-code-block-label)
     (set! (@ self current-label) current-label)
@@ -111,6 +111,7 @@
     (set! (@ self environment) (make-hash-table))
     (set! (@ self message) (make-Message))
     (set! (@ self io-context) io-context)
+    (set! (@ self program) program)
     {initialize-environment self}))
 
 ;; <- Runtime
@@ -120,20 +121,11 @@
       (def ccbl (@ self current-code-block-label))
       (displayln "executing code block: " ccbl)
 
-      ;; non-active participants verify previous move
-      (unless {is-active-participant? self}
+      (if {is-active-participant? self}
+        {publish self}
         {receive self})
 
-      ;; interpreter
-      (def code-block {get-current-code-block self})
-      (for ((statement (code-block-statements code-block)))
-        {interpret-participant-statement self statement})
-
-      ;; active participants make next move
-      (when {is-active-participant? self}
-        {publish self})
-
-      (match (code-block-exit code-block)
+      (match (code-block-exit {get-current-code-block self})
         (#f
           (void)) ; contract finished
         (exit
@@ -159,6 +151,54 @@
       (def to-block (+ from-block (.@ (@ self agreement) options timeoutInBlocks)))
       (watch-contract callback contract-address from-block to-block))))
 
+(def (run-passive-code-block/contract self role contract-config)
+  (displayln role ": Watching for new transaction ...")
+  ;; TODO: `from` should be calculated using the deadline and not necessarily the previous tx,
+  ;; since it may or not be setting the deadline
+  (display-poo-ln role ": contract-config=" ContractConfig contract-config)
+  (def from (if (@ self timer-start) (@ self timer-start) (.@ contract-config creation-block)))
+  (displayln role ": watching from block " from)
+  (def new-log-object {watch self (.@ contract-config contract-address) from})
+  ;; TODO: handle the case when there is no log objects
+  (display-poo-ln role ": New TX: " (Maybe LogObject) new-log-object)
+  (def log-data (.@ new-log-object data))
+  (set! (@ self timer-start) (.@ new-log-object blockNumber))
+  ;; TODO: process the data in the same method?
+  (set! (@ self message inbox) (open-input-u8vector log-data))
+  (interpret-current-code-block self))
+
+(def (interpret-current-code-block self)
+  (let (code-block {get-current-code-block self})
+    (for ((statement (code-block-statements code-block)))
+      {interpret-participant-statement self statement})))
+
+
+(def (run-passive-code-block/handshake self role)
+  (nest
+   (begin (displayln role ": Reading contract handshake ..."))
+   (let (agreement-handshake {read-handshake self}))
+   (begin
+     (displayln role ": Verifying contract config ...")
+     (force-current-outputs))
+   (with-slots (agreement contract-config published-data) agreement-handshake)
+   (let (message (@ self message)))
+   (begin
+     (set! (@ message inbox) (open-input-u8vector published-data))
+     ;; TODO: Execute contract until first change participant.
+     ;; Check that the agreement part matches
+     (unless (equal? (json<- InteractionAgreement (@ self agreement))
+                     (json<- InteractionAgreement agreement))
+       (DDT agreements-mismatch:
+            InteractionAgreement (@ self agreement)
+            InteractionAgreement agreement)
+       (error "agreements don't match" (@ self agreement) agreement))
+     (set! (@ self timer-start) (.@ agreement options maxInitialBlock))
+     (interpret-current-code-block self))
+   (let (create-pretx {prepare-create-contract-transaction self})
+     (verify-contract-config contract-config create-pretx)
+     (set! (@ self contract-config) contract-config))))
+
+;; TODO: rename to RunPassiveCodeBlock or something
 ;; <- Runtime
 (defmethod {receive Runtime}
   (λ (self)
@@ -166,38 +206,8 @@
     (def contract-config (@ self contract-config))
     (when (eq? (@ self status) 'running)
       (if contract-config
-        (let ()
-          (displayln role ": Watching for new transaction ...")
-          ;; TODO: `from` should be calculated using the deadline and not necessarily the previous tx,
-          ;; since it may or not be setting the deadline
-          (display-poo-ln role ": contract-config=" ContractConfig contract-config)
-          (def from (if (@ self timer-start) (@ self timer-start) (.@ contract-config creation-block)))
-          (displayln role ": watching from block " from)
-          (def new-log-object {watch self (.@ contract-config contract-address) from})
-          ;; TODO: handle the case when there is no log objects
-          (display-poo-ln role ": New TX: " (Maybe LogObject) new-log-object)
-          (def log-data (.@ new-log-object data))
-          (set! (@ self timer-start) (.@ new-log-object blockNumber))
-          ;; TODO: process the data in the same method?
-          (set! (@ (@ self message) inbox) (open-input-u8vector log-data)))
-        (let ()
-          (displayln role ": Reading contract handshake ...")
-          (def agreement-handshake {read-handshake self})
-          (display-poo-ln role ": agreement-handshake: " AgreementHandshake agreement-handshake)
-          (displayln role ": Verifying contract config ...")
-          (def-slots (agreement contract-config published-data) agreement-handshake)
-          ;; check that the agreement part matches
-          (unless (equal? (json<- InteractionAgreement (@ self agreement))
-                          (json<- InteractionAgreement agreement))
-            (DDT agreements-match:
-                 InteractionAgreement (@ self agreement)
-                 InteractionAgreement agreement)
-            (error "agreements don't match" (@ self agreement) agreement))
-          (set! (@ self timer-start) (.@ agreement options maxInitialBlock))
-          (def create-pretx {prepare-create-contract-transaction self})
-          (verify-contract-config contract-config create-pretx)
-          (set! (@ self contract-config) contract-config)
-          (set! (@ self message inbox) (open-input-u8vector published-data)))))))
+        (run-passive-code-block/contract self role contract-config)
+        (run-passive-code-block/handshake self role)))))
 
 ;; : AgreementHandshake <- Runtime
 (defmethod {read-handshake Runtime}
@@ -210,16 +220,16 @@
   (λ (self)
     (def role (@ self role))
     (def contract-config (@ self contract-config))
+    (interpret-current-code-block self)
     (when (eq? (@ self status) 'running)
       (if (not contract-config)
         (let ()
           (displayln role ": deploying contract ...")
           (def outbox (@ self message outbox))
-          (def out (open-output-u8vector))
-          (for ([type . value] (hash-values outbox))
-            (marshal type value out))
-          (def published-data (get-output-u8vector out))
-          ;; TODO: Add published data to initial frame variables.
+          (def published-data
+            (call-with-output-u8vector (λ (out)
+              (for ([type . value] outbox)
+                (marshal-sized16-bytes (<-bytes type value) out)))))
           {deploy-contract self}
           (def contract-config (@ self contract-config))
           (def agreement (@ self agreement))
@@ -232,7 +242,6 @@
           ;; requires getting TransactionInfo using the TransactionReceipt.
           (displayln role ": publishing message ...")
           (def contract-address (.@ contract-config contract-address))
-          (def contract (@ self contract))
           (def message (@ self message))
           (def outbox (@ message outbox))
           (def message-pretx {prepare-call-function-transaction self outbox contract-address})
@@ -257,11 +266,10 @@
     (def code-block {get-current-code-block self})
     (def next (code-block-exit code-block))
     (def participant (code-block-participant code-block))
-    (def contract (@ self contract))
     (defvalues (contract-runtime-bytes contract-runtime-labels)
-      {generate-consensus-runtime contract (.@ (@ self agreement) options timeoutInBlocks)})
+      {generate-consensus-runtime self})
     (def initial-state
-      {create-frame-variables contract (.@ (@ self agreement) options maxInitialBlock) contract-runtime-labels next participant})
+      {create-frame-variables self (.@ (@ self agreement) options maxInitialBlock) contract-runtime-labels next participant})
     (def initial-state-digest
       (digest-product-f initial-state))
     (def contract-bytes
@@ -273,7 +281,6 @@
 (defmethod {deploy-contract Runtime}
   (λ (self)
     (def role (@ self role))
-    (def contract (@ self contract))
     (def timer-start (.@ (@ self agreement) options maxInitialBlock))
     (def pretx {prepare-create-contract-transaction self})
     (display-poo-ln role ": Deploying contract... "
@@ -285,7 +292,7 @@
     (set! (@ self contract-config) contract-config)))
 
 (defmethod {send-contract-handshake Runtime}
-  (lambda (self handshake)
+  (λ (self handshake)
     (def io-context (@ self io-context))
     (.call io-context send-handshake handshake)))
 
@@ -295,36 +302,35 @@
   (λ (self outbox contract-address)
     (def sender-address {get-active-participant self})
     (defvalues (_ contract-runtime-labels)
-      {generate-consensus-runtime (@ self contract) (.@ (@ self agreement) options timeoutInBlocks)})
+      {generate-consensus-runtime self})
     (def frame-variables
       {create-frame-variables
-        (@ self contract)
+        self
         (@ self timer-start)
         contract-runtime-labels
         (@ self current-code-block-label)
         (@ self role)})
     (def frame-variable-bytes (marshal-product-f frame-variables))
     (def frame-length (bytes-length frame-variable-bytes))
-    (def out (open-output-u8vector))
-    (marshal UInt16 frame-length out)
-    (marshal-product-to frame-variables out)
-    (for ([type . value] (hash-values outbox))
-      (marshal type value out))
-    (marshal UInt8 1 out)
-    (def message-bytes (get-output-u8vector out))
+    (def message-bytes
+      (let (out (open-output-u8vector))
+        (marshal UInt16 frame-length out)
+        (marshal-product-to frame-variables out)
+        (for ([type . value] outbox)
+          (marshal type value out))
+        (marshal UInt8 1 out)
+        (get-output-u8vector out)))
     (call-function sender-address contract-address message-bytes
       value: {compute-participant-dues (@ self message) sender-address})))
       ;; default gas value should be (void), i.e. ask for an automatic estimate,
       ;; unless we want to force the TX to happen
       ;; (gas: 800000))))
 
-
 ;; CodeBlock <- Runtime
 (defmethod {get-current-code-block Runtime}
   (λ (self)
-    (def contract (@ self contract))
     (def participant-interaction
-      {get-interaction (@ contract program) (@ self role)})
+      {get-interaction (@ self program) (@ self role)})
     (hash-get participant-interaction (@ self current-code-block-label))))
 
 ;; TODO: map alpha-converted names to names in original source when displaying to user
@@ -332,12 +338,17 @@
 ;; <- Runtime
 (defmethod {initialize-environment Runtime}
   (λ (self)
-    (def contract (@ self contract))
+    (def agreement (@ self agreement))
     (.call (@ self io-context) setup) ;; NB: putting this call before the def above crashes gxc(!)
-    (for ((values key value) (in-hash (@ contract participants)))
-      {add-to-environment self key value})
-    (for ((values key [_ . value]) (in-hash (@ contract arguments)))
-      {add-to-environment self key value})))
+    (def participants (.@ agreement participants))
+    (for (participant-name (.all-slots-sorted participants))
+      {add-to-environment self participant-name (.ref participants participant-name)})
+    (def parameters (.@ agreement parameters))
+    (for ((values parameter-name-key parameter-json-value) parameters)
+      (def parameter-name (symbolify parameter-name-key))
+      (def parameter-type {lookup-type (@ self program) parameter-name})
+      (def parameter-value (<-json parameter-type parameter-json-value))
+      {add-to-environment self parameter-name parameter-value})))
 
 ;; TODO: make sure everything always has a type ???
 ;; Any <- Runtime
@@ -363,8 +374,8 @@
 ;; Symbol <- Runtime
 (defmethod {get-active-participant Runtime}
   (λ (self)
-    (def contract (@ self contract))
-    (hash-get (@ contract participants) (@ self role))))
+    (def environment (@ self environment))
+    (hash-get environment (@ self role))))
 
 ;; Bytes <- (List DependentPair)
 (def (marshal-product-f fields)
@@ -384,6 +395,7 @@
 ;; : <- Runtime ProjectStatement
 (defmethod {interpret-participant-statement Runtime}
   (λ (self statement)
+    (displayln statement)
     (match statement
 
       (['set-participant new-participant]
@@ -413,7 +425,7 @@
       (['add-to-publish ['quote publish-name] variable-name]
         (let
           ((publish-value {reduce-expression self variable-name})
-           (publish-type {lookup-type (@ self contract program) variable-name}))
+           (publish-type {lookup-type (@ self program) variable-name}))
           {add-to-published (@ self message) publish-name publish-type publish-value}))
 
       (['def variable-name expression]
@@ -447,7 +459,7 @@
   (λ (self expression)
     (match expression
       (['expect-published ['quote publish-name]]
-        (let (publish-type {lookup-type (@ self contract program) publish-name})
+        (let (publish-type {lookup-type (@ self program) publish-name})
           {expect-published (@ self message) publish-name publish-type}))
       (['@app 'isValidSignature address-variable digest-variable signature-variable]
         (let
@@ -479,7 +491,7 @@
       (['digest . es]
         (digest
         (for/collect ((e es))
-          (cons {lookup-type (@ self contract program) e}
+          (cons {lookup-type (@ self program) e}
                 {reduce-expression self e}))))
       (['sign digest-variable]
         (let ((this-participant {get-active-participant self})
@@ -491,77 +503,267 @@
       (else
         {reduce-expression self expression}))))
 
-;; MESSAGE ;; TODO: more like CommunicationState
-(defclass Message
-  (inbox ;; : BytesInputPort
-   outbox ;; : (Table DependentPair <- Symbol) ;; TODO: just have a BytesOutputPort ?
-   asset-transfers) ;; : (Alist Z <- Address)
-  constructor: :init!
-  transparent: #t)
+;; : Frame <- Runtime Block (Table Offset <- Symbol) Symbol
+(defmethod {create-frame-variables Runtime}
+  (λ (self timer-start contract-runtime-labels code-block-label code-block-participant)
+    (DBG c-f-v: code-block-label)
+    (def checkpoint-location
+      (hash-get contract-runtime-labels {make-checkpoint-label self code-block-label}))
+    (def active-participant-offset
+      {lookup-variable-offset self code-block-label code-block-participant})
+    (def agreement (@ self agreement))
+    (def participants (.@ agreement participants))
+    ;; TODO better way to get the difference between two lists. Use sets instead?
+    (def live-variables
+      (lset-difference equal? {lookup-live-variables (@ self program) code-block-label} (.all-slots participants)))
+    (DBG live-variables: live-variables)
+    ;; TODO: ensure keys are sorted in both hash-values
+    [[UInt16 . checkpoint-location]
+     [Block . timer-start]
+     ;; [UInt16 . active-participant-offset]
+     ;; TODO: designate participant addresses as global variables that are stored outside of frames
+     (map (λ (slot-name) (cons Address (.ref participants slot-name))) (.all-slots-sorted participants))...
+     (map
+        (λ (variable-name)
+          (def variable-type {lookup-type (@ self program) variable-name})
+          (def variable-value (hash-get (@ self environment) variable-name))
+          (cons variable-type variable-value))
+        (sort live-variables symbol<?))...]))
 
-(defmethod {:init! Message}
-  (λ (self (i #f) (o (make-hash-table)) (at []))
-    (set! (@ self inbox) i)
-    (set! (@ self outbox) o)
-    (set! (@ self asset-transfers) at)))
+;; Block <- Frame
+(def (timer-start<-frame-variables frame-variables)
+  (cdadr frame-variables))
 
-;; <- Message
-(defmethod {reset Message}
+;; TODO: use [t . v] everywhere instead of [v t] ? and unify with sexp<-state in ethereum-runtime
+;; Sexp <- Frame
+(def (sexp<-frame-variables frame-variables)
+  `(list ,@(map (match <> ([v t] `(list ,(sexp<- t v) ,(sexp<- Type t)))) frame-variables)))
+
+;; TODO: Exclude checkpoints that have already been executed by the first active
+;; participant.
+;; : Bytes (Table Offset <- Symbol) <- Runtime
+(defmethod {generate-consensus-runtime Runtime}
   (λ (self)
-    (set! (@ self inbox) #f)
-    (hash-clear! (@ self outbox))))
+    (parameterize ((brk-start (box params-start@)))
+      (def consensus-code {generate-consensus-code self})
+      (assemble
+        (&begin
+        (&simple-contract-prelude)
+        &define-simple-logging
+        (&define-check-participant-or-timeout)
+        ;; NB: you can use #t below to debug with remix.ethereum.org. Do NOT commit that!
+        ;; TODO: maybe we should have some more formal debugging mode parameter?
+        (&define-end-contract debug: #f)
+        consensus-code
+        [&label 'brk-start@ (unbox (brk-start))])))))
 
-;; <- Message Symbol t:Type t
-(defmethod {add-to-published Message}
-  (λ (self name type value)
-    (hash-put! (@ self outbox) name [type . value])))
+;; : Bytes (Table Offset <- Symbol) <- Runtime
+(defmethod {make-checkpoint-label Runtime}
+  (λ (self checkpoint)
+    (symbolify (@ self program name) "--" checkpoint)))
 
-;; expect-published : t <- Symbol t:Type
-(defmethod {expect-published Message}
-  (λ (self name type)
-    ;; ignore name, by order not by name
-    (unmarshal type (@ self inbox))))
+;; <- Runtime
+(defmethod {compute-variable-offsets Runtime}
+  (λ (self code-block-label)
+    (def frame-variables (make-hash-table))
+    ;; Initial offset computed by global registers, see :mukn/ethereum/contract-runtime
+    (def start params-start@)
+    (def agreement (@ self agreement))
+    (def participants (.@ agreement participants))
+    (for-each (λ (role)
+                 (let (parameter-length (param-length Address))
+                   (hash-put! frame-variables role (post-increment! start parameter-length))))
+              (.all-slots-sorted participants))
+    (def live-variables
+      (lset-difference equal? {lookup-live-variables (@ self program) code-block-label} (.all-slots participants)))
+    (for-each
+      (λ (live-variable)
+        (let* ((type {lookup-type (@ self program) live-variable})
+               (parameter-length (param-length type)))
+          (hash-put! frame-variables live-variable (post-increment! start parameter-length))))
+      (sort live-variables symbol<?))
+    (hash-put! (@ self variable-offsets) code-block-label frame-variables)
+    (set! (@ self params-end) start)))
 
-;; add-to-withdraw : <- Address Nat
-(defmethod {add-to-withdraw Message}
-  (λ (self address amount)
-    (def mat (@ self asset-transfers))
-    (def mat2 (assq-update mat address (cut + <> amount) 0))
-    (def mat3 (assq-update mat2 #f (cut - <> amount) 0))
-    (set! (@ self asset-transfers) mat3)))
+;; Offset <- Runtime Symbol
+(defmethod {lookup-variable-offset Runtime}
+  (λ (self code-block-label variable-name)
+    (def offset
+      (hash-get (hash-get (@ self variable-offsets) code-block-label) variable-name))
+    (if offset
+      offset
+      (error "No offset for variable: " variable-name))))
 
-;; add-to-deposit : <- Nat
-(defmethod {add-to-deposit Message}
-  (λ (self address amount)
-    (def mat (@ self asset-transfers))
-    (def mat2 (assq-update mat address (cut - <> amount) 0))
-    (def mat3 (assq-update mat2 #f (cut + <> amount) 0))
-    (set! (@ self asset-transfers) mat3)))
+;; Assembly directives to load an immediate variable (i.e. for unboxed type) onto the stack
+;; : Directives <- Runtime Symbol Type
+(defmethod {load-immediate-variable Runtime}
+  (λ (self code-block-label variable-name variable-type)
+    (&mloadat
+      {lookup-variable-offset self code-block-label variable-name}
+      (param-length variable-type))))
 
-;; expect-deposited : <- Nat
-(defmethod {expect-deposited Message}
-  (λ (self address amount)
-    (def mat (@ self asset-transfers))
-    (def mat2 (assq-update mat address (cut + <> amount) 0))
-    (def mat3 (assq-update mat2 #f (cut - <> amount) 0))
-    (set! (@ self asset-transfers) mat3)))
+;; Directives to load onto stack a representation for a trivial expression
+;; use load-immediate-variable for types passed by value
+;; use lookup-variable-offset for types passed by reference (Signature)
+;; otherwise place a constant on the stack
+;; : Directives <- Runtime
+(defmethod {trivial-expression Runtime}
+  (λ (self code-block-label expr)
+    (def type {lookup-type (@ self program) expr})
+    (def len (param-length type))
+    (cond
+     ((zero? len) 0) ;; TODO: have a more general notion of singleton/unit type, not only 0-valued?
+     ((<= len 32) ;; TODO: have a more general notion of immediate vs boxed type?
+      (if (symbol? expr)
+        {load-immediate-variable self code-block-label expr type} ;; reading a variable
+        (nat<-bytes (bytes<- type expr)))) ;; constant
+     (else
+      (if (symbol? expr)
+        {lookup-variable-offset self code-block-label expr} ;; referring to a variable by offset
+        ;; TODO: store the data in a variable (temporary, if needed) --- do that in ANF after typesetting.
+        (error "trivial-expression: oversize constant" (.@ type sexp) expr))))))
 
-;; expect-withdrawn : <- Address Nat
-(defmethod {expect-withdrawn Message}
-  (λ (self address amount)
-    (def mat (@ self asset-transfers))
-    (def mat2 (assq-update mat address (cut - <> amount) 0))
-    (def mat3 (assq-update mat2 #f (cut + <> amount) 0))
-    (set! (@ self asset-transfers) mat3)))
+;; TODO: params-end should be the MAX of each frame's params-end.
+;; Updates variable offsets to account for new local variable, and increments params-end
+;; <- Runtime Symbol
+(defmethod {add-local-variable-to-frame Runtime}
+  (λ (self code-block-label variable-name)
+    (def type {lookup-type (@ self program) variable-name})
+    (def argument-length (param-length type))
+    (def code-block-variable-offsets (hash-get (@ self variable-offsets) code-block-label))
+    ;; The same variable can be bound in several branches of an if or match expression, and
+    ;; because of the ANF transformation we can assume the previously assigned offset is
+    ;; correct already.
+    (unless (hash-key? code-block-variable-offsets variable-name)
+      (hash-put! code-block-variable-offsets variable-name
+        (post-increment! (@ self params-end) argument-length)))))
 
-;; : Nat <- Message Symbol
-(defmethod {compute-participant-dues Message}
+;; Directives to generate the entire bytecode for the contract (minus header / footer)
+;; Directive <- Runtime
+(defmethod {generate-consensus-code Runtime}
+  (λ (self)
+    (def consensus-interaction {get-interaction (@ self program) #f})
+    (set! (@ self variable-offsets) (make-hash-table))
+    (&begin*
+     (append-map (match <> ([code-block-label . code-block]
+                            {generate-consensus-code-block self code-block-label code-block}))
+                 (hash->list/sort consensus-interaction symbol<?)))))
+
+;; Directives from a code block
+;; (List Directive) <- Runtime Symbol CodeBlock
+(defmethod {generate-consensus-code-block Runtime}
+  (λ (self code-block-label code-block)
+    (def checkpoint-statements (code-block-statements code-block))
+    (set! (@ self params-end) #f)
+    {compute-variable-offsets self code-block-label}
+    (def code-block-directives
+      [[&jumpdest {make-checkpoint-label self code-block-label}]
+       (&check-timeout! timeout: (.@ (@ self agreement) options timeoutInBlocks))
+       (append-map (λ (statement) {interpret-consensus-statement self code-block-label statement})
+                 checkpoint-statements)...])
+    (register-frame-size (@ self params-end))
+    (def end-code-block-directive
+      (if (equal? code-block-label {get-last-code-block-label (@ self program)})
+        &end-contract!
+        (&begin
+          &start-timer!
+          ;; TODO: Store call frame in storage before committing. See targets defined in contract-runtime/&define-tail-call
+          STOP)))
+    (snoc end-code-block-directive code-block-directives)))
+
+;; ASSUMING a two-participant contract, find the other participant for use in timeouts.
+;; Symbol <- Runtime Symbol
+(defmethod {find-other-participant Runtime}
   (λ (self participant)
-    (def asset-transfers (@ self asset-transfers))
-    (def active-balance
-      (if (assq-has-key? asset-transfers participant)
-        (assq-ref asset-transfers participant)
-        0))
-    (if (negative? active-balance)
-      (abs active-balance)
-      0)))
+    (find
+      (λ (p) (not (equal? p participant)))
+      (.all-slots-sorted (.@ (@ self agreement) participants)))))
+
+;; (List Directive) <- Runtime Sexp
+(defmethod {interpret-consensus-statement Runtime}
+  (λ (self code-block-label statement)
+    (match statement
+      (['set-participant new-participant]
+       ;; TODO: support more than two participants
+       (let (other-participant {find-other-participant self new-participant})
+         [(&check-participant-or-timeout!
+           must-act: {lookup-variable-offset self code-block-label new-participant}
+           or-end-in-favor-of: {lookup-variable-offset self code-block-label other-participant})]))
+
+      ;; TODO: support the fact that the "immediate continuation" for an expression
+      ;; may be not just def, but also ignore or return
+      (['def variable-name expression]
+       {add-local-variable-to-frame self code-block-label variable-name}
+       {interpret-consensus-expression self code-block-label variable-name expression})
+
+      (['require! variable-name]
+       [{load-immediate-variable self code-block-label variable-name Bool} &require!])
+
+      (['expect-deposited amount]
+       [{load-immediate-variable self code-block-label amount Ether} &deposit!])
+
+      (['consensus:withdraw participant amount]
+       [{load-immediate-variable self code-block-label amount Ether}
+        {load-immediate-variable self code-block-label participant Address}
+        &withdraw!])
+
+      (['return _]
+        [])
+
+      (['@label _]
+        [])
+
+      (['switch value cases ...]
+        (let*
+          ((comparison-value {trivial-expression self code-block-label value})
+           (interpreted-cases (map (λ (case)
+             (let (interpreted-statements (map (λ (case-statement)
+                    {interpret-consensus-statement self code-block-label case-statement}) (cdr case)))
+              [(car case) (flatten1 interpreted-statements)])) cases)))
+        [(&switch comparison-value interpreted-cases)]))
+
+      (else
+       (error "Runtime does not recognize consensus statement: " statement)))))
+
+(def (typed-directive<-trivial-expr runtime code-block-label expr)
+  (def program (@ runtime program))
+  (cons {lookup-type program expr} {trivial-expression runtime code-block-label expr}))
+
+(defmethod {interpret-consensus-expression Runtime}
+  (λ (self code-block-label variable-name expression)
+    (def type {lookup-type (@ self program) variable-name})
+    (def len (and type (param-length type)))
+    (def (binary-operator op a b)
+      [{trivial-expression self code-block-label b}
+       {trivial-expression self code-block-label a}
+       op])
+    (match expression
+      (['expect-published published-variable-name]
+        [len {lookup-variable-offset self code-block-label variable-name} &read-published-data-to-mem])
+      (['@app 'isValidSignature participant digest signature]
+        [{load-immediate-variable self code-block-label participant Address}
+          {load-immediate-variable self code-block-label digest Digest}
+          ;; signatures are passed by reference, not by value
+          {lookup-variable-offset self code-block-label signature}
+          &isValidSignature
+          (&mstoreat {lookup-variable-offset self code-block-label variable-name} 1)])
+      (['digest . exprs]
+        [(&digest<-tvps (map (cut typed-directive<-trivial-expr self code-block-label <>) exprs))])
+      (['== a b]
+        (binary-operator EQ a b))
+      (['@app '< a b]
+        (binary-operator LT a b))
+      (['@app '> a b]
+        (binary-operator GT a b))
+      (['@app '+ a b]
+        (binary-operator ADD a b))
+      (['@app '- a b]
+        (binary-operator SUB a b))
+      (['@app '* a b]
+        (binary-operator MUL a b))
+      (['@app '/ a b]
+        (binary-operator DIV a b))
+      (['@app 'bitwise-xor a b]
+        (binary-operator XOR a b))
+      (['@app 'bitwise-and a b]
+        (binary-operator AND a b)))))
