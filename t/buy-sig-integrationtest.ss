@@ -18,21 +18,11 @@
   ../compiler/multipass
   ../compiler/syntax-context
   ../runtime/program
-  ../runtime/ethereum-contract
   ../runtime/ethereum-runtime)
 
 (def buyer-address alice)
 (def seller-address bob)
 (def digest (keccak256<-string "abcdefghijklmnopqrstuvwxyz012345"))
-
-(def participants
-  (hash
-    (Buyer buyer-address)
-    (Seller seller-address)))
-(def arguments
-  (hash
-    (digest0 [Digest . digest])
-    (price [Ether . one-ether-in-wei])))
 
 ;; Should `timeout` be the value of `(ethereum-timeout-in-blocks)`,
 ;; or should it be the `timeoutInBlocks` field of the entry in `config/ethereum_networks.json`?
@@ -75,16 +65,12 @@
       (def buyer-thread
         (spawn/name/logged "Buyer"
          (lambda ()
-           (def contract (make-Contract
-                          program: program
-                          participants: participants
-                          arguments: arguments))
            (def buyer-runtime
              (make-Runtime role: 'Buyer
                            agreement: agreement
-                           contract: contract
                            current-code-block-label: 'begin0 ;; TODO: grab the start label from the compilation output, instead of 'begin0
-                           current-label: 'begin)) ;; TODO: grab the start label from the compilation output, instead of 'begins
+                           current-label: 'begin ;; TODO: grab the start label from the compilation output, instead of 'begins
+                           program: program))
            {execute buyer-runtime}
            (displayln "buyer finished")
            (@ buyer-runtime environment))))
@@ -93,16 +79,12 @@
       (def seller-thread
         (spawn/name/logged "Seller"
          (lambda ()
-           (def contract (make-Contract
-                          program: program
-                          participants: participants
-                          arguments: arguments))
            (def seller-runtime
              (make-Runtime role: 'Seller
                            agreement: agreement
-                           contract: contract
                            current-code-block-label: 'begin0 ;; TODO: grab the start label from the compilation output, instead of 'begin0
-                           current-label: 'begin)) ;; TODO: grab the start label from the compilation output, instead of 'begins
+                           current-label: 'begin ;; TODO: grab the start label from the compilation output, instead of 'begins
+                           program: program))
            {execute seller-runtime}
            (displayln "seller finished"))))
 

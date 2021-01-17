@@ -66,7 +66,6 @@
   :mukn/glow/compiler/desugar/desugar
   :mukn/glow/compiler/typecheck/typecheck
   :mukn/glow/compiler/anf/anf
-  :mukn/glow/runtime/ethereum-contract
   :mukn/glow/runtime/ethereum-runtime
   :mukn/glow/runtime/cli
 
