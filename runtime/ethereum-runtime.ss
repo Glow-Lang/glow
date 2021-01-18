@@ -229,7 +229,7 @@
           (def published-data
             (call-with-output-u8vector (λ (out)
               (for ([type . value] outbox)
-                (marshal-sized16-bytes (<-bytes type value) out)))))
+                (marshal type value out)))))
           {deploy-contract self}
           (def contract-config (@ self contract-config))
           (def agreement (@ self agreement))
