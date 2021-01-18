@@ -313,13 +313,12 @@
     (def frame-variable-bytes (marshal-product-f frame-variables))
     (def frame-length (bytes-length frame-variable-bytes))
     (def message-bytes
-      (let (out (open-output-u8vector))
+      (call-with-output-u8vector (λ (out)
         (marshal UInt16 frame-length out)
         (marshal-product-to frame-variables out)
         (for ([type . value] outbox)
           (marshal type value out))
-        (marshal UInt8 1 out)
-        (get-output-u8vector out)))
+        (marshal UInt8 1 out))))
     (call-function sender-address contract-address message-bytes
       value: {compute-participant-dues (@ self message) sender-address})))
       ;; default gas value should be (void), i.e. ask for an automatic estimate,
@@ -379,10 +378,8 @@
 
 ;; Bytes <- (List DependentPair)
 (def (marshal-product-f fields)
-  (def out (open-output-u8vector))
-  (marshal-product-to fields out)
-  (get-output-u8vector out))
-
+  (call-with-output-u8vector (λ (out)
+    (marshal-product-to fields out))))
 ;; <- (List DependentPair) BytesOutputPort
 (def (marshal-product-to fields port)
   (for ((p fields))
