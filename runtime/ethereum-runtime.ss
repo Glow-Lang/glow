@@ -33,7 +33,7 @@
     parameters: [Json] ;; This Json object to be decoded according to a type descriptor from the interaction (dependent types yay!)
     reference: [(MonomorphicPoo Json)] ;; Arbitrary reference objects from each participant, with some conventional size limits on the Json string.
     options: [AgreementOptions] ;; See above
-    code-digest: [Bytes]))) ;; Make it the digest of Glow source code (in the future, including all Glow libraries transitively used)
+    code-digest: [Digest]))) ;; Make it the digest of Glow source code (in the future, including all Glow libraries transitively used)
 
 (define-type AgreementHandshake
   (Record
