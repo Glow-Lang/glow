@@ -2,7 +2,7 @@
 
 (import
   :gerbil/gambit/os :gerbil/gambit/ports :gerbil/gambit/threads
-  :std/format :std/srfi/1 :std/test :std/sugar :std/iter :std/text/json :std/misc/ports
+  :std/format :std/srfi/1 :std/test :std/sugar :std/iter :std/text/json :std/misc/ports :std/misc/hash
   :clan/base :clan/concurrency :clan/debug :clan/decimal :clan/exception
   :clan/io :clan/json :clan/path-config :clan/ports
   :clan/poo/poo :clan/poo/io :clan/poo/debug
@@ -68,7 +68,7 @@
                            current-label: 'begin ;; TODO: grab the start label from the compilation output, instead of 'begins
                            program: program))
            {execute a-runtime}
-           (displayln "a finished")
+           (displayln "A finished")
            (@ a-runtime environment))))
 
       (displayln "\nEXECUTING B THREAD ...")
@@ -82,7 +82,10 @@
                            current-label: 'begin ;; TODO: grab the start label from the compilation output, instead of 'begins
                            program: program))
            {execute b-runtime}
-           (displayln "b finished"))))
-      (def environment (thread-join! b-thread))
-      (displayln (hash-keys environment))
-      (check-equal? #t #t))))
+           (displayln "B finished")
+           (@ b-runtime environment))))
+      (def a-environment (thread-join! a-thread))
+      (def b-environment (thread-join! b-thread))
+      (check-equal?
+        (hash->list/sort a-environment symbol<?)
+        (hash->list/sort b-environment symbol<?)))))
