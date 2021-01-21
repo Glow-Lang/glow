@@ -74,8 +74,11 @@
 (defmethod {lookup-live-variables Program}
   (λ (self code-block-label)
     (def live-variable-table (hash-ref (@ self compiler-output) 'cpitable2.sexp))
-    (filter (λ (x) (not {definitely-constant? self x}))
-            (ci-variables-live (hash-get live-variable-table code-block-label)))))
+    ;; TODO: Store participants in fixed addresses.
+    (def participants (filter (λ (x) x) (hash-keys (@ self interactions))))
+    (unique (append participants
+      (filter (λ (x) (not {definitely-constant? self x}))
+            (ci-variables-live (hash-get live-variable-table code-block-label)))))))
 
 ;; context to parse compiler output and locate labels
 (defclass ParseContext
