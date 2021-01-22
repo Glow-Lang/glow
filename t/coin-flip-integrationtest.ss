@@ -64,8 +64,6 @@
            (def a-runtime
              (make-Runtime role: 'A
                            agreement: agreement
-                           current-code-block-label: 'begin0 ;; TODO: grab the start label from the compilation output, instead of 'begin0
-                           current-label: 'begin ;; TODO: grab the start label from the compilation output, instead of 'begins
                            program: program))
            {execute a-runtime}
            (displayln "A finished")
@@ -78,8 +76,6 @@
            (def b-runtime
              (make-Runtime role: 'B
                            agreement: agreement
-                           current-code-block-label: 'begin0 ;; TODO: grab the start label from the compilation output, instead of 'begin0
-                           current-label: 'begin ;; TODO: grab the start label from the compilation output, instead of 'begins
                            program: program))
            {execute b-runtime}
            (displayln "B finished")

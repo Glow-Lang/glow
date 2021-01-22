@@ -94,15 +94,13 @@
   (λ (self
       role: role
       agreement: agreement
-      current-code-block-label: current-code-block-label ;; TODO: grab the start label from the compilation output, instead of 'begin0
-      current-label: current-label ;; TODO: grab the start label from the compilation output, instead of 'begin
       io-context: (io-context io-context:special-file)
       program: program)
     (set! (@ self role) role)
     (set! (@ self agreement) agreement)
     ;; TODO: extract initial code block label from contract compiler output
-    (set! (@ self current-code-block-label) current-code-block-label)
-    (set! (@ self current-label) current-label)
+    (set! (@ self current-code-block-label) (@ program initial-code-block-label))
+    (set! (@ self current-label) (@ program initial-label))
 
     (set! (@ self contract-config) #f)
     (set! (@ self status) 'running) ;; (Enum running stopped completed aborted)
