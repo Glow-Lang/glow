@@ -50,6 +50,7 @@
        String {database})
   (def environment (run role agreement))
   (displayln "Final environment:")
-  ;; TODO: get run to include type t, and print v using type t
+  ;; TODO: get run to include type t and pre-alpha-converted labels,
+  ;; and output the entire thing as JSON omitting shadowed variables (rather than having conflicts)
   (for-each (match <> ([k . v] (display-poo-ln k "=> " v)))
             (hash->list/sort environment symbol<?)))
