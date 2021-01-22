@@ -24,14 +24,13 @@
 (def seller-address bob)
 (def digest (keccak256<-string "abcdefghijklmnopqrstuvwxyz012345"))
 
-;; Should `timeout` be the value of `(ethereum-timeout-in-blocks)`,
-;; or should it be the `timeoutInBlocks` field of the entry in `config/ethereum_networks.json`?
-(def timeout (* (ethereum-timeout-in-blocks) 2))
-(def initial-timer-start (+ (eth_blockNumber) timeout))
-
 (def buy_sig.glow (source-path "examples/buy_sig.glow"))
 
-(def agreement
+(def (make-agreement)
+  ;; Should `timeout` be the value of `(ethereum-timeout-in-blocks)`,
+  ;; or should it be the `timeoutInBlocks` field of the entry in `config/ethereum_networks.json`?
+  (def timeout (ethereum-timeout-in-blocks))
+  (def initial-timer-start (+ (eth_blockNumber) timeout))
   (.o
     glow-version: (software-identifier)
     interaction: "mukn/glow/examples/buy_sig#payForSignature"
@@ -60,6 +59,7 @@
     ;; TODO: run buyer and seller step in separate threads, using posted transactions to progress their state
     (test-case "buy sig executes"
       (ignore-errors (delete-file (run-path "contract-handshake.json"))) ;; TODO: do it better
+      (def agreement (make-agreement))
 
       (displayln "\nEXECUTING BUYER THREAD ...")
       (def buyer-thread

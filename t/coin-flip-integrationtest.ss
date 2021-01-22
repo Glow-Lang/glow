@@ -23,14 +23,13 @@
 (def a-address alice)
 (def b-address bob)
 
-;; Should `timeout` be the value of `(ethereum-timeout-in-blocks)`,
-;; or should it be the `timeoutInBlocks` field of the entry in `config/ethereum_networks.json`?
-(def timeout (* (ethereum-timeout-in-blocks) 2))
-(def initial-timer-start (+ (eth_blockNumber) timeout))
-
 (def coin_flip.glow (source-path "examples/coinflip.glow"))
 
-(def agreement
+(def (make-agreement)
+  ;; Should `timeout` be the value of `(ethereum-timeout-in-blocks)`,
+  ;; or should it be the `timeoutInBlocks` field of the entry in `config/ethereum_networks.json`?
+  (def timeout (ethereum-timeout-in-blocks))
+  (def initial-timer-start (+ (eth_blockNumber) timeout))
   (.o
     glow-version: (software-identifier)
     interaction: "mukn/glow/examples/coinflip#coinFlip"
@@ -56,6 +55,7 @@
 
     (test-case "coin flip executes"
       (ignore-errors (delete-file (run-path "contract-handshake.json"))) ;; TODO: do it better
+      (def agreement (make-agreement))
 
       (displayln "\nEXECUTING A THREAD ...")
       (def a-thread
