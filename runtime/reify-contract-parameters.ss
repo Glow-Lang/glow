@@ -42,8 +42,6 @@
     (make-Runtime role: role
                   agreement: a
                   program: program
-                  current-code-block-label: 'begin0 ;; TODO: grab the start label from the compilation output, instead of 'begin0
-                  current-label: 'begin ;; TODO: grab the start label from the compilation output, instead of 'begins
                   io-context: io-context:terminal))
   {execute runtime}
   (printf "~a finished\n" role)

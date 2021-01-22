@@ -18,12 +18,13 @@
                  timeoutInBlocks: 0)
                  maxInitialBlock: 1))
 
-(def test-runtime (make-Runtime
-  role: 'Test
-  agreement: test-agreement
-  program: #f
-  current-code-block-label: 'begin
-  current-label: 'begin0))
+(def test-program (make-Program))
+
+(def test-runtime
+  (make-Runtime
+   role: 'Test
+   agreement: test-agreement
+   program: test-program))
 
 (def (switch-participant-statement value)
   ['switch value

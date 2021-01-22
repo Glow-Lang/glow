@@ -16,7 +16,9 @@
   (name ;; : String
    parameter-names ;; : (List Symbol)
    interactions ;; : (Table Interaction <- (OrFalse Symbol))
-   compiler-output) ;; : (Table Sexp <- Symbol) ;; S-expression returned by the project pass.
+   compiler-output ;; : (Table Sexp <- Symbol) ;; S-expression returned by the project pass.
+   initial-label ;; Symbol ;; First label in program, as defined by module header.
+   initial-code-block-label) ;; Symbol ;; Label preceding first participant code block.
   constructor: :init!
   transparent: #t)
 
@@ -74,8 +76,11 @@
 (defmethod {lookup-live-variables Program}
   (λ (self code-block-label)
     (def live-variable-table (hash-ref (@ self compiler-output) 'cpitable2.sexp))
-    (filter (λ (x) (not {definitely-constant? self x}))
-            (ci-variables-live (hash-get live-variable-table code-block-label)))))
+    ;; TODO: Store participants in fixed addresses.
+    (def participants (filter (λ (x) x) (hash-keys (@ self interactions))))
+    (unique (append participants
+      (filter (λ (x) (not {definitely-constant? self x}))
+            (ci-variables-live (hash-get live-variable-table code-block-label)))))))
 
 ;; context to parse compiler output and locate labels
 (defclass ParseContext
@@ -135,30 +140,30 @@
               (hash-put! contract (@ self current-label) (make-code-block new-participant [] #f)))))))))
 
 ;; Program <- Sexp
-(def (extract-program statements)
-  (def program (make-Program))
-  (for ((statement (syntax->datum statements)))
-    (match statement
-      (['def name ['@make-interaction [['@list participants ...]] parameter-names labels interactions ...]]
-        (set! (@ program name) name)
-        (set! (@ program parameter-names) parameter-names)
-        (def interactions-table (make-hash-table))
-        (for ((values name body) (list->hash-table interactions))
-          (hash-put! interactions-table name (process-program name body)))
-        (set! (@ program interactions) interactions-table))
-      ('@module
-        (void))
-      (['begin 'end]
-        (void))
-      (['@label 'begin]
-        (void))
-      (['return ['@tuple]]
-        (void))
-      (['@label 'end]
-        (void))
-      (else
-        (error "Unrecognized program statement: " statement))))
-  program)
+(def (extract-program module)
+  (match (syntax->datum module)
+    (['@module [initial-label final-label] . statements]
+      (def program (make-Program))
+      (set! (@ program initial-label) initial-label)
+      (for ((statement (syntax->datum statements)))
+        (match statement
+          (['def name ['@make-interaction [['@list participants ...]] parameter-names labels interactions ...]]
+            (set! (@ program name) name)
+            (set! (@ program parameter-names) parameter-names)
+            (def interactions-table (make-hash-table))
+            (for ((values name body) (list->hash-table interactions))
+              (hash-put! interactions-table name (process-program name body)))
+            (set! (@ program initial-code-block-label) (car labels))
+            (set! (@ program interactions) interactions-table))
+          (['@label label]
+            (void))
+          (['return ['@tuple]]
+            (void))
+          (else
+            (error "Unrecognized program statement: " statement))))
+      program)
+    (else
+      (error "Unrecognized module format"))))
 
 ;; : Interaction <- Symbol (List Sexp)
 (def (process-program name body)
