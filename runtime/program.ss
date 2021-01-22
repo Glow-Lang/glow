@@ -17,8 +17,8 @@
    parameter-names ;; : (List Symbol)
    interactions ;; : (Table Interaction <- (OrFalse Symbol))
    compiler-output ;; : (Table Sexp <- Symbol) ;; S-expression returned by the project pass.
-   initial-label ;; Symbol
-   initial-code-block-label) ;; Symbol
+   initial-label ;; Symbol ;; First label in program, as defined by module header.
+   initial-code-block-label) ;; Symbol ;; Label preceding first participant code block.
   constructor: :init!
   transparent: #t)
 
