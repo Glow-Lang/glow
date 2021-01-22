@@ -21,9 +21,7 @@
 (def test-runtime (make-Runtime
   role: 'Test
   agreement: test-agreement
-  program: #f
-  current-code-block-label: 'begin
-  current-label: 'begin0))
+  program: #f))
 
 (def (switch-participant-statement value)
   ['switch value
