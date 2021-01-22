@@ -20,46 +20,43 @@
   ../runtime/program
   ../runtime/ethereum-runtime)
 
-(def buyer-address alice)
-(def seller-address bob)
-(def digest (keccak256<-string "abcdefghijklmnopqrstuvwxyz012345"))
-
-;; Should `timeout` be the value of `(ethereum-timeout-in-blocks)`,
-;; or should it be the `timeoutInBlocks` field of the entry in `config/ethereum_networks.json`?
-(def timeout (ethereum-timeout-in-blocks))
-(def initial-timer-start (+ (eth_blockNumber) timeout))
-
-(def buy_sig.glow (source-path "examples/buy_sig.glow"))
-
-(def agreement
-  (.o
-    glow-version: (software-identifier)
-    interaction: "mukn/glow/examples/buy_sig#payForSignature"
-    participants: (.o Buyer: buyer-address Seller: seller-address)
-    parameters: (hash
-                  (digest0 (json<- Digest digest))
-                  (price (json<- Ether one-ether-in-wei)))
-    reference: (.o Buyer: "Purchase #42"
-                   Seller: "Sale #101")
-    options: (.o blockchain: "Private Ethereum Testnet" ;; the `name` field of an entry in `config/ethereum_networks.json`
-                 escrowAmount: (void) ;; not meaningful for buy_sig in particular
-                 timeoutInBlocks: timeout ; should be the `timeoutInBlocks` field of the same entry in `config/ethereum_networks.json`
-                 maxInitialBlock: initial-timer-start)
-    code-digest: (digest<-file buy_sig.glow)))
-
-(def compiler-output (run-passes buy_sig.glow pass: 'project show?: #f))
-
 (def buy-sig-integrationtest
   (test-suite "integration test for ethereum/buy-sig"
-    (DBG "Ensure participants funded")
-    (ensure-addresses-prefunded)
-    (DBG "DONE")
-    (test-case "buy sig parses"
-      (def program (parse-compiler-output compiler-output))
-
-    ;; TODO: run buyer and seller step in separate threads, using posted transactions to progress their state
-    (test-case "buy sig executes"
+    (test-case "buy sig runs successfully"
       (ignore-errors (delete-file (run-path "contract-handshake.json"))) ;; TODO: do it better
+
+      (DBG "Ensure participants funded")
+      (ensure-addresses-prefunded)
+
+      (def buyer-address alice)
+      (def seller-address bob)
+      (def document "abcdefghijklmnopqrstuvwxyz012345")
+      (def digest (keccak256<-string document))
+
+      (def timeout (ethereum-timeout-in-blocks))
+      (def initial-timer-start (+ (eth_blockNumber) timeout))
+
+      (def buy_sig.glow (source-path "examples/buy_sig.glow"))
+
+      (def agreement
+        (.o
+         glow-version: (software-identifier)
+         interaction: "mukn/glow/examples/buy_sig#payForSignature"
+         participants: (.o Buyer: buyer-address Seller: seller-address)
+         parameters: (hash
+                      (digest0 (json<- Digest digest))
+                      (price (json<- Ether one-ether-in-wei)))
+         reference: (.o Buyer: "Purchase #42"
+                        Seller: "Sale #101")
+         options: (.o blockchain: "Private Ethereum Testnet" ;; the `name` field of an entry in `config/ethereum_networks.json`
+                      escrowAmount: (void) ;; not meaningful for buy_sig in particular
+                      timeoutInBlocks: timeout ; should be the `timeoutInBlocks` field of the same entry in `config/ethereum_networks.json`
+                      maxInitialBlock: initial-timer-start)
+         code-digest: (digest<-file buy_sig.glow)))
+
+      (def compiler-output (run-passes buy_sig.glow pass: 'project show?: #f))
+
+      (def program (parse-compiler-output compiler-output))
 
       (displayln "\nEXECUTING BUYER THREAD ...")
       (def buyer-thread
@@ -93,4 +90,4 @@
       (def signature (hash-get environment 'signature))
       (display-poo-ln
           ["Signature extracted from contract logs: " Signature (json<- Signature signature)
-           "valid?: " (message-signature-valid? seller-address signature digest)])))))
+           "valid?: " (message-signature-valid? seller-address signature digest)]))))
