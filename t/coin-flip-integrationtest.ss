@@ -25,7 +25,7 @@
 
 ;; Should `timeout` be the value of `(ethereum-timeout-in-blocks)`,
 ;; or should it be the `timeoutInBlocks` field of the entry in `config/ethereum_networks.json`?
-(def timeout (ethereum-timeout-in-blocks))
+(def timeout (* (ethereum-timeout-in-blocks) 2))
 (def initial-timer-start (+ (eth_blockNumber) timeout))
 
 (def coin_flip.glow (source-path "examples/coinflip.glow"))
