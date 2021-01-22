@@ -1,7 +1,7 @@
 (export #t)
 
 (import
-  :gerbil/gambit/bytes :gerbil/gambit/threads
+  :gerbil/gambit/bits :gerbil/gambit/bytes :gerbil/gambit/threads
   :std/iter :std/misc/hash :std/sugar :std/misc/number :std/misc/list :std/sort :std/srfi/1
   :clan/base :clan/exception :clan/io :clan/json :clan/number :clan/path-config :clan/ports :clan/syntax
   :clan/poo/poo :clan/poo/io :clan/poo/debug :clan/debug
@@ -94,15 +94,13 @@
   (λ (self
       role: role
       agreement: agreement
-      current-code-block-label: current-code-block-label ;; TODO: grab the start label from the compilation output, instead of 'begin0
-      current-label: current-label ;; TODO: grab the start label from the compilation output, instead of 'begin
       io-context: (io-context io-context:special-file)
       program: program)
     (set! (@ self role) role)
     (set! (@ self agreement) agreement)
     ;; TODO: extract initial code block label from contract compiler output
-    (set! (@ self current-code-block-label) current-code-block-label)
-    (set! (@ self current-label) current-label)
+    (set! (@ self current-code-block-label) (@ program initial-code-block-label))
+    (set! (@ self current-label) (@ program initial-label))
 
     (set! (@ self contract-config) #f)
     (set! (@ self status) 'running) ;; (Enum running stopped completed aborted)
@@ -124,6 +122,7 @@
       (if {is-active-participant? self}
         {publish self}
         {receive self})
+      {reset (@ self message)}
 
       (match (code-block-exit {get-current-code-block self})
         (#f
@@ -156,7 +155,10 @@
   ;; TODO: `from` should be calculated using the deadline and not necessarily the previous tx,
   ;; since it may or not be setting the deadline
   (display-poo-ln role ": contract-config=" ContractConfig contract-config)
-  (def from (if (@ self timer-start) (@ self timer-start) (.@ contract-config creation-block)))
+  (def from
+    (if (@ self timer-start)
+      (+ (@ self timer-start) 1)
+      (.@ contract-config creation-block)))
   (displayln role ": watching from block " from)
   (def new-log-object {watch self (.@ contract-config contract-address) from})
   ;; TODO: handle the case when there is no log objects
@@ -228,8 +230,8 @@
           (def outbox (@ self message outbox))
           (def published-data
             (call-with-output-u8vector (λ (out)
-              (for ([type . value] outbox)
-                (marshal type value out)))))
+                                        (for ([type . value] outbox)
+                                          (marshal type value out)))))
           {deploy-contract self}
           (def contract-config (@ self contract-config))
           (def agreement (@ self agreement))
@@ -242,13 +244,11 @@
           ;; requires getting TransactionInfo using the TransactionReceipt.
           (displayln role ": publishing message ...")
           (def contract-address (.@ contract-config contract-address))
-          (def message (@ self message))
-          (def outbox (@ message outbox))
+          (def outbox (@ self message outbox))
           (def message-pretx {prepare-call-function-transaction self outbox contract-address})
           (def new-tx-receipt (post-transaction message-pretx))
           (display-poo-ln role ": Tx Receipt: " TransactionReceipt new-tx-receipt)
-          (set! (@ self timer-start) (.@ new-tx-receipt blockNumber))
-          {reset message})))))
+          (set! (@ self timer-start) (.@ new-tx-receipt blockNumber)))))))
 
 ;; Sexp <- State
 (def (sexp<-state state) (map (match <> ([t . v] (sexp<- t v))) state))
@@ -359,7 +359,7 @@
               (@ self environment) expression
               (cut error "variable missing from execution environment" expression))
         ([type . value]
-          value)
+         value)
         (value
           value)))
      ((boolean? expression) expression)
@@ -399,56 +399,56 @@
         ;; Since the contract has already been separated into transaction boundaries,
         ;; the participant doesn't need to do anything here, since the active participant
         ;; is already known.
-        (void))
+       (void))
 
       (['add-to-deposit amount-variable]
-        (let
-          ((this-participant {get-active-participant self})
-           (amount {reduce-expression self amount-variable}))
-          {add-to-deposit (@ self message) this-participant amount}))
+       (let
+         ((this-participant {get-active-participant self})
+          (amount {reduce-expression self amount-variable}))
+         {add-to-deposit (@ self message) this-participant amount}))
 
       (['expect-deposited amount-variable]
-        (let
-          ((this-participant {get-active-participant self})
-           (amount {reduce-expression self amount-variable}))
-          {expect-deposited (@ self message) this-participant amount}))
+       (let
+         ((this-participant {get-active-participant self})
+          (amount {reduce-expression self amount-variable}))
+         {expect-deposited (@ self message) this-participant amount}))
 
       (['participant:withdraw address-variable price-variable]
-        (let
-          ((address {reduce-expression self address-variable})
-           (price {reduce-expression self price-variable}))
-          {add-to-withdraw (@ self message) address price}))
+       (let
+         ((address {reduce-expression self address-variable})
+          (price {reduce-expression self price-variable}))
+         {add-to-withdraw (@ self message) address price}))
 
       (['add-to-publish ['quote publish-name] variable-name]
-        (let
-          ((publish-value {reduce-expression self variable-name})
-           (publish-type {lookup-type (@ self program) variable-name}))
-          {add-to-published (@ self message) publish-name publish-type publish-value}))
+       (let
+         ((publish-value {reduce-expression self variable-name})
+          (publish-type {lookup-type (@ self program) variable-name}))
+         {add-to-published (@ self message) publish-name publish-type publish-value}))
 
       (['def variable-name expression]
-        (let
-          ((variable-value {interpret-participant-expression self expression}))
-          {add-to-environment self variable-name variable-value}))
+       (let
+         ((variable-value {interpret-participant-expression self expression}))
+         {add-to-environment self variable-name variable-value}))
 
       (['require! variable-name]
-        (match {reduce-expression self variable-name}
-          (#t (void))
+       (match {reduce-expression self variable-name}
+         (#t (void))
           ;; TODO: include debugging information when something fails!
-          (#f
-           (error "Assertion failed"))
-          (else
-           (error "Assertion failed, variable is not a Boolean" variable-name))))
+         (#f
+          (error "Assertion failed"))
+         (n
+          (error "Assertion failed, " variable-name " is not a Boolean."))))
 
       (['return ['@tuple]]
-        (void))
+       (void))
 
       (['@label name]
-        (set! (@ self current-label) name))
+       (set! (@ self current-label) name))
 
       (['switch variable-name cases ...]
-        (let*
-          ((variable-value {reduce-expression self variable-name})
-           (matching-case (find (λ (case) (equal? {reduce-expression self (car case)} variable-value)) cases)))
+       (let*
+         ((variable-value {reduce-expression self variable-name})
+          (matching-case (find (λ (case) (equal? {reduce-expression self (car case)} variable-value)) cases)))
         (for (case-statement (cdr matching-case))
           {interpret-participant-statement self case-statement}))))))
 
@@ -456,75 +456,78 @@
   (λ (self expression)
     (match expression
       (['expect-published ['quote publish-name]]
-        (let (publish-type {lookup-type (@ self program) publish-name})
-          {expect-published (@ self message) publish-name publish-type}))
+       (let (publish-type {lookup-type (@ self program) publish-name})
+         {expect-published (@ self message) publish-name publish-type}))
       (['@app 'isValidSignature address-variable digest-variable signature-variable]
-        (let
-          ((address {reduce-expression self address-variable})
-            (digest {reduce-expression self digest-variable})
-            (signature {reduce-expression self signature-variable}))
-          (isValidSignature address digest signature)))
+       (let
+         ((address {reduce-expression self address-variable})
+          (digest {reduce-expression self digest-variable})
+          (signature {reduce-expression self signature-variable}))
+         (isValidSignature address digest signature)))
       (['@app '< a b]
-        (let
-          ((av {reduce-expression self a})
-            (bv {reduce-expression self b}))
-          (< av bv)))
+       (let
+         ((av {reduce-expression self a})
+          (bv {reduce-expression self b}))
+         (< av bv)))
       (['@app '+ a b]
-        (let
-          ((av {reduce-expression self a})
-            (bv {reduce-expression self b}))
-          (+ av bv)))
+       (let
+         ((av {reduce-expression self a})
+          (bv {reduce-expression self b}))
+         (+ av bv)))
       (['@app bitwise-xor a b]
-        (let
-          ((av {reduce-expression self a})
-            (bv {reduce-expression self b}))
-          (+ av bv)))
+       (let
+         ((av {reduce-expression self a})
+          (bv {reduce-expression self b}))
+         (bitwise-and av bv)))
+      (['@app bitwise-and a b]
+       (let
+         ((av {reduce-expression self a})
+          (bv {reduce-expression self b}))
+         (bitwise-and av bv)))
       (['@app 'randomUInt256]
-        (randomUInt256))
+       (randomUInt256))
       (['@tuple . es]
-        (list->vector
+       (list->vector
         (for/collect ((e es))
           {reduce-expression self e})))
       (['digest . es]
-        (digest
+       (digest
         (for/collect ((e es))
           (cons {lookup-type (@ self program) e}
                 {reduce-expression self e}))))
       (['sign digest-variable]
-        (let ((this-participant {get-active-participant self})
-              (digest {reduce-expression self digest-variable}))
-          (make-message-signature (secret-key<-address this-participant) digest)))
+       (let ((this-participant {get-active-participant self})
+             (digest {reduce-expression self digest-variable}))
+         (make-message-signature (secret-key<-address this-participant) digest)))
       (['input 'Nat tag]
-        (let ((tagv {reduce-expression self tag}))
-          (input UInt256 tagv)))
+       (let ((tagv {reduce-expression self tag}))
+         (input UInt256 tagv)))
+      (['== a b]
+        (let ((av {reduce-expression self a})
+              (bv {reduce-expression self b}))
+          (equal? av bv)))
       (else
         {reduce-expression self expression}))))
 
 ;; : Frame <- Runtime Block (Table Offset <- Symbol) Symbol
 (defmethod {create-frame-variables Runtime}
   (λ (self timer-start contract-runtime-labels code-block-label code-block-participant)
-    (DBG c-f-v: code-block-label)
     (def checkpoint-location
       (hash-get contract-runtime-labels {make-checkpoint-label self code-block-label}))
     (def active-participant-offset
       {lookup-variable-offset self code-block-label code-block-participant})
     (def agreement (@ self agreement))
-    (def participants (.@ agreement participants))
-    ;; TODO better way to get the difference between two lists. Use sets instead?
-    (def live-variables
-      (lset-difference equal? {lookup-live-variables (@ self program) code-block-label} (.all-slots participants)))
-    (DBG live-variables: live-variables)
+    (def live-variables {lookup-live-variables (@ self program) code-block-label})
     ;; TODO: ensure keys are sorted in both hash-values
     [[UInt16 . checkpoint-location]
-     [Block . timer-start]
-     ;; [UInt16 . active-participant-offset]
-     ;; TODO: designate participant addresses as global variables that are stored outside of frames
-     (map (λ (slot-name) (cons Address (.ref participants slot-name))) (.all-slots-sorted participants))...
-     (map
+      [Block . timer-start]
+      ;; [UInt16 . active-participant-offset]
+      ;; TODO: designate participant addresses as global variables that are stored outside of frames
+      (map
         (λ (variable-name)
           (def variable-type {lookup-type (@ self program) variable-name})
           (def variable-value (hash-get (@ self environment) variable-name))
-          (cons variable-type variable-value))
+          [variable-type . variable-value])
         (sort live-variables symbol<?))...]))
 
 ;; Block <- Frame
@@ -545,14 +548,15 @@
       (def consensus-code {generate-consensus-code self})
       (assemble
         (&begin
-        (&simple-contract-prelude)
-        &define-simple-logging
-        (&define-check-participant-or-timeout)
+         (&simple-contract-prelude)
+         &define-tail-call
+         &define-simple-logging
+        (&define-check-participant-or-timeout debug: #f)
         ;; NB: you can use #t below to debug with remix.ethereum.org. Do NOT commit that!
         ;; TODO: maybe we should have some more formal debugging mode parameter?
         (&define-end-contract debug: #f)
-        consensus-code
-        [&label 'brk-start@ (unbox (brk-start))])))))
+         consensus-code
+         [&label 'brk-start@ (unbox (brk-start))])))))
 
 ;; : Bytes (Table Offset <- Symbol) <- Runtime
 (defmethod {make-checkpoint-label Runtime}
@@ -566,13 +570,7 @@
     ;; Initial offset computed by global registers, see :mukn/ethereum/contract-runtime
     (def start params-start@)
     (def agreement (@ self agreement))
-    (def participants (.@ agreement participants))
-    (for-each (λ (role)
-                 (let (parameter-length (param-length Address))
-                   (hash-put! frame-variables role (post-increment! start parameter-length))))
-              (.all-slots-sorted participants))
-    (def live-variables
-      (lset-difference equal? {lookup-live-variables (@ self program) code-block-label} (.all-slots participants)))
+    (def live-variables {lookup-live-variables (@ self program) code-block-label})
     (for-each
       (λ (live-variable)
         (let* ((type {lookup-type (@ self program) live-variable})
@@ -580,7 +578,8 @@
           (hash-put! frame-variables live-variable (post-increment! start parameter-length))))
       (sort live-variables symbol<?))
     (hash-put! (@ self variable-offsets) code-block-label frame-variables)
-    (set! (@ self params-end) start)))
+    (when (or (not (@ self params-end)) (> start (@ self params-end)))
+      (set! (@ self params-end) start))))
 
 ;; Offset <- Runtime Symbol
 (defmethod {lookup-variable-offset Runtime}
@@ -662,11 +661,44 @@
     (def end-code-block-directive
       (if (equal? code-block-label {get-last-code-block-label (@ self program)})
         &end-contract!
-        (&begin
-          &start-timer!
-          ;; TODO: Store call frame in storage before committing. See targets defined in contract-runtime/&define-tail-call
-          STOP)))
+        (setup-tail-call self code-block-label code-block)))
     (snoc end-code-block-directive code-block-directives)))
+
+;; Directive <- Runtime Symbol CodeBlock
+(def (setup-tail-call self code-block-label code-block)
+  (let* ((participants (.@ (@ self agreement) participants))
+         (next-code-block-label (code-block-exit code-block))
+         (next-code-block-live-variables (sort {lookup-live-variables (@ self program) next-code-block-label} symbol<?))
+         (next-code-block-frame-size (+ (param-length UInt16) (param-length Block)))) ;; 2 for program counter, 2 for timer start,
+    (&begin
+      (&begin*
+        (map
+          (λ (lv)
+            ;; TODO: Make sure this works for non-immediate variables.
+            (def variable-size (param-length {lookup-type (@ self program) lv}))
+            (&mloadat
+              {lookup-variable-offset self code-block-label lv}
+              variable-size))
+          (reverse next-code-block-live-variables)))
+      ;; TODO: If other guy, put NUMBER, otherwise, reuse current timer-start.
+      NUMBER
+      ;; TODO: Define only once for every callee.
+      ;; [&jumpdest (symbolify 'tail-call-into- next-code-block-label)]
+      {make-checkpoint-label self next-code-block-label} pc-set!
+      timer-start-set!
+      (&begin*
+        (map
+          (λ (lv)
+            ;; TODO: Make sure this works for non-immediate variables.
+            (def variable-size (param-length {lookup-type (@ self program) lv}))
+            (set! next-code-block-frame-size (+ next-code-block-frame-size variable-size))
+            (&mstoreat
+              {lookup-variable-offset self next-code-block-label lv}
+              variable-size))
+          next-code-block-live-variables))
+      next-code-block-frame-size
+      'tail-call JUMP)))
+
 
 ;; ASSUMING a two-participant contract, find the other participant for use in timeouts.
 ;; Symbol <- Runtime Symbol
@@ -705,18 +737,18 @@
         &withdraw!])
 
       (['return _]
-        [])
+       [])
 
       (['@label _]
-        [])
+       [])
 
       (['switch value cases ...]
-        (let*
-          ((comparison-value {trivial-expression self code-block-label value})
-           (interpreted-cases (map (λ (case)
-             (let (interpreted-statements (map (λ (case-statement)
-                    {interpret-consensus-statement self code-block-label case-statement}) (cdr case)))
-              [(car case) (flatten1 interpreted-statements)])) cases)))
+       (let*
+         ((comparison-value {trivial-expression self code-block-label value})
+          (interpreted-cases (map (λ (case)
+                                   (let (interpreted-statements (map (λ (case-statement)
+                                                                      {interpret-consensus-statement self code-block-label case-statement}) (cdr case)))
+                                    [(car case) (flatten1 interpreted-statements)])) cases)))
         [(&switch comparison-value interpreted-cases)]))
 
       (else
@@ -733,34 +765,36 @@
     (def (binary-operator op a b)
       [{trivial-expression self code-block-label b}
        {trivial-expression self code-block-label a}
-       op])
+       op
+       (&mstoreat {lookup-variable-offset self code-block-label variable-name} len)])
     (match expression
       (['expect-published published-variable-name]
-        [len {lookup-variable-offset self code-block-label variable-name} &read-published-data-to-mem])
+       [len {lookup-variable-offset self code-block-label variable-name} &read-published-data-to-mem])
       (['@app 'isValidSignature participant digest signature]
-        [{load-immediate-variable self code-block-label participant Address}
-          {load-immediate-variable self code-block-label digest Digest}
+       [{load-immediate-variable self code-block-label participant Address}
+        {load-immediate-variable self code-block-label digest Digest}
           ;; signatures are passed by reference, not by value
-          {lookup-variable-offset self code-block-label signature}
-          &isValidSignature
-          (&mstoreat {lookup-variable-offset self code-block-label variable-name} 1)])
+        {lookup-variable-offset self code-block-label signature}
+        &isValidSignature
+         (&mstoreat {lookup-variable-offset self code-block-label variable-name} 1)])
       (['digest . exprs]
-        [(&digest<-tvps (map (cut typed-directive<-trivial-expr self code-block-label <>) exprs))])
+       [(&digest<-tvps (map (cut typed-directive<-trivial-expr self code-block-label <>) exprs))
+        (&mstoreat {lookup-variable-offset self code-block-label variable-name} len)])
       (['== a b]
-        (binary-operator EQ a b))
+       (binary-operator EQ a b))
       (['@app '< a b]
-        (binary-operator LT a b))
+       (binary-operator LT a b))
       (['@app '> a b]
-        (binary-operator GT a b))
+       (binary-operator GT a b))
       (['@app '+ a b]
-        (binary-operator ADD a b))
+       (binary-operator ADD a b))
       (['@app '- a b]
-        (binary-operator SUB a b))
+       (binary-operator SUB a b))
       (['@app '* a b]
-        (binary-operator MUL a b))
+       (binary-operator MUL a b))
       (['@app '/ a b]
-        (binary-operator DIV a b))
+       (binary-operator DIV a b))
       (['@app 'bitwise-xor a b]
-        (binary-operator XOR a b))
+       (binary-operator XOR a b))
       (['@app 'bitwise-and a b]
-        (binary-operator AND a b)))))
+       (binary-operator AND a b)))))

@@ -2,7 +2,7 @@
 
 (import
   :gerbil/gambit/os :gerbil/gambit/ports :gerbil/gambit/threads
-  :std/format :std/srfi/1 :std/test :std/sugar :std/iter :std/text/json :std/misc/ports
+  :std/format :std/srfi/1 :std/test :std/sugar :std/iter :std/text/json :std/misc/ports :std/misc/hash
   :clan/base :clan/concurrency :clan/debug :clan/decimal :clan/exception
   :clan/io :clan/json :clan/path-config :clan/ports
   :clan/poo/poo :clan/poo/io :clan/poo/debug
@@ -23,14 +23,13 @@
 (def a-address alice)
 (def b-address bob)
 
-;; Should `timeout` be the value of `(ethereum-timeout-in-blocks)`,
-;; or should it be the `timeoutInBlocks` field of the entry in `config/ethereum_networks.json`?
-(def timeout (ethereum-timeout-in-blocks))
-(def initial-timer-start (+ (eth_blockNumber) timeout))
-
 (def coin_flip.glow (source-path "examples/coinflip.glow"))
 
-(def agreement
+(def (make-agreement)
+  ;; Should `timeout` be the value of `(ethereum-timeout-in-blocks)`,
+  ;; or should it be the `timeoutInBlocks` field of the entry in `config/ethereum_networks.json`?
+  (def timeout (ethereum-timeout-in-blocks))
+  (def initial-timer-start (+ (eth_blockNumber) timeout))
   (.o
     glow-version: (software-identifier)
     interaction: "mukn/glow/examples/coinflip#coinFlip"
@@ -56,6 +55,7 @@
 
     (test-case "coin flip executes"
       (ignore-errors (delete-file (run-path "contract-handshake.json"))) ;; TODO: do it better
+      (def agreement (make-agreement))
 
       (displayln "\nEXECUTING A THREAD ...")
       (def a-thread
@@ -64,11 +64,9 @@
            (def a-runtime
              (make-Runtime role: 'A
                            agreement: agreement
-                           current-code-block-label: 'begin0 ;; TODO: grab the start label from the compilation output, instead of 'begin0
-                           current-label: 'begin ;; TODO: grab the start label from the compilation output, instead of 'begins
                            program: program))
            {execute a-runtime}
-           (displayln "a finished")
+           (displayln "A finished")
            (@ a-runtime environment))))
 
       (displayln "\nEXECUTING B THREAD ...")
@@ -78,11 +76,12 @@
            (def b-runtime
              (make-Runtime role: 'B
                            agreement: agreement
-                           current-code-block-label: 'begin0 ;; TODO: grab the start label from the compilation output, instead of 'begin0
-                           current-label: 'begin ;; TODO: grab the start label from the compilation output, instead of 'begins
                            program: program))
            {execute b-runtime}
-           (displayln "b finished"))))
-      (def environment (thread-join! b-thread))
-      (displayln (hash-keys environment))
-      (check-equal? #t #t))))
+           (displayln "B finished")
+           (@ b-runtime environment))))
+      (def a-environment (thread-join! a-thread))
+      (def b-environment (thread-join! b-thread))
+      (check-equal?
+        (hash->list/sort a-environment symbol<?)
+        (hash->list/sort b-environment symbol<?)))))

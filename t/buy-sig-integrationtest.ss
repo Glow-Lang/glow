@@ -65,8 +65,6 @@
            (def buyer-runtime
              (make-Runtime role: 'Buyer
                            agreement: agreement
-                           current-code-block-label: 'begin0 ;; TODO: grab the start label from the compilation output, instead of 'begin0
-                           current-label: 'begin ;; TODO: grab the start label from the compilation output, instead of 'begins
                            program: program))
            {execute buyer-runtime}
            (displayln "buyer finished")
@@ -79,8 +77,6 @@
            (def seller-runtime
              (make-Runtime role: 'Seller
                            agreement: agreement
-                           current-code-block-label: 'begin0 ;; TODO: grab the start label from the compilation output, instead of 'begin0
-                           current-label: 'begin ;; TODO: grab the start label from the compilation output, instead of 'begins
                            program: program))
            {execute seller-runtime}
            (displayln "seller finished"))))
