@@ -16,7 +16,9 @@ case "${1-}" in
     *) swank=() ;;
 esac
 if [ $# = 0 ] ; then
-    interaction=("$GERBIL_HOME/lib/init.ss" -)
+    #gerbil_home=${GERBIL_HOME:-$(gxi -e '(display __gx#default-gerbil-home)')}
+    #interaction=("$gerbil_home/lib/init.ss" -)
+    interaction=(-e '(load (path-expand "lib/init.ss" (getenv "GERBIL_HOME" __gx#default-gerbil-home)))' -)
 fi
 command=(
     gxi

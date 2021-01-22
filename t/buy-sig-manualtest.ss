@@ -1,7 +1,7 @@
 (export #t)
 
 (import
-  :std/sugar
+  :std/sugar :std/test
   :clan/base :clan/files :clan/json :clan/path-config :clan/shell :clan/versioning
   :clan/poo/poo :clan/poo/io
   :clan/crypto/keccak
@@ -18,45 +18,62 @@
 ;; TODO: start the off-chain interaction with a one-sided proposal, and
 ;; use libp2p to do the off-chain communication
 
-(def string-to-sign "abcdefghijklmnopqrstuvwxyz012345")
+(def buy-sig-manualtest
+  (test-suite "integration test for ethereum/buy-sig"
+    (test-case "buy sig runs successfully"
 
-(def block (eth_blockNumber))
+      (def document "abcdefghijklmnopqrstuvwxyz012345")
+      (def digest (keccak256<-string document))
+      (def block (eth_blockNumber))
+      (def agreement
+        (.o
+         ;; Filled in "manually" by the DApp from user input
+         interaction: "mukn/glow/examples/buy_sig#payForSignature"
+         participants: (.o Buyer: alice Seller: bob)
+         parameters: (hash
+                      (digest0 (json<- Digest digest))
+                      (price (json<- Ether one-ether-in-wei)))
 
-(def agreement
-  (.o
-    glow-version: (software-identifier)
-    interaction: "mukn/glow/examples/buy_sig#payForSignature"
-    participants: (.o Buyer: alice Seller: bob)
-    parameters: (hash
-                  (digest0 (json<- Digest (keccak256<-string string-to-sign)))
-                  (price (json<- Ether one-ether-in-wei)))
-    reference: (.o Buyer: "Purchase #42"
-                   Seller: "Sale #101")
-    options: (.o blockchain: "Private Ethereum Testnet"
-                 escrowAmount: (void)
-                 timeoutInBlocks: (* 10 (ethereum-timeout-in-blocks))
-                 maxInitialBlock: (+ block timeoutInBlocks))
-    code-digest: (digest<-file (source-path "examples/buy_sig.glow"))))
+         ;; Filled in automatically by Glow
+         glow-version: (software-identifier)
+         code-digest: (digest<-file (source-path "examples/buy_sig.glow"))
 
-(def agreement-path (run-path "t/buy-sig-manualtest-agreement.json"))
-(def agreement-string (json-string<- InteractionAgreement agreement))
+         ;; Filled in automatically by the DApp infrastructure
+         reference: (.o Buyer: "Purchase #42"
+                        Seller: "Sale #101")
 
-(create-directory* (run-path "t"))
+         ;; Filled in automatically by the DApp from its blockchain configuration
+         options: (.o blockchain: "Private Ethereum Testnet"
+                      escrowAmount: (void)
+                      timeoutInBlocks: (* 10 (ethereum-timeout-in-blocks))
+                      maxInitialBlock: (+ block timeoutInBlocks))))
 
-(clobber-file agreement-path (cut write-json-ln (json<- InteractionAgreement agreement) <>))
+      (def agreement-path (run-path "t/buy-sig-manualtest-agreement.json"))
+      (def agreement-string (json-string<- InteractionAgreement agreement))
 
-(ensure-addresses-prefunded)
+      (create-directory* (run-path "t"))
 
-;; TODO: if on another machine, it must connect to the same ethereum network(!) Give instructions for that!
-(displayln
- "Here is an agreement, also saved to file " agreement-path "\n"
- agreement-string "\n\n"
- "Please start a Seller on another terminal or machine (with agreement copy) with:\n"
- "  ./glow start-interaction --database run/testdb-bob Seller " agreement-path "\n"
- "or\n"
- "  ./glow start-interaction --database run/testdb-bob Seller " (escape-shell-token agreement-string) "\n"
- "then press ENTER to start the Buyer in this terminal.")
+      (clobber-file agreement-path (cut write-json-ln (json<- InteractionAgreement agreement) <>))
 
-(read-line)
+      (ensure-addresses-prefunded)
 
-(run 'Buyer agreement)
+      ;; TODO: if on another machine, it must connect to the same ethereum network(!) Give instructions for that!
+      (displayln
+       "Here is an agreement, also saved to file " agreement-path "\n"
+       agreement-string "\n\n"
+       "Please start a Seller on another terminal or machine (with agreement copy) with:\n"
+       "  ./glow start-interaction --database run/testdb-bob Seller " agreement-path "\n"
+       "or\n"
+       "  ./glow start-interaction --database run/testdb-bob Seller " (escape-shell-token agreement-string) "\n"
+       "then press ENTER to start the Buyer in this terminal.")
+
+      (read-line)
+
+      ;; Run the Buyer program, get the final environment object from it.
+      (def environment (run 'Buyer agreement))
+
+      (def signature (hash-get environment 'signature))
+      (display-poo-ln
+       ["Signature extracted from DApp execution: " Signature (json<- Signature signature)
+        "valid?: " (message-signature-valid? bob signature digest)]))))
+

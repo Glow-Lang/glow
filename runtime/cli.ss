@@ -1,8 +1,8 @@
 (export #t)
 
 (import
-  :std/getopt :std/sugar
-  :clan/json :clan/multicall :clan/path-config :clan/syntax
+  :std/getopt :std/misc/hash :std/sugar
+  :clan/base :clan/json :clan/multicall :clan/path-config :clan/syntax
   :clan/poo/debug
   :clan/persist/db
   :mukn/ethereum/cli :mukn/ethereum/types :mukn/ethereum/json-rpc
@@ -26,6 +26,7 @@
   "Start an interaction based on an agreement"
   (def gopt
     (getopt
+     ;;(flag 'test-identities "--test-identities" default: #f help: "name of ethereum network")
      (option 'ethereum-network "-E" "--ethereum-network" default: "pet"
              help: "name of ethereum network")
      (option 'database "-D" "--database" default: (run-path "testdb")
@@ -47,4 +48,9 @@
        InteractionAgreement agreement
        String {ethereum-network}
        String {database})
-  (run role agreement))
+  (def environment (run role agreement))
+  (displayln "Final environment:")
+  ;; TODO: get run to include type t and pre-alpha-converted labels,
+  ;; and output the entire thing as JSON omitting shadowed variables (rather than having conflicts)
+  (for-each (match <> ([k . v] (display-poo-ln k "=> " v)))
+            (hash->list/sort environment symbol<?)))

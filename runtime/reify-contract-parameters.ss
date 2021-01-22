@@ -15,10 +15,12 @@
   (lambda () (void))
   send-handshake:
   (lambda (handshake)
-    (displayln "send this handshake to the other participants:")
-    (pretty-print-json (json<- AgreementHandshake handshake)))
+    (displayln "\nPLEASE SEND THE HANDSHAKE BELOW TO THE OTHER PARTICIPANTS: ---v")
+    (write-json-ln (json<- AgreementHandshake handshake))
+    (displayln "^--- PLEASE SEND THE HANDSHAKE ABOVE TO THE OTHER PARTICIPANTS\n"))
   receive-handshake:
   (lambda ()
+    (displayln "\nPLEASE PASTE BELOW THE HANDSHAKE SENT BY THE OTHER PARTICIPANT:")
     (def handshake-json (json<-port (current-input-port)))
     (<-json AgreementHandshake handshake-json)))
 
@@ -44,6 +46,7 @@
   {execute runtime}
   (printf "~a finished\n" role)
   ;; TODO: change alpha-converted names to surface names for printing to the user
+  ;; TODO: and return type-value pairs
   (@ runtime environment))
 
 ;; --------------------------------------------------------
