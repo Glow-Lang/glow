@@ -46,8 +46,7 @@ It has a static type system based on MLsub, and static safety analyses
 that are discharged by a theorem solver. (TODO: complete the static analyses.)
 
 If you are a seasoned developer, you can check our less-detailed and straight-to-the-point grammar,
-our
-@hyperlink["https://gitlab.com/mukn/glow/-/blob/master/docs/internal/syntax/glow-surface.scrbl"]{surface grammar}.
+our @secref["Glow_Language_Grammar"].
 Otherwise the next chapters are designed to make you grasp it quickly.
 
 @section[#:tag "hash-lang"]{Fundamentals: Hello world!}
@@ -141,80 +140,7 @@ notably for the keywords of the language or a few languages that might be proble
 There are terms that can't be used to name objects,
 as they are already used as Keywords by either Glow or other languages that interact with it:
 
-@itemize[
- @item{@racket[abstract]}
- @item{@racket[arguments]}
- @item{@racket[assert]}
- @item{@racket[boolean]}
- @item{@racket[break]}
- @item{@racket[byte]}
- @item{@racket[case]}
- @item{@racket[catch]}
- @item{@racket[class]}
- @item{@racket[char]}
- @item{@racket[const]}
- @item{@racket[continue]}
- @item{@racket[data]}
- @item{@racket[debugger]}
- @item{@racket[default]}
- @item{@racket[delete]}
- @item{@racket[deposit]}
- @item{@racket[do]}
- @item{@racket[double]}
- @item{@racket[else]}
- @item{@racket[enum]}
- @item{@racket[eval]}
- @item{@racket[export]}
- @item{@racket[extends]}
- @item{@racket[false]}
- @item{@racket[final]}
- @item{@racket[finally]}
- @item{@racket[float]}
- @item{@racket[for]}
- @item{@racket[function]}
- @item{@racket[goto]}
- @item{@racket[if]}
- @item{@racket[implements]}
- @item{@racket[import]}
- @item{@racket[in]}
- @item{@racket[instanceof]}
- @item{@racket[int]}
- @item{@racket[interface]}
- @item{@racket[let]}
- @item{@racket[long]}
- @item{@racket[native]}
- @item{@racket[new]}
- @item{@racket[null]}
- @item{@racket[package]}
- @item{@racket[private]}
- @item{@racket[protected]}
- @item{@racket[public]}
- @item{@racket[rec]}
- @item{@racket[require]}
- @item{@racket[return]}
- @item{@racket[short]}
- @item{@racket[static]}
- @item{@racket[sum]}
- @item{@racket[super]}
- @item{@racket[switch]}
- @item{@racket[synchronized]}
- @item{@racket[this]}
- @item{@racket[throw]}
- @item{@racket[throws]}
- @item{@racket[transient]}
- @item{@racket[true]}
- @item{@racket[try]}
- @item{@racket[type]}
- @item{@racket[typeof]}
- @item{@racket[var]}
- @item{@racket[verify]}
- @item{@racket[void]}
- @item{@racket[volatile]}
- @item{@racket[while]}
- @item{@racket[with]}
- @item{@racket[yield]}
- @item{@racket[withdraw]}
-]
+@racket[abstract] @racket[arguments] @racket[assert] @racket[boolean] @racket[break] @racket[byte] @racket[case] @racket[catch] @racket[class] @racket[char] @racket[const] @racket[continue] @racket[data] @racket[debugger] @racket[default] @racket[delete] @racket[deposit] @racket[do] @racket[double] @racket[else] @racket[enum] @racket[eval] @racket[export] @racket[extends] @racket[false] @racket[final] @racket[finally] @racket[float] @racket[for] @racket[function] @racket[goto] @racket[if] @racket[implements] @racket[import] @racket[in] @racket[instanceof] @racket[int] @racket[interface] @racket[let] @racket[long] @racket[native] @racket[new] @racket[null] @racket[package] @racket[private] @racket[protected] @racket[public] @racket[rec] @racket[require] @racket[return] @racket[short] @racket[static] @racket[sum] @racket[super] @racket[switch] @racket[synchronized] @racket[this] @racket[throw] @racket[throws] @racket[transient] @racket[true] @racket[try] @racket[type] @racket[typeof] @racket[var] @racket[verify] @racket[void] @racket[volatile] @racket[while] @racket[with] @racket[yield] @racket[withdraw]
 
 Capitalization is conventionally used for types, constructors and constants,
 while regular variables conventionally start with lower-case letter and are in "CamelCase".
@@ -238,7 +164,7 @@ output.
 
 Example:
 @glowstmblock|{
-let pythag = (a, b) => {
+let hypotenuse = (a, b) => {
     sqrt(sqr(a) + sqr(b))
 };
 }|
