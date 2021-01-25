@@ -86,7 +86,9 @@
    io-context ; : IOContext
    program ;; : Program ;; from program.ss
    variable-offsets ;; : (Table (Table Offset <- Symbol) <- Symbol)
-   params-end)
+   params-end ;; Nat?
+   contract-runtime-labels ;; Bytes (Table Offset <- Symbol)
+   contract-runtime-bytes) ;; Bytes
   constructor: :init!
   transparent: #t)
 
@@ -110,6 +112,8 @@
     (set! (@ self block-ctx) #f)
     (set! (@ self io-context) io-context)
     (set! (@ self program) program)
+
+    {initialize-contract-runtime self}
     {initialize-environment self}))
 
 ;; <- Runtime
@@ -222,15 +226,17 @@
     (def role (@ self role))
     (def contract-config (@ self contract-config))
     (set! (@ self block-ctx) (.call ActiveBlockCtx .make))
+    (when contract-config
+      {publish-frame-data self})
     (interpret-current-code-block self)
     (when (eq? (@ self status) 'running)
       (if (not contract-config)
         (let ()
           (displayln role ": deploying contract ...")
-          (def published-data (get-output-u8vector (.@ (@ self block-ctx) outbox)))
           {deploy-contract self}
           (def contract-config (@ self contract-config))
           (def agreement (@ self agreement))
+          (def published-data (get-output-u8vector (.@ (@ self block-ctx) outbox)))
           (def handshake (.new AgreementHandshake agreement contract-config published-data))
           (display-poo-ln role ": Handshake: " AgreementHandshake handshake)
           {send-contract-handshake self handshake})
@@ -240,8 +246,7 @@
           ;; requires getting TransactionInfo using the TransactionReceipt.
           (displayln role ": publishing message ...")
           (def contract-address (.@ contract-config contract-address))
-          (def published-data (get-output-u8vector (.@ (@ self block-ctx) outbox)))
-          (def message-pretx {prepare-call-function-transaction self published-data contract-address})
+          (def message-pretx {prepare-call-function-transaction self contract-address})
           (def new-tx-receipt (post-transaction message-pretx))
           (display-poo-ln role ": Tx Receipt: " TransactionReceipt new-tx-receipt)
           (set! (@ self timer-start) (.@ new-tx-receipt blockNumber)))))))
@@ -262,19 +267,16 @@
     (def code-block {get-current-code-block self})
     (def next (code-block-exit code-block))
     (def participant (code-block-participant code-block))
-    (defvalues (contract-runtime-bytes contract-runtime-labels)
-      {generate-consensus-runtime self})
     (def initial-state
       {create-frame-variables
         self
         (.@ (@ self agreement) options maxInitialBlock)
-        contract-runtime-labels
         next
         participant})
     (def initial-state-digest
       (digest-product-f initial-state))
     (def contract-bytes
-      (stateful-contract-init initial-state-digest contract-runtime-bytes))
+      (stateful-contract-init initial-state-digest (@ self contract-runtime-bytes)))
     (create-contract sender-address contract-bytes
       value: (.@ (@ self block-ctx) deposits))))
 
@@ -297,28 +299,28 @@
     (def io-context (@ self io-context))
     (.call io-context send-handshake handshake)))
 
-;; See gerbil-ethereum/contract-runtime.ss for spec.
-;; PreTransaction <- Runtime Message.Outbox Block Address
-(defmethod {prepare-call-function-transaction Runtime}
-  (λ (self published-data contract-address)
-    (def sender-address {get-active-participant self})
-    (defvalues (_ contract-runtime-labels)
-      {generate-consensus-runtime self})
+(defmethod {publish-frame-data Runtime}
+  (λ (self)
+    (def out (.@ (@ self block-ctx) outbox))
     (def frame-variables
       {create-frame-variables
         self
         (@ self timer-start)
-        contract-runtime-labels
         (@ self current-code-block-label)
         (@ self role)})
     (def frame-variable-bytes (marshal-product-f frame-variables))
     (def frame-length (bytes-length frame-variable-bytes))
-    (def message-bytes
-      (call-with-output-u8vector (λ (out)
-        (marshal UInt16 frame-length out)
-        (marshal-product-to frame-variables out)
-        (write-bytes published-data out)
-        (marshal UInt8 1 out))))
+    (marshal UInt16 frame-length out)
+    (marshal-product-to frame-variables out)))
+
+;; See gerbil-ethereum/contract-runtime.ss for spec.
+;; PreTransaction <- Runtime Message.Outbox Block Address
+(defmethod {prepare-call-function-transaction Runtime}
+  (λ (self contract-address)
+    (def out (.@ (@ self block-ctx) outbox))
+    (marshal UInt8 1 out)
+    (def message-bytes (get-output-u8vector out))
+    (def sender-address {get-active-participant self})
     (call-function sender-address contract-address message-bytes
       ;; default gas value should be (void), i.e. ask for an automatic estimate,
       ;; unless we want to force the TX to happen, e.g. so we can see the failure in Remix
@@ -331,6 +333,13 @@
     (def participant-interaction
       {get-interaction (@ self program) (@ self role)})
     (hash-get participant-interaction (@ self current-code-block-label))))
+
+(defmethod {initialize-contract-runtime Runtime}
+  (λ (self)
+    (defvalues (contract-runtime-bytes contract-runtime-labels)
+      {generate-consensus-runtime self})
+    (set! (@ self contract-runtime-labels) contract-runtime-labels)
+    (set! (@ self contract-runtime-bytes) contract-runtime-bytes)))
 
 ;; TODO: map alpha-converted names to names in original source when displaying to user
 ;;       using the alpha-back-table
@@ -510,9 +519,9 @@
 
 ;; : Frame <- Runtime Block (Table Offset <- Symbol) Symbol
 (defmethod {create-frame-variables Runtime}
-  (λ (self timer-start contract-runtime-labels code-block-label code-block-participant)
+  (λ (self timer-start code-block-label code-block-participant)
     (def checkpoint-location
-      (hash-get contract-runtime-labels {make-checkpoint-label self code-block-label}))
+      (hash-get (@ self contract-runtime-labels) {make-checkpoint-label self code-block-label}))
     (def active-participant-offset
       {lookup-variable-offset self code-block-label code-block-participant})
     (def agreement (@ self agreement))
