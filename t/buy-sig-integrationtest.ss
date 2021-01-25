@@ -32,6 +32,7 @@
       (def seller-address bob)
       (def document "abcdefghijklmnopqrstuvwxyz012345")
       (def digest (keccak256<-string document))
+      (def price one-ether-in-wei)
 
       (def timeout (ethereum-timeout-in-blocks))
       (def initial-timer-start (+ (eth_blockNumber) timeout))
@@ -45,7 +46,7 @@
          participants: (.o Buyer: buyer-address Seller: seller-address)
          parameters: (hash
                       (digest0 (json<- Digest digest))
-                      (price (json<- Ether one-ether-in-wei)))
+                      (price (json<- Ether price)))
          reference: (.o Buyer: "Purchase #42"
                         Seller: "Sale #101")
          options: (.o blockchain: "Private Ethereum Testnet" ;; the `name` field of an entry in `config/ethereum_networks.json`
@@ -57,6 +58,8 @@
       (def compiler-output (run-passes buy_sig.glow pass: 'project show?: #f))
 
       (def program (parse-compiler-output compiler-output))
+      (def buyer-balance-before (eth_getBalance alice 'latest))
+      (def seller-balance-before (eth_getBalance bob 'latest))
 
       (displayln "\nEXECUTING BUYER THREAD ...")
       (def buyer-thread
@@ -81,9 +84,25 @@
            {execute seller-runtime}
            (displayln "seller finished"))))
 
+
+      ;; Get the final environment object from the Buyer
       (def environment (thread-join! buyer-thread))
 
       (def signature (hash-get environment 'signature))
-      (display-poo-ln
-          ["Signature extracted from contract logs: " Signature (json<- Signature signature)
-           "valid?: " (message-signature-valid? seller-address signature digest)]))))
+      (def valid? (message-signature-valid? bob signature digest))
+      (def buyer-balance-after (eth_getBalance alice 'latest))
+      (def seller-balance-after (eth_getBalance bob 'latest))
+
+      (DDT "DApp completed"
+           Signature signature
+           Bool valid?
+           (.@ Ether .string<-) buyer-balance-before
+           (.@ Ether .string<-) seller-balance-before
+           (.@ Ether .string<-) buyer-balance-after
+           (.@ Ether .string<-) seller-balance-after)
+
+      ;; Check that the signature was valid and that the money transfer happened, modulo gas allowance
+      (def gas-allowance (wei<-ether .01))
+      (assert! valid?)
+      (assert! (<= 0 (- buyer-balance-before buyer-balance-after price) gas-allowance))
+      (assert! (<= 0 (- (+ seller-balance-before price) seller-balance-after) gas-allowance)))))

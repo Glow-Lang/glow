@@ -13,6 +13,7 @@
   ;; TODO: make sure there's a one-stop-shop to all bindings required for the runtime to work.
   :mukn/ethereum/signing :mukn/ethereum/assets
   :mukn/glow/compiler/syntax-context
+  :clan/debug :clan/poo/debug
   )
 
 ;; TODO: start the off-chain interaction with a one-sided proposal, and
@@ -24,6 +25,7 @@
 
       (def document "abcdefghijklmnopqrstuvwxyz012345")
       (def digest (keccak256<-string document))
+      (def price one-ether-in-wei)
       (def block (eth_blockNumber))
       (def agreement
         (.o
@@ -32,7 +34,7 @@
          participants: (.o Buyer: alice Seller: bob)
          parameters: (hash
                       (digest0 (json<- Digest digest))
-                      (price (json<- Ether one-ether-in-wei)))
+                      (price (json<- Ether price)))
 
          ;; Filled in automatically by Glow
          glow-version: (software-identifier)
@@ -57,6 +59,8 @@
 
       (ensure-addresses-prefunded)
 
+      (def seller-balance-before (eth_getBalance bob 'latest))
+
       ;; TODO: if on another machine, it must connect to the same ethereum network(!) Give instructions for that!
       (displayln
        "Here is an agreement, also saved to file " agreement-path "\n"
@@ -69,11 +73,27 @@
 
       (read-line)
 
+      (def buyer-balance-before (eth_getBalance alice 'latest))
+      (def seller-balance-before (eth_getBalance bob 'latest))
+
       ;; Run the Buyer program, get the final environment object from it.
       (def environment (run 'Buyer agreement))
 
       (def signature (hash-get environment 'signature))
-      (display-poo-ln
-       ["Signature extracted from DApp execution: " Signature (json<- Signature signature)
-        "valid?: " (message-signature-valid? bob signature digest)]))))
+      (def valid? (message-signature-valid? bob signature digest))
+      (def buyer-balance-after (eth_getBalance alice 'latest))
+      (def seller-balance-after (eth_getBalance bob 'latest))
 
+      (DDT "DApp completed"
+           Signature signature
+           Bool valid?
+           (.@ Ether .string<-) buyer-balance-before
+           (.@ Ether .string<-) seller-balance-before
+           (.@ Ether .string<-) buyer-balance-after
+           (.@ Ether .string<-) seller-balance-after)
+
+      ;; Check that the signature was valid and that the money transfer happened, modulo gas allowance
+      (def gas-allowance (wei<-ether .01))
+      (assert! valid?)
+      (assert! (<= 0 (- buyer-balance-before buyer-balance-after price) gas-allowance))
+      (assert! (<= 0 (- (+ seller-balance-before price) seller-balance-after) gas-allowance)))))
