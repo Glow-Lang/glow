@@ -29,8 +29,8 @@
   (.+
     (Record
       deposits: [Nat]
-      withdrawals: [(List Any)]
-      inbox: [Any])
+      withdrawals: [(List Any)] ;; Alist Nat <- Address
+      inbox: [Any]) ;; BytesInputPort
     {(:: @ BlockCtx)
     .make: (lambda (in-bytes) {deposits: 0
                                withdrawals: []
@@ -44,8 +44,8 @@
   (.+
     (Record
       deposits: [Nat]
-      withdrawals: [(List Any)]
-      outbox: [Any])
+      withdrawals: [(List Any)] ;; Alist Nat <- Address
+      outbox: [Any]) ;; BytesOutputPort
     {(:: @ BlockCtx)
     .make: (lambda () {deposits: 0
                        withdrawals: []
