@@ -48,7 +48,7 @@
 (define-type ActiveBlockCtx
   {(:: @ BlockCtx)
    .element?: $ActiveBlockCtx?
-   .make: (lambda (out) ($ActiveBlockCtx 0 [] (open-output-u8vector)))
+   .make: (lambda () ($ActiveBlockCtx 0 [] (open-output-u8vector)))
    .add-to-published: ;; <- @ Symbol t:Type t
    (λ (self _name type value)
      ;; for debugging, accumulate name and type in a parallel data structure?

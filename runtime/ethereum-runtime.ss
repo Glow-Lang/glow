@@ -222,17 +222,13 @@
   (λ (self)
     (def role (@ self role))
     (def contract-config (@ self contract-config))
-    (interpret-current-code-block self)
     (set! (@ self block-ctx) (.call ActiveBlockCtx .make))
+    (interpret-current-code-block self)
     (when (eq? (@ self status) 'running)
       (if (not contract-config)
         (let ()
           (displayln role ": deploying contract ...")
-          (def outbox (@ self block-ctx outbox))
-          (def published-data
-            (call-with-output-u8vector (λ (out)
-                                        (for ([type . value] outbox)
-                                          (marshal type value out)))))
+          (def published-data (get-output-u8vector ($ActiveBlockCtx-outbox (@ self block-ctx))))
           {deploy-contract self}
           (def contract-config (@ self contract-config))
           (def agreement (@ self agreement))
@@ -245,8 +241,8 @@
           ;; requires getting TransactionInfo using the TransactionReceipt.
           (displayln role ": publishing message ...")
           (def contract-address (.@ contract-config contract-address))
-          (def outbox (@ self block-ctx outbox))
-          (def message-pretx {prepare-call-function-transaction self outbox contract-address})
+          (def published-data (get-output-u8vector ($ActiveBlockCtx-outbox (@ self block-ctx))))
+          (def message-pretx {prepare-call-function-transaction self published-data contract-address})
           (def new-tx-receipt (post-transaction message-pretx))
           (display-poo-ln role ": Tx Receipt: " TransactionReceipt new-tx-receipt)
           (set! (@ self timer-start) (.@ new-tx-receipt blockNumber)))))))
@@ -300,7 +296,7 @@
 ;; See gerbil-ethereum/contract-runtime.ss for spec.
 ;; PreTransaction <- Runtime Message.Outbox Block Address
 (defmethod {prepare-call-function-transaction Runtime}
-  (λ (self outbox contract-address)
+  (λ (self published-data contract-address)
     (def sender-address {get-active-participant self})
     (defvalues (_ contract-runtime-labels)
       {generate-consensus-runtime self})
@@ -317,8 +313,7 @@
       (call-with-output-u8vector (λ (out)
         (marshal UInt16 frame-length out)
         (marshal-product-to frame-variables out)
-        (for ([type . value] outbox)
-          (marshal type value out))
+        (write-bytes published-data out)
         (marshal UInt8 1 out))))
     (call-function sender-address contract-address message-bytes
       ;; default gas value should be (void), i.e. ask for an automatic estimate,
@@ -406,13 +401,13 @@
        (let
          ((this-participant {get-active-participant self})
           (amount {reduce-expression self amount-variable}))
-         (.call BlockCtx .add-to-deposit (@ self block-ctx) amount)))
+         (.call BlockCtx .add-to-deposit (@ self block-ctx) this-participant amount)))
 
       (['expect-deposited amount-variable]
        (let
          ((this-participant {get-active-participant self})
           (amount {reduce-expression self amount-variable}))
-         (.call BlockCtx .add-to-deposit (@ self block-ctx) amount)))
+         (.call BlockCtx .add-to-deposit (@ self block-ctx) this-participant amount)))
 
       (['participant:withdraw address-variable price-variable]
        (let ((address {reduce-expression self address-variable})
