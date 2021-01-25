@@ -195,5 +195,5 @@
   (run-process/batch ["./scripts/ci.ss" "after-test"]))
 
 (set-default-entry-point! docker-all)
-;;(backtrace-on-abort? #f)
+(backtrace-on-abort? #f)
 (def main call-entry-point)
