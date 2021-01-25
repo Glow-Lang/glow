@@ -9,7 +9,7 @@
   :mukn/ethereum/hex :mukn/ethereum/ethereum :mukn/ethereum/network-config :mukn/ethereum/json-rpc
   :mukn/ethereum/transaction :mukn/ethereum/tx-tracker :mukn/ethereum/watch :mukn/ethereum/assets
   :mukn/ethereum/contract-runtime :mukn/ethereum/contract-config :mukn/ethereum/assembly :mukn/ethereum/types
-  ./program ./message
+  ./program ./block-ctx
   ../compiler/method-resolve/method-resolve
   ../compiler/project/runtime-2)
 
@@ -174,7 +174,6 @@
     (for ((statement (code-block-statements code-block)))
       {interpret-participant-statement self statement})))
 
-
 (def (run-passive-code-block/handshake self role)
   (nest
    (begin (displayln role ": Reading contract handshake ..."))
@@ -228,7 +227,7 @@
       (if (not contract-config)
         (let ()
           (displayln role ": deploying contract ...")
-          (def published-data (get-output-u8vector ($ActiveBlockCtx-outbox (@ self block-ctx))))
+          (def published-data (get-output-u8vector (.@ (@ self block-ctx) outbox)))
           {deploy-contract self}
           (def contract-config (@ self contract-config))
           (def agreement (@ self agreement))
@@ -241,7 +240,7 @@
           ;; requires getting TransactionInfo using the TransactionReceipt.
           (displayln role ": publishing message ...")
           (def contract-address (.@ contract-config contract-address))
-          (def published-data (get-output-u8vector ($ActiveBlockCtx-outbox (@ self block-ctx))))
+          (def published-data (get-output-u8vector (.@ (@ self block-ctx) outbox)))
           (def message-pretx {prepare-call-function-transaction self published-data contract-address})
           (def new-tx-receipt (post-transaction message-pretx))
           (display-poo-ln role ": Tx Receipt: " TransactionReceipt new-tx-receipt)
@@ -266,13 +265,18 @@
     (defvalues (contract-runtime-bytes contract-runtime-labels)
       {generate-consensus-runtime self})
     (def initial-state
-      {create-frame-variables self (.@ (@ self agreement) options maxInitialBlock) contract-runtime-labels next participant})
+      {create-frame-variables
+        self
+        (.@ (@ self agreement) options maxInitialBlock)
+        contract-runtime-labels
+        next
+        participant})
     (def initial-state-digest
       (digest-product-f initial-state))
     (def contract-bytes
       (stateful-contract-init initial-state-digest contract-runtime-bytes))
     (create-contract sender-address contract-bytes
-      value: ($BlockCtx-deposits (@ self block-ctx)))))
+      value: (.@ (@ self block-ctx) deposits))))
 
 ;; PreTransaction <- Runtime Block
 (defmethod {deploy-contract Runtime}
@@ -319,7 +323,7 @@
       ;; default gas value should be (void), i.e. ask for an automatic estimate,
       ;; unless we want to force the TX to happen, e.g. so we can see the failure in Remix
       gas: 1000000 ;; XXX ;;<=== DO NOT COMMIT THIS LINE UNCOMMENTED
-      value: ($BlockCtx-deposits (@ self block-ctx)))))
+      value: (.@ (@ self block-ctx) deposits))))
 
 ;; CodeBlock <- Runtime
 (defmethod {get-current-code-block Runtime}
