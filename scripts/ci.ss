@@ -5,7 +5,7 @@
 (import
   :gerbil/gambit/exceptions :gerbil/gambit/ports
   :std/format :std/getopt :std/misc/ports :std/misc/process :std/srfi/1 :std/sugar
-  :clan/base :clan/exit :clan/debug :clan/files :clan/json
+  :clan/base :clan/exit :clan/debug :clan/files :clan/git-fu :clan/json
   :clan/multicall :clan/path :clan/path-config :clan/source :clan/versioning
   :mukn/ethereum/version)
 
@@ -38,8 +38,12 @@
                coprocess: read-all-as-lines))
 
 (def (show-env-vars tag)
+  (def repo (git-origin-repo))
+  (def repo-url (git-repo-url repo))
+  (def normalized-repo-url (normalize-git-url repo-url))
   (DBG tag
        here glow-home (run-directory)
+       repo repo-url normalized-repo-url
        (getenv "HOME" #f) (getenv "USER" #f) (getenv "UID" #f)
        (getenv "PWD" #f) (getenv "PATH" #f) (getenv "TMPDIR" #f)
        (getenv "GERBIL_LOADPATH" #f) (getenv "GERBIL_PATH" #f)))
