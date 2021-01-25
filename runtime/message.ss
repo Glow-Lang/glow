@@ -1,81 +1,55 @@
 (export #t)
 
 (import
-  :std/misc/list :clan/base :clan/poo/io :clan/pure/dict/assq)
+  :std/misc/list
+  :clan/base :clan/pure/dict/assq
+  :clan/poo/poo :clan/poo/brace :clan/poo/io
+  :mukn/ethereum/types)
 
-;; MESSAGE ;; TODO: more like CommunicationState
-;; TODO: Split this into ActiveBlockCtx and PassiveBlockCtx
-(defclass Message
-  (inbox ;; : BytesInputPort
-   outbox ;; : ListOf DependentPair ;; TODO: just have a BytesOutputPort ?
-   asset-transfers) ;; : (Alist Z <- Address)
-  constructor: :init!
+;; The state for the "monad" of consensual computations, with two variants,
+;; depending on whether the current participant is active or passive
+
+(defstruct $BlockCtx
+  (deposits ;; : Nat
+   withdrawals) ;; : (Alist Nat <- Address)
+  transparent: #t)
+(defstruct ($PassiveBlockCtx $BlockCtx)
+  (inbox) ;; : BytesInputPort
+  transparent: #t)
+(defstruct ($ActiveBlockCtx $BlockCtx)
+  (outbox) ;; : BytesOutputPort
   transparent: #t)
 
-(defmethod {:init! Message}
-  (λ (self (i #f) (o []) (at []))
-    (set! (@ self inbox) i)
-    (set! (@ self outbox) o)
-    (set! (@ self asset-transfers) at)))
-
-;; <- Message
-(defmethod {reset Message}
-  (λ (self)
-    (set! (@ self inbox) #f)
-    (set! (@ self outbox) [])))
-
-;; <- Message Symbol t:Type t
-(defmethod {add-to-published Message}
-  (λ (self name type value)
-    (def dependent-pair [type . value])
-    (set! (@ self outbox) (snoc dependent-pair (@ self outbox)))))
-
-;; expect-published : t <- Symbol t:Type
-(defmethod {expect-published Message}
-  (λ (self name type)
-    ;; ignore name, by order not by name
-    (unmarshal type (@ self inbox))))
-
 ;; add-to-withdraw : <- Address Nat
-(defmethod {add-to-withdraw Message}
-  (λ (self address amount)
-    (def mat (@ self asset-transfers))
-    (def mat2 (assq-update mat address (cut + <> amount) 0))
-    (def mat3 (assq-update mat2 #f (cut - <> amount) 0))
-    (set! (@ self asset-transfers) mat3)))
+(define-type BlockCtx
+  {.add-to-withdraw: ;; <- @ Address Nat
+   ;; TODO: Shouldn't we be taking a Role rather than an Address as argument?
+   ;; This would make both static verification and contract generation much simpler.
+   ;; TODO: One the other hand, support multiple asset classes in a same transaction,
+   ;; there again in a per-invocation static finite set.
+   (λ (self address amount)
+     ;; TODO: make sure we check that the amounts are balanced at the end of the transaction
+     (modify! ($BlockCtx-withdrawals self)
+              (cut assq-update <> address (cut + <> amount) 0)))
+   .add-to-deposit: ;; <- @ Nat
+   (λ (self address amount)
+     (modify! ($BlockCtx-deposits self) (cut + <> amount)))
+   })
 
-;; add-to-deposit : <- Nat
-(defmethod {add-to-deposit Message}
-  (λ (self address amount)
-    (def mat (@ self asset-transfers))
-    (def mat2 (assq-update mat address (cut - <> amount) 0))
-    (def mat3 (assq-update mat2 #f (cut + <> amount) 0))
-    (set! (@ self asset-transfers) mat3)))
+(define-type PassiveBlockCtx
+  {(:: @ BlockCtx)
+   .element?: $PassiveBlockCtx?
+   .make: (lambda (in-bytes) ($PassiveBlockCtx 0 [] (open-input-u8vector in-bytes)))
+   .expect-published: ;; : t <- Symbol t:Type
+   (λ (self _name type)
+     ;; ignore name: by order not by name
+     (unmarshal type ($PassiveBlockCtx-inbox self)))})
 
-;; expect-deposited : <- Nat
-(defmethod {expect-deposited Message}
-  (λ (self address amount)
-    (def mat (@ self asset-transfers))
-    (def mat2 (assq-update mat address (cut + <> amount) 0))
-    (def mat3 (assq-update mat2 #f (cut - <> amount) 0))
-    (set! (@ self asset-transfers) mat3)))
-
-;; expect-withdrawn : <- Address Nat
-(defmethod {expect-withdrawn Message}
-  (λ (self address amount)
-    (def mat (@ self asset-transfers))
-    (def mat2 (assq-update mat address (cut - <> amount) 0))
-    (def mat3 (assq-update mat2 #f (cut + <> amount) 0))
-    (set! (@ self asset-transfers) mat3)))
-
-;; : Nat <- Message Symbol
-(defmethod {compute-participant-dues Message}
-  (λ (self participant)
-    (def asset-transfers (@ self asset-transfers))
-    (def active-balance
-      (if (assq-has-key? asset-transfers participant)
-        (assq-ref asset-transfers participant)
-        0))
-    (if (negative? active-balance)
-      (abs active-balance)
-      0)))
+(define-type ActiveBlockCtx
+  {(:: @ BlockCtx)
+   .element?: $ActiveBlockCtx?
+   .make: (lambda (out) ($ActiveBlockCtx 0 [] (open-output-u8vector)))
+   .add-to-published: ;; <- @ Symbol t:Type t
+   (λ (self _name type value)
+     ;; for debugging, accumulate name and type in a parallel data structure?
+     (marshal type value ($ActiveBlockCtx-outbox self)))})

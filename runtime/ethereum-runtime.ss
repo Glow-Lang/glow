@@ -81,8 +81,8 @@
    current-code-block-label ;; : Symbol
    current-label ;; : Symbol
    environment ;; : (Table (Or DependentPair Any) <- Symbol) ;; TODO: have it always typed???
-   message ;; : Message ;; byte buffer?
-   timer-start ;; Block
+   block-ctx ;; : BlockCtx ;; byte buffer?
+   timer-start ;; : Block
    io-context ; : IOContext
    program ;; : Program ;; from program.ss
    variable-offsets ;; : (Table (Table Offset <- Symbol) <- Symbol)
@@ -107,7 +107,7 @@
     (set! (@ self processed-events) '())
     (set! (@ self unprocessed-events) '())
     (set! (@ self environment) (make-hash-table))
-    (set! (@ self message) (make-Message))
+    (set! (@ self block-ctx) #f)
     (set! (@ self io-context) io-context)
     (set! (@ self program) program)
     {initialize-environment self}))
@@ -122,7 +122,7 @@
       (if {is-active-participant? self}
         {publish self}
         {receive self})
-      {reset (@ self message)}
+      (set! (@ self block-ctx) #f)
 
       (match (code-block-exit {get-current-code-block self})
         (#f
@@ -166,7 +166,7 @@
   (def log-data (.@ new-log-object data))
   (set! (@ self timer-start) (.@ new-log-object blockNumber))
   ;; TODO: process the data in the same method?
-  (set! (@ self message inbox) (open-input-u8vector log-data))
+  (set! (@ self block-ctx) (.call PassiveBlockCtx .make log-data))
   (interpret-current-code-block self))
 
 (def (interpret-current-code-block self)
@@ -183,9 +183,9 @@
      (displayln role ": Verifying contract config ...")
      (force-current-outputs))
    (with-slots (agreement contract-config published-data) agreement-handshake)
-   (let (message (@ self message)))
+   (let (block-ctx (@ self block-ctx)))
    (begin
-     (set! (@ message inbox) (open-input-u8vector published-data))
+     (set! (@ self block-ctx) (.call PassiveBlockCtx .make published-data))
      ;; TODO: Execute contract until first change participant.
      ;; Check that the agreement part matches
      (unless (equal? (json<- InteractionAgreement (@ self agreement))
@@ -223,11 +223,12 @@
     (def role (@ self role))
     (def contract-config (@ self contract-config))
     (interpret-current-code-block self)
+    (set! (@ self block-ctx) (.call ActiveBlockCtx .make))
     (when (eq? (@ self status) 'running)
       (if (not contract-config)
         (let ()
           (displayln role ": deploying contract ...")
-          (def outbox (@ self message outbox))
+          (def outbox (@ self block-ctx outbox))
           (def published-data
             (call-with-output-u8vector (λ (out)
                                         (for ([type . value] outbox)
@@ -244,7 +245,7 @@
           ;; requires getting TransactionInfo using the TransactionReceipt.
           (displayln role ": publishing message ...")
           (def contract-address (.@ contract-config contract-address))
-          (def outbox (@ self message outbox))
+          (def outbox (@ self block-ctx outbox))
           (def message-pretx {prepare-call-function-transaction self outbox contract-address})
           (def new-tx-receipt (post-transaction message-pretx))
           (display-poo-ln role ": Tx Receipt: " TransactionReceipt new-tx-receipt)
@@ -275,7 +276,7 @@
     (def contract-bytes
       (stateful-contract-init initial-state-digest contract-runtime-bytes))
     (create-contract sender-address contract-bytes
-      value: {compute-participant-dues (@ self message) sender-address})))
+      value: ($BlockCtx-deposits (@ self block-ctx)))))
 
 ;; PreTransaction <- Runtime Block
 (defmethod {deploy-contract Runtime}
@@ -320,10 +321,10 @@
           (marshal type value out))
         (marshal UInt8 1 out))))
     (call-function sender-address contract-address message-bytes
-      value: {compute-participant-dues (@ self message) sender-address})))
       ;; default gas value should be (void), i.e. ask for an automatic estimate,
-      ;; unless we want to force the TX to happen
-      ;; (gas: 800000))))
+      ;; unless we want to force the TX to happen, e.g. so we can see the failure in Remix
+      gas: 1000000 ;; XXX ;;<=== DO NOT COMMIT THIS LINE UNCOMMENTED
+      value: ($BlockCtx-deposits (@ self block-ctx)))))
 
 ;; CodeBlock <- Runtime
 (defmethod {get-current-code-block Runtime}
@@ -405,25 +406,24 @@
        (let
          ((this-participant {get-active-participant self})
           (amount {reduce-expression self amount-variable}))
-         {add-to-deposit (@ self message) this-participant amount}))
+         (.call BlockCtx .add-to-deposit (@ self block-ctx) amount)))
 
       (['expect-deposited amount-variable]
        (let
          ((this-participant {get-active-participant self})
           (amount {reduce-expression self amount-variable}))
-         {expect-deposited (@ self message) this-participant amount}))
+         (.call BlockCtx .add-to-deposit (@ self block-ctx) amount)))
 
       (['participant:withdraw address-variable price-variable]
-       (let
-         ((address {reduce-expression self address-variable})
-          (price {reduce-expression self price-variable}))
-         {add-to-withdraw (@ self message) address price}))
+       (let ((address {reduce-expression self address-variable})
+             (price {reduce-expression self price-variable}))
+         (.call BlockCtx .add-to-withdraw (@ self block-ctx) address price)))
 
       (['add-to-publish ['quote publish-name] variable-name]
-       (let
-         ((publish-value {reduce-expression self variable-name})
-          (publish-type {lookup-type (@ self program) variable-name}))
-         {add-to-published (@ self message) publish-name publish-type publish-value}))
+       (let ((publish-value {reduce-expression self variable-name})
+             (publish-type {lookup-type (@ self program) variable-name}))
+         (.call ActiveBlockCtx .add-to-published (@ self block-ctx)
+                publish-name publish-type publish-value)))
 
       (['def variable-name expression]
        (let
@@ -457,7 +457,7 @@
     (match expression
       (['expect-published ['quote publish-name]]
        (let (publish-type {lookup-type (@ self program) publish-name})
-         {expect-published (@ self message) publish-name publish-type}))
+         (.call PassiveBlockCtx .expect-published (@ self block-ctx) publish-name publish-type)))
       (['@app 'isValidSignature address-variable digest-variable signature-variable]
        (let
          ((address {reduce-expression self address-variable})
@@ -546,17 +546,18 @@
   (λ (self)
     (parameterize ((brk-start (box params-start@)))
       (def consensus-code {generate-consensus-code self})
+      ;; NB: you can use #t below to debug with remix.ethereum.org. Do NOT commit that!
+      ;; TODO: maybe we should have some more formal debugging mode parameter?
+      (def debug #t)
       (assemble
-        (&begin
-         (&simple-contract-prelude)
-         &define-tail-call
-         &define-simple-logging
-        (&define-check-participant-or-timeout debug: #f)
-        ;; NB: you can use #t below to debug with remix.ethereum.org. Do NOT commit that!
-        ;; TODO: maybe we should have some more formal debugging mode parameter?
-        (&define-end-contract debug: #f)
-         consensus-code
-         [&label 'brk-start@ (unbox (brk-start))])))))
+       (&begin
+        (&simple-contract-prelude)
+        &define-tail-call
+        &define-simple-logging
+        (&define-check-participant-or-timeout debug: debug)
+        (&define-end-contract debug: debug)
+        consensus-code
+        [&label 'brk-start@ (unbox (brk-start))])))))
 
 ;; : Bytes (Table Offset <- Symbol) <- Runtime
 (defmethod {make-checkpoint-label Runtime}

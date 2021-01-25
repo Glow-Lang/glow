@@ -12,18 +12,17 @@
   setup:
   (lambda () (assert! (input-port? (current-input-port))))
   teardown:
-  (lambda () (void))
+  void
   send-handshake:
   (lambda (handshake)
-    (displayln "\nPLEASE SEND THE HANDSHAKE BELOW TO THE OTHER PARTICIPANTS: ---v")
+    (displayln "\nPLEASE SEND THE HANDSHAKE BELOW TO THE OTHER PARTICIPANT: ---v")
     (write-json-ln (json<- AgreementHandshake handshake))
-    (displayln "^--- PLEASE SEND THE HANDSHAKE ABOVE TO THE OTHER PARTICIPANTS\n"))
+    (displayln "^___ PLEASE SEND THE HANDSHAKE ABOVE TO THE OTHER PARTICIPANT\n"))
   receive-handshake:
   (lambda ()
     (displayln "\nPLEASE PASTE BELOW THE HANDSHAKE SENT BY THE OTHER PARTICIPANT:")
     (def handshake-json (json<-port (current-input-port)))
     (<-json AgreementHandshake handshake-json)))
-
 
 ;; interaction-agreement->program : InteractionAgreement -> Program
 (def (interaction-agreement->program a)
@@ -54,11 +53,12 @@
 ;; glow-module-path->path : String -> PathString
 (def (glow-module-path->path s)
   (cond
-    ((string-prefix? "mukn/glow/" s)
-     (let ((s (string-trim-prefix "mukn/glow/" s)))
-       (source-path (string-append s ".glow"))))
-    (else
-     (error 'glow-module-path->path "given:" s))))
+   ((string-prefix? "mukn/glow/" s)
+    (let (s (string-trim-prefix "mukn/glow/" s))
+      (source-path (string-append s ".glow"))))
+   (else
+    (error 'glow-module-path->path "given:" s))))
 
 ;; monomorphic-poo->hash-table : [MonomorphicPooof V] -> [Hashof Symbol V]
-(def (monomorphic-poo->hash-table p) (list->hash-table (.alist p)))
+(def (monomorphic-poo->hash-table p)
+  (poo-instance (force-poo p)))

@@ -33,7 +33,7 @@
   :clan/net/json-rpc :clan/net/s3 :clan/net/simple-http-client :clan/net/websocket
   :clan/assert :clan/base :clan/basic-parsers :clan/basic-printers
   :clan/call-limiter :clan/concurrency :clan/config
-  :clan/timestamp :clan/debug :clan/diceware
+  :clan/debug :clan/decimal :clan/diceware
   :clan/error :clan/exit
   :clan/failure :clan/ffi :clan/files :clan/filesystem
   :clan/generator :clan/git-fu :clan/hash
@@ -43,7 +43,7 @@
   :clan/random
   :clan/source :clan/simple-rpc-client :clan/stateful-avl-map :clan/string
   :clan/subprocess :clan/syntax
-  :clan/temporary-files
+  :clan/temporary-files :clan/timestamp
   :clan/vector :clan/versioning :clan/watch :clan/with-id
   :clan/persist/db :clan/persist/persist :clan/persist/content-addressing
 
