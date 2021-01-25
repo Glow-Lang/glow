@@ -12,8 +12,10 @@ mukn/
 # Editor-generated files
 *~
 [#]*[#]
+.vscode/
 
 # Scribble-generated files
+doc/
 *.html
 manual-fonts.css
 manual-racket.css
