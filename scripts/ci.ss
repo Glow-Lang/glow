@@ -107,14 +107,11 @@
   (run-process/batch ["./build.ss" "nix"]) ;; NB: this should use the path from cachix
   (defvalues (glow-lang.out gerbil-ethereum.src loadpath) (set-test-environment-variables))
   (def testnet.ss (subpath gerbil-ethereum.src "scripts/run-ethereum-test-net.ss"))
-  (def signing-test (subpath gerbil-ethereum.src "t/signing-test.ss"))
   #;(DBG before: gerbil-ethereum.src (file-exists? gerbil-ethereum.src) glow-lang.out)
   (unless (file-exists? gerbil-ethereum.src)
     (run-process/batch ["nix-build" "./pkgs.nix" "-A"
                         "gerbilPackages-unstable.gerbil-ethereum.src"]))
-  #;(DBG after: (file-exists? gerbil-ethereum.src)
-       testnet.ss (file-exists? testnet.ss)
-       signing-test (file-exists? signing-test))
+  #;(DBG after: (file-exists? gerbil-ethereum.src) testnet.ss (file-exists? testnet.ss))
   (create-directory* (run-directory))
   (show-env-vars "Running test net:")
   (run-process/batch [testnet.ss])

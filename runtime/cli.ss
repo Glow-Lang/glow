@@ -26,7 +26,7 @@
   "Start an interaction based on an agreement"
   (def gopt
     (getopt
-     ;;(flag 'test-identities "--test-identities" default: #f help: "name of ethereum network")
+     ;;(flag 'test-identities "--test-identities" default: #f help: "enable test identities")
      (option 'ethereum-network "-E" "--ethereum-network" default: "pet"
              help: "name of ethereum network")
      (option 'database "-D" "--database" default: (run-path "testdb")

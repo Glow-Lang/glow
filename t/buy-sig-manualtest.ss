@@ -8,7 +8,7 @@
   :clan/persist/content-addressing
   :mukn/ethereum/types :mukn/ethereum/ethereum :mukn/ethereum/network-config :mukn/ethereum/json-rpc
   :mukn/glow/runtime/ethereum-runtime :mukn/glow/runtime/reify-contract-parameters
-  :mukn/ethereum/t/signing-test :mukn/ethereum/t/50-batch-send-integrationtest.ss
+  :mukn/ethereum/testing
 
   ;; TODO: make sure there's a one-stop-shop to all bindings required for the runtime to work.
   :mukn/ethereum/signing :mukn/ethereum/assets

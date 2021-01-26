@@ -12,7 +12,7 @@
   :mukn/ethereum/types :mukn/ethereum/ethereum :mukn/ethereum/known-addresses :mukn/ethereum/json-rpc
   :mukn/ethereum/batch-send :mukn/ethereum/network-config :mukn/ethereum/assets
   :mukn/ethereum/signing :mukn/ethereum/hex :mukn/ethereum/transaction :mukn/ethereum/types
-  :mukn/ethereum/t/signing-test
+  :mukn/ethereum/testing
   :mukn/ethereum/t/50-batch-send-integrationtest
   ../compiler/passes
   ../compiler/multipass
