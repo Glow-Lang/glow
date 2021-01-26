@@ -347,7 +347,6 @@
 (defmethod {initialize-environment Runtime}
   (λ (self)
     (def agreement (@ self agreement))
-    (.call (@ self io-context) setup) ;; NB: putting this call before the def above crashes gxc(!)
     (def participants (.@ agreement participants))
     (for (participant-name (.all-slots-sorted participants))
       {add-to-environment self participant-name (.ref participants participant-name)})

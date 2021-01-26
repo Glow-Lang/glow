@@ -7,7 +7,7 @@
   :clan/io :clan/json :clan/path-config :clan/ports
   :clan/poo/poo :clan/poo/io :clan/poo/debug
   :clan/crypto/keccak
-  :clan/persist/content-addressing
+  :clan/persist/content-addressing :clan/persist/db
   :clan/versioning
   :mukn/ethereum/types :mukn/ethereum/ethereum :mukn/ethereum/known-addresses :mukn/ethereum/json-rpc
   :mukn/ethereum/batch-send :mukn/ethereum/network-config :mukn/ethereum/assets
@@ -48,6 +48,9 @@
 
 (def coin-flip-integrationtest
   (test-suite "integration test for ethereum/coin-flip"
+    (ignore-errors (delete-file (run-path "agreement-handshake.json"))) ;; TODO: do it better
+    (ensure-ethereum-connection "pet")
+    (ensure-db-connection (run-path "testdb"))
     (DBG "Ensure participants funded")
     (ensure-addresses-prefunded)
     (DBG "DONE")
@@ -55,8 +58,6 @@
     (def program (parse-compiler-output compiler-output))
 
     (test-case "coin flip executes"
-      (ignore-errors (delete-file (run-path "contract-handshake.json"))) ;; TODO: do it better
-
       (def a-balance-before (eth_getBalance a-address 'latest))
       (def b-balance-before (eth_getBalance b-address 'latest))
 
