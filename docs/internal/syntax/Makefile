@@ -1,16 +1,10 @@
 
-html: glow-surface.html glow-sexpr.html
+html: glow-sexpr.html
 
-pdf: glow-surface.pdf glow-sexpr.pdf
+pdf: glow-sexpr.pdf
 
 open-html: html
-	open glow-surface.html glow-sexpr.html
-
-glow-surface.html: glow-surface.scrbl
-	scribble --dest-name glow-surface --html glow-surface.scrbl
-
-glow-surface.pdf: glow-surface.scrbl
-	scribble --dest-name glow-surface --pdf glow-surface.scrbl
+	open glow-sexpr.html
 
 glow-sexpr.html: glow-sexpr.scrbl
 	scribble --dest-name glow-sexpr --html glow-sexpr.scrbl

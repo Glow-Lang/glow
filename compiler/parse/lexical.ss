@@ -63,7 +63,7 @@
                         (return `(IntegerLiteral, (list->string n)))))
 
 (def Opertor
-    (.let* (op (.or "<<<" ">>>"
+    (.let* (op (.or "<<" ">>"
                     "==" "=>" "<=" ">=" "!=" "!" "="  "<-" "<" ">"
                     "++" "+=" "+"
                     "--" "-=" "->" "-"
