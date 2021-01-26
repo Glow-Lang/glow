@@ -11,18 +11,18 @@ Glow is a domain-specific language to write safe DApps (Decentralized Applicatio
 Here you will learn everything about this mighty language and its associated toolset
 and perform feats previously inaccessible to mere mortals!
 
-This document was updated on December 10th, 2020.
+This document was updated on January 25th, 2021.
 
 @section{Intro}
 
 @bold{Hello, there! Who are you?}
 
-Hi, and welcome to Glow's reference manual.
+Hi, and welcome to Glow's tutorial.
 
-To be as useful as possible, this manual has been designed with multiple layers of complexity,
+To be as useful as possible, this tutorial has been designed with multiple layers of complexity,
 depending on your level of proficiency in programming and in computer science:
 this means you can re-read it as you get better at using Glow.
-This manual has been written both
+This tutorial has been written both
 by nearly total-beginners, and computer science experts,
 so that Glow can be learnt without being confusing.
 
@@ -68,7 +68,7 @@ You'll be sure that your DApp's transactions are secure, so that you only have
 to take care of what matters the most in any app:
 its general design, its business logic, its front-end, etc.
 
-While you won't need to program in the Glow language, you may still read this manual
+While you won't need to program in the Glow language, you may still read this tutorial
 to understand what Glow does for you and how it works, so you can fit
 the functionality it provides into the architecture of your application.
 Thus you can ultimately use Glow and its runtime as an efficient tool
@@ -77,7 +77,7 @@ about the risks you would otherwise have to face while building your DApp.
 
 @subsection{Level 3: I can make DApps, and want to make my own smart-contracts}
 
-You have read this manual and tried Glow for a while,
+You have read this tutorial and tried Glow for a while,
 or you are already a bit experienced in blockchain-related programming.
 
 This documentation will allow you to make your own smart-contracts:
@@ -87,7 +87,7 @@ The team behind Glow can audit and certify your smart-contracts for a fee,
 if you want to make sure they are safe, and
 want your potential users to trust it, too.
 
-Each chapter of this manual links to sub-documents for Level-3 users.
+Each chapter of this tutorial links to sub-documents for Level-3 users.
 Each time you want to be more autonomous and make the best use of Glow,
 those links will give you advanced tips about
 what our community and development team understood over time.
@@ -98,7 +98,7 @@ you'll be able to grasp Glow (and DApps) like never before.
 @subsection{Level 4: I want to help develop Glow and understand all the details}
 
 A contributor, are we? Well, welcome backstage:
-each chapter of this manual contains sub-documents for level-4 users.
+each chapter of this tutorial contains sub-documents for level-4 users.
 
 These sub-documents can contain either the source code of Glow (written in other languages)
 or details about the thinking process we went through

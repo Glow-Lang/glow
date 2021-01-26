@@ -328,7 +328,7 @@ At this moment, Glow only supports the type @defid[Nat]
 which contains non-negative natural integers.
 
 Furthermore, as an implementation limitation, when deploying
-on Ethereum oro a similar network, numbers are also
+on Ethereum or a similar network, numbers are also
 restricted to fit in 256 bits (or 32 bytes), the same as the
 usual type @glowexp{UInt256} of Ethereum. Operations that
 yield integers greater or equal to 2**256 or less than zero
@@ -482,14 +482,17 @@ the near future.
 
 @bold{Important note}
 
-Note that the choice of characters as non-negative 8-bit
-bytes, is deliberate: DApps have to deal with digesting
-exactly well-defined sequences of bytes, and concepts like
-Unicode, UTF-8, etc., only get in the way. When interfacing
-between Glow and other languages, make sure that you
-represent Glow bytestrings as sequences bytes in your
-language, and not "native" strings of Unicode or any such
-dangerously misfit type.
+Note that the choice of characters as non-negative 8-bit bytes, is deliberate:
+DApps have to deal with digesting exactly well-defined sequences of bytes
+in consensually executed code that where string validation,
+like each bit of computation, costs literally millions of times more
+to execute than code running in private on your local device.
+In this context, concepts like Unicode, valid codepoints, UTF-8,
+normalization forms, etc., are extremely expensive nonsense
+that will rack up immense bills for no benefit whatsoever.
+Thus, when interfacing between Glow and other languages, make sure that
+you represent Glow bytestrings as sequences of bytes in your language, and
+not "native" strings of Unicode or any such dangerously misfit type.
 
 @subsection{Digests and Signatures}
 
