@@ -14,4 +14,4 @@
 
 (define scribblings '(("scribblings/glow.scrbl" (multi-page))))
 (define compile-omit-paths 'all)
-(define compile-include-files '("main.rkt"))
+(define compile-include-files '("main.rkt" "scribblings/glow.scrbl"))

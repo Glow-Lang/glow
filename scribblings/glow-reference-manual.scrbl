@@ -7,103 +7,7 @@
 
 @title{Glow Reference Manual}
 
-@section{Overview}
-
-@deftech{Glow} is a domain-specific language for DApps, Decentralized Applications.
-The language syntax is based on that of JavaScript,
-with some inspiration from ReasonML where we have to diverge from JavaScript.
-While it should feel familiar to you if you know JavaScript,
-there are many differences underneath designed to keep your DApps safe:
-
-@itemize[
- @item{
-  The language is statically typed.
-  Its type system is in the same general style as ReasonML or TypeScript,
-  yet differs in many details, wherein we optimize our design for the safety of DApps.
- }
- @item{
-  Though the syntax looks imperative, it is a function language underneath.
-  In particular, you cannot modify bindings to existing variables,
-  you can only have new variables shadow old variables.
-  You also cannot side-effect data structures, only create new data structures
-  that shadow the old data structures as those in consideration.
- }
- @item{
-  Many features are currently missing, such as loops or recursion,
-  that will be added slowly as the need arises.
- }
-]
-
-If you are used to programming in imperative languages, you will also find common concepts.
-
-@italic{For programming language buffs}:
-DApps are asynchronous interactions between multiple mutually-untrusting participant
-manipulating digital assets on decentralized ledgers,
-according to rules verifiable by blockchain smart contracts.
-Semantically, Glow is an applicative language with a pure functional programming core
-extended with a few primitives and annotations making it suitable for for multiparty computation.
-It has a static type system based on MLsub, and static safety analyses
-that are discharged by a theorem solver. (TODO: complete the static analyses.)
-
-If you are a seasoned developer, you can check our less-detailed and straight-to-the-point grammar,
-our @secref["Glow_Language_Grammar"].
-Otherwise the next chapters are designed to make you grasp it quickly.
-
-@section[#:tag "hash-lang"]{Fundamentals: Hello world!}
-
-Unlike most languages, including most languages supposedly dedicated
-to specifying DApps or just their smart contracts,
-Glow is a language focused on interactions between multiple participants.
-Hence, there is no typical @racket["hello world!"] program like in most languages,
-but there is something alike: a @racket["hello world!"] for two...
-
-Let's have a look at this very simple code:
-@glowmodblock|{
-#lang glow
-@interaction([A, B])
-let publishHello = () => {
-  @A let ha = "Hello, B, I am A. How do you do?";
-  publish! A -> ha;
-
-  @B let hb = "Hello, A. I am B. How do YOU do?";
-  publish! B -> hb;
-};
-}|
-
-This is not a very useful DApp, but then neither is printing @racket["Hello, world"].
-For a minimal useful DApp, see @secref{buy_sig} below.
-
-Interactions are specified using annotations, that begin the "at-sign" (a.k.a. arobase): @"@"
-
-If you remove the annotations, it looks like a regular JavaScript or ReasonML program,
-except with those special publish! statements.
-
-(Also, note that white spaces and interlines don't matter.
-We didn't implement indentation-based structure, and don't intend to in the short-run.
-It is too easy to introduce subtle with such semi-invisible structure;
-we prefer bugs to remain painfully obvious, instead.)
-
-The first line of this code specifies through an annotation
-that the following function will be an interaction between two participants
-the roles of which are called A and B.
-
-You can see that semicolons are used to end statements.
-They can be used to end every expression, but are mandatory only for statements.
-
-The second line defines the interaction function.
-
-The third and fifth lines define two private variables respectively named ha and hb
-using the keyword let, each bound to a different byte string.
-The former is initially private to A only,
-while the latter is initially private to B only.
-
-The fourth and sixth lines use the publish! statement to specify that
-the respective sentences ha and hb will be sent
-respectively on behalf of users A and B.
-
-Note that these instructions will be executed line by line, so the dialog will happen like a real one.
-
-@subsection{Basic Syntax}
+@section{Basic Syntax}
 
 @subsection[#:tag "hash-lang"]{The @hash-lang[] @racketmodname[glow] line}
 
@@ -190,9 +94,9 @@ let publishHello = () => {
 }|
 }
 
-@defglowstm[(type Name existing_type) @{type Name = existing_type;}]{
-Defines @glowexp{Name} as a type alias for the
-@glowexp{existing_type}.
+@defglowstm[(type Name Type) @{type Name = Type;}]{
+Defines @glowexp{Name} as a type alias for the given
+existing @glowexp{Type}.
 
 Example:
 @glowstmblock|{
@@ -200,11 +104,21 @@ type Point2D = (Int, Int);
 }|
 }
 
-@defglowstm[(data Name variants) @{data Name = variants;}]{
+@defglowstm[(data Name Variants) @{data Name = Variants;}]{
 Defines @glowexp{Name} as a new datatype with the given
-@glowexp{variants}.
+@glowexp{Variants}.
 
-Example:
+It can be used to define enumerations:
+@glowstmblock|{
+data Hand = Rock | Paper | Scissors;
+}|
+
+Or structures containing values:
+@glowstmblock|{
+data Color = Rgb(Int, Int, Int);
+}|
+
+Or enumerations of structures, for example:
 @glowstmblock|{
 data Shape2D = Circle(Point2D, Int)
              | Triangle(Point2D, Point2D, Point2D)
@@ -236,6 +150,103 @@ to the consensus includes this deposit.
 Withdraws the given @glowexp{amount} of assets from the
 consensus and transfers it to the given
 @glowexp{participant}.
+}
+
+@defglowstm[(\@publicly participant name expr)
+            @|{@participant @publicly let name = expr;}|]{
+Defines @glowexp{name} from the given @glowexp{participant}'s
+evaluation of @glowexp{expr}, in a way that can be published
+and verified on the consensus.
+
+Equivalent to:
+@glowstmblock|{
+@participant @verifiably let name = expr;
+publish! participant -> name;
+verify! name;
+}|
+}
+
+@defglowstm[(\@verifiably participant name expr)
+            @|{@participant @verifiably let name = expr;}|]{
+Defines @glowexp{name} privately for the given
+@glowexp{participant} from their evaluation of
+@glowexp{expr}. The @glowexp{name} remains associated with
+the @glowexp{expr} by an equation that can be verified later
+on the consensus with @glowexp{verify!} once the
+@glowexp{name} and its dependencies in @glowexp{expr} have
+all been published.
+}
+
+@defglowstm[(verify! names name) @{verify! names;}]{
+Verifies the equation associated with each @glowexp{name} in
+@glowexp{names}. Each @glowexp{name} and its dependencies
+must all be published beforehand, and the equations must
+hold.
+}
+
+@defglowstm[(assert! expr) @{assert! expr;}]{
+Checks at compile-time that the predicate always hold no
+matter what, as long as this point in the program was
+reached while the current user and the contract indeed run
+code generated by the Glow compiler, and the underlying
+infrastructure runs within the allowed parameters.
+Informally, @glowexp{assert!} means
+"if this fails, the program won't even start."
+}
+
+@defglowstm[(require! expr) @{require! expr;}]{
+Checks at runtime a predicate holds and if not fails the
+active user's transaction. The predicate must be computable
+at runtime by all the parties using their common knowledge,
+so that the contract may verify it. The Glow compiler will
+reject the program unless it can prove that the assertion is
+indeed satisfiable for the active user, and generate code
+that satisfies the assertion. If some of the data comes from
+user input, it is the user's responsibility to provide data
+satisfying the predicate in a timely fashion.
+Informally, @glowexp{require!} means
+"if this fails, the active user is at fault".
+}
+
+@defglowstm[(\@participant participant stmt)
+            @|{@participant stmt;}|]{
+Evaluates the given @glowexp{stmt} privately for the given
+@glowexp{participant}.
+}
+
+@section{Conditionals}
+
+@defglowexp[(if a b c) @{if (a) { b } else { c }}]{
+Evaluates @glowexp{a} and produces @glowexp{b} if
+@glowexp{a} is @glowexp{true}, or @glowexp{c} if @glowexp{a}
+is @glowexp{false}.
+}
+
+@defglowexp[(switch val cases) @{switch (val) { cases }}]{
+Evaluates @glowexp{val}, and pattern-matches it against each
+case in @glowexp{cases} in order. When a pattern in a case
+matches @glowexp{val}, it produces the case body associated
+with it.
+
+Example:
+@glowstmblock|{
+type Point2D = (Int, Int);
+data Shape2D = Circle(Point2D, Int)
+             | Triangle(Point2D, Point2D, Point2D)
+             | Quadrangle(Point2D, Point2D, Point2D, Point2D);
+
+let dist = (a, b) =>
+  switch (a, b) {
+    ((x1, y1), (x2, y2)) => hypotenuse(x2 - x1, y2 - y1)
+  };
+
+let perimeter = (shape) =>
+  switch (shape) {
+  | Circle(center, radius) => 2 * pi * radius
+  | Triangle(a, b, c)      => dist(a,b) + dist(b,c) + dist(c,a)
+  | Quadrangle(a, b, c, d) => dist(a,b) + dist(b,c) + dist(c,d) + dist(d,a)
+  };
+}|
 }
 
 @section{Datatypes}
@@ -313,7 +324,7 @@ Nevertheless integer literals in Glow do not take a final
 However, when compiling Glow to smart contracts running on a
 blockchain,
 
-At this moment, Glow only supports the type @glowexp{Nat}
+At this moment, Glow only supports the type @defid[Nat]
 which contains non-negative natural integers.
 
 Furthermore, as an implementation limitation, when deploying
@@ -371,6 +382,15 @@ and currently on our Ethereum backend, all numbers must be less than 2**256.
 
 Also note that you can't perform operations between strings and numbers:
 you have to explicitly convert values from one type to another.
+
+@defglowexp[(sqr a) @{sqr(a)}]{
+Produces the square of the @glowexp{Int} @glowexp{a}, or
+@glowexp{a * a}.
+}
+
+@defglowexp[(sqrt a) @{sqrt(a)}]{
+Produces the @glowexp{Int} square-root of @glowexp{a}.
+}
 
 @subsubsection{Integer Comparisons}
 
@@ -471,12 +491,60 @@ represent Glow bytestrings as sequences bytes in your
 language, and not "native" strings of Unicode or any such
 dangerously misfit type.
 
+@subsection{Digests and Signatures}
+
+@defglowexp[(Digest) @{Digest}]{
+The type for digests, or hash-values produced by @glowexp{digest}.
+}
+
+@defglowexp[(digest exprs) @{digest(exprs)}]{
+Produces a @glowexp{Digest} value representing the hash of
+the values of the @glowexp{exprs}.
+
+Two digests computed from two values should only be equal
+iff the values are equal.
+}
+
+@defglowexp[(Signature) @{Signature}]{
+The type for signatures, produced by @glowexp{sign}.
+}
+
+@defglowexp[(sign participant digest) @{sign(digest)}]{
+Within a private @glowexp{participant}'s evaluation,
+produces a @glowexp{Signature} value confirming that the
+@glowexp{participant} has signed the @glowexp{Digest}
+@glowexp{digest}.
+}
+
+@defglowexp[(isValidSignature participant signature digest)
+            @{isValidSignature(participant, signature, digest)}]{
+Produces @glowexp{true} if @glowexp{signature} comes from
+the given @glowexp{participant} signing the @glowexp{digest}
+with @glowexp{sign(digest)}, or produces @glowexp{false}
+otherwise.
+}
+
 @subsection{Unit and Tuple Types}
 
-@defglowexp[(tuplet types) @{(types)}]{
-Creates a tuple type. @glowexp{()} is an empty tuple,
-@glowexp{(a, b)} is a pair, @glowexp{(a, b, c)} is a triple,
+@defglowexp[(Tuple Types A B C) @{(Types)}]{
+Creates a tuple type, a simple cartesian product of the
+given @glowexp{types}. They contain as elements "tuples",
+each made of one element of each of the types in the
+product, in order. There can be any natural number of types
+in a tuple type. @glowexp{()} is an empty tuple,
+@glowexp{(A, B)} is a pair, @glowexp{(A, B, C)} is a triple,
 and so on.
+
+For example, the type @glowexp{(Bool, Nat, Bytes)} contains
+such elements as @glowexp{(true, 4, "hello")} and
+@glowexp{(false, 42, "world")}.
+
+Do note that @glowexp{(A,B,C)} is different from both
+@glowexp{(A,(B,C))} and @glowexp{((A,B),C)}: these types are
+syntactically different and semantically disjoint;
+just in a sense they are "isomorphic" since you can write a
+reversible pair of functions that take one into the other
+and vice versa.
 }
 
 @defglowexp[(Unit) @{Unit}]{
@@ -484,7 +552,7 @@ Another name for the empty tuple type @glowexp{()}, contains
 the single value @glowexp{()}.
 }
 
-@defglowexp[(tuplee exprs) @{(exprs)}]{
+@defglowexp[(tuple exprs) @{(exprs)}]{
 Creates a tuple as an expression. @glowexp{()} is an empty
 tuple, @glowexp{(a, b)} is a pair, @glowexp{(a, b, c)} is a
 triple, and so on.
@@ -492,16 +560,16 @@ triple, and so on.
 
 @subsection{Record Types}
 
-@defglowexp[(recordt x type_entries) @{{type_entries}}]{
-Creates a record type. @glowexp{{ x: a, y: b, z: c }} is a
+@defglowexp[(Record TypeEntries A B C) @{{ TypeEntries }}]{
+Creates a record type. @glowexp{{ x: A, y: B, z: C }} is a
 record type with fields @glowexp{x}, @glowexp{y}, and
-@glowexp{z}, where the types of the fields are @glowexp{a},
-@glowexp{b}, and @glowexp{c} respectively.
+@glowexp{z}, where the types of the fields are @glowexp{A},
+@glowexp{B}, and @glowexp{C} respectively.
 
 The order of the fields does not matter for record types.
 }
 
-@defglowexp[(recorde expr_entries) @{{expr_entries}}]{
+@defglowexp[(record expr_entries) @{{ expr_entries }}]{
 Creates a record as an expression.
 @glowexp{{ x: a, y: b, z: c }} creates a
 record with fields @glowexp{x}, @glowexp{y}, and
@@ -512,17 +580,5 @@ The order of the fields determines evaluation order, but
 once evaluated, the field order doesn't matter for the value
 itself. @glowexp{{ x: a, y: b } == { y: b, x: a }}.
 }
-
-@section{buy_sig}
-
-@glowmodblock|{
-#lang glow
-@interaction([Buyer, Seller])
-let payForSignature = (digest : Digest, price : Assets) => {
-  @Buyer deposit! price;
-  @Seller @publicly let signature = sign(digest);
-  withdraw! Seller price;
-};
-}|
 
 @include-section["glow-surface-grammar.scrbl"]
