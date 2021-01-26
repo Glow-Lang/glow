@@ -35,6 +35,7 @@
     ("%" 'mod)
     ("&&" 'and)
     ("||" 'or)
+    ("!" 'not)
     ("|||" 'bitwise-or)
     ("&&&" 'bitwise-and)
     ("^^^" 'bitwise-xor)

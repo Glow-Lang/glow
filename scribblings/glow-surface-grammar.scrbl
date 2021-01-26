@@ -1,16 +1,15 @@
 #lang scribble/manual
 
 @(require scribble/bnf
-          syntax/parse/define)
+          syntax/parse/define
+          (for-label glow))
 @(define-simple-macro (defs [x:id e:expr] ...)
    (begin (define x e) ...))
 
-@title{Glow Surface Syntax}
+@title{Glow Language Grammar}
 
-@section{Grammar}
-
-This surface syntax is inspired by ReasonML, Javascript, and Haskell,
-in that order. Most forms based on ReasonML. However, @litchar|{@}|
+This surface syntax is inspired by ReasonML, Javascript, and Haskell.
+Most forms based on ReasonML. However, @litchar|{@}|
 attributes are based on Javascript, and datatype definitions based on
 a combination of ReasonML and Haskell.
 
@@ -33,24 +32,42 @@ ReasonML.
    [|.| @litchar{.}]
    [= @litchar{=}]
    [_ @litchar{_}]
-   [=> @litchar{=>}]
+   [=> @racketlink[=> @litchar{=>}]]
    [-> @litchar{->}]
    [<- @litchar{<-}]
    [: @litchar{:}]
-   [type @litchar{type}]
-   [data @litchar{data}]
-   [let @litchar{let}]
-   [if @litchar{if}]
-   [else @litchar{else}]
-   [switch @litchar{switch}]
-   [publish! @litchar{publish!}]
-   [verify! @litchar{verify!}]
-   [require! @litchar{require!}]
-   [assert! @litchar{assert!}]
-   [deposit! @litchar{deposit!}]
-   [withdraw! @litchar{withdraw!}])
+   [== @racketlink[== @litchar{==}]]
+   [+ @racketlink[+ @litchar{+}]]
+   [- @racketlink[- @litchar{-}]]
+   [* @racketlink[* @litchar{*}]]
+   [/ @racketlink[/ @litchar{/}]]
+   [% @racketlink[% @litchar{%}]]
+   [&& @racketlink[&& @litchar{&&}]]
+   [|| @racketlink[\|\| @litchar{||}]]
+   [! @racketlink[! @litchar{!}]]
+   [&&& @racketlink[&&& @litchar{&&&}]]
+   [\|\|\| @racketlink[\|\|\| @litchar{|||}]]
+   [^^^ @racketlink[^^^ @litchar{^^^}]]
+   [~~~ @racketlink[~~~ @litchar{~~~}]]
+   [<< @racketlink[<< @litchar{<<}]]
+   [>> @racketlink[>> @litchar{>>}]]
+   [type @racketlink[type @litchar{type}]]
+   [data @racketlink[data @litchar{data}]]
+   [let @racketlink[let @litchar{let}]]
+   [if @racketlink[if @litchar{if}]]
+   [else @racketlink[if @litchar{else}]]
+   [switch @racketlink[switch @litchar{switch}]]
+   [publish! @racketlink[publish! @litchar{publish!}]]
+   [verify! @racketlink[verify! @litchar{verify!}]]
+   [require! @racketlink[require! @litchar{require!}]]
+   [assert! @racketlink[assert! @litchar{assert!}]]
+   [deposit! @racketlink[deposit! @litchar{deposit!}]]
+   [withdraw! @racketlink[withdraw! @litchar{withdraw!}]])
 
 @(BNF
+  (list
+   @nonterm{module}
+   (BNF-seq @litchar{#lang glow} (kleenestar (BNF-group @nonterm{stmt} |;|))))
   (list
    @nonterm{id}
    @elem{name that isn't a reserved keyword or symbol})
@@ -126,7 +143,23 @@ ReasonML.
    (BNF-seq require! @nonterm{expr})
    (BNF-seq assert! @nonterm{expr})
    (BNF-seq deposit! @nonterm{id} -> @nonterm{expr})
-   (BNF-seq withdraw! @nonterm{id} <- @nonterm{expr}))
+   (BNF-seq withdraw! @nonterm{id} <- @nonterm{expr})
+   (BNF-seq @nonterm{expr} == @nonterm{expr})
+   (BNF-seq @nonterm{expr} + @nonterm{expr})
+   (BNF-seq @nonterm{expr} - @nonterm{expr})
+   (BNF-seq @nonterm{expr} * @nonterm{expr})
+   (BNF-seq @nonterm{expr} / @nonterm{expr})
+   (BNF-seq @nonterm{expr} % @nonterm{expr})
+   (BNF-seq @nonterm{expr} && @nonterm{expr})
+   (BNF-seq @nonterm{expr} || @nonterm{expr})
+   (BNF-seq ! @nonterm{expr})
+   (BNF-seq @nonterm{expr} &&& @nonterm{expr})
+   (BNF-seq @nonterm{expr} \|\|\| @nonterm{expr})
+   (BNF-seq @nonterm{expr} ^^^ @nonterm{expr})
+   (BNF-seq @nonterm{expr} ~~~ @nonterm{expr})
+   (BNF-seq @nonterm{expr} << @nonterm{expr})
+   (BNF-seq @nonterm{expr} >> @nonterm{expr})
+   )
   (list
    @nonterm{arg-exprs}
    (BNF-seq)
@@ -200,24 +233,3 @@ ReasonML.
    @nonterm{id}
    (BNF-seq @nonterm{id} |(| @nonterm{arg-exprs} |)| )))
 
-@section{Example}
-
-The following glow-surface-syntax program:
-@verbatim|{
-@interaction([Buyer, Seller])
-let payForSignature = (digest : Digest, price : Assets) => {
-  @Buyer deposit! price;
-  @Seller @publicly let signature = sign(digest);
-  withdraw! Seller price;
-};
-}|
-
-would be parsed into this glow-sexpr-ugly representation:
-@racketblock[
-(\@ (interaction (\@list Buyer Seller))
-   (def payForSignature
-     (λ ((digest : Digest) (price : Assets)) ; inferred `: Unit`
-       (\@ Buyer (deposit! price))
-       (\@ Seller (\@ publicly (def signature (sign digest))))
-       (withdraw! Seller price))))
-]
