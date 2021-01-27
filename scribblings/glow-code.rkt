@@ -1,6 +1,6 @@
 #lang racket/base
 
-(provide defid
+(provide defid Glow
          glowmod glowmodblock
          glowstm glowstmblock defglowstm
          glowexp glowexpblock defglowexp)
@@ -174,3 +174,5 @@
           (boxed (verbatim e ...))
           body
           ...)))])
+
+(define Glow @emph{Glow})

@@ -121,6 +121,7 @@ Other non-Lisp types of interest?
 * Rho-lang
 * [LLL](https://lll-docs.readthedocs.io/en/latest/lll_introduction.html)
 * See more in [this file](https://github.com/AlacrisIO/alacrity/blob/master/archive/competition.md)
+* Tooling for Solidity: HardHat.org, truffle, etc.
 
 ### Complexity
 
