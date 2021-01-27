@@ -77,7 +77,7 @@
              (ptype:union
               (@list (type:app
                       (type:name 'listof)
-                      (@list (@list #f (ptype:union (@list (type:var 'x8) (type:name 'Int))))))
+                      (@list (@list #f (ptype:union (@list (type:var 'x9) (type:name 'Int))))))
                      (type:app
                       (type:name 'listof)
                       (@list (@list #f (type:name-subtype 'Nat (type:name 'Int))))))))))))

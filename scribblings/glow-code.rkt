@@ -1,6 +1,9 @@
 #lang racket/base
 
-(provide defid Glow
+(provide Glow
+         hash-lang
+         defglowlang
+         defid
          glowmod glowmodblock
          glowstm glowstmblock defglowstm
          glowexp glowexpblock defglowexp)
@@ -10,12 +13,49 @@
          scribble/manual
          syntax/parse/define
          (only-in scribble/racket make-variable-id)
+         (only-in scribble/decode splice part-tag-decl)
+         (only-in scribble/struct element->string make-index-element)
+         (only-in scribble/manual-struct make-language-index-desc)
          (for-label glow)
          (for-syntax racket/base
                      racket/list
                      racket/match
                      racket/string
                      "glow-parse.rkt"))
+
+(define Glow @emph{Glow})
+
+(define (hash-lang)
+  (seclink "hash-lang" (racketmodfont "#lang")))
+
+(define-simple-macro (defglowlang name:id)
+  (begin
+    (declare-exporting name #:packages ())
+    (*defglowlang (racketmodname name))))
+
+(define (*defglowlang name)
+  (define modpath name)
+  (define modname (make-defglowmodname name modpath the-language-index-desc))
+  (splice
+   (list
+    (tabular
+     #:style "defmodule"
+     (list (list (elem (hash-lang) " " modname))))
+    (part-tag-decl
+     (intern-taglet
+      `(mod-path ,(datum-intern-literal (element->string modpath))))))))
+
+(define (make-defglowmodname mn mp index-desc)
+  (let ([name-str (datum-intern-literal (element->string mn))]
+        [path-str (datum-intern-literal (element->string mp))])
+    (make-index-element #f
+                        (list mn)
+                        (intern-taglet `(mod-path ,path-str))
+                        (list name-str)
+                        (list mn)
+                        index-desc)))
+
+(define the-language-index-desc (make-language-index-desc))
 
 (define-simple-macro (defid x:id)
   (parameterize ([read-accept-bar-quote #f])
@@ -174,5 +214,3 @@
           (boxed (verbatim e ...))
           body
           ...)))])
-
-(define Glow @emph{Glow})

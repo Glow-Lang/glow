@@ -14,7 +14,7 @@
   publish! verify! require! assert! deposit! withdraw!
   @interaction @verifiably @publicly @make-interaction @app-interaction
   Unit Int Nat Bool Bytes Digest Assets Signature
-  ! <= < > >= + - * / % sqr sqrt
+  ! <= < > >= + - * / %
   ~~~ &&& \|\|\| ^^^ << >> ; make sure to use `read-accept-bar-quote #f` for `\|\|\|`
   member
   randomUInt256 isValidSignature

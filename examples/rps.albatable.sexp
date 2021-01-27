@@ -81,8 +81,6 @@
       (salt 'salt)
       (sign 'sign)
       (splice 'splice)
-      (sqr 'sqr)
-      (sqrt 'sqrt)
       (switch 'switch)
       (verifiably 'verifiably)
       (verify! 'verify!)
