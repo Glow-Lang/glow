@@ -8,8 +8,7 @@ test:
 
 doc:
 	# TODO: figure out how to make a search bar for only `glow` w/o racket
-	# scribble --htmls --dest doc scribblings/glow.scrbl
-	raco setup glow
+	scribble --htmls --dest doc scribblings/glow.scrbl
 
 # Build using nix-build
 nix:
