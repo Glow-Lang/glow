@@ -1,8 +1,13 @@
 #lang scribble/manual
 
+@(require "glow-code.rkt"
+          (for-label glow))
+
+@(define em emph)
+
 @title{Glow Explanation}
 
-@section{Intro}
+@section[#:tag-prefix "glow-explanation"]{Intro}
 
 @(Glow) is a domain-specific language to write @emph{safe} DApps (Decentralized Applications).
 

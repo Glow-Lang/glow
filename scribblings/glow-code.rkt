@@ -23,7 +23,7 @@
                      racket/string
                      "glow-parse.rkt"))
 
-(define Glow @emph{Glow})
+(define (Glow) (emph "Glow"))
 
 (define (hash-lang)
   (seclink "hash-lang" (racketmodfont "#lang")))
