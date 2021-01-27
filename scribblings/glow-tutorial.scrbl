@@ -13,7 +13,7 @@ and perform feats previously inaccessible to mere mortals!
 
 This document was updated on January 25th, 2021.
 
-@section{Intro}
+@section[#:tag-prefix "glow-tutorial"]{Intro}
 
 @bold{Hello, there! Who are you?}
 
