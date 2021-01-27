@@ -48,7 +48,7 @@
 
 (def coin-flip-integrationtest
   (test-suite "integration test for ethereum/coin-flip"
-    (ignore-errors (delete-file (run-path "agreement-handshake.json"))) ;; TODO: do it better
+    (delete-agreement-handshake)
     (ensure-ethereum-connection "pet")
     (ensure-db-connection (run-path "testdb"))
     (DBG "Ensure participants funded")

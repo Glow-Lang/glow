@@ -47,16 +47,19 @@
     slots: (.o send-handshake: (.o type: (Fun Unit <- AgreementHandshake))
                receive-handshake: (.o type: (Fun AgreementHandshake <-)))))
 
+(def (delete-agreement-handshake)
+  (displayln "Deleting any old agreement handshake file...")
+  (ignore-errors (delete-file (run-path "agreement-handshake.json"))))
+
 ;; TODO: make an alternate version of io-context that
 ;;       displays at the terminal for the user to copy/paste and send to
 ;;       other participants through an outside channel
 (.def io-context:special-file
-  setup:
-  (λ () (ignore-errors (delete-file (run-path "agreement-handshake.json"))))
-  teardown:
-  (λ () (ignore-errors (delete-file (run-path "agreement-handshake.json"))))
+  setup: delete-agreement-handshake
+  teardown: delete-agreement-handshake
   send-handshake:
   (λ (handshake)
+    (displayln "Writing agreement handshake to file...")
     (write-file-json (run-path "agreement-handshake.json") (json<- AgreementHandshake handshake)))
   receive-handshake:
   (λ ()

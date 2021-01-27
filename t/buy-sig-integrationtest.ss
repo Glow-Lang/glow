@@ -22,7 +22,7 @@
 (def buy-sig-integrationtest
   (test-suite "integration test for ethereum/buy-sig"
     (test-case "buy sig runs successfully"
-      (ignore-errors (delete-file (run-path "agreement-handshake.json"))) ;; TODO: do it better
+      (delete-agreement-handshake)
       (ensure-ethereum-connection "pet")
       (ensure-db-connection (run-path "testdb"))
 

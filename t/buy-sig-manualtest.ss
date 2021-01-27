@@ -22,7 +22,7 @@
 (def buy-sig-manualtest
   (test-suite "integration test for ethereum/buy-sig"
     (test-case "buy sig runs successfully"
-      (ignore-errors (delete-file (run-path "agreement-handshake.json"))) ;; TODO: do it better
+      (delete-agreement-handshake)
 
       (def document "abcdefghijklmnopqrstuvwxyz012345")
       (def digest (keccak256<-string document))
