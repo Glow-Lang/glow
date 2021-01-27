@@ -331,9 +331,6 @@
 
 (def mod modulo)
 
-(def (randomUInt256)
-  (random-integer (expt 2 256)))
-
 (def (digest alst)
   (def out (open-output-u8vector))
   (for ((p alst))

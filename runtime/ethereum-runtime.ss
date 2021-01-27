@@ -9,6 +9,7 @@
   :mukn/ethereum/hex :mukn/ethereum/ethereum :mukn/ethereum/network-config :mukn/ethereum/json-rpc
   :mukn/ethereum/transaction :mukn/ethereum/tx-tracker :mukn/ethereum/watch :mukn/ethereum/assets
   :mukn/ethereum/contract-runtime :mukn/ethereum/contract-config :mukn/ethereum/assembly :mukn/ethereum/types
+  :mukn/ethereum/signing
   ./program ./block-ctx
   ../compiler/method-resolve/method-resolve
   ../compiler/project/runtime-2)
@@ -484,18 +485,25 @@
          ((av {reduce-expression self a})
           (bv {reduce-expression self b}))
          (+ av bv)))
-      (['@app bitwise-xor a b]
+      (['@app '* a b]
        (let
          ((av {reduce-expression self a})
           (bv {reduce-expression self b}))
-         (bitwise-and av bv)))
-      (['@app bitwise-and a b]
+         (* av bv)))
+      (['@app 'bitwise-xor a b]
+       (let
+         ((av {reduce-expression self a})
+          (bv {reduce-expression self b}))
+         (bitwise-xor av bv)))
+      (['@app 'bitwise-and a b]
        (let
          ((av {reduce-expression self a})
           (bv {reduce-expression self b}))
          (bitwise-and av bv)))
       (['@app 'randomUInt256]
        (randomUInt256))
+      (['@app name . args]
+        (error "Unknown @app expression: " name " " args))
       (['@tuple . es]
        (list->vector
         (for/collect ((e es))
@@ -793,6 +801,7 @@
         (&mstoreat {lookup-variable-offset self code-block-label variable-name} len)])
       (['== a b]
        (binary-operator EQ a b))
+      ;; TODO: Make sure contract and runtime handle overflows in the same way.
       (['@app '< a b]
        (binary-operator LT a b))
       (['@app '> a b]
