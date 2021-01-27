@@ -68,8 +68,8 @@ output.
 
 Example:
 @glowstmblock|{
-let hypotenuse = (a, b) => {
-    sqrt(sqr(a) + sqr(b))
+let avg = (a, b) => {
+    (a + b) / 2
 };
 }|
 }
@@ -235,16 +235,13 @@ data Shape2D = Circle(Point2D, Int)
              | Triangle(Point2D, Point2D, Point2D)
              | Quadrangle(Point2D, Point2D, Point2D, Point2D);
 
-let dist = (a, b) =>
-  switch (a, b) {
-    ((x1, y1), (x2, y2)) => hypotenuse(x2 - x1, y2 - y1)
-  };
-
-let perimeter = (shape) =>
+let center = (shape) =>
   switch (shape) {
-  | Circle(center, radius) => 2 * pi * radius
-  | Triangle(a, b, c)      => dist(a,b) + dist(b,c) + dist(c,a)
-  | Quadrangle(a, b, c, d) => dist(a,b) + dist(b,c) + dist(c,d) + dist(d,a)
+  | Circle(c, r) => c
+  | Triangle((x1,y1), (x2,y2), (x3,y3)) =>
+    ((x1 + x2 + x3)/3, (y1 + y2 + y3)/3)
+  | Quadrangle((x1,y1), (x2,y2), (x3,y3), (x4,y4)) =>
+    ((x1 + x2 + x3 + x4)/4, (y1 + y2 + y3 + y4)/4)
   };
 }|
 }
@@ -382,15 +379,6 @@ and currently on our Ethereum backend, all numbers must be less than 2**256.
 
 Also note that you can't perform operations between strings and numbers:
 you have to explicitly convert values from one type to another.
-
-@defglowexp[(sqr a) @{sqr(a)}]{
-Produces the square of the @glowexp{Int} @glowexp{a}, or
-@glowexp{a * a}.
-}
-
-@defglowexp[(sqrt a) @{sqrt(a)}]{
-Produces the @glowexp{Int} square-root of @glowexp{a}.
-}
 
 @subsubsection{Integer Comparisons}
 

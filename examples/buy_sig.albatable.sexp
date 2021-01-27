@@ -69,8 +69,6 @@
       (sign 'sign)
       (signature 'signature)
       (splice 'splice)
-      (sqr 'sqr)
-      (sqrt 'sqrt)
       (switch 'switch)
       (verifiably 'verifiably)
       (verify! 'verify!)

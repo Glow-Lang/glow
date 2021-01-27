@@ -88,8 +88,6 @@
       (require! 'require!)
       (sign 'sign)
       (splice 'splice)
-      (sqr 'sqr)
-      (sqrt 'sqrt)
       (switch 'switch)
       (v 'v)
       (verifiably 'verifiably)
