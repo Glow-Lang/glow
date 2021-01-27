@@ -675,8 +675,6 @@
    ('* (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Int type:Int] type:Int))))
    ('/ (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Int type:Int] type:Int))))
    ('mod (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Int type:Nat] type:Nat))))
-   ('sqr (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Int] type:Int))))
-   ('sqrt (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Int] type:Int))))
    ('bitwise-not (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Int] type:Int))))
    ('bitwise-and (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Int type:Int] type:Int))))
    ('bitwise-or (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Int type:Int] type:Int))))

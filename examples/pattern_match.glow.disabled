@@ -33,7 +33,7 @@ switch (p) { (a, b) => a + b };
 
 let v = { x: 3, y: 4 };
 switch (v) {
-  | { x: x, y: y } => sqrt(sqr(x) + sqr(y))
+  | { x: x, y: y } => x*x + y*y
 };
 
 data lcexpr =

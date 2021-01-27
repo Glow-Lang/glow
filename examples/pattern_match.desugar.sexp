@@ -12,7 +12,7 @@
 (def v () (@record (x 3) (y 4)))
 (switch v
   ((@record (x (@var-pat x)) (y (@var-pat y)))
-   (@app sqrt (@app + (@app sqr x) (@app sqr y)))))
+   (@app + (@app * x x) (@app * y y))))
 (defdata lcexpr
          (Var Int)
          (Lam lcexpr)

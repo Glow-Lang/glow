@@ -29,7 +29,7 @@
 
 (def v (@record (x 3) (y 4)))
 (switch v
-  ((@record (x x) (y y)) (sqrt (+ (sqr x) (sqr y)))))
+  ((@record (x x) (y y)) (+ (* x x) (* y y))))
 
 (defdata lcexpr
   (Var Int)

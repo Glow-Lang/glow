@@ -7,7 +7,7 @@
 
 @title[#:style '(toc)]{Glow}
 
-@defmodule[glow #:lang #:packages ()]
+@defglowlang[glow]
 
 @local-table-of-contents[]
 
