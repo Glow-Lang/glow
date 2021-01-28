@@ -7,6 +7,7 @@
           :clan/poo/poo
           :clan/poo/type
           :clan/concurrency
+          :clan/crypto/random
           :mukn/ethereum/types
           :mukn/ethereum/known-addresses
           :mukn/ethereum/signing))
@@ -21,9 +22,6 @@
         :gerbil/gambit/threads
         (only-in :gerbil/gambit/ports output-port-readtable output-port-readtable-set! read-u8)
         (only-in :gerbil/gambit/readtables readtable-sharing-allowed?-set)
-        ;; TODO: use more cryptographically-secure randomness
-        ;; from Gerbil :std/crypto or fare/gerbil-crypto
-        (only-in :gerbil/gambit/random random-integer)
         :clan/base
         :clan/pure/dict/assq
         :clan/concurrency
