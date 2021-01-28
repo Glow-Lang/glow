@@ -7,7 +7,7 @@ To run from gxi in the glow directory, assuming gerbil-etherum is in a sibling d
 > ((payForSignature alice-address bob-address) (digest<-string "hello") 1)
 |#
 (export #t)
-(import :mukn/glow/compiler/project/runtime-2 :clan/crypto/random)
+(import :mukn/glow/compiler/project/runtime-2)
 (def payForSignature-consensus0
      (lambda (in2 out2 Buyer Seller)
        (lambda (digest0 price)

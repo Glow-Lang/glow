@@ -31,7 +31,7 @@
       (let ((stmts (syntax->list #'(stmt ...))))
         (cons*
           #'(export #t)
-          #'(import :mukn/glow/compiler/project/runtime-2 :clan/crypto/random)
+          #'(import :mukn/glow/compiler/project/runtime-2)
           (translate-body stmts cpit #f)))))))
 
 ;; TODO: factor out common stx-def-interaction functions

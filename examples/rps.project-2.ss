@@ -30,7 +30,7 @@ consensus confirmed message:
 done
 |#
 (export #t)
-(import :mukn/glow/compiler/project/runtime-2 :clan/crypto/random) ;; TODO: Why doesn't :clan/crypto/random get rexported from runtime-2??
+(import :mukn/glow/compiler/project/runtime-2)
 (define-type Hand (Sum Rock: (Tuple) Paper: (Tuple) Scissors: (Tuple)))
 (define-sum-constructors Hand Rock Paper Scissors)
 (def Rock (Hand-Rock (vector)))
