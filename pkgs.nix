@@ -126,6 +126,7 @@ let
             maybeOverrideDep "gerbil-utils" super //
             maybeOverrideDep "gerbil-poo" super //
             maybeOverrideDep "gerbil-persist" super //
+            maybeOverrideDep "gerbil-crypto" super //
             maybeOverrideDep "gerbil-ethereum" super //
             { "glow-lang" = extendPop super.glow-lang (params: super:
               let source = gerbilFilterSource ./.; in

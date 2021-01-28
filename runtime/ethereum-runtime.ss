@@ -4,7 +4,7 @@
   :gerbil/gambit/bits :gerbil/gambit/bytes :gerbil/gambit/threads
   :std/iter :std/misc/hash :std/sugar :std/misc/number :std/misc/list :std/sort :std/srfi/1
   :clan/base :clan/exception :clan/io :clan/json :clan/number :clan/path-config :clan/ports :clan/syntax
-  :clan/poo/poo :clan/poo/io :clan/poo/debug :clan/debug
+  :clan/poo/poo :clan/poo/io :clan/poo/debug :clan/debug :clan/crypto/random
   :clan/persist/content-addressing
   :mukn/ethereum/hex :mukn/ethereum/ethereum :mukn/ethereum/network-config :mukn/ethereum/json-rpc
   :mukn/ethereum/transaction :mukn/ethereum/tx-tracker :mukn/ethereum/watch :mukn/ethereum/assets
@@ -484,18 +484,25 @@
          ((av {reduce-expression self a})
           (bv {reduce-expression self b}))
          (+ av bv)))
-      (['@app bitwise-xor a b]
+      (['@app '* a b]
        (let
          ((av {reduce-expression self a})
           (bv {reduce-expression self b}))
-         (bitwise-and av bv)))
-      (['@app bitwise-and a b]
+         (* av bv)))
+      (['@app 'bitwise-xor a b]
+       (let
+         ((av {reduce-expression self a})
+          (bv {reduce-expression self b}))
+         (bitwise-xor av bv)))
+      (['@app 'bitwise-and a b]
        (let
          ((av {reduce-expression self a})
           (bv {reduce-expression self b}))
          (bitwise-and av bv)))
       (['@app 'randomUInt256]
        (randomUInt256))
+      (['@app name . args]
+        (error "Unknown @app expression: " name " " args))
       (['@tuple . es]
        (list->vector
         (for/collect ((e es))
@@ -793,6 +800,7 @@
         (&mstoreat {lookup-variable-offset self code-block-label variable-name} len)])
       (['== a b]
        (binary-operator EQ a b))
+      ;; TODO: Make sure contract and runtime handle overflows in the same way.
       (['@app '< a b]
        (binary-operator LT a b))
       (['@app '> a b]
