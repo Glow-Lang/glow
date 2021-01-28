@@ -67,9 +67,9 @@
        "Here is an agreement, also saved to file " agreement-path "\n"
        agreement-string "\n\n"
        "Please start a Seller on another terminal or machine (with agreement copy) with:\n"
-       "  ./glow start-interaction --database run/testdb-bob Seller " agreement-path "\n"
+       "  ./glow start-interaction --test --database run/testdb-bob Seller " agreement-path "\n"
        "or\n"
-       "  ./glow start-interaction --database run/testdb-bob Seller " (escape-shell-token agreement-string) "\n"
+       "  ./glow start-interaction --test --database run/testdb-bob Seller " (escape-shell-token agreement-string) "\n"
        "then press ENTER to start the Buyer in this terminal.")
 
       (read-line)

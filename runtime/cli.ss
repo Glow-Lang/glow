@@ -1,12 +1,13 @@
 (export #t)
 
 (import
+  :gerbil/expander
   :std/getopt :std/misc/hash :std/sugar
-  :clan/base :clan/json :clan/multicall :clan/path-config :clan/syntax
+  :clan/base :clan/exit :clan/json :clan/multicall :clan/path-config :clan/syntax
   :clan/poo/debug
   :clan/persist/db
   :mukn/ethereum/cli :mukn/ethereum/types :mukn/ethereum/json-rpc
-  ./ethereum-runtime ./reify-contract-parameters)
+  ./ethereum-runtime ./reify-contract-parameters ./configuration)
 
 (def (json<-cli-input cli-input)
   (cond
@@ -20,20 +21,36 @@
     (read-file-json cli-input))
    (else (error "invalid input specifier" 'json<-cli-input cli-input))))
 
+(def (getopt/common-options . options)
+  (apply getopt
+    (append
+     [(flag 'test "--test"
+            help: "enable testing including test identities")
+      (flag 'backtrace "--backtrace"
+            help: "enable backtraces for debugging purposes")
+      (option 'ethereum-network "-E" "--ethereum-network" default: "pet"
+              help: "name of ethereum network")
+      (option 'database "-D" "--database" default: (run-path "testdb")
+              help: "path to local DApp state database")]
+     options)))
+
+(def (process-common-options opt)
+  (defrule {symbol} (hash-get opt 'symbol))
+  (backtrace-on-abort? {backtrace})
+  (cond
+   ({test} (import-module ':mukn/ethereum/testing #t #t))
+   (else (load-secret-key-ring))))
+
 ;; TODO: also accept local interaction parameters
 ;; TODO: accept alternative ethereum networks, etc
 (define-entry-point (start-interaction . arguments)
   "Start an interaction based on an agreement"
   (def gopt
-    (getopt
-     ;;(flag 'test-identities "--test-identities" default: #f help: "enable test identities")
-     (option 'ethereum-network "-E" "--ethereum-network" default: "pet"
-             help: "name of ethereum network")
-     (option 'database "-D" "--database" default: (run-path "testdb")
-             help: "path to local DApp state database")
+    (getopt/common-options
      (argument 'role help: "role to play in the interaction")
      (argument 'agreement help: "JSON agreement for the interaction")))
   (def opt (getopt-parse gopt arguments))
+  (process-common-options opt)
   (defrule {symbol} (hash-get opt 'symbol))
   ;; TODO: validate role, with nice user-friendly error message
   (def role (string->symbol {role}))
