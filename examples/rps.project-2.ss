@@ -37,7 +37,12 @@ done
 (def Paper (Hand-Paper (vector)))
 (def Scissors (Hand-Scissors (vector)))
 (def tmp (λ (tag) (def x (input Hand1 tag)) x))
-(def tmp0 (λ (x0) (match x0 ((Hand-Rock (vector)) 0) ((Hand-Paper (vector)) 1) ((Hand-Scissors (vector)) 2))))
+(def tmp0
+     (λ (x0)
+        (match x0
+               ((Hand-Rock (vector)) 0)
+               ((Hand-Paper (vector)) 1)
+               ((Hand-Scissors (vector)) 2))))
 (def tmp1 (λ (x1) (match x1 (0 Rock) (1 Paper) (2 Scissors))))
 (def Hand1 (.o (:: @ Hand) (input tmp) (toNat tmp0) (ofNat tmp1)))
 (define-type Outcome (Sum B_Wins: (Tuple) Draw: (Tuple) A_Wins: (Tuple)))
@@ -46,7 +51,12 @@ done
 (def Draw (Outcome-Draw (vector)))
 (def A_Wins (Outcome-A_Wins (vector)))
 (def tmp2 (λ (tag0) (def x2 (input Outcome1 tag0)) x2))
-(def tmp3 (λ (x3) (match x3 ((Outcome-B_Wins (vector)) 0) ((Outcome-Draw (vector)) 1) ((Outcome-A_Wins (vector)) 2))))
+(def tmp3
+     (λ (x3)
+        (match x3
+               ((Outcome-B_Wins (vector)) 0)
+               ((Outcome-Draw (vector)) 1)
+               ((Outcome-A_Wins (vector)) 2))))
 (def tmp4 (λ (x4) (match x4 (0 B_Wins) (1 Draw) (2 A_Wins))))
 (def Outcome1 (.o (:: @ Outcome) (input tmp2) (toNat tmp3) (ofNat tmp4)))
 (def winner
@@ -60,10 +70,10 @@ done
         (def tmp11 (%%app + tmp7 tmp10))
         (def tmp12 (%%app mod tmp11 3))
         (%%app tmp5 tmp12)))
-(def rockPaperScissors-consensus0
-     (lambda (in2 out2 A B)
+(def rockPaperScissors-consensus
+     (lambda (in out A B)
        (lambda (wagerAmount)
-         (parameterize ((current-input-channel in2) (current-output-channel out2))
+         (parameterize ((current-input-channel in) (current-output-channel out))
            (begin0 (let ()
                      (consensus:set-participant A)
                      (consensus:set-participant A)
@@ -90,15 +100,21 @@ done
                      (assert! tmp18)
                      (def outcome (%%app winner handA0 handB0))
                      (match outcome
-                            ((Outcome-A_Wins (vector)) (def tmp19 (%%app * 2 wagerAmount)) (consensus:withdraw A tmp19))
-                            ((Outcome-B_Wins (vector)) (def tmp20 (%%app * 2 wagerAmount)) (consensus:withdraw B tmp20))
-                            ((Outcome-Draw (vector)) (consensus:withdraw A wagerAmount) (consensus:withdraw B wagerAmount)))
+                            ((Outcome-A_Wins (vector))
+                             (def tmp19 (%%app * 2 wagerAmount))
+                             (consensus:withdraw A tmp19))
+                            ((Outcome-B_Wins (vector))
+                             (def tmp20 (%%app * 2 wagerAmount))
+                             (consensus:withdraw B tmp20))
+                            ((Outcome-Draw (vector))
+                             (consensus:withdraw A wagerAmount)
+                             (consensus:withdraw B wagerAmount)))
                      outcome)
                    (consensus:end-interaction))))))
-(def rockPaperScissors-A0
-     (lambda (in3 out3 A B)
+(def rockPaperScissors-A
+     (lambda (in0 out0 A B)
        (lambda (wagerAmount)
-         (parameterize ((current-input-channel in3) (current-output-channel out3))
+         (parameterize ((current-input-channel in0) (current-output-channel out0))
            (begin0 (let ()
                      (participant:set-participant A)
                      (def tmp13 (.@ Hand1 input))
@@ -130,15 +146,21 @@ done
                      (assert! tmp18)
                      (def outcome (%%app winner handA0 handB0))
                      (match outcome
-                            ((Outcome-A_Wins (vector)) (def tmp19 (%%app * 2 wagerAmount)) (participant:withdraw A tmp19))
-                            ((Outcome-B_Wins (vector)) (def tmp20 (%%app * 2 wagerAmount)) (participant:withdraw B tmp20))
-                            ((Outcome-Draw (vector)) (participant:withdraw A wagerAmount) (participant:withdraw B wagerAmount)))
+                            ((Outcome-A_Wins (vector))
+                             (def tmp19 (%%app * 2 wagerAmount))
+                             (participant:withdraw A tmp19))
+                            ((Outcome-B_Wins (vector))
+                             (def tmp20 (%%app * 2 wagerAmount))
+                             (participant:withdraw B tmp20))
+                            ((Outcome-Draw (vector))
+                             (participant:withdraw A wagerAmount)
+                             (participant:withdraw B wagerAmount)))
                      outcome)
                    (participant:end-interaction))))))
-(def rockPaperScissors-B0
-     (lambda (in4 out4 A B)
+(def rockPaperScissors-B
+     (lambda (in1 out1 A B)
        (lambda (wagerAmount)
-         (parameterize ((current-input-channel in4) (current-output-channel out4))
+         (parameterize ((current-input-channel in1) (current-output-channel out1))
            (begin0 (let ()
                      (participant:set-participant A)
                      (participant:set-participant A)
@@ -167,9 +189,15 @@ done
                      (assert! tmp18)
                      (def outcome (%%app winner handA0 handB0))
                      (match outcome
-                            ((Outcome-A_Wins (vector)) (def tmp19 (%%app * 2 wagerAmount)) (participant:withdraw A tmp19))
-                            ((Outcome-B_Wins (vector)) (def tmp20 (%%app * 2 wagerAmount)) (participant:withdraw B tmp20))
-                            ((Outcome-Draw (vector)) (participant:withdraw A wagerAmount) (participant:withdraw B wagerAmount)))
+                            ((Outcome-A_Wins (vector))
+                             (def tmp19 (%%app * 2 wagerAmount))
+                             (participant:withdraw A tmp19))
+                            ((Outcome-B_Wins (vector))
+                             (def tmp20 (%%app * 2 wagerAmount))
+                             (participant:withdraw B tmp20))
+                            ((Outcome-Draw (vector))
+                             (participant:withdraw A wagerAmount)
+                             (participant:withdraw B wagerAmount)))
                      outcome)
                    (participant:end-interaction))))))
 (def ((rockPaperScissors A B) wagerAmount)
@@ -182,22 +210,26 @@ done
           (spawn/name/params
            'consensus
            (lambda ()
-             (parameterize ((current-address #f)
-                            (current-balances balances))
-               ((rockPaperScissors-consensus0 participant->consensus consensus->participants A B) wagerAmount)))))
+             (parameterize ((current-address #f) (current-balances balances))
+               ((rockPaperScissors-consensus
+                 participant->consensus
+                 consensus->participants
+                 A
+                 B)
+                wagerAmount)))))
      (def participant-threads
           (@list (spawn/name/params
                   'A
                   (lambda ()
-                    (parameterize ((current-address A)
-                                   (current-balances balances))
-                      ((rockPaperScissors-A0 consensus->A participant->consensus A B) wagerAmount))))
+                    (parameterize ((current-address A) (current-balances balances))
+                      ((rockPaperScissors-A consensus->A participant->consensus A B)
+                       wagerAmount))))
                  (spawn/name/params
                   'B
                   (lambda ()
-                    (parameterize ((current-address B)
-                                   (current-balances balances))
-                      ((rockPaperScissors-B0 consensus->B participant->consensus A B) wagerAmount))))))
+                    (parameterize ((current-address B) (current-balances balances))
+                      ((rockPaperScissors-B consensus->B participant->consensus A B)
+                       wagerAmount))))))
      (for-each thread-join! (cons consensus-thread participant-threads))
      (channel-close consensus->A)
      (channel-close consensus->B)
