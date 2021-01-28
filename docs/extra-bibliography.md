@@ -64,7 +64,7 @@ Other non-Lisp types of interest?
 * [Arion: Docker compose with NixOS images](https://github.com/hercules-ci/arion)
 * [Graham Christensen: erase your darlings](https://grahamc.com/blog/erase-your-darlings)
 * [Cachix](https://cachix.org/) (including [our cache](https://app.cachix.org/cache/mukn))
-* See also Fugue, Darklang, below.
+* See also [Fugue](https://fugue.co), [Darklang](https://darklang.com).
 
 ### Game Theory
 
@@ -104,7 +104,7 @@ Other non-Lisp types of interest?
 * [Fugue](https://fugue.co), a proprietary alternative to Hashicorp's [Terraform](https://terraform.io), puts engineers in command of cloud security with tools for visualizing resources and changes over time.
 * [dhall](https://dhall-lang.org), a strongly typed terminating programmable configuration language that you can think of as: JSON + functions + types + imports.
 * [Hazel](https://hazel.org), a live functional language programming environment with typed holes.
-* [Dark](https://darklang.com), a holistic programming language, editor, and infrastructure for building backends without accidental complexity.
+* [Dark](https://darklang.com), a holistic programming language, editor, and infrastructure for building backends without accidental complexity ([impressions](https://dev.to/syntaxseed/darklang-intro-and-first-impressions-46oi)).
 * [Unison](https://unisonweb.org), an open source functional programming language based on a simple idea with big implications: code is content-addressed and immutable.
 * [Pony](https://www.ponylang.io/), an open-source, object-oriented, actor-model, capabilities-secure, high-performance programming language.
 
@@ -121,7 +121,7 @@ Other non-Lisp types of interest?
 * Rho-lang
 * [LLL](https://lll-docs.readthedocs.io/en/latest/lll_introduction.html)
 * See more in [this file](https://github.com/AlacrisIO/alacrity/blob/master/archive/competition.md)
-* Tooling for Solidity: HardHat.org, truffle, etc.
+* Tooling for Solidity: HardHat.org, truffle, etc. [template](https://github.com/paulrberg/solidity-template)
 
 ### Complexity
 
