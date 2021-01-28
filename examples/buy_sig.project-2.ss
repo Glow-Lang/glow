@@ -7,11 +7,11 @@ To run from gxi in the glow directory, assuming gerbil-etherum is in a sibling d
 > ((payForSignature alice-address bob-address) (digest<-string "hello") 1)
 |#
 (export #t)
-(import :mukn/glow/compiler/project/runtime-2 :clan/crypto/random)
-(def payForSignature-consensus0
-     (lambda (in2 out2 Buyer Seller)
+(import :mukn/glow/compiler/project/runtime-2)
+(def payForSignature-consensus
+     (lambda (in out Buyer Seller)
        (lambda (digest0 price)
-         (parameterize ((current-input-channel in2) (current-output-channel out2))
+         (parameterize ((current-input-channel in) (current-output-channel out))
            (begin0 (let ()
                      (consensus:set-participant Buyer)
                      (expect-deposited price)
@@ -23,10 +23,10 @@ To run from gxi in the glow directory, assuming gerbil-etherum is in a sibling d
                      (consensus:withdraw Seller price)
                      (vector))
                    (consensus:end-interaction))))))
-(def payForSignature-Buyer0
-     (lambda (in3 out3 Buyer Seller)
+(def payForSignature-Buyer
+     (lambda (in0 out0 Buyer Seller)
        (lambda (digest0 price)
-         (parameterize ((current-input-channel in3) (current-output-channel out3))
+         (parameterize ((current-input-channel in0) (current-output-channel out0))
            (begin0 (let ()
                      (participant:set-participant Buyer)
                      (add-to-deposit price)
@@ -38,10 +38,10 @@ To run from gxi in the glow directory, assuming gerbil-etherum is in a sibling d
                      (participant:withdraw Seller price)
                      (vector))
                    (participant:end-interaction))))))
-(def payForSignature-Seller0
-     (lambda (in4 out4 Buyer Seller)
+(def payForSignature-Seller
+     (lambda (in1 out1 Buyer Seller)
        (lambda (digest0 price)
-         (parameterize ((current-input-channel in4) (current-output-channel out4))
+         (parameterize ((current-input-channel in1) (current-output-channel out1))
            (begin0 (let ()
                      (participant:set-participant Buyer)
                      (expect-deposited price)
@@ -59,27 +59,42 @@ To run from gxi in the glow directory, assuming gerbil-etherum is in a sibling d
      (def consensus->Seller (make-channel #f))
      (def consensus->participants (@list consensus->Buyer consensus->Seller))
      (def participant->consensus (make-channel #f))
-     (def balances (get-balances [Buyer Seller]))
+     (def balances (get-balances (@list Buyer Seller)))
      (def consensus-thread
           (spawn/name/params
            'consensus
            (lambda ()
-             (parameterize ((current-address #f)
-                            (current-balances balances))
-               ((payForSignature-consensus0 participant->consensus consensus->participants Buyer Seller) digest0 price)))))
+             (parameterize ((current-address #f) (current-balances balances))
+               ((payForSignature-consensus
+                 participant->consensus
+                 consensus->participants
+                 Buyer
+                 Seller)
+                digest0
+                price)))))
      (def participant-threads
           (@list (spawn/name/params
                   'Buyer
                   (lambda ()
-                    (parameterize ((current-address Buyer)
-                                   (current-balances balances))
-                      ((payForSignature-Buyer0 consensus->Buyer participant->consensus Buyer Seller) digest0 price))))
+                    (parameterize ((current-address Buyer) (current-balances balances))
+                      ((payForSignature-Buyer
+                        consensus->Buyer
+                        participant->consensus
+                        Buyer
+                        Seller)
+                       digest0
+                       price))))
                  (spawn/name/params
                   'Seller
                   (lambda ()
-                    (parameterize ((current-address Seller)
-                                   (current-balances balances))
-                      ((payForSignature-Seller0 consensus->Seller participant->consensus Buyer Seller) digest0 price))))))
+                    (parameterize ((current-address Seller) (current-balances balances))
+                      ((payForSignature-Seller
+                        consensus->Seller
+                        participant->consensus
+                        Buyer
+                        Seller)
+                       digest0
+                       price))))))
      (for-each thread-join! (cons consensus-thread participant-threads))
      (channel-close consensus->Buyer)
      (channel-close consensus->Seller)

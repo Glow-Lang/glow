@@ -25,6 +25,7 @@
         :clan/base
         :clan/pure/dict/assq
         :clan/concurrency
+        :clan/crypto/random
         :clan/poo/poo
         :clan/poo/io
         :clan/persist/content-addressing
