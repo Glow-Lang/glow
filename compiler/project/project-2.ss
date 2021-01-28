@@ -34,9 +34,6 @@
           #'(import :mukn/glow/compiler/project/runtime-2)
           (translate-body stmts cpit #f)))))))
 
-;; TODO: factor out common stx-def-interaction functions
-;;       between project-1 and project-2
-
 ;; stx-def-interaction? : Stx -> Bool
 ;; stx-not-def-interaction? : Stx -> Bool
 (def (stx-def-interaction? stx)

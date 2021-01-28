@@ -1,6 +1,6 @@
 #!/usr/bin/env gxi
 
-;; Runs project-1 on the `.sexp` files in `../../../examples`.
+;; Runs project-2 on the `.sexp` files in `../../../examples`.
 
 (export #t)
 
