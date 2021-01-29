@@ -8,7 +8,7 @@
   :mukn/ethereum/assets :mukn/ethereum/types
   ./program)
 
-(define-type ConsensusRuntime
+(define-type ConsensusCodeGenerator
   (.+
     (Record
       program: [Any] ; Program
@@ -26,15 +26,15 @@
          timeout: some-timeout})
      .initialize:
       (lambda (self)
-        (defvalues (bytes-value labels-value) (generate-consensus-runtime self))
+        (defvalues (bytes-value labels-value) (generate-consensus-code-generator self))
         (.set! self bytes bytes-value)
         (.set! self labels labels-value))
     }))
 
 ;; TODO: Exclude checkpoints that have already been executed by the first active
 ;; participant.
-;; : Bytes (Table Offset <- Symbol) <- ConsensusRuntime
-(def (generate-consensus-runtime self)
+;; : Bytes (Table Offset <- Symbol) <- ConsensusCodeGenerator
+(def (generate-consensus-code-generator self)
   (parameterize ((brk-start (box params-start@)))
     (def consensus-code (generate-consensus-code self))
     ;; NB: you can use #t below to debug with remix.ethereum.org. Do NOT commit that!
@@ -51,7 +51,7 @@
       [&label 'brk-start@ (unbox (brk-start))]))))
 
 ;; Directives to generate the entire bytecode for the contract (minus header / footer)
-;; Directive <- ConsensusRuntime
+;; Directive <- ConsensusCodeGenerator
 (def (generate-consensus-code self)
   (def consensus-interaction (get-interaction (.@ self program) #f))
   (.set! self variable-offsets (make-hash-table))
@@ -61,7 +61,7 @@
                 (hash->list/sort consensus-interaction symbol<?))))
 
 ;; Directives from a code block
-;; (List Directive) <- ConsensusRuntime Symbol CodeBlock
+;; (List Directive) <- ConsensusCodeGenerator Symbol CodeBlock
 (def (generate-consensus-code-block self code-block-label code-block)
   (def checkpoint-statements (code-block-statements code-block))
   (.set! self params-end #f)
@@ -78,11 +78,11 @@
       (setup-tail-call self code-block-label code-block)))
   (snoc end-code-block-directive code-block-directives))
 
-;; : Bytes (Table Offset <- Symbol) <- ConsensusRuntime
+;; : Bytes (Table Offset <- Symbol) <- ConsensusCodeGenerator
 (def (make-checkpoint-label program checkpoint)
   (symbolify (@ program name) "--" checkpoint))
 
-;; (List Directive) <- ConsensusRuntime Sexp
+;; (List Directive) <- ConsensusCodeGenerator Sexp
 (def (compile-consensus-statement self code-block-label statement)
   (match statement
     (['set-participant new-participant]
@@ -128,7 +128,7 @@
       (error "Runtime does not recognize consensus statement: " statement))))
 
 ;; ASSUMING a two-participant contract, find the other participant for use in timeouts.
-;; Symbol <- ConsensusRuntime Symbol
+;; Symbol <- ConsensusCodeGenerator Symbol
 (def (find-other-participant self participant)
   (find
     (λ (p) (and (not (equal? #f p)) (not (equal? p participant))))
@@ -183,7 +183,7 @@
 
       ))
 
-;; Offset <- ConsensusRuntime Symbol
+;; Offset <- ConsensusCodeGenerator Symbol
 (def (lookup-variable-offset self code-block-label variable-name)
   (def offset
     (hash-get (hash-get (.@ self variable-offsets) code-block-label) variable-name))
@@ -192,7 +192,7 @@
     (error "No offset for variable: " variable-name)))
 
 ;; Assembly directives to load an immediate variable (i.e. for unboxed type) onto the stack
-;; : Directives <- ConsensusRuntime Symbol Type
+;; : Directives <- ConsensusCodeGenerator Symbol Type
 (def (load-immediate-variable self code-block-label variable-name variable-type)
   (&mloadat
     (lookup-variable-offset self code-block-label variable-name)
@@ -200,7 +200,7 @@
 
 ;; TODO: params-end should be the MAX of each frame's params-end.
 ;; Updates variable offsets to account for new local variable, and increments params-end
-;; <- ConsensusRuntime Symbol
+;; <- ConsensusCodeGenerator Symbol
 (def (add-local-variable-to-frame self code-block-label variable-name)
   (def type (lookup-type (.@ self program) variable-name))
   (def argument-length (param-length type))
@@ -216,7 +216,7 @@
 ;; use load-immediate-variable for types passed by value
 ;; use lookup-variable-offset for types passed by reference (Signature)
 ;; otherwise place a constant on the stack
-;; : Directives <- ConsensusRuntime
+;; : Directives <- ConsensusCodeGenerator
 (def (trivial-expression self code-block-label expr)
   (def type (lookup-type (.@ self program) expr))
   (def len (param-length type))
@@ -232,7 +232,7 @@
       ;; TODO: store the data in a variable (temporary, if needed) --- do that in ANF after typesetting.
       (error "trivial-expression: oversize constant" (.@ type sexp) expr)))))
 
-;; Directive <- ConsensusRuntime Symbol CodeBlock
+;; Directive <- ConsensusCodeGenerator Symbol CodeBlock
 (def (setup-tail-call self code-block-label code-block)
   (let* ((next-code-block-label (code-block-exit code-block))
          (next-code-block-live-variables (sort (lookup-live-variables (.@ self program) next-code-block-label) symbol<?))
@@ -266,7 +266,7 @@
       next-code-block-frame-size
       'tail-call JUMP)))
 
-;; <- ConsensusRuntime
+;; <- ConsensusCodeGenerator
 (def (compute-variable-offsets self code-block-label)
   (def frame-variables (make-hash-table))
   ;; Initial offset computed by global registers, see :mukn/ethereum/contract-runtime

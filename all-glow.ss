@@ -67,7 +67,7 @@
   :mukn/glow/compiler/typecheck/typecheck
   :mukn/glow/compiler/anf/anf
   :mukn/glow/runtime/participant-runtime
-  :mukn/glow/runtime/consensus-runtime
+  :mukn/glow/runtime/consensus-code-generator
   :mukn/glow/runtime/cli
 
   ;;:mukn/glow/compiler/checkpointify/checkpointify

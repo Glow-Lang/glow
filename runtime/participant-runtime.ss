@@ -9,7 +9,7 @@
   :mukn/ethereum/hex :mukn/ethereum/ethereum :mukn/ethereum/network-config :mukn/ethereum/json-rpc
   :mukn/ethereum/transaction :mukn/ethereum/tx-tracker :mukn/ethereum/watch :mukn/ethereum/assets
   :mukn/ethereum/contract-runtime :mukn/ethereum/contract-config :mukn/ethereum/assembly :mukn/ethereum/types
-  ./program ./block-ctx ./consensus-runtime
+  ./program ./block-ctx ./consensus-code-generator
   ../compiler/method-resolve/method-resolve
   ../compiler/project/runtime-2)
 
@@ -88,7 +88,7 @@
    timer-start ;; : Block
    io-context ; : IOContext
    program ;; : Program ;; from program.ss
-   consensus-runtime) ;; ConsensusRuntime
+   consensus-code-generator) ;; ConsensusCodeGenerator
   constructor: :init!
   transparent: #t)
 
@@ -112,9 +112,9 @@
     (set! (@ self block-ctx) #f)
     (set! (@ self io-context) io-context)
     (set! (@ self program) program)
-    (set! (@ self consensus-runtime)
-      (.call ConsensusRuntime .make program (.@ agreement options timeoutInBlocks)))
-    (.call ConsensusRuntime .initialize (@ self consensus-runtime))
+    (set! (@ self consensus-code-generator)
+      (.call ConsensusCodeGenerator .make program (.@ agreement options timeoutInBlocks)))
+    (.call ConsensusCodeGenerator .initialize (@ self consensus-code-generator))
     {initialize-environment self}))
 
 ;; <- Runtime
@@ -277,7 +277,7 @@
     (def initial-state-digest
       (digest-product-f initial-state))
     (def contract-bytes
-      (stateful-contract-init initial-state-digest (.@ (@ self consensus-runtime) bytes)))
+      (stateful-contract-init initial-state-digest (.@ (@ self consensus-code-generator) bytes)))
     (create-contract sender-address contract-bytes
       value: (.@ (@ self block-ctx) deposits))))
 
@@ -520,11 +520,11 @@
 ;; : Frame <- Runtime Block (Table Offset <- Symbol) Symbol
 (defmethod {create-frame-variables Runtime}
   (λ (self timer-start code-block-label code-block-participant)
-    (def consensus-runtime (@ self consensus-runtime))
+    (def consensus-code-generator (@ self consensus-code-generator))
     (def checkpoint-location
-      (hash-get (.@ consensus-runtime labels) (make-checkpoint-label (@ self program) code-block-label)))
+      (hash-get (.@ consensus-code-generator labels) (make-checkpoint-label (@ self program) code-block-label)))
     (def active-participant-offset
-      (lookup-variable-offset consensus-runtime code-block-label code-block-participant))
+      (lookup-variable-offset consensus-code-generator code-block-label code-block-participant))
     (def live-variables (lookup-live-variables (@ self program) code-block-label))
     ;; TODO: ensure keys are sorted in both hash-values
     [[UInt16 . checkpoint-location]
