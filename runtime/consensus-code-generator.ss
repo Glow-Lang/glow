@@ -73,11 +73,11 @@
       (setup-tail-call self code-block-label code-block)))
   (snoc end-code-block-directive code-block-directives))
 
-;; : Bytes (Table Offset <- Symbol) <- ConsensusCodeGenerator
+;; : Symbol <- Program Symbol
 (def (make-checkpoint-label program checkpoint)
   (symbolify (@ program name) "--" checkpoint))
 
-;; (List Directive) <- ConsensusCodeGenerator Sexp
+;; (List Directive) <- ConsensusCodeGenerator Symbol Sexp
 (def (compile-consensus-statement self code-block-label statement)
   (match statement
     (['set-participant new-participant]
@@ -133,6 +133,7 @@
   (def program (.@ self program))
   (cons (lookup-type program expr) (trivial-expression self code-block-label expr)))
 
+;; Directive <- ConsensusCodeGenerator Symbol Symbol Any
 (def (compile-consensus-expression self code-block-label variable-name expression)
   (def type (lookup-type (.@ self program) variable-name))
   (def len (and type (param-length type)))
@@ -176,7 +177,7 @@
     (['input _ _]
       [REVERT])))
 
-;; Offset <- ConsensusCodeGenerator Symbol
+;; Offset <- ConsensusCodeGenerator Symbol Symbol
 (def (lookup-variable-offset self code-block-label variable-name)
   (def offset
     (hash-get (hash-get (.@ self variable-offsets) code-block-label) variable-name))
@@ -185,7 +186,7 @@
     (error "No offset for variable: " variable-name)))
 
 ;; Assembly directives to load an immediate variable (i.e. for unboxed type) onto the stack
-;; : Directives <- ConsensusCodeGenerator Symbol Type
+;; : Directives <- ConsensusCodeGenerator Symbol Symbol Type
 (def (load-immediate-variable self code-block-label variable-name variable-type)
   (&mloadat
     (lookup-variable-offset self code-block-label variable-name)
@@ -193,7 +194,7 @@
 
 ;; TODO: params-end should be the MAX of each frame's params-end.
 ;; Updates variable offsets to account for new local variable, and increments params-end
-;; <- ConsensusCodeGenerator Symbol
+;; <- ConsensusCodeGenerator Symbol Symbol
 (def (add-local-variable-to-frame self code-block-label variable-name)
   (def type (lookup-type (.@ self program) variable-name))
   (def argument-length (param-length type))
@@ -209,7 +210,7 @@
 ;; use load-immediate-variable for types passed by value
 ;; use lookup-variable-offset for types passed by reference (Signature)
 ;; otherwise place a constant on the stack
-;; : Directives <- ConsensusCodeGenerator
+;; : Directives <- ConsensusCodeGenerator Symbol Any
 (def (trivial-expression self code-block-label expr)
   (def type (lookup-type (.@ self program) expr))
   (def len (param-length type))
@@ -259,7 +260,7 @@
       next-code-block-frame-size
       'tail-call JUMP)))
 
-;; <- ConsensusCodeGenerator
+;; <- ConsensusCodeGenerator Symbol
 (def (compute-variable-offsets self code-block-label)
   (def frame-variables (make-hash-table))
   ;; Initial offset computed by global registers, see :mukn/ethereum/contract-runtime
@@ -273,4 +274,4 @@
     (sort live-variables symbol<?))
   (hash-put! (.@ self variable-offsets) code-block-label frame-variables)
   (when (or (not (.@ self params-end)) (> start (.@ self params-end)))
-    (set! (.@ self params-end) start)))
+    (.set! self params-end start)))
