@@ -4,7 +4,7 @@
  (def coinFlip
   (λ (wagerAmount escrowAmount)
     (@ A (def randA (@app randomUInt256)))
-    (@ A (@verifiably (def commitment (digest randA))))
+    (@verifiably (A) (def commitment (digest randA)))
     (publish! A commitment)
     (deposit! A (@app + wagerAmount escrowAmount))
     (@ B (def randB (@app randomUInt256)))

@@ -111,7 +111,7 @@ The following surface-syntax program:
 @interaction([Buyer, Seller])
 let payForSignature = (digest : Digest, price : Assets) => {
   @Buyer deposit! price;
-  @Seller @publicly let signature = sign(digest);
+  @publicly(Seller) let signature = sign(digest);
   withdraw! Seller price;
 };
 }|
@@ -122,7 +122,7 @@ would be parsed into this glow-sexpr representation:
    (def payForSignature
      (λ ((digest : Digest) (price : Assets)) ; inferred `: Unit`
        (\@ Buyer (deposit! price))
-       (\@ Seller (\@ publicly (def signature (sign digest))))
+       (\@ (publicly Seller) (def signature (sign digest)))
        (withdraw! Seller price))))
 ]
 
