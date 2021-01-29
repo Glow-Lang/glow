@@ -18,7 +18,7 @@
   ../compiler/multipass
   ../compiler/syntax-context
   ../runtime/program
-  ../runtime/ethereum-runtime)
+  ../runtime/participant-runtime)
 
 (def a-address alice)
 (def b-address bob)
