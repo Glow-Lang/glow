@@ -114,7 +114,7 @@
     (set! (@ self program) program)
     (set! (@ self consensus-code-generator)
       (.call ConsensusCodeGenerator .make program (.@ agreement options timeoutInBlocks)))
-    (.call ConsensusCodeGenerator .initialize (@ self consensus-code-generator))
+    (.call ConsensusCodeGenerator .generate (@ self consensus-code-generator))
     {initialize-environment self}))
 
 ;; <- Runtime

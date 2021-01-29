@@ -24,31 +24,26 @@
          bytes: #f
          params-end: #f
          timeout: some-timeout})
-     .initialize:
+     .generate:
       (lambda (self)
-        (defvalues (bytes-value labels-value) (generate-consensus-code-generator self))
-        (.set! self bytes bytes-value)
-        (.set! self labels labels-value))
+        (parameterize ((brk-start (box params-start@)))
+          (def consensus-code (generate-consensus-code self))
+          ;; NB: you can use #t below to debug with remix.ethereum.org. Do NOT commit that!
+          ;; TODO: maybe we should have some more formal debugging mode parameter?
+          (def debug #t)
+          (defvalues (bytes-value labels-value)
+            (assemble
+              (&begin
+              (&simple-contract-prelude)
+              &define-tail-call
+              &define-simple-logging
+              (&define-check-participant-or-timeout debug: debug)
+              (&define-end-contract debug: debug)
+              consensus-code
+              [&label 'brk-start@ (unbox (brk-start))])))
+          (.set! self bytes bytes-value)
+          (.set! self labels labels-value)))
     }))
-
-;; TODO: Exclude checkpoints that have already been executed by the first active
-;; participant.
-;; : Bytes (Table Offset <- Symbol) <- ConsensusCodeGenerator
-(def (generate-consensus-code-generator self)
-  (parameterize ((brk-start (box params-start@)))
-    (def consensus-code (generate-consensus-code self))
-    ;; NB: you can use #t below to debug with remix.ethereum.org. Do NOT commit that!
-    ;; TODO: maybe we should have some more formal debugging mode parameter?
-    (def debug #t)
-    (assemble
-      (&begin
-      (&simple-contract-prelude)
-      &define-tail-call
-      &define-simple-logging
-      (&define-check-participant-or-timeout debug: debug)
-      (&define-end-contract debug: debug)
-      consensus-code
-      [&label 'brk-start@ (unbox (brk-start))]))))
 
 ;; Directives to generate the entire bytecode for the contract (minus header / footer)
 ;; Directive <- ConsensusCodeGenerator
@@ -179,9 +174,7 @@
     (['@app 'bitwise-and a b]
       (binary-operator AND a b))
     (['input _ _]
-      [REVERT])
-
-      ))
+      [REVERT])))
 
 ;; Offset <- ConsensusCodeGenerator Symbol
 (def (lookup-variable-offset self code-block-label variable-name)
