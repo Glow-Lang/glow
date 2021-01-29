@@ -9,7 +9,7 @@
   :mukn/ethereum/hex :mukn/ethereum/ethereum :mukn/ethereum/network-config :mukn/ethereum/json-rpc
   :mukn/ethereum/transaction :mukn/ethereum/tx-tracker :mukn/ethereum/watch :mukn/ethereum/assets
   :mukn/ethereum/contract-runtime :mukn/ethereum/contract-config :mukn/ethereum/assembly :mukn/ethereum/types
-  ./program ./block-ctx
+  ./program ./block-ctx ./consensus-runtime
   ../compiler/method-resolve/method-resolve
   ../compiler/project/runtime-2)
 
@@ -88,10 +88,7 @@
    timer-start ;; : Block
    io-context ; : IOContext
    program ;; : Program ;; from program.ss
-   variable-offsets ;; : (Table (Table Offset <- Symbol) <- Symbol)
-   params-end ;; Nat?
-   contract-runtime-labels ;; Bytes (Table Offset <- Symbol)
-   contract-runtime-bytes) ;; Bytes
+   consensus-runtime) ;; ConsensusRuntime
   constructor: :init!
   transparent: #t)
 
@@ -115,8 +112,9 @@
     (set! (@ self block-ctx) #f)
     (set! (@ self io-context) io-context)
     (set! (@ self program) program)
-
-    {initialize-contract-runtime self}
+    (set! (@ self consensus-runtime)
+      (.call ConsensusRuntime .make program (.@ agreement options timeoutInBlocks)))
+    (.call ConsensusRuntime .initialize (@ self consensus-runtime))
     {initialize-environment self}))
 
 ;; <- Runtime
@@ -279,7 +277,7 @@
     (def initial-state-digest
       (digest-product-f initial-state))
     (def contract-bytes
-      (stateful-contract-init initial-state-digest (@ self contract-runtime-bytes)))
+      (stateful-contract-init initial-state-digest (.@ (@ self consensus-runtime) bytes)))
     (create-contract sender-address contract-bytes
       value: (.@ (@ self block-ctx) deposits))))
 
@@ -334,15 +332,8 @@
 (defmethod {get-current-code-block Runtime}
   (λ (self)
     (def participant-interaction
-      {get-interaction (@ self program) (@ self role)})
+      (get-interaction (@ self program) (@ self role)))
     (hash-get participant-interaction (@ self current-code-block-label))))
-
-(defmethod {initialize-contract-runtime Runtime}
-  (λ (self)
-    (defvalues (contract-runtime-bytes contract-runtime-labels)
-      {generate-consensus-runtime self})
-    (set! (@ self contract-runtime-labels) contract-runtime-labels)
-    (set! (@ self contract-runtime-bytes) contract-runtime-bytes)))
 
 ;; TODO: map alpha-converted names to names in original source when displaying to user
 ;;       using the alpha-back-table
@@ -356,7 +347,7 @@
     (def parameters (.@ agreement parameters))
     (for ((values parameter-name-key parameter-json-value) parameters)
       (def parameter-name (symbolify parameter-name-key))
-      (def parameter-type {lookup-type (@ self program) parameter-name})
+      (def parameter-type (lookup-type (@ self program) parameter-name))
       (def parameter-value (<-json parameter-type parameter-json-value))
       {add-to-environment self parameter-name parameter-value})))
 
@@ -431,7 +422,7 @@
 
       (['add-to-publish ['quote publish-name] variable-name]
        (let ((publish-value {reduce-expression self variable-name})
-             (publish-type {lookup-type (@ self program) variable-name}))
+             (publish-type (lookup-type (@ self program) variable-name)))
          (.call ActiveBlockCtx .add-to-published (@ self block-ctx)
                 publish-name publish-type publish-value)))
 
@@ -466,7 +457,7 @@
   (λ (self expression)
     (match expression
       (['expect-published ['quote publish-name]]
-       (let (publish-type {lookup-type (@ self program) publish-name})
+       (let (publish-type (lookup-type (@ self program) publish-name))
          (.call PassiveBlockCtx .expect-published (@ self block-ctx) publish-name publish-type)))
       (['@app 'isValidSignature address-variable digest-variable signature-variable]
        (let
@@ -510,7 +501,7 @@
       (['digest . es]
        (digest
         (for/collect ((e es))
-          (cons {lookup-type (@ self program) e}
+          (cons (lookup-type (@ self program) e)
                 {reduce-expression self e}))))
       (['sign digest-variable]
        (let ((this-participant {get-active-participant self})
@@ -529,291 +520,29 @@
 ;; : Frame <- Runtime Block (Table Offset <- Symbol) Symbol
 (defmethod {create-frame-variables Runtime}
   (λ (self timer-start code-block-label code-block-participant)
+    (def consensus-runtime (@ self consensus-runtime))
     (def checkpoint-location
-      (hash-get (@ self contract-runtime-labels) {make-checkpoint-label self code-block-label}))
+      (hash-get (.@ consensus-runtime labels) (make-checkpoint-label (@ self program) code-block-label)))
     (def active-participant-offset
-      {lookup-variable-offset self code-block-label code-block-participant})
-    (def agreement (@ self agreement))
-    (def live-variables {lookup-live-variables (@ self program) code-block-label})
+      (lookup-variable-offset consensus-runtime code-block-label code-block-participant))
+    (def live-variables (lookup-live-variables (@ self program) code-block-label))
     ;; TODO: ensure keys are sorted in both hash-values
     [[UInt16 . checkpoint-location]
-      [Block . timer-start]
-      ;; [UInt16 . active-participant-offset]
-      ;; TODO: designate participant addresses as global variables that are stored outside of frames
-      (map
-        (λ (variable-name)
-          (def variable-type {lookup-type (@ self program) variable-name})
-          (def variable-value (hash-get (@ self environment) variable-name))
-          [variable-type . variable-value])
-        (sort live-variables symbol<?))...]))
+     [Block . timer-start]
+     ;; [UInt16 . active-participant-offset]
+     ;; TODO: designate participant addresses as global variables that are stored outside of frames
+     (map
+       (λ (variable-name)
+         (def variable-type (lookup-type (@ self program) variable-name))
+         (def variable-value (hash-get (@ self environment) variable-name))
+         [variable-type . variable-value])
+       (sort live-variables symbol<?))...]))
 
 ;; Block <- Frame
 (def (timer-start<-frame-variables frame-variables)
   (cdadr frame-variables))
 
-;; TODO: use [t . v] everywhere instead of [v t] ? and unify with sexp<-state in ethereum-runtime
+;; TODO: use [t . v] everywhere instead of [v t] ? and unify with sexp<-state in participant-runtime
 ;; Sexp <- Frame
 (def (sexp<-frame-variables frame-variables)
   `(list ,@(map (match <> ([v t] `(list ,(sexp<- t v) ,(sexp<- Type t)))) frame-variables)))
-
-;; TODO: Exclude checkpoints that have already been executed by the first active
-;; participant.
-;; : Bytes (Table Offset <- Symbol) <- Runtime
-(defmethod {generate-consensus-runtime Runtime}
-  (λ (self)
-    (parameterize ((brk-start (box params-start@)))
-      (def consensus-code {generate-consensus-code self})
-      ;; NB: you can use #t below to debug with remix.ethereum.org. Do NOT commit that!
-      ;; TODO: maybe we should have some more formal debugging mode parameter?
-      (def debug #t)
-      (assemble
-       (&begin
-        (&simple-contract-prelude)
-        &define-tail-call
-        &define-simple-logging
-        (&define-check-participant-or-timeout debug: debug)
-        (&define-end-contract debug: debug)
-        consensus-code
-        [&label 'brk-start@ (unbox (brk-start))])))))
-
-;; : Bytes (Table Offset <- Symbol) <- Runtime
-(defmethod {make-checkpoint-label Runtime}
-  (λ (self checkpoint)
-    (symbolify (@ self program name) "--" checkpoint)))
-
-;; <- Runtime
-(defmethod {compute-variable-offsets Runtime}
-  (λ (self code-block-label)
-    (def frame-variables (make-hash-table))
-    ;; Initial offset computed by global registers, see :mukn/ethereum/contract-runtime
-    (def start params-start@)
-    (def agreement (@ self agreement))
-    (def live-variables {lookup-live-variables (@ self program) code-block-label})
-    (for-each
-      (λ (live-variable)
-        (let* ((type {lookup-type (@ self program) live-variable})
-               (parameter-length (param-length type)))
-          (hash-put! frame-variables live-variable (post-increment! start parameter-length))))
-      (sort live-variables symbol<?))
-    (hash-put! (@ self variable-offsets) code-block-label frame-variables)
-    (when (or (not (@ self params-end)) (> start (@ self params-end)))
-      (set! (@ self params-end) start))))
-
-;; Offset <- Runtime Symbol
-(defmethod {lookup-variable-offset Runtime}
-  (λ (self code-block-label variable-name)
-    (def offset
-      (hash-get (hash-get (@ self variable-offsets) code-block-label) variable-name))
-    (if offset
-      offset
-      (error "No offset for variable: " variable-name))))
-
-;; Assembly directives to load an immediate variable (i.e. for unboxed type) onto the stack
-;; : Directives <- Runtime Symbol Type
-(defmethod {load-immediate-variable Runtime}
-  (λ (self code-block-label variable-name variable-type)
-    (&mloadat
-      {lookup-variable-offset self code-block-label variable-name}
-      (param-length variable-type))))
-
-;; Directives to load onto stack a representation for a trivial expression
-;; use load-immediate-variable for types passed by value
-;; use lookup-variable-offset for types passed by reference (Signature)
-;; otherwise place a constant on the stack
-;; : Directives <- Runtime
-(defmethod {trivial-expression Runtime}
-  (λ (self code-block-label expr)
-    (def type {lookup-type (@ self program) expr})
-    (def len (param-length type))
-    (cond
-     ((zero? len) 0) ;; TODO: have a more general notion of singleton/unit type, not only 0-valued?
-     ((<= len 32) ;; TODO: have a more general notion of immediate vs boxed type?
-      (if (symbol? expr)
-        {load-immediate-variable self code-block-label expr type} ;; reading a variable
-        (nat<-bytes (bytes<- type expr)))) ;; constant
-     (else
-      (if (symbol? expr)
-        {lookup-variable-offset self code-block-label expr} ;; referring to a variable by offset
-        ;; TODO: store the data in a variable (temporary, if needed) --- do that in ANF after typesetting.
-        (error "trivial-expression: oversize constant" (.@ type sexp) expr))))))
-
-;; TODO: params-end should be the MAX of each frame's params-end.
-;; Updates variable offsets to account for new local variable, and increments params-end
-;; <- Runtime Symbol
-(defmethod {add-local-variable-to-frame Runtime}
-  (λ (self code-block-label variable-name)
-    (def type {lookup-type (@ self program) variable-name})
-    (def argument-length (param-length type))
-    (def code-block-variable-offsets (hash-get (@ self variable-offsets) code-block-label))
-    ;; The same variable can be bound in several branches of an if or match expression, and
-    ;; because of the ANF transformation we can assume the previously assigned offset is
-    ;; correct already.
-    (unless (hash-key? code-block-variable-offsets variable-name)
-      (hash-put! code-block-variable-offsets variable-name
-        (post-increment! (@ self params-end) argument-length)))))
-
-;; Directives to generate the entire bytecode for the contract (minus header / footer)
-;; Directive <- Runtime
-(defmethod {generate-consensus-code Runtime}
-  (λ (self)
-    (def consensus-interaction {get-interaction (@ self program) #f})
-    (set! (@ self variable-offsets) (make-hash-table))
-    (&begin*
-     (append-map (match <> ([code-block-label . code-block]
-                            {generate-consensus-code-block self code-block-label code-block}))
-                 (hash->list/sort consensus-interaction symbol<?)))))
-
-;; Directives from a code block
-;; (List Directive) <- Runtime Symbol CodeBlock
-(defmethod {generate-consensus-code-block Runtime}
-  (λ (self code-block-label code-block)
-    (def checkpoint-statements (code-block-statements code-block))
-    (set! (@ self params-end) #f)
-    {compute-variable-offsets self code-block-label}
-    (def code-block-directives
-      [[&jumpdest {make-checkpoint-label self code-block-label}]
-       (&check-timeout! timeout: (.@ (@ self agreement) options timeoutInBlocks))
-       (append-map (λ (statement) {interpret-consensus-statement self code-block-label statement})
-                 checkpoint-statements)...])
-    (register-frame-size (@ self params-end))
-    (def end-code-block-directive
-      (if (equal? code-block-label {get-last-code-block-label (@ self program)})
-        &end-contract!
-        (setup-tail-call self code-block-label code-block)))
-    (snoc end-code-block-directive code-block-directives)))
-
-;; Directive <- Runtime Symbol CodeBlock
-(def (setup-tail-call self code-block-label code-block)
-  (let* ((participants (.@ (@ self agreement) participants))
-         (next-code-block-label (code-block-exit code-block))
-         (next-code-block-live-variables (sort {lookup-live-variables (@ self program) next-code-block-label} symbol<?))
-         (next-code-block-frame-size (+ (param-length UInt16) (param-length Block)))) ;; 2 for program counter, 2 for timer start,
-    (&begin
-      (&begin*
-        (map
-          (λ (lv)
-            ;; TODO: Make sure this works for non-immediate variables.
-            (def variable-size (param-length {lookup-type (@ self program) lv}))
-            (&mloadat
-              {lookup-variable-offset self code-block-label lv}
-              variable-size))
-          (reverse next-code-block-live-variables)))
-      ;; TODO: If other guy, put NUMBER, otherwise, reuse current timer-start.
-      NUMBER
-      ;; TODO: Define only once for every callee.
-      ;; [&jumpdest (symbolify 'tail-call-into- next-code-block-label)]
-      {make-checkpoint-label self next-code-block-label} pc-set!
-      timer-start-set!
-      (&begin*
-        (map
-          (λ (lv)
-            ;; TODO: Make sure this works for non-immediate variables.
-            (def variable-size (param-length {lookup-type (@ self program) lv}))
-            (set! next-code-block-frame-size (+ next-code-block-frame-size variable-size))
-            (&mstoreat
-              {lookup-variable-offset self next-code-block-label lv}
-              variable-size))
-          next-code-block-live-variables))
-      next-code-block-frame-size
-      'tail-call JUMP)))
-
-
-;; ASSUMING a two-participant contract, find the other participant for use in timeouts.
-;; Symbol <- Runtime Symbol
-(defmethod {find-other-participant Runtime}
-  (λ (self participant)
-    (find
-      (λ (p) (not (equal? p participant)))
-      (.all-slots-sorted (.@ (@ self agreement) participants)))))
-
-;; (List Directive) <- Runtime Sexp
-(defmethod {interpret-consensus-statement Runtime}
-  (λ (self code-block-label statement)
-    (match statement
-      (['set-participant new-participant]
-       ;; TODO: support more than two participants
-       (let (other-participant {find-other-participant self new-participant})
-         [(&check-participant-or-timeout!
-           must-act: {lookup-variable-offset self code-block-label new-participant}
-           or-end-in-favor-of: {lookup-variable-offset self code-block-label other-participant})]))
-
-      ;; TODO: support the fact that the "immediate continuation" for an expression
-      ;; may be not just def, but also ignore or return
-      (['def variable-name expression]
-       {add-local-variable-to-frame self code-block-label variable-name}
-       {interpret-consensus-expression self code-block-label variable-name expression})
-
-      (['require! variable-name]
-       [{load-immediate-variable self code-block-label variable-name Bool} &require!])
-
-      (['expect-deposited amount]
-       [{load-immediate-variable self code-block-label amount Ether} &deposit!])
-
-      (['consensus:withdraw participant amount]
-       [{load-immediate-variable self code-block-label amount Ether}
-        {load-immediate-variable self code-block-label participant Address}
-        &withdraw!])
-
-      (['return _]
-       [])
-
-      (['@label _]
-       [])
-
-      (['switch value cases ...]
-       (let*
-         ((comparison-value {trivial-expression self code-block-label value})
-          (interpreted-cases (map (λ (case)
-                                   (let (interpreted-statements (map (λ (case-statement)
-                                                                      {interpret-consensus-statement self code-block-label case-statement}) (cdr case)))
-                                    [(car case) (flatten1 interpreted-statements)])) cases)))
-        [(&switch comparison-value interpreted-cases)]))
-
-      (else
-       (error "Runtime does not recognize consensus statement: " statement)))))
-
-(def (typed-directive<-trivial-expr runtime code-block-label expr)
-  (def program (@ runtime program))
-  (cons {lookup-type program expr} {trivial-expression runtime code-block-label expr}))
-
-(defmethod {interpret-consensus-expression Runtime}
-  (λ (self code-block-label variable-name expression)
-    (def type {lookup-type (@ self program) variable-name})
-    (def len (and type (param-length type)))
-    (def (binary-operator op a b)
-      [{trivial-expression self code-block-label b}
-       {trivial-expression self code-block-label a}
-       op
-       (&mstoreat {lookup-variable-offset self code-block-label variable-name} len)])
-    (match expression
-      (['expect-published published-variable-name]
-       [len {lookup-variable-offset self code-block-label variable-name} &read-published-data-to-mem])
-      (['@app 'isValidSignature participant digest signature]
-       [{load-immediate-variable self code-block-label participant Address}
-        {load-immediate-variable self code-block-label digest Digest}
-          ;; signatures are passed by reference, not by value
-        {lookup-variable-offset self code-block-label signature}
-        &isValidSignature
-         (&mstoreat {lookup-variable-offset self code-block-label variable-name} 1)])
-      (['digest . exprs]
-       [(&digest<-tvps (map (cut typed-directive<-trivial-expr self code-block-label <>) exprs))
-        (&mstoreat {lookup-variable-offset self code-block-label variable-name} len)])
-      (['== a b]
-       (binary-operator EQ a b))
-      ;; TODO: Make sure contract and runtime handle overflows in the same way.
-      (['@app '< a b]
-       (binary-operator LT a b))
-      (['@app '> a b]
-       (binary-operator GT a b))
-      (['@app '+ a b]
-       (binary-operator ADD a b))
-      (['@app '- a b]
-       (binary-operator SUB a b))
-      (['@app '* a b]
-       (binary-operator MUL a b))
-      (['@app '/ a b]
-       (binary-operator DIV a b))
-      (['@app 'bitwise-xor a b]
-       (binary-operator XOR a b))
-      (['@app 'bitwise-and a b]
-       (binary-operator AND a b)))))

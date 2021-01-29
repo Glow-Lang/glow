@@ -6,7 +6,7 @@
   :clan/path-config
   :mukn/ethereum/network-config :mukn/ethereum/json-rpc
   :mukn/glow/compiler/syntax-context :mukn/glow/compiler/multipass :mukn/glow/compiler/passes
-  ./program ./ethereum-runtime)
+  ./program ./participant-runtime)
 
 (.def io-context:terminal
   setup:

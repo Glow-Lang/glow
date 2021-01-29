@@ -7,7 +7,7 @@
   :clan/crypto/keccak
   :clan/persist/content-addressing
   :mukn/ethereum/types :mukn/ethereum/ethereum :mukn/ethereum/network-config :mukn/ethereum/json-rpc
-  :mukn/glow/runtime/ethereum-runtime :mukn/glow/runtime/reify-contract-parameters
+  :mukn/glow/runtime/participant-runtime :mukn/glow/runtime/reify-contract-parameters
   :mukn/ethereum/testing
 
   ;; TODO: make sure there's a one-stop-shop to all bindings required for the runtime to work.

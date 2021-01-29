@@ -17,7 +17,7 @@
   ../compiler/multipass
   ../compiler/syntax-context
   ../runtime/program
-  ../runtime/ethereum-runtime)
+  ../runtime/participant-runtime)
 
 (def buy-sig-integrationtest
   (test-suite "integration test for ethereum/buy-sig"
