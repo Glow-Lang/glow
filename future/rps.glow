@@ -44,7 +44,7 @@ let rockPaperScissors = (wagerAmount) => {
     // so we can assume that B's choice is made from information already available at this point,
     @A assert! canReach(end, end.outcome == A_Wins); // inside @A, canReach means that A can win even *against* others.
     @A let salt = randomUInt256();
-    @A @verifiably let commitment = digest(salt, handA);
+    @verifiably(A) let commitment = digest(salt, handA);
     publish! A -> commitment;
     deposit! A -> wagerAmount;
     // commit; // Maybe the commit is implicit at the transition between @A and @B ???

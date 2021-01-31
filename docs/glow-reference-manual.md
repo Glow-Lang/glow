@@ -1137,7 +1137,7 @@ to be used as an arbitrator in case of later dispute between the two participant
 let payForSignature = (digest : Digest, price : Nat) => {
   deposit! Buyer -> price;
 
-  @Seller @publicly let signature = sign(digest);
+  @publicly(Seller) let signature = sign(digest);
   withdraw! Seller <- price;
 }
 ```
@@ -1163,14 +1163,14 @@ with this statement:
 In the second step, the `Seller` publishes his signature, and
 after the contract verifies the signature, withdraws the price:
 ```
-  @Seller @publicly let signature = sign(digest);
+  @publicly(Seller) let signature = sign(digest);
   withdraw! Seller <- price;
 ```
 
-Note that the line `@Seller @publicly let signature = sign(digest);` above
+Note that the line `@publicly(Seller) let signature = sign(digest);` above
 is equivalent to the three statements below:
 ```
-  @Seller @verifiably let signature = sign(digest);
+  @verifiably(Seller) let signature = sign(digest);
   publish! Seller -> signature;
   verify! signature;
 ```
@@ -1530,7 +1530,7 @@ Compare with the above, and/or look for lines that include the new variable `esc
 let rockPaperScissors = (wagerAmount, escrowAmount) => {
   @A let handA = Hand.input("First player, pick your hand");
   @A let salt = randomUInt256();
-  @A @verifiably let commitment = digest(salt, handA);
+  @verifiably(A) let commitment = digest(salt, handA);
   publish! A -> commitment;
   deposit! A -> wagerAmount;
   deposit! A -> escrowAmount;

@@ -153,21 +153,21 @@ consensus and transfers it to the given
 }
 
 @defglowstm[(\@publicly participant name expr)
-            @|{@participant @publicly let name = expr;}|]{
+            @|{@publicly(participant) let name = expr;}|]{
 Defines @glowexp{name} from the given @glowexp{participant}'s
 evaluation of @glowexp{expr}, in a way that can be published
 and verified on the consensus.
 
 Equivalent to:
 @glowstmblock|{
-@participant @verifiably let name = expr;
+@verifiably(participant) let name = expr;
 publish! participant -> name;
 verify! name;
 }|
 }
 
 @defglowstm[(\@verifiably participant name expr)
-            @|{@participant @verifiably let name = expr;}|]{
+            @|{@verifiably(participant) let name = expr;}|]{
 Defines @glowexp{name} privately for the given
 @glowexp{participant} from their evaluation of
 @glowexp{expr}. The @glowexp{name} remains associated with
@@ -179,9 +179,10 @@ all been published.
 
 @defglowstm[(verify! names name) @{verify! names;}]{
 Verifies the equation associated with each @glowexp{name} in
-@glowexp{names}. Each @glowexp{name} and its dependencies
-must all be published beforehand, and the equations must
-hold.
+@glowexp{names}. Each equation is determined by the previous
+@glowexp|{@verifiably}| statement defining @glowexp{name}.
+Each @glowexp{name} and its dependencies must all be
+published beforehand, and the equations must hold.
 }
 
 @defglowstm[(assert! expr) @{assert! expr;}]{
