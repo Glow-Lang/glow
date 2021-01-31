@@ -124,8 +124,8 @@
   ;; NB: Regular unit-tests should already have been taken care of by the build
   ;;;; (run-process/batch ["nix-shell" "--arg" "thunk" "false" "--arg" "precompile" "true" "--pure" "--command" "./unit-tests.ss"])
   ;; For integration tests, could we somehow run in a pure nix-shell?
-  (run-process/batch ["./unit-tests.ss" "integration"])
-  (run-process/batch ["make" "doc"])
+  (run-process/batch ["time" "./unit-tests.ss" "integration"])
+  (run-process/batch ["time" "make" "doc"])
   ;; NB: running the below outside a Nix shell so we can interact with the git repo
   (run-process/batch ["./unit-tests.ss" "check-git-up-to-date"]))
 
@@ -151,7 +151,8 @@
 (define-entry-point (docker-all)
   "Build and test locally in docker containers, emulating CI"
   (docker-build)
-  (docker-test))
+  (docker-test)
+  #;(docker-doc)) ;; <- For now, done as part of test
 
 ;; Instead of extracting these and putting them in the too-visible environment,
 ;; just mount the appropriate configuration directory
@@ -170,8 +171,12 @@
   (docker-run "/root/glow-source/scripts/ci.ss in-docker-build"))
 
 (define-entry-point (docker-test)
-  "Build and test locally in docker containers, emulating CI"
+  "Run tests locally in a docker container, emulating CI"
   (docker-run "/root/glow-source/scripts/ci.ss in-docker-test"))
+
+#;(define-entry-point (docker-doc)
+  "Build documentation locally in a docker container, emulating CI"
+  (docker-run "/root/glow-source/scripts/ci.ss in-docker-doc"))
 
 (define-entry-point (in-docker-setup)
   "(Internal) Setup local docker container"
@@ -195,6 +200,12 @@
   (run-process/batch ["./scripts/ci.ss" "before-test"])
   (run-process/batch ["./scripts/ci.ss" "test"])
   (run-process/batch ["./scripts/ci.ss" "after-test"]))
+
+#;(define-entry-point (in-docker-doc)
+  "(Internal) Emulate CI doc inside a local docker container"
+  (in-docker-setup)
+  (run-process/batch ["./scripts/ci.ss" "before-test"])
+  (run-process/batch ["./scripts/ci.ss" "doc"]))
 
 (set-default-entry-point! docker-all)
 (backtrace-on-abort? #f)
