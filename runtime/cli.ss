@@ -3,43 +3,31 @@
 (import
   :gerbil/expander
   :std/getopt :std/misc/hash :std/sugar
-  :clan/base :clan/exit :clan/json :clan/multicall :clan/path-config :clan/syntax
+  :clan/base :clan/cli :clan/exit :clan/json :clan/multicall :clan/path-config :clan/syntax
   :clan/poo/debug
   :clan/persist/db
   :mukn/ethereum/cli :mukn/ethereum/types :mukn/ethereum/json-rpc
   ./participant-runtime ./reify-contract-parameters ./configuration)
 
-(def (json<-cli-input cli-input)
-  (cond
-   ((equal? cli-input "-")
-    (json<-port (current-input-port)))
-   ((and (string? cli-input)
-         (< 0 (string-length cli-input))
-         (string-index "[{\"0123456789-" (string-ref cli-input 0)))
-    (json<-string cli-input))
-   ((string? cli-input)
-    (read-file-json cli-input))
-   (else (error "invalid input specifier" 'json<-cli-input cli-input))))
+(def common-options
+  [(flag 'test "--test"
+         help: "enable testing including test identities")
+   (flag 'backtrace "--backtrace"
+         help: "enable backtraces for debugging purposes")
+   (option 'ethereum-network "-E" "--ethereum-network" default: "pet"
+           help: "name of ethereum network")
+   (option 'database "-D" "--database" default: (run-path "testdb")
+           help: "path to local DApp state database")])
 
 (def (getopt/common-options . options)
-  (apply getopt
-    (append
-     [(flag 'test "--test"
-            help: "enable testing including test identities")
-      (flag 'backtrace "--backtrace"
-            help: "enable backtraces for debugging purposes")
-      (option 'ethereum-network "-E" "--ethereum-network" default: "pet"
-              help: "name of ethereum network")
-      (option 'database "-D" "--database" default: (run-path "testdb")
-              help: "path to local DApp state database")]
-     options)))
+  (apply getopt (append common-options options)))
 
-(def (process-common-options opt)
-  (defrule {symbol} (hash-get opt 'symbol))
-  (backtrace-on-abort? {backtrace})
-  (cond
-   ({test} (import-module ':mukn/ethereum/testing #t #t))
-   (else (load-secret-key-ring))))
+(def process-common-options
+  (lambda-opt
+   (backtrace-on-abort? {backtrace})
+   (cond
+    ({test} (import-module ':mukn/ethereum/testing #t #t))
+    (else (load-secret-key-ring)))))
 
 ;; TODO: also accept local interaction parameters
 ;; TODO: accept alternative ethereum networks, etc
