@@ -552,7 +552,7 @@ to be used as an arbitrator in case of later dispute between the two participant
 let payForSignature = (digest : Digest, price : Nat) => {
   deposit! Buyer -> price;
 
-  @Seller @publicly let signature = sign(digest);
+  @publicly(Seller) let signature = sign(digest);
   withdraw! Seller price;
 };
 }|
@@ -580,15 +580,15 @@ In the second step, the @glowexp{Seller} publishes their signature, and
 after the contract verifies the signature, withdraws the price:
 
 @glowstmblock|{
-  @Seller @publicly let signature = sign(digest);
+  @publicly(Seller) let signature = sign(digest);
   withdraw! Seller <- price;
 }|
 
-Note that the line @glowstm|{@Seller @publicly let signature = sign(digest);}| above
+Note that the line @glowstm|{@publicly(Seller) let signature = sign(digest);}| above
 is equivalent to the three statements below:
 
 @glowstmblock|{
-  @Seller @verifiably let signature = sign(digest);
+  @verifiably(Seller) let signature = sign(digest);
   publish! Seller -> signature;
   verify! signature;
 }|

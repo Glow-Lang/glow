@@ -4,5 +4,5 @@
  (def payForSignature
       (λ ((digest0 : Digest) (price : Nat))
          (deposit! Buyer price)
-         (@ Seller (@publicly (def signature (sign digest0))))
+         (@publicly (Seller) (def signature (sign digest0)))
          (withdraw! Seller price)))))
