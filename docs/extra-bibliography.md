@@ -155,9 +155,9 @@ Other non-Lisp types of interest?
 
 ### Hard Wallet
 
-* Ledger
+* [Ledger](https://www.ledger.com/)
 * [Trezor](https://wiki.trezor.io/Developers_guide), distant second
-* KeepKey, distant third
+* [KeepKey](https://shapeshift.com/keepkey), distant third
 
 ### Soft Wallets and chats
 
@@ -217,10 +217,16 @@ Other non-Lisp types of interest?
 
 ### More...
 
-* Ledger
-* COSMOS
+* Storage: [Swarm](https://swarm.ethereum.org) ([Book](https://gateway.ethswarm.org/bzz/latest.bookofswarm.eth/)), LBRY, SIA, FileCoin (IPFS), Swarm, NeoFS, Storj...
+* [Near](https://near.org)
+* [PolkaDot](https://polkadot.network)
+* [Fluence](https://fluence.network)
+* [Cosmos](cosmos.network)
+* [Aether](https://getaether.net/)
+* [ScuttleButt](https://ScuttleButt.nz)
 * [RGB](https://rgb-org.github.io/)
 * [Kleros](https://kleros.io)
 * [Ergo](https://ergoplatform.org/en/)
+* [THOR](https://thorchain.org/)
 
 Integrate old documents such as the [Legicash FaCTS bibliography](https://github.com/AlacrisIO/legicash-facts/blob/master/bibliography.md) and from the Alacrity archive: [language scope](https://github.com/AlacrisIO/alacrity/blob/master/archive/language-scope.md), [competition](https://github.com/AlacrisIO/alacrity/blob/master/archive/competition.md), [bootstrap plan](https://github.com/AlacrisIO/alacrity/blob/master/docs/bootstrap.md), [state channels](https://github.com/AlacrisIO/alacrity/blob/master/archive/StateChannel.sol).
