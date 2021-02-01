@@ -23,3 +23,5 @@ test:
     - ./scripts/ci.ss test
   after_script:
     - ./scripts/ci.ss after-test
+  artifacts:
+    - run/log/ethereum/*.log
