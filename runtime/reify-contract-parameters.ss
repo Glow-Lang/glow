@@ -34,6 +34,19 @@
   (def compiler-output (run-passes path pass: 'project show?: #f))
   (parse-compiler-output compiler-output))
 
+;; A TypeValuePair is a dependent pair of a type and a value of that type:
+;;   (Σ (value : Type) value)
+
+;; program-environment-type-value-pairs :
+;; Program Environment -> [Hashof Symbol TypeValuePair]
+;; The symbols are alpha-names, not surface names
+(def (program-environment-type-value-pairs prg env)
+  (list->hash-table
+   (for/collect ((ent (hash->list env)))
+     (match ent
+       ((cons k v)
+        (cons k (cons (lookup-type prg k) v)))))))
+
 ;; run : Symbol InteractionAgreement -> [Hashof Symbol Any]
 (def (run role a)
   (def program (interaction-agreement->program a))
@@ -46,7 +59,7 @@
   (printf "~a finished\n" role)
   ;; TODO: change alpha-converted names to surface names for printing to the user
   ;; TODO: and return type-value pairs
-  (@ runtime environment))
+  (program-environment-type-value-pairs program (@ runtime environment)))
 
 ;; --------------------------------------------------------
 

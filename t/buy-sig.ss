@@ -104,7 +104,9 @@
   ;; Run the Buyer program, get the final environment object from it.
   (def environment (run 'Buyer agreement))
 
-  (def signature (hash-get environment 'signature))
+  (def signature-tvp (hash-get environment 'signature))
+  (def signature-t (car signature-tvp))
+  (def signature-v (cdr signature-tvp))
   (display-poo-ln
-   ["Signature extracted from DApp execution: " Signature (json<- Signature signature)
-    "valid?: " (message-signature-valid? bob signature digest)]))))
+   ["Signature extracted from DApp execution: " signature-t signature-v
+    "valid?: " (message-signature-valid? bob signature-v digest)]))))
