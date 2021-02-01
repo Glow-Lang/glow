@@ -48,8 +48,11 @@
                receive-handshake: (.o type: (Fun AgreementHandshake <-)))))
 
 (def (delete-agreement-handshake)
-  (displayln "Deleting any old agreement handshake file...")
-  (ignore-errors (delete-file (run-path "agreement-handshake.json"))))
+  (def file (special-file:handshake))
+  (displayln "Deleting any old agreement handshake file " file " ...")
+  (ignore-errors (delete-file file)))
+
+(def (special-file:handshake) (run-path "agreement-handshake.json"))
 
 ;; TODO: make an alternate version of io-context that
 ;;       displays at the terminal for the user to copy/paste and send to
@@ -59,16 +62,17 @@
   teardown: delete-agreement-handshake
   send-handshake:
   (λ (handshake)
-    (displayln "Writing agreement handshake to file...")
-    (write-file-json (run-path "agreement-handshake.json") (json<- AgreementHandshake handshake)))
+    (def file (special-file:handshake))
+    (displayln "Writing agreement handshake to file " file " ...")
+    (write-file-json (special-file:handshake) (json<- AgreementHandshake handshake)))
   receive-handshake:
   (λ ()
-    (def agreement-handshake.json (run-path "agreement-handshake.json"))
-    (while (not (file-exists? agreement-handshake.json))
-      (displayln "waiting for agreement handshake ...")
+    (def file (special-file:handshake))
+    (displayln "Waiting for agreement handshake file " file " ...")
+    (until (file-exists? file)
+      (displayln "still waiting for file " file " ...")
       (thread-sleep! 1))
-    (def handshake-json (read-file-json agreement-handshake.json))
-    (<-json AgreementHandshake handshake-json)))
+    (<-json AgreementHandshake (read-file-json file))))
 
 ;; PARTICIPANT RUNTIME
 

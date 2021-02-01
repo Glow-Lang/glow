@@ -16,7 +16,7 @@
          help: "enable backtraces for debugging purposes")
    (option 'ethereum-network "-E" "--ethereum-network" default: "pet"
            help: "name of ethereum network")
-   (option 'database "-D" "--database" default: (run-path "testdb")
+   (option 'database "-D" "--database" default: #f
            help: "path to local DApp state database")])
 
 (def (getopt/common-options . options)
@@ -47,7 +47,7 @@
   ;; TODO: validate ethereum network, with nice user-friendly error message
   (ensure-ethereum-connection {ethereum-network})
   ;; TODO: validate database, with nice user-friendly error message
-  (ensure-db-connection {database})
+  (ensure-db-connection (or {database} (run-path (if {test} "testdb" "userdb"))))
   (DDT start-interaction:
        Symbol role
        InteractionAgreement agreement
