@@ -3,7 +3,8 @@
 (import
   :gerbil/gambit/bits :gerbil/gambit/bytes :gerbil/gambit/threads
   :std/iter :std/misc/hash :std/sugar :std/misc/number :std/misc/list :std/sort :std/srfi/1
-  :clan/base :clan/exception :clan/io :clan/json :clan/number :clan/path-config :clan/ports :clan/syntax
+  :clan/base :clan/exception :clan/io :clan/json :clan/number
+  :clan/path-config :clan/ports :clan/syntax :clan/timestamp
   :clan/poo/poo :clan/poo/io :clan/poo/debug :clan/debug :clan/crypto/random
   :clan/persist/content-addressing
   :mukn/ethereum/hex :mukn/ethereum/ethereum :mukn/ethereum/network-config :mukn/ethereum/json-rpc
@@ -53,6 +54,7 @@
   (ignore-errors (delete-file file)))
 
 (def (special-file:handshake) (run-path "agreement-handshake.json"))
+(def (handshake-timeout-in-seconds) (* 15 (ethereum-timeout-in-blocks)))
 
 ;; TODO: make an alternate version of io-context that
 ;;       displays at the terminal for the user to copy/paste and send to
@@ -63,13 +65,17 @@
   send-handshake:
   (λ (handshake)
     (def file (special-file:handshake))
-    (displayln "Writing agreement handshake to file " file " ...")
+    (displayln "NOT Writing agreement handshake to file " file " ...")
     (write-file-json (special-file:handshake) (json<- AgreementHandshake handshake)))
   receive-handshake:
   (λ ()
     (def file (special-file:handshake))
+    (def deadline (+ (current-unix-time) (handshake-timeout-in-seconds)))
     (displayln "Waiting for agreement handshake file " file " ...")
     (until (file-exists? file)
+      (when (> (current-unix-time) deadline)
+        (displayln "Timeout while waiting for handshake!")
+        (error "Timeout while waiting for handshake"))
       (displayln "still waiting for file " file " ...")
       (thread-sleep! 1))
     (<-json AgreementHandshake (read-file-json file))))
