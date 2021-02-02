@@ -185,29 +185,24 @@
       (binary-operator XOR a b))
     (['@app 'bitwise-and a b]
       (binary-operator AND a b))
+    (['@app 'mod a b]
+      (binary-operator MOD a b))
     (['input _ _]
       [REVERT])))
 
 ;; Offset <- ConsensusCodeGenerator Symbol Symbol
-(def (lookup-variable-offset/small-function self function-name variable-name)
+(def (lookup-temporary-variable-offset self function-name variable-name)
   (def function-offsets (hash-get (.@ self variable-offsets) function-name))
-  (def offset (hash-get function-offsets variable-name))
-  (if offset
-    offset
-    (let* ((type (lookup-type (.@ self program) variable-name))
-           (computed-offset (.@ self params-end))
-           (argument-length (param-length type)))
-      (hash-put! (hash-get (.@ self variable-offsets) function-name) variable-name
-        (post-increment! (.@ self params-end) argument-length))
-      computed-offset)))
-
-;; Offset <- ConsensusCodeGenerator Symbol Symbol
-(def (lookup-variable-offset/medium-function self code-block-label variable-name)
-  (hash-get (hash-get (.@ self variable-offsets) code-block-label) variable-name))
+  (let* ((type (lookup-type (.@ self program) variable-name))
+         (computed-offset (.@ self params-end))
+         (argument-length (param-length type)))
+    (hash-put! (hash-get (.@ self variable-offsets) function-name) variable-name
+      (post-increment! (.@ self params-end) argument-length))
+    computed-offset))
 
 (def (lookup-variable-offset self function-name variable-name)
-  (or (lookup-variable-offset/medium-function self function-name variable-name)
-      (lookup-variable-offset/small-function self function-name variable-name)))
+  (or (hash-get (hash-get (.@ self variable-offsets) function-name) variable-name)
+      (lookup-temporary-variable-offset self function-name variable-name)))
 
 ;; Assembly directives to load an immediate variable (i.e. for unboxed type) onto the stack
 ;; : Directives <- ConsensusCodeGenerator Symbol Symbol Type
@@ -265,7 +260,7 @@
             ;; TODO: Make sure this works for non-immediate variables.
             (def variable-size (param-length (lookup-type (.@ self program) lv)))
             (&mloadat
-              (lookup-variable-offset/medium-function self code-block-label lv)
+              (lookup-variable-offset self code-block-label lv)
               variable-size))
           (reverse next-code-block-live-variables)))
       ;; TODO: If other guy, put NUMBER, otherwise, reuse current timer-start.
@@ -281,7 +276,7 @@
             (def variable-size (param-length (lookup-type (.@ self program) lv)))
             (set! next-code-block-frame-size (+ next-code-block-frame-size variable-size))
             (&mstoreat
-              (lookup-variable-offset/medium-function self next-code-block-label lv)
+              (lookup-variable-offset self next-code-block-label lv)
               variable-size))
           next-code-block-live-variables))
       next-code-block-frame-size

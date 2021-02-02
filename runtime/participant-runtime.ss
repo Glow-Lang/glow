@@ -444,7 +444,7 @@
          (n
           (error "Assertion failed, " variable-name " is not a Boolean."))))
 
-      (['return ['@tuple]]
+      (['return _]
        (void))
 
       (['@label name]
@@ -479,6 +479,11 @@
          ((av {reduce-expression self a})
           (bv {reduce-expression self b}))
          (+ av bv)))
+      (['@app '- a b]
+       (let
+         ((av {reduce-expression self a})
+          (bv {reduce-expression self b}))
+         (- av bv)))
       (['@app '* a b]
        (let
          ((av {reduce-expression self a})
@@ -494,6 +499,11 @@
          ((av {reduce-expression self a})
           (bv {reduce-expression self b}))
          (bitwise-and av bv)))
+      (['@app 'mod a b]
+        (let
+         ((av {reduce-expression self a})
+          (bv {reduce-expression self b}))
+         (modulo av bv)))
       (['@app 'randomUInt256]
        (randomUInt256))
       (['@app name . args]
