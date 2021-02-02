@@ -1,7 +1,7 @@
 (export #t)
 
 (import
-  :std/iter :std/misc/list :std/srfi/1 :clan/base :clan/pure/dict/symdict
+  :std/iter :std/sugar :std/misc/list :std/srfi/1 :clan/base :clan/pure/dict/symdict :clan/poo/poo
   <expander-runtime>
   :mukn/ethereum/types
   :mukn/ethereum/ethereum
@@ -18,7 +18,8 @@
    interactions ;; : (Table Interaction <- (OrFalse Symbol))
    compiler-output ;; : (Table Sexp <- Symbol) ;; S-expression returned by the project pass.
    initial-label ;; Symbol ;; First label in program, as defined by module header.
-   initial-code-block-label) ;; Symbol ;; Label preceding first participant code block.
+   initial-code-block-label ;; Symbol ;; Label preceding first participant code block.
+   small-functions) ;; (Table SmallFunction <- Symbol)
   constructor: :init!
   transparent: #t)
 
@@ -34,7 +35,8 @@
   (λ (self (n "") (an []) (i (make-hash-table)))
     (set! (@ self name) n)
     (set! (@ self parameter-names) an)
-    (set! (@ self interactions) i)))
+    (set! (@ self interactions) i)
+    (set! (@ self small-functions) (make-hash-table))))
 
 ;; Interaction <- Program Symbol
 (def (get-interaction self participant)
@@ -113,6 +115,13 @@
    exit) ;; (OrFalse Symbol)
   transparent: #t)
 
+(define-type SmallFunction
+  (Record
+   arguments: [(List Symbol)]
+   start-label: [Symbol]
+   end-label: [Symbol]
+   body: [(List Any)]))
+
 ;; <- ParseContext (OrFalse Symbol)
 (defmethod {set-participant ParseContext}
   (λ (self new-participant)
@@ -144,6 +153,10 @@
       (set! (@ program initial-label) initial-label)
       (for ((statement (syntax->datum statements)))
         (match statement
+          (['def name ['λ argumentss [start-label end-label] . body]]
+            (def small-functions (@ program small-functions))
+            (hash-put! small-functions name
+              (.o arguments: arguments start-label: start-label end-label: end-label body: body)))
           (['def name ['@make-interaction [['@list participants ...]] parameter-names labels interactions ...]]
             (set! (@ program name) name)
             (set! (@ program parameter-names) parameter-names)
