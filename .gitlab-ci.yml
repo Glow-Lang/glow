@@ -13,7 +13,7 @@ build:
     - ./scripts/ci.ss build
   after_script:
     - ./scripts/ci.ss after-build
-  #artifacts: # No need for artifacts, we build and test with nix then push to cachix!
+
 
 test:
   stage: test
@@ -23,3 +23,7 @@ test:
     - ./scripts/ci.ss test
   after_script:
     - ./scripts/ci.ss after-test
+  artifacts:
+    when: always
+    paths:
+      - ./run/*
