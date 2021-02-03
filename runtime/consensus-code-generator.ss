@@ -110,6 +110,7 @@
 
 ;; (List Directive) <- ConsensusCodeGenerator Symbol Sexp
 (def (compile-consensus-statement self function-name statement)
+
   (match statement
     (['set-participant new-participant]
       ;; TODO: support more than two participants
@@ -142,6 +143,9 @@
       [(load-immediate-variable self function-name amount Ether)
        (load-immediate-variable self function-name participant Address)
        &withdraw!])
+
+   (['return ['@tuple]]
+      [])
 
     (['return expression]
       (compile-consensus-expression self function-name expression))
@@ -178,6 +182,7 @@
     [(trivial-expression self function-name b)
      (trivial-expression self function-name a)
      op])
+
   (match expression
 
     (['@app 'isValidSignature participant digest signature]

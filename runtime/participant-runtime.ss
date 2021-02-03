@@ -450,6 +450,9 @@
          (n
           (error "Assertion failed, " variable-name " is not a Boolean."))))
 
+      (['return ['@tuple]]
+        (void))
+
       (['return expression]
         {interpret-participant-expression self expression})
 
