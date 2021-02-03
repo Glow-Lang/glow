@@ -32,8 +32,8 @@
           ;; NB: Scratch space begins at the memory location after the maximum size of all the medium
           ;; functions / code block frames. Therefore, medium functions need to be defined before small
           ;; functions, since small functions use the scratch space to store temporary variables.
-          (def medium-functions (&define-medium-functions self))
-          (def small-functions (&define-small-functions self (@ (.@ self program) small-functions)))
+          (def compiled-medium-functions (&define-medium-functions self))
+          (def compiled-small-functions (&define-small-functions self (@ (.@ self program) small-functions)))
           ;; NB: you can use #t below to debug with remix.ethereum.org. Do NOT commit that!
           ;; TODO: maybe we should have some more formal debugging mode parameter?
           (def debug #t)
@@ -45,8 +45,8 @@
                 &define-simple-logging
                 (&define-check-participant-or-timeout debug: debug)
                 (&define-end-contract debug: debug)
-                small-functions
-                medium-functions
+                compiled-small-functions
+                compiled-medium-functions
                 [&label 'brk-start@ (unbox (brk-start))])))
           (.set! self bytes bytes-value)
           (.set! self labels labels-value)))
@@ -56,26 +56,25 @@
 ;; Directive <- ConsensusCodeGenerator (Map SmallFunction <- Symbol)
 (def (&define-small-functions self small-functions)
   (&begin*
-    (map (λ (small-function)
-            (match small-function
-              ([function-name . definition]
-                (hash-put! (.@ self variable-offsets) function-name (make-hash-table))
-                (def store-instructions
-                  (map (λ (argument-name)
-                         (def type (lookup-type (.@ self program) argument-name))
-                         (def len (and type (param-length type)))
-                         (add-temporary-variable-offset self function-name argument-name)
-                         (&mstoreat (lookup-variable-offset self function-name argument-name) len))
-                   (.@ definition arguments)))
-                (def compiled-statements
-                  (map (λ (statement) (compile-consensus-statement self function-name statement))
-                        (.@ definition body)))
-                (def body-bytes
-                  (&begin*
-                    (append
-                      (flatten1 store-instructions)
-                      (flatten1 compiled-statements))))
-                (&define-small-function function-name body-bytes))))
+    (map (match <>
+            ([function-name . definition]
+              (hash-put! (.@ self variable-offsets) function-name (make-hash-table))
+              (def store-instructions
+                (map (λ (argument-name)
+                        (def type (lookup-type (.@ self program) argument-name))
+                        (def len (and type (param-length type)))
+                        (def offset (add-temporary-variable-offset self function-name argument-name))
+                        (&mstoreat offset len))
+                  (.@ definition arguments)))
+              (def compiled-statements
+                (map (λ (statement) (compile-consensus-statement self function-name statement))
+                      (.@ definition body)))
+              (def body-bytes
+                (&begin*
+                  (append
+                    (flatten1 store-instructions)
+                    (flatten1 compiled-statements))))
+              (&define-small-function function-name body-bytes)))
          (hash->list/sort small-functions symbol<?))))
 
 ;; Directives to generate the entire bytecode for the contract (minus header / footer)
@@ -226,7 +225,11 @@
     (['@app 'mod a b]
       (binary-operator MOD a b))
 
+    ;; WARNING: This does not support re-entrancy!
+    ;; TODO: Handle re-entrancy.
     (['@app inner-function-name argument-names ...]
+      (unless (hash-get (@ (.@ self program) small-functions) inner-function-name)
+        (error "Unknown function " inner-function-name))
       (let (arguments (map (λ (argument-name) (trivial-expression self function-name argument-name)) argument-names))
         [(apply &call inner-function-name arguments)]))
 
@@ -268,10 +271,10 @@
 (def (add-temporary-variable-offset self function-name variable-name)
   (def function-offsets (hash-get (.@ self variable-offsets) function-name))
   (def type (lookup-type (.@ self program) variable-name))
-  (def computed-offset (.@ self params-end))
   (def argument-length (param-length type))
-  (hash-put! (hash-get (.@ self variable-offsets) function-name) variable-name
-    (post-increment! (.@ self params-end) argument-length)))
+  (def offset (post-increment! (.@ self params-end) argument-length))
+  (hash-put! (hash-get (.@ self variable-offsets) function-name) variable-name offset)
+  offset)
 
 ;; Directives to load onto stack a representation for a trivial expression
 ;; use load-immediate-variable for types passed by value

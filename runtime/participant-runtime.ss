@@ -297,9 +297,9 @@
     (def role (@ self role))
     (def timer-start (.@ (@ self agreement) options maxInitialBlock))
     (def pretx {prepare-create-contract-transaction self})
-    (display-poo-ln role ": Deploying contract... "
-                    "timer-start: " timer-start)
+    (display-poo-ln role ": Deploying contract... " "timer-start: " timer-start)
     (def receipt (post-transaction pretx))
+    (display-poo-ln role ": Contract receipt... " "receipt: " receipt)
     (def contract-config (contract-config<-creation-receipt receipt))
     (display-poo-ln role ": Contract config: " ContractConfig contract-config)
     (verify-contract-config contract-config pretx)
@@ -525,6 +525,8 @@
       (['@app 'randomUInt256]
        (randomUInt256))
 
+      ;; WARNING: This does not support re-entrancy!
+      ;; TODO: Enable re-entrancy.
       (['@app name . argument-names]
         (let* ((small-function (hash-get (@ (@ self program) small-functions) name))
                (zipped-arguments (map cons argument-names (.@ small-function arguments))))
