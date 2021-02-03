@@ -2,6 +2,7 @@
 
 (import
   :std/iter :std/sugar :std/misc/list :std/srfi/1 :clan/base :clan/pure/dict/symdict :clan/poo/poo
+  :clan/poo/debug
   <expander-runtime>
   :mukn/ethereum/types
   :mukn/ethereum/ethereum
@@ -90,10 +91,9 @@
   transparent: #t)
 
 (defmethod {:init! ParseContext}
-  (λ (self (current-participant #f) ;; : (OrFalse Symbol)
-           (current-label 'begin0) ;; : (OrFalse Symbol) ;; TODO: do NOT hardwire begin0
+  (λ (self (current-label #f) ;; : (OrFalse Symbol)
            (code (make-hash-table))) ;; Interaction
-    (set! (@ self current-participant) current-participant)
+    (set! (@ self current-participant) #f)
     (set! (@ self current-label) current-label)
     (set! (@ self code) code)))
 
@@ -153,17 +153,21 @@
       (set! (@ program initial-label) initial-label)
       (for ((statement (syntax->datum statements)))
         (match statement
-          (['def name ['λ argumentss [start-label end-label] . body]]
+          (['def name ['λ arguments-value [start-label-value end-label-value] . body-value]]
             (def small-functions (@ program small-functions))
             (hash-put! small-functions name
-              (.o arguments: arguments start-label: start-label end-label: end-label body: body)))
+              (.o arguments: arguments-value
+                  start-label: start-label-value
+                  end-label: end-label-value
+                  body: body-value)))
           (['def name ['@make-interaction [['@list participants ...]] parameter-names labels interactions ...]]
             (set! (@ program name) name)
             (set! (@ program parameter-names) parameter-names)
+            (def initial-code-block-label (car labels))
+            (set! (@ program initial-code-block-label) initial-code-block-label)
             (def interactions-table (make-hash-table))
             (for ((values name body) (list->hash-table interactions))
-              (hash-put! interactions-table name (process-program name body)))
-            (set! (@ program initial-code-block-label) (car labels))
+              (hash-put! interactions-table name (process-program initial-code-block-label name body)))
             (set! (@ program interactions) interactions-table))
           (['@label label]
             (void))
@@ -176,8 +180,8 @@
       (error "Unrecognized module format"))))
 
 ;; : Interaction <- Symbol (List Sexp)
-(def (process-program name body)
-  (def parse-context (make-ParseContext))
+(def (process-program initial-code-block-label name body)
+  (def parse-context (make-ParseContext initial-code-block-label))
   (for-each! body (λ (statement)
     (match statement
       (['participant:set-participant new-participant]
