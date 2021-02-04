@@ -1,8 +1,8 @@
 {
   "owner": "fare",
   "repo": "gerbil-persist",
-  "branch": "master",
+  "branch": "debug",
   "private": false,
-  "rev": "553ddc6739b276ad107cce79c5c94dd7e4ce5859",
-  "sha256": "02rj4aw70wrn1p3kr5gc943xbc5bw47vznrig5dx182cm7lid4fy"
+  "rev": "b20795c0601afb5ef936a31d7c722e97045d31ee",
+  "sha256": "1248wnyc0vjf53ihw4d77hrsj03k682fb44w7dxvvk9s3i98s4pj"
 }
