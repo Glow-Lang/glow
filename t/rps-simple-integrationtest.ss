@@ -35,13 +35,13 @@ input UInt256: First player, pick your hand: 0 (Rock), 1 (Paper), 2 (Scissors)
 (def b-address bob)
 (def wagerAmount (wei<-ether .01))
 
-(def rps_simple.glow (source-path "examples/rps_simpl.sexp"))
+(def rps_simple.glow (source-path "examples/rps_simple.sexp"))
 
 (def (make-agreement)
   (def timeout (ethereum-timeout-in-blocks))
   (def initial-timer-start (+ (eth_blockNumber) timeout))
   (.o
-    interaction: "mukn/glow/examples/rps_simpl#rockPaperScissors"
+    interaction: "mukn/glow/examples/rps_simple#rockPaperScissors"
     participants: (.o A: a-address B: b-address)
     parameters: (hash
                   (wagerAmount (json<- Ether wagerAmount)))

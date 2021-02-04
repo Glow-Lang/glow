@@ -27,7 +27,13 @@
      .generate:
       (lambda (self)
         (parameterize ((brk-start (box params-start@)))
-          (def consensus-code (generate-consensus-code self))
+          (.set! self variable-offsets (make-hash-table))
+          (.set! self params-end params-start@)
+          ;; NB: Scratch space begins at the memory location after the maximum size of all the medium
+          ;; functions / code block frames. Therefore, medium functions need to be defined before small
+          ;; functions, since small functions use the scratch space to store temporary variables.
+          (def compiled-medium-functions (&define-medium-functions self))
+          (def compiled-small-functions (&define-small-functions self (@ (.@ self program) small-functions)))
           ;; NB: you can use #t below to debug with remix.ethereum.org. Do NOT commit that!
           ;; TODO: maybe we should have some more formal debugging mode parameter?
           (def debug #t)
@@ -39,29 +45,42 @@
                 &define-simple-logging
                 (&define-check-participant-or-timeout debug: debug)
                 (&define-end-contract debug: debug)
-                (&define-small-functions self (@ (.@ self program) small-functions))
-                consensus-code
+                compiled-small-functions
+                compiled-medium-functions
                 [&label 'brk-start@ (unbox (brk-start))])))
           (.set! self bytes bytes-value)
           (.set! self labels labels-value)))
     }))
 
+;; Directives to generate bytecode for small functions, usually defined in the header.
+;; Directive <- ConsensusCodeGenerator (Map SmallFunction <- Symbol)
 (def (&define-small-functions self small-functions)
   (&begin*
-    (map (λ (sf) (match sf
-          ([name . definition]
-            (def body-bytes
-              (&begin*
-                (map (λ (statement) (compile-consensus-statement self name statement))
-                     (.@ definition body))))
-            (&define-small-function name body-bytes))))
+    (map (match <>
+            ([function-name . definition]
+              (hash-put! (.@ self variable-offsets) function-name (make-hash-table))
+              (def store-instructions
+                (map (λ (argument-name)
+                        (def type (lookup-type (.@ self program) argument-name))
+                        (def len (and type (param-length type)))
+                        (def offset (add-temporary-variable-offset self function-name argument-name))
+                        (&mstoreat offset len))
+                  (.@ definition arguments)))
+              (def compiled-statements
+                (map (λ (statement) (compile-consensus-statement self function-name statement))
+                      (.@ definition body)))
+              (def body-bytes
+                (&begin*
+                  (append
+                    (flatten1 store-instructions)
+                    (flatten1 compiled-statements))))
+              (&define-small-function function-name body-bytes)))
          (hash->list/sort small-functions symbol<?))))
 
 ;; Directives to generate the entire bytecode for the contract (minus header / footer)
 ;; Directive <- ConsensusCodeGenerator
-(def (generate-consensus-code self)
+(def (&define-medium-functions self)
   (def consensus-interaction (get-interaction (.@ self program) #f))
-  (.set! self variable-offsets (make-hash-table))
   (&begin*
     (append-map (match <> ([code-block-label . code-block]
                           (generate-consensus-code-block self code-block-label code-block)))
@@ -90,6 +109,7 @@
 
 ;; (List Directive) <- ConsensusCodeGenerator Symbol Sexp
 (def (compile-consensus-statement self function-name statement)
+
   (match statement
     (['set-participant new-participant]
       ;; TODO: support more than two participants
@@ -102,7 +122,15 @@
     ;; may be not just def, but also ignore or return
     (['def variable-name expression]
       (add-local-variable-to-frame self function-name variable-name)
-      (compile-consensus-expression self function-name variable-name expression))
+      (def type (lookup-type (.@ self program) variable-name))
+      (def len (and type (param-length type)))
+      (match expression
+        (['expect-published published-variable-name]
+          [len (lookup-variable-offset self function-name variable-name) &read-published-data-to-mem])
+        (else
+          (append
+            (compile-consensus-expression self function-name expression)
+            [(&mstoreat (lookup-variable-offset self function-name variable-name) len)]))))
 
     (['require! variable-name]
       [(load-immediate-variable self function-name variable-name Bool) &require!])
@@ -115,8 +143,11 @@
        (load-immediate-variable self function-name participant Address)
        &withdraw!])
 
-    (['return _]
+   (['return ['@tuple]]
       [])
+
+    (['return expression]
+      (compile-consensus-expression self function-name expression))
 
     (['@label _]
       [])
@@ -145,64 +176,72 @@
   (cons (lookup-type program expr) (trivial-expression self function-name expr)))
 
 ;; Directive <- ConsensusCodeGenerator Symbol Symbol Any
-(def (compile-consensus-expression self function-name variable-name expression)
-  (def type (lookup-type (.@ self program) variable-name))
-  (def len (and type (param-length type)))
+(def (compile-consensus-expression self function-name expression)
   (def (binary-operator op a b)
     [(trivial-expression self function-name b)
      (trivial-expression self function-name a)
-     op
-     (&mstoreat (lookup-variable-offset self function-name variable-name) len)])
+     op])
+
   (match expression
-    (['expect-published published-variable-name]
-      [len (lookup-variable-offset self function-name variable-name) &read-published-data-to-mem])
+
     (['@app 'isValidSignature participant digest signature]
       [(load-immediate-variable self function-name participant Address)
        (load-immediate-variable self function-name digest Digest)
         ;; signatures are passed by reference, not by value
        (lookup-variable-offset self function-name signature)
-       &isValidSignature
-       (&mstoreat (lookup-variable-offset self function-name variable-name) 1)])
+       &isValidSignature])
+
     (['digest . exprs]
-      [(&digest<-tvps (map (cut typed-directive<-trivial-expr self function-name <>) exprs))
-       (&mstoreat (lookup-variable-offset self function-name variable-name) len)])
+      [(&digest<-tvps (map (cut typed-directive<-trivial-expr self function-name <>) exprs))])
+
     (['== a b]
       (binary-operator EQ a b))
+
     ;; TODO: Make sure contract and runtime handle overflows in the same way.
     (['@app '< a b]
       (binary-operator LT a b))
+
     (['@app '> a b]
       (binary-operator GT a b))
+
     (['@app '+ a b]
       (binary-operator ADD a b))
+
     (['@app '- a b]
       (binary-operator SUB a b))
+
     (['@app '* a b]
       (binary-operator MUL a b))
+
     (['@app '/ a b]
       (binary-operator DIV a b))
+
     (['@app 'bitwise-xor a b]
       (binary-operator XOR a b))
+
     (['@app 'bitwise-and a b]
       (binary-operator AND a b))
+
     (['@app 'mod a b]
       (binary-operator MOD a b))
+
+    ;; WARNING: This does not support re-entrancy!
+    ;; TODO: Handle re-entrancy.
+    (['@app inner-function-name argument-names ...]
+      (unless (hash-get (@ (.@ self program) small-functions) inner-function-name)
+        (error "Unknown function " inner-function-name))
+      (let (arguments (map (λ (argument-name) (trivial-expression self function-name argument-name)) argument-names))
+        [(apply &call inner-function-name arguments)]))
+
     (['input _ _]
-      [REVERT])))
+      [REVERT])
+
+    (else
+      [(trivial-expression self function-name expression)])))
 
 ;; Offset <- ConsensusCodeGenerator Symbol Symbol
-(def (lookup-temporary-variable-offset self function-name variable-name)
-  (def function-offsets (hash-get (.@ self variable-offsets) function-name))
-  (let* ((type (lookup-type (.@ self program) variable-name))
-         (computed-offset (.@ self params-end))
-         (argument-length (param-length type)))
-    (hash-put! (hash-get (.@ self variable-offsets) function-name) variable-name
-      (post-increment! (.@ self params-end) argument-length))
-    computed-offset))
-
 (def (lookup-variable-offset self function-name variable-name)
-  (or (hash-get (hash-get (.@ self variable-offsets) function-name) variable-name)
-      (lookup-temporary-variable-offset self function-name variable-name)))
+  (hash-get (hash-get (.@ self variable-offsets) function-name) variable-name))
 
 ;; Assembly directives to load an immediate variable (i.e. for unboxed type) onto the stack
 ;; : Directives <- ConsensusCodeGenerator Symbol Symbol Type
@@ -220,13 +259,22 @@
 (def (add-local-variable-to-frame self function-name variable-name)
   (def type (lookup-type (.@ self program) variable-name))
   (def argument-length (param-length type))
-  (def code-block-variable-offsets (hash-get (.@ self variable-offsets) function-name))
+  (def function-variable-offsets (hash-get (.@ self variable-offsets) function-name))
   ;; The same variable can be bound in several branches of an if or match expression, and
   ;; because of the ANF transformation we can assume the previously assigned offset is
   ;; correct already.
-  (unless (hash-key? code-block-variable-offsets variable-name)
-    (hash-put! code-block-variable-offsets variable-name
+  (unless (hash-key? function-variable-offsets variable-name)
+    (hash-put! function-variable-offsets variable-name
       (post-increment! (.@ self params-end) argument-length))))
+
+;; Offset <- ConsensusCodeGenerator Symbol Symbol
+(def (add-temporary-variable-offset self function-name variable-name)
+  (def function-offsets (hash-get (.@ self variable-offsets) function-name))
+  (def type (lookup-type (.@ self program) variable-name))
+  (def argument-length (param-length type))
+  (def offset (post-increment! (.@ self params-end) argument-length))
+  (hash-put! (hash-get (.@ self variable-offsets) function-name) variable-name offset)
+  offset)
 
 ;; Directives to load onto stack a representation for a trivial expression
 ;; use load-immediate-variable for types passed by value

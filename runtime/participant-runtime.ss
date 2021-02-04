@@ -297,9 +297,9 @@
     (def role (@ self role))
     (def timer-start (.@ (@ self agreement) options maxInitialBlock))
     (def pretx {prepare-create-contract-transaction self})
-    (display-poo-ln role ": Deploying contract... "
-                    "timer-start: " timer-start)
+    (display-poo-ln role ": Deploying contract... " "timer-start: " timer-start)
     (def receipt (post-transaction pretx))
+    (display-poo-ln role ": Contract receipt... " "receipt: " receipt)
     (def contract-config (contract-config<-creation-receipt receipt))
     (display-poo-ln role ": Contract config: " ContractConfig contract-config)
     (verify-contract-config contract-config pretx)
@@ -450,90 +450,120 @@
          (n
           (error "Assertion failed, " variable-name " is not a Boolean."))))
 
-      (['return _]
-       (void))
+      (['return ['@tuple]]
+        (void))
+
+      (['return expression]
+        {interpret-participant-expression self expression})
 
       (['@label name]
        (set! (@ self current-label) name))
 
       (['switch variable-name cases ...]
-       (let*
-         ((variable-value {reduce-expression self variable-name})
-          (matching-case (find (λ (case) (equal? {reduce-expression self (car case)} variable-value)) cases)))
-        (for (case-statement (cdr matching-case))
-          {interpret-participant-statement self case-statement}))))))
+        (let* ((variable-value {reduce-expression self variable-name})
+               (matching-case (find (λ (case) (equal? {reduce-expression self (car case)} variable-value)) cases)))
+          (for (case-statement (cdr matching-case))
+            {interpret-participant-statement self case-statement}))))))
 
 (defmethod {interpret-participant-expression Runtime}
   (λ (self expression)
     (match expression
+
       (['expect-published ['quote publish-name]]
        (let (publish-type (lookup-type (@ self program) publish-name))
          (.call PassiveBlockCtx .expect-published (@ self block-ctx) publish-name publish-type)))
+
       (['@app 'isValidSignature address-variable digest-variable signature-variable]
        (let
          ((address {reduce-expression self address-variable})
           (digest {reduce-expression self digest-variable})
           (signature {reduce-expression self signature-variable}))
          (isValidSignature address digest signature)))
+
       (['@app '< a b]
        (let
          ((av {reduce-expression self a})
           (bv {reduce-expression self b}))
          (< av bv)))
+
       (['@app '+ a b]
        (let
          ((av {reduce-expression self a})
           (bv {reduce-expression self b}))
          (+ av bv)))
+
       (['@app '- a b]
        (let
          ((av {reduce-expression self a})
           (bv {reduce-expression self b}))
          (- av bv)))
+
       (['@app '* a b]
        (let
          ((av {reduce-expression self a})
           (bv {reduce-expression self b}))
          (* av bv)))
+
       (['@app 'bitwise-xor a b]
        (let
          ((av {reduce-expression self a})
           (bv {reduce-expression self b}))
          (bitwise-xor av bv)))
+
       (['@app 'bitwise-and a b]
        (let
          ((av {reduce-expression self a})
           (bv {reduce-expression self b}))
          (bitwise-and av bv)))
+
       (['@app 'mod a b]
         (let
          ((av {reduce-expression self a})
           (bv {reduce-expression self b}))
          (modulo av bv)))
+
       (['@app 'randomUInt256]
        (randomUInt256))
-      (['@app name . args]
-        (error "Unknown @app expression: " name " " args))
+
+      ;; WARNING: This does not support re-entrancy!
+      ;; TODO: Enable re-entrancy.
+      (['@app name . argument-names]
+        (let* ((small-function (hash-get (@ (@ self program) small-functions) name))
+               (zipped-arguments (map cons argument-names (.@ small-function arguments))))
+          (unless small-function
+            (error "Unknown function " name))
+          (for ((zipped-argument zipped-arguments))
+            {add-to-environment self (cdr zipped-argument) {reduce-expression self (car zipped-argument)}})
+          (let/cc return
+            (for ((statement (.@ small-function body)))
+              (let (result {interpret-participant-statement self statement})
+                (when (equal? (car statement) 'return) (return result)))))))
+
       (['@tuple . es]
        (list->vector
         (for/collect ((e es))
           {reduce-expression self e})))
+
       (['digest . es]
        (digest
         (for/collect ((e es))
           (cons (lookup-type (@ self program) e)
                 {reduce-expression self e}))))
+
       (['sign digest-variable]
        (let ((this-participant {get-active-participant self})
              (digest {reduce-expression self digest-variable}))
          (make-message-signature (secret-key<-address this-participant) digest)))
+
       (['input 'Nat tag]
        (let ((tagv {reduce-expression self tag}))
          (input UInt256 tagv)))
+
       (['== a b]
         (let ((av {reduce-expression self a})
               (bv {reduce-expression self b}))
           (equal? av bv)))
+
       (else
         {reduce-expression self expression}))))
 
