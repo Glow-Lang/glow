@@ -2,7 +2,7 @@
 (import
   :std/format :std/iter :std/pregexp :std/misc/string :std/text/json
   :clan/debug :clan/json
-  :clan/poo/poo :clan/poo/mop :clan/poo/debug
+  :clan/poo/object :clan/poo/mop :clan/poo/debug
   :clan/path-config
   :mukn/ethereum/network-config :mukn/ethereum/json-rpc
   :mukn/glow/compiler/syntax-context :mukn/glow/compiler/multipass :mukn/glow/compiler/passes
@@ -72,6 +72,6 @@
    (else
     (error 'glow-module-path->path "given:" s))))
 
-;; monomorphic-poo->hash-table : [MonomorphicPooof V] -> [Hashof Symbol V]
-(def (monomorphic-poo->hash-table p)
-  (poo-instance (force-poo p)))
+;; monomorphic-object->hash-table : [MonomorphicPooof V] -> [Hashof Symbol V]
+(def (monomorphic-object->hash-table p)
+  (object-instance (force-object p)))

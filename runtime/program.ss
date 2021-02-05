@@ -1,7 +1,7 @@
 (export #t)
 
 (import
-  :std/iter :std/sugar :std/misc/list :std/srfi/1 :clan/base :clan/pure/dict/symdict :clan/poo/poo
+  :std/iter :std/sugar :std/misc/list :std/srfi/1 :clan/base :clan/pure/dict/symdict :clan/poo/object
   :clan/poo/debug
   <expander-runtime>
   :mukn/ethereum/types

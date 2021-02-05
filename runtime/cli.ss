@@ -57,5 +57,5 @@
   (displayln "Final environment:")
   ;; TODO: get run to include type t and pre-alpha-converted labels,
   ;; and output the entire thing as JSON omitting shadowed variables (rather than having conflicts)
-  (for-each (match <> ([k t . v] (display-poo-ln k "=> " t v)))
+  (for-each (match <> ([k t . v] (display-object-ln k "=> " t v)))
             (hash->list/sort environment symbol<?)))

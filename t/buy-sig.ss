@@ -11,7 +11,7 @@
 (import
   :std/sugar
   :clan/base :clan/files :clan/json :clan/path-config :clan/shell :clan/versioning
-  :clan/poo/poo :clan/poo/io :clan/poo/brace
+  :clan/poo/object :clan/poo/io :clan/poo/brace
   :clan/crypto/keccak
   :clan/persist/content-addressing :clan/persist/db
   :mukn/ethereum/types :mukn/ethereum/ethereum :mukn/ethereum/network-config :mukn/ethereum/json-rpc
@@ -107,6 +107,6 @@
   (def signature-tvp (hash-get environment 'signature))
   (def signature-t (car signature-tvp))
   (def signature-v (cdr signature-tvp))
-  (display-poo-ln
+  (display-object-ln
    ["Signature extracted from DApp execution: " signature-t signature-v
     "valid?: " (message-signature-valid? bob signature-v digest)]))))

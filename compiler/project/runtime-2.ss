@@ -4,7 +4,7 @@
           :std/misc/channel
           :gerbil/gambit/threads
           :clan/base
-          :clan/poo/poo
+          :clan/poo/object
           :clan/poo/type
           :clan/concurrency
           :clan/crypto/random
@@ -26,7 +26,7 @@
         :clan/pure/dict/assq
         :clan/concurrency
         :clan/crypto/random
-        :clan/poo/poo
+        :clan/poo/object
         :clan/poo/io
         :clan/persist/content-addressing
         (only-in :clan/poo/type Sum define-sum-constructors)

@@ -5,7 +5,7 @@
   :std/iter :std/misc/hash :std/sugar :std/misc/number :std/misc/list :std/sort :std/srfi/1
   :clan/base :clan/exception :clan/io :clan/json :clan/number
   :clan/path-config :clan/ports :clan/syntax :clan/timestamp
-  :clan/poo/poo :clan/poo/io :clan/poo/debug :clan/debug :clan/crypto/random
+  :clan/poo/object :clan/poo/io :clan/poo/debug :clan/debug :clan/crypto/random
   :clan/persist/content-addressing
   :mukn/ethereum/hex :mukn/ethereum/ethereum :mukn/ethereum/network-config :mukn/ethereum/json-rpc
   :mukn/ethereum/transaction :mukn/ethereum/tx-tracker :mukn/ethereum/watch :mukn/ethereum/assets
@@ -16,7 +16,7 @@
 
 ;; NB: Whichever function exports data end-users / imports from them should make sure to put in a Json array (Scheme list) prepend by the name of the type. And/or we may have a {"": "InteractionAgreement" ...} field with this asciibetically always-first name. Maybe such function belongs to gerbil-poo, too.
 
-(define-type Tokens (MonomorphicPoo Nat))
+(define-type Tokens (MonomorphicObject Nat))
 
 (define-type AgreementOptions
   (Record
@@ -30,9 +30,9 @@
    (Record
     glow-version: [String] ;; e.g. "Glow v0.0-560-gda782c9 on Gerbil-ethereum v0.0-83-g6568bc6" ;; TODO: have a function to compute that from versioning.ss
     interaction: [String] ;; e.g. "mukn/glow/examples/buy_sig#payForSignature", fully qualified Gerbil symbol
-    participants: [(MonomorphicPoo Address)] ;; e.g. {Buyer: alice Seller: bob}
+    participants: [(MonomorphicObject Address)] ;; e.g. {Buyer: alice Seller: bob}
     parameters: [Json] ;; This Json object to be decoded according to a type descriptor from the interaction (dependent types yay!)
-    reference: [(MonomorphicPoo Json)] ;; Arbitrary reference objects from each participant, with some conventional size limits on the Json string.
+    reference: [(MonomorphicObject Json)] ;; Arbitrary reference objects from each participant, with some conventional size limits on the Json string.
     options: [AgreementOptions] ;; See above
     code-digest: [Digest]))) ;; Make it the digest of Glow source code (in the future, including all Glow libraries transitively used)
 
@@ -169,7 +169,7 @@
   (displayln role ": Watching for new transaction ...")
   ;; TODO: `from` should be calculated using the deadline and not necessarily the previous tx,
   ;; since it may or not be setting the deadline
-  (display-poo-ln role ": contract-config=" ContractConfig contract-config)
+  (display-object-ln role ": contract-config=" ContractConfig contract-config)
   (def from
     (if (@ self timer-start)
       (+ (@ self timer-start) 1)
@@ -177,7 +177,7 @@
   (displayln role ": watching from block " from)
   (def new-log-object {watch self (.@ contract-config contract-address) from})
   ;; TODO: handle the case when there is no log objects
-  (display-poo-ln role ": New TX: " (Maybe LogObject) new-log-object)
+  (display-object-ln role ": New TX: " (Maybe LogObject) new-log-object)
   (def log-data (.@ new-log-object data))
   (set! (@ self timer-start) (.@ new-log-object blockNumber))
   ;; TODO: process the data in the same method?
@@ -249,7 +249,7 @@
           (def agreement (@ self agreement))
           (def published-data (get-output-u8vector (.@ (@ self block-ctx) outbox)))
           (def handshake (.new AgreementHandshake agreement contract-config published-data))
-          (display-poo-ln role ": Handshake: " AgreementHandshake handshake)
+          (display-object-ln role ": Handshake: " AgreementHandshake handshake)
           {send-contract-handshake self handshake})
         (let ()
           ;; TODO: Verify asset transfers using previous transaction and balances
@@ -259,7 +259,7 @@
           (def contract-address (.@ contract-config contract-address))
           (def message-pretx {prepare-call-function-transaction self contract-address})
           (def new-tx-receipt (post-transaction message-pretx))
-          (display-poo-ln role ": Tx Receipt: " TransactionReceipt new-tx-receipt)
+          (display-object-ln role ": Tx Receipt: " TransactionReceipt new-tx-receipt)
           (set! (@ self timer-start) (.@ new-tx-receipt blockNumber)))))))
 
 ;; Sexp <- State
@@ -297,11 +297,11 @@
     (def role (@ self role))
     (def timer-start (.@ (@ self agreement) options maxInitialBlock))
     (def pretx {prepare-create-contract-transaction self})
-    (display-poo-ln role ": Deploying contract... " "timer-start: " timer-start)
+    (display-object-ln role ": Deploying contract... " "timer-start: " timer-start)
     (def receipt (post-transaction pretx))
-    (display-poo-ln role ": Contract receipt... " "receipt: " receipt)
+    (display-object-ln role ": Contract receipt... " "receipt: " receipt)
     (def contract-config (contract-config<-creation-receipt receipt))
-    (display-poo-ln role ": Contract config: " ContractConfig contract-config)
+    (display-object-ln role ": Contract config: " ContractConfig contract-config)
     (verify-contract-config contract-config pretx)
     (set! (@ self contract-config) contract-config)))
 
@@ -352,7 +352,7 @@
   (λ (self)
     (def agreement (@ self agreement))
     (def participants (.@ agreement participants))
-    (for (participant-name (.all-slots-sorted participants))
+    (for (participant-name (.all-slots/sort participants))
       {add-to-environment self participant-name (.ref participants participant-name)})
     (def parameters (.@ agreement parameters))
     (for ((values parameter-name-key parameter-json-value) parameters)

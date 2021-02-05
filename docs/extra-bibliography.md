@@ -214,6 +214,7 @@ Other non-Lisp types of interest?
 ### Consensus Algorithms
 
 * Improve performance with [Compartmentalization](https://mwhittaker.github.io/publications/compartmentalized_paxos.html) (see [this summary](https://twitter.com/judofyr/status/1288929031816204294))
+* [Self-Healing](https://eprint.iacr.org/2020/1021.pdf)
 
 ### More...
 
