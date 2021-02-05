@@ -17,7 +17,7 @@ input UInt256: First player, pick your hand: 0 (Rock), 1 (Paper), 2 (Scissors)
   :std/format :std/srfi/1 :std/test :std/sugar :std/iter :std/text/json :std/misc/ports :std/misc/hash
   :clan/base :clan/concurrency :clan/debug :clan/decimal :clan/exception
   :clan/io :clan/json :clan/path-config :clan/ports
-  :clan/poo/poo :clan/poo/io :clan/poo/debug
+  :clan/poo/object :clan/poo/io :clan/poo/debug
   :clan/crypto/keccak
   :clan/persist/content-addressing :clan/persist/db
   :clan/versioning
@@ -104,6 +104,6 @@ input UInt256: First player, pick your hand: 0 (Rock), 1 (Paper), 2 (Scissors)
 
       ;; if A chose scissors, B chose paper, then outcome 2 (A_Wins)
       (def outcome (hash-get a-environment 'outcome))
-      (display-poo
+      (display-object
         ["outcome extracted from contract logs, 0 (B_Wins), 1 (Draw), 2 (A_Wins):" UInt256 outcome])
       (check-equal? outcome 2))))

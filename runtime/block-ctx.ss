@@ -3,7 +3,7 @@
 (import
   :std/misc/list
   :clan/base :clan/pure/dict/assq
-  :clan/poo/poo :clan/poo/brace :clan/poo/io
+  :clan/poo/object :clan/poo/brace :clan/poo/io
   :mukn/ethereum/types)
 
 ;; The state for the "monad" of consensual computations, with two variants,

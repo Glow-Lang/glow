@@ -67,7 +67,7 @@ writeSchemeDefinitions moduleName names = do
         [ "(export #t)"
         , ""
         , "(import"
-        , "  :clan/poo/poo :clan/poo/number :clan/poo/mop :clan/poo/type"
+        , "  :clan/poo/object :clan/poo/number :clan/poo/mop :clan/poo/type"
         , "  ../poo-extensions)"
         , ""
         , ""

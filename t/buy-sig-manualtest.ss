@@ -3,7 +3,7 @@
 (import
   :std/sugar :std/test
   :clan/base :clan/files :clan/json :clan/path-config :clan/shell :clan/versioning
-  :clan/poo/poo :clan/poo/io
+  :clan/poo/object :clan/poo/io
   :clan/crypto/keccak
   :clan/persist/content-addressing
   :mukn/ethereum/types :mukn/ethereum/ethereum :mukn/ethereum/network-config :mukn/ethereum/json-rpc
