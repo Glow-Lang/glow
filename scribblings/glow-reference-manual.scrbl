@@ -59,6 +59,26 @@ Example:
 @glowstmblock|{
 let c = 299792458;
 }|
+
+The @glowexp{name} is only defined for the scope
+@emph{after} the let statement, so the @glowexp{expr} cannot
+refer to @glowexp{name} recursively. If there is a previous
+@glowexp{name}, the let statement shadows it for statements
+after it, but the @glowexp{expr} will only refer to the
+previous one.
+
+Example:
+@glowstmblock|{
+let x = 1;
+let x = x + 1;
+}|
+
+The @glowexp{x} in the @glowexp{x + 1} refers to the first
+let statement defining it as @glowexp{1}, and so second let
+statement defines @glowexp{x} as @glowexp{2}.
+
+In the future there will be an option for @tt{let rec} to
+allow recursion.
 }
 
 @defglowstm[(=> name params body) @{let name = (params) => { body };}]{
@@ -72,6 +92,13 @@ let avg = (a, b) => {
     (a + b) / 2
 };
 }|
+
+The @glowexp{name} is only defined for the scope
+@emph{after} the let statement, so the @glowexp{body} cannot
+refer to @glowexp{name} recursively.
+
+In the future there will be an option for @tt{let rec} to
+allow recursion.
 }
 
 @defglowstm[(\@interaction name participants params body)
@@ -92,6 +119,13 @@ let publishHello = () => {
   publish! B -> hb;
 };
 }|
+
+The @glowexp{name} is only defined for the scope
+@emph{after} the let statement, so the @glowexp{body} cannot
+refer to @glowexp{name} recursively.
+
+In the future there will be an option for @tt{let rec} to
+allow recursion.
 }
 
 @defglowstm[(type Name Type) @{type Name = Type;}]{
@@ -102,11 +136,15 @@ Example:
 @glowstmblock|{
 type Point2D = (Int, Int);
 }|
+
+The @glowexp{Name} is only defined for the scope
+@emph{after} the type statement, so the @glowexp{Type} cannot
+refer to @glowexp{Name} recursively.
 }
 
 @defglowstm[(data Name Variants) @{data Name = Variants;}]{
-Defines @glowexp{Name} as a new datatype with the given
-@glowexp{Variants}.
+Defines @glowexp{Name} as a new algebraic data type with the
+given @glowexp{Variants}.
 
 It can be used to define enumerations:
 @glowstmblock|{
@@ -124,32 +162,67 @@ data Shape2D = Circle(Point2D, Int)
              | Triangle(Point2D, Point2D, Point2D)
              | Quadrangle(Point2D, Point2D, Point2D, Point2D);
 }|
+
+It is called an algebraic data type because the structures
+form products of types, while the enumerations form sums,
+making the new type a sum of products.
+
+The @glowexp{Name} is defined for the scope of the
+@glowexp{Variants} as well as the scope after the data
+statement, so the @glowexp{Variants} @emph{can} refer to
+@glowexp{Name} recursively.
 }
 
 @section{Interaction Effects}
 
+The Interaction Effects in this section are only valid
+within interactions, or within the body of an
+@glowexp|{@interaction}| statement.
+
 @defglowstm[(publish! participant names) @{publish! participant -> names;}]{
-For the given @glowexp{participant}, sends a message with
-the values of all the given @glowexp{names} to the
-consensus.
+For the given @glowexp{participant}, makes them the active
+participant and sends a message with the values of all the
+given @glowexp{names} to the consensus.
 
 For all other participants, it receives the message and
 defines the @glowexp{names} with the values from the
 message.
+
+For example in an interaction between @glowexp{A} and
+@glowexp{B}, @glowstm|{publish! A -> x;}| makes @glowexp{A}
+the active participant, has @glowexp{A} publish
+@glowexp{x} to the consensus, and has @glowexp{B} receive
+@glowexp{x} from the consensus.
 }
 
 @defglowstm[(deposit! participant amount) @{deposit! participant -> amount;}]{
-For the given @glowexp{participant}, deposits the given
-@glowexp{amount} of assets to the consensus.
+For the given @glowexp{participant}, makes them the active
+participant and deposits the given @glowexp{amount} of
+their assets to the consensus.
 
 For all other participants, it checks that the next message
 to the consensus includes this deposit.
+
+For example in an interaction between @glowexp{A} and
+@glowexp{B}, @glowstm|{deposit! A -> 1;}| makes @glowexp{A}
+the active participant, has @glowexp{A} deposit 1 unit of
+their assets to the consensus, and has @glowexp{B} check
+that the message included that deposit.
 }
 
 @defglowstm[(withdraw! participant amount) @{withdraw! participant <- amount;}]{
 Withdraws the given @glowexp{amount} of assets from the
 consensus and transfers it to the given
-@glowexp{participant}.
+@glowexp{participant}. This does @emph{not} have to be the
+active participant, it can be any participant in the
+interaction.
+
+For example in an interaction between @glowexp{A} and
+@glowexp{B}, @glowstm|{withdraw! A <- 1; withdraw! B <- 2;}|
+withdraws a combined @glowexp{3} units of assets from the
+consensus and transfers @glowexp{1} to @glowexp{A} and
+@glowexp{2} to @glowexp{B} without changing the active
+participant.
 }
 
 @defglowstm[(\@publicly participant name expr)
@@ -213,6 +286,12 @@ Informally, @glowexp{require!} means
             @|{@participant stmt;}|]{
 Evaluates the given @glowexp{stmt} privately for the given
 @glowexp{participant}.
+
+For example in an interaction between @glowexp{A} and
+@glowexp{B}, @glowstm|{@A let x = 1;}| defines @glowexp{x}
+privately to @glowexp{A}. Neither @glowexp{B} nor the
+consensus can see @glowexp{x} until @glowexp{A} publishes
+it.
 }
 
 @section{Conditionals}
@@ -495,6 +574,28 @@ the values of the @glowexp{exprs}.
 
 Two digests computed from two values should only be equal
 iff the values are equal.
+
+For example, @glowexp{digest(salt, hand)} produces a digest
+will be the same when computed with the same salt and hand,
+but different when computed with either different, so a
+different salt with the same hand produces a different
+digest, preventing rainbow-table attacks if both the salt
+and hand are private.
+
+Digests are often used with @glowexp|{@verifiably}| and
+@glowexp{verify!} to commit to a private choice that can't
+be changed later:
+@glowstmblock|{
+    @verifiably(A) let commitment = digest(salt, handA);
+    publish! A -> commitment;
+}|
+
+Then later when they must show their hand it can be
+published and verified:
+@glowstmblock|{
+    publish! A -> salt, handA;
+    verify! commitment;
+}|
 }
 
 @defglowexp[(Signature) @{Signature}]{
@@ -514,6 +615,11 @@ Produces @glowexp{true} if @glowexp{signature} comes from
 the given @glowexp{participant} signing the @glowexp{digest}
 with @glowexp{sign(digest)}, or produces @glowexp{false}
 otherwise.
+
+For a given @glowexp{participant} and @glowexp{digest}, the
+expression
+@glowexp{isValidSignature(participant, sign(digest), digest)}
+always produces @glowexp{true}.
 }
 
 @subsection{Unit and Tuple Types}
@@ -559,6 +665,8 @@ record type with fields @glowexp{x}, @glowexp{y}, and
 @glowexp{B}, and @glowexp{C} respectively.
 
 The order of the fields does not matter for record types.
+
+For the syntax see the @secref["Glow_Language_Grammar"].
 }
 
 @defglowexp[(record expr_entries) @{{ expr_entries }}]{
@@ -571,6 +679,8 @@ record with fields @glowexp{x}, @glowexp{y}, and
 The order of the fields determines evaluation order, but
 once evaluated, the field order doesn't matter for the value
 itself. @glowexp{{ x: a, y: b } == { y: b, x: a }}.
+
+For the syntax see the @secref["Glow_Language_Grammar"].
 }
 
 @include-section["glow-surface-grammar.scrbl"]
