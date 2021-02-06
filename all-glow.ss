@@ -32,7 +32,7 @@
   ;; Clan Utilities
   :clan/net/json-rpc :clan/net/s3 :clan/net/simple-http-client :clan/net/websocket
   :clan/assert :clan/base :clan/basic-parsers :clan/basic-printers
-  :clan/call-limiter :clan/concurrency :clan/config
+  :clan/call-limiter :clan/cli :clan/concurrency :clan/config
   :clan/debug :clan/decimal :clan/diceware
   :clan/error :clan/exit
   :clan/failure :clan/ffi :clan/files :clan/filesystem
@@ -48,7 +48,7 @@
   :clan/persist/db :clan/persist/persist :clan/persist/content-addressing
 
   ;; POO
-  :clan/poo/object :clan/poo/io :clan/poo/debug
+  :clan/poo/object :clan/poo/io :clan/poo/debug :clan/poo/cli
   (prefix-in :clan/poo/mop poo.) (prefix-in :clan/poo/type poo.)
   (only-in :clan/poo/mop
            Type Type. Class Class. Slot Lens Function Fun
@@ -77,7 +77,7 @@
   :mukn/ethereum/network-config :mukn/ethereum/json-rpc :mukn/ethereum/transaction :mukn/ethereum/watch
   :mukn/ethereum/assembly :mukn/ethereum/contract-config :mukn/ethereum/contract-runtime
   :mukn/ethereum/nonce-tracker :mukn/ethereum/tx-tracker :mukn/ethereum/batch-send
-  :mukn/ethereum/assets
+  :mukn/ethereum/assets :mukn/ethereum/cli
 
 
   ;; Testing Glow
