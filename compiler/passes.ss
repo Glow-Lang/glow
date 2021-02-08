@@ -5,6 +5,7 @@
 (import
   :mukn/glow/compiler/multipass :mukn/glow/compiler/common
   :mukn/glow/compiler/parse/parse
+  :mukn/glow/compiler/debug-label/debug-label
   :mukn/glow/compiler/alpha-convert/alpha-convert
   :mukn/glow/compiler/desugar/desugar
   (only-in :mukn/glow/compiler/typecheck/typecheck
@@ -37,6 +38,9 @@
 
 ;; SEXP notation for Glow programs
 (define-layer sexp read-sexp-module write-sexp-module stx-sexpr=?)
+
+;; With `@debug-label`s added
+(define-layer dlb.sexp read-sexp-module write-sexp-module stx-sexpr=?)
 
 ;; Alpha-converted Glow programs, and the Unused table and AlphaBackTable
 (define-layer alpha.sexp read-sexp-module write-sexp-module stx-sexpr=?)
@@ -90,6 +94,9 @@
 ;; TODO: *Parsing*: transform the original source code into syntax objects.
 ;; Port → ModuleStx
 (define-pass parse (glow) (sexp))
+
+;; ModuleStx -> ModuleStx
+(define-pass debug-label (sexp) (dlb.sexp))
 
 ;; TODO: *Deriving-expansion*: macro-expand the deriving forms
 
@@ -163,7 +170,7 @@
 ;;(define-pass javascript-extraction ".client.sexp" ".js")
 
 (define-strategy ethereum-direct-style
-  parse alpha-convert desugar typecheck method-resolve anf checkpointify checkpoint-liveness project project-2) ;; ...
+  parse debug-label alpha-convert desugar typecheck method-resolve anf checkpointify checkpoint-liveness project project-2) ;; ...
 
 ;; Different layers and passes for State-Channel style:
 ;; the previous contract is virtualized, so that
