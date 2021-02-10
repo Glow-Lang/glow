@@ -95,4 +95,6 @@
 ;;(printf "Welcome, Glow hacker\n")
 
 ;;(##set-debug-settings! 15 3) ;; TODO: remember what this is about
-(##vector-set! ##stdout-port 37 (lambda (port) 218)) ;; TODO: remember what this is about
+
+;; Force the stdout port width to 218… the port width is used by the pretty printer to determine when to break lines… the Gambit rtlib should export a higher level API than that hack
+(##vector-set! ##stdout-port 37 (lambda (port) 218))

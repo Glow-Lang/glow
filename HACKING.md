@@ -9,7 +9,7 @@ please make sure you have [installed it](INSTALL.md) properly and it passes all 
 
 ### Gerbil and Gambit
 
-Glow is implemented in [Gerbil Scheme](https://cons.io/),
+[Glow](https://glow-lang.org/) is implemented in [Gerbil Scheme](https://cons.io/),
 itself a layer on top of [Gambit Scheme](http://gambitscheme.org/).
 
 While hacking on Glow, you'll find that the lower-level primitives you use are defined by
@@ -20,6 +20,22 @@ while the higher-level functions and macros are defined by
 You can find the community for both these layers of language on Gitter:
 [Gerbil Scheme gitter](https://gitter.im/gerbil-scheme/community) and
 [Gambit Scheme gitter](https://gitter.im/gambit/gambit).
+
+The biggest drawback of Gerbil is that it is insufficiently documented,
+and that the documentation that exists is split in many layers:
+
+  - The R5RS and/or R7RS for the base Scheme language.
+  - Gambit documentation for Gambit (and for some internals the Gambit sources).
+  - Gerbil documentation for Gerbil and its standard library (and for some things, again, its sources).
+  - The SRFI documents for some of the somewhat standard libraries provided by Gambit or Gerbil.
+  - The sources of various libraries we use (and often develop) on top of Gerbil,
+    such as Gerbil-Utils, Gerbil-POO, etc.
+
+Don't hesitate to ask around for help.
+
+Also, the `apropos` function can help you find functions that have already been
+loaded in your environment, if you only remember part of their name, as in
+`(apropos "hash")` to discover the name of a function relating to hash-tables.
 
 ## Configuring Your Editor
 

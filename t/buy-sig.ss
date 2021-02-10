@@ -26,11 +26,11 @@
 (define-persistent-variable agreement-index Nat "agreementIndex" 0)
 
 ;; Hash the secret key to get a seed that only he who has the secret key knows,
-;; but that doesn't actually leak secret key data.
+;; but that doesn't actually leak the secret key data.
 (def (secret-hash keypair)
   (keccak256<-bytes (secp256k1-seckey-data (keypair-secret-key keypair))))
 
-;; Marshal semi-structured information from x to either display to user or digest.
+;; Marshal semi-structured information from x to either loosely display to user or digest.
 (def (marshalify x port)
   (cond
    ((member x '(#f #t () #!void #!eof)) (void))
