@@ -1,12 +1,14 @@
 ;; The Glow language
 (package: mukn/glow
- depend: ("github.com/fare/gerbil-utils"
+ depend: ("github.com/vyzo/gerbil-libp2p"
+          "github.com/drewc/smug-gerbil"
+          "github.com/fare/gerbil-utils"
           "github.com/fare/gerbil-crypto"
           "github.com/fare/gerbil-poo"
           "github.com/fare/gerbil-persist"
           "github.com/fare/gerbil-ethereum"
-          ;;"github.com/fare-patches/r7rs-swank"
-          "github.com/drewc/js-syntax")
+          #;"github.com/fare-patches/r7rs-swank"
+          #;"github.com/drewc/js-syntax")
  ;; Base version this is relative to
  ;; We use a format v${MAJOR}.${MINOR}[.${PATCH}], where, like in the Linux kernel,
  ;; development will happen within branches with an odd MINOR number, and "releases"
