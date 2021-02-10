@@ -69,6 +69,7 @@
   :mukn/glow/runtime/participant-runtime
   :mukn/glow/runtime/consensus-code-generator
   :mukn/glow/runtime/cli
+  :mukn/glow/runtime/configuration
 
   ;;:mukn/glow/compiler/checkpointify/checkpointify
   :clan/crypto/keccak :clan/crypto/secp256k1
