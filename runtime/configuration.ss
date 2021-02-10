@@ -11,7 +11,9 @@
 (def (load-secret-key-ring)
   (def ring (secret-key-ring))
   (with-catch
-   (lambda (_) (error "Failed to read and parse the secret key ring file" ring))
+   (lambda (e)
+     (displayln (error-message e))
+     (error "Failed to read and parse the secret key ring file" ring))
    (lambda ()
      (for (((values nickname j) (in-hash (read-file-json ring))))
        (register-keypair nickname (import-keypair/json j))))))
