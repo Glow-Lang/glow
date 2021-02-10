@@ -171,6 +171,8 @@
             (set! (@ program interactions) interactions-table))
           (['@label label]
             (void))
+          (['@debug-label label]
+            (void))
           (['return ['@tuple]]
             (void))
           (else

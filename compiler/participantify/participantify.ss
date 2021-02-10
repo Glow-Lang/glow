@@ -85,7 +85,8 @@
        ;; which means cons it after since we accumulate in reverse order.
        (cons* s (participant-checkpoint stx participant p) acc))
      p))
-  (syntax-case stx (@ deftype defdata publish! def ann return ignore! switch require! assert! deposit! withdraw!)
+  (syntax-case stx (@ @debug-label deftype defdata publish! def ann return ignore! switch require! assert! deposit! withdraw!)
+    ((@debug-label . _) (simple))
     ((@ p s) (identifier? #'p)
      (let ((ps (syntax-e #'p)))
        (if (eq? ps participant)

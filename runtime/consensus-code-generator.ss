@@ -151,6 +151,8 @@
 
     (['@label _]
       [])
+    (['@debug-label _]
+      [])
 
     (['switch value cases ...]
       (let*

@@ -91,6 +91,7 @@
    unprocessed-events ;; : (List LogObjects) ;; ???
    current-code-block-label ;; : Symbol
    current-label ;; : Symbol
+   current-debug-label ;; : (Or Symbol False)
    environment ;; : (Table (Or DependentPair Any) <- Symbol) ;; TODO: have it always typed???
    block-ctx ;; : BlockCtx ;; byte buffer?
    timer-start ;; : Block
@@ -111,6 +112,7 @@
     ;; TODO: extract initial code block label from contract compiler output
     (set! (@ self current-code-block-label) (@ program initial-code-block-label))
     (set! (@ self current-label) (@ program initial-label))
+    (set! (@ self current-debug-label) #f)
 
     (set! (@ self contract-config) #f)
     (set! (@ self status) 'running) ;; (Enum running stopped completed aborted)
@@ -444,6 +446,8 @@
 
       (['@label name]
        (set! (@ self current-label) name))
+      (['@debug-label name]
+       (set! (@ self current-debug-label) name))
 
       (['switch variable-name cases ...]
         (let* ((variable-value {reduce-expression self variable-name})

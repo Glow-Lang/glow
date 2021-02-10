@@ -26,9 +26,10 @@
 
 ;; translate-pure-stmt : StmtStx -> [Listof SchemeStx]
 (def (translate-pure-stmt stx)
-  (syntax-case stx (@ @label deftype defdata def ann return ignore! switch)
+  (syntax-case stx (@ @label @debug-label deftype defdata def ann return ignore! switch)
     ;; TODO: ignore @label whether pure or not
     ((@label _) [])
+    ((@debug-label _) [])
     ((def v e) (translate-def stx))
     ((ignore! e) [(restx1 stx ['void (translate-pure-expr #'e)])])
     ((return e)

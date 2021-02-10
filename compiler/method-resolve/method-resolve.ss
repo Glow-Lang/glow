@@ -85,8 +85,9 @@
 
 ;; mr-stmt : StmtStx -> [Listof StmtStx]
 (def (mr-stmt stx)
-  (syntax-case stx (@ splice : quote def deftype defdata publish! deposit!)
+  (syntax-case stx (@ splice @debug-label : quote def deftype defdata publish! deposit!)
     ((splice s ...) (mr-stmts (syntax->list #'(s ...))))
+    ((@debug-label . _) [stx])
     ((@ p s) (identifier? #'p)
      (for/collect ((s2 (mr-stmt #'s)))
        (retail-stx stx [#'p s2])))
