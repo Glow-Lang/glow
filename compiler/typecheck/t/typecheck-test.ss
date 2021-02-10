@@ -56,7 +56,7 @@
 ;; Produces #t on success, can return #f or raise an exception on failure
 ;; TODO: check against expected types of top-level defined identifiers
 (def (typecheck-display prog expected-env expect-failure?)
-  (defvalues (prog2 unused-table albatable alenv) (alpha-convert prog))
+  (defvalues (prog2 unused-table albatable dlbtbl alenv) (alpha-convert prog))
   (def prog3 (desugar prog2 unused-table))
   (defvalues (tyenv tyinfotbl) (typecheck prog3 unused-table))
   (parameterize ((current-type-info-table tyinfotbl))
