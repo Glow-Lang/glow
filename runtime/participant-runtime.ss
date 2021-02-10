@@ -10,7 +10,7 @@
   :mukn/ethereum/hex :mukn/ethereum/ethereum :mukn/ethereum/network-config :mukn/ethereum/json-rpc
   :mukn/ethereum/transaction :mukn/ethereum/tx-tracker :mukn/ethereum/watch :mukn/ethereum/assets
   :mukn/ethereum/contract-runtime :mukn/ethereum/contract-config :mukn/ethereum/assembly :mukn/ethereum/types
-  ./program ./block-ctx ./consensus-code-generator
+  ./program ./block-ctx ./consensus-code-generator ./terminal-codes
   ../compiler/method-resolve/method-resolve
   ../compiler/project/runtime-2)
 
@@ -139,7 +139,7 @@
 
       (match (code-block-exit {get-current-code-block self})
         (#f
-          (void)) ; contract finished
+          (displayln)) ; contract finished
         (exit
           (set! (@ self current-code-block-label) exit)
           {execute self})))))
@@ -164,6 +164,7 @@
       (watch-contract callback contract-address from-block to-block))))
 
 (def (run-passive-code-block/contract self role contract-config)
+  (displayln BOLD "\nWaiting for " (code-block-participant {get-current-code-block self}) " to make a move ..." END)
   ;; TODO: `from` should be calculated using the deadline and not necessarily the previous tx,
   ;; since it may or not be setting the deadline
   (def from
@@ -180,6 +181,7 @@
 
 (def (interpret-current-code-block self)
   (let (code-block {get-current-code-block self})
+    (displayln BOLD "\nExecuting code block " (@ self current-code-block-label) " ..." END)
     (for ((statement (code-block-statements code-block)))
       {interpret-participant-statement self statement})))
 
@@ -389,6 +391,7 @@
 ;; : <- Runtime ProjectStatement
 (defmethod {interpret-participant-statement Runtime}
   (λ (self statement)
+    (displayln statement)
     (match statement
 
       (['set-participant new-participant]
