@@ -71,7 +71,7 @@
                            agreement: agreement
                            program: program))
            {execute buyer-runtime}
-           (displayln "buyer finished")
+           (displayln "Buyer finished")
            (@ buyer-runtime environment))))
 
       (displayln "\nEXECUTING SELLER THREAD ...")
@@ -83,7 +83,7 @@
                            agreement: agreement
                            program: program))
            {execute seller-runtime}
-           (displayln "seller finished"))))
+           (displayln "Seller finished"))))
 
 
       ;; Get the final environment object from the Buyer

@@ -10,7 +10,7 @@
   :mukn/ethereum/hex :mukn/ethereum/ethereum :mukn/ethereum/network-config :mukn/ethereum/json-rpc
   :mukn/ethereum/transaction :mukn/ethereum/tx-tracker :mukn/ethereum/watch :mukn/ethereum/assets
   :mukn/ethereum/contract-runtime :mukn/ethereum/contract-config :mukn/ethereum/assembly :mukn/ethereum/types
-  ./program ./block-ctx ./consensus-code-generator
+  ./program ./block-ctx ./consensus-code-generator ./terminal-codes
   ../compiler/method-resolve/method-resolve
   ../compiler/project/runtime-2)
 
@@ -65,7 +65,7 @@
   send-handshake:
   (λ (handshake)
     (def file (special-file:handshake))
-    (displayln "NOT Writing agreement handshake to file " file " ...")
+    (displayln "Writing agreement handshake to file " file " ...")
     (write-file-json (special-file:handshake) (json<- AgreementHandshake handshake)))
   receive-handshake:
   (λ ()
@@ -76,7 +76,6 @@
       (when (> (current-unix-time) deadline)
         (displayln "Timeout while waiting for handshake!")
         (error "Timeout while waiting for handshake"))
-      (displayln "still waiting for file " file " ...")
       (thread-sleep! 1))
     (<-json AgreementHandshake (read-file-json file))))
 
@@ -132,7 +131,6 @@
   (λ (self)
     (with-logged-exceptions ()
       (def ccbl (@ self current-code-block-label))
-      (displayln "executing code block: " ccbl)
 
       (if {is-active-participant? self}
         {publish self}
@@ -141,7 +139,7 @@
 
       (match (code-block-exit {get-current-code-block self})
         (#f
-          (void)) ; contract finished
+          (displayln)) ; contract finished
         (exit
           (set! (@ self current-code-block-label) exit)
           {execute self})))))
@@ -166,18 +164,15 @@
       (watch-contract callback contract-address from-block to-block))))
 
 (def (run-passive-code-block/contract self role contract-config)
-  (displayln role ": Watching for new transaction ...")
+  (displayln BOLD "\nWaiting for " (code-block-participant {get-current-code-block self}) " to make a move ..." END)
   ;; TODO: `from` should be calculated using the deadline and not necessarily the previous tx,
   ;; since it may or not be setting the deadline
-  (display-object-ln role ": contract-config=" ContractConfig contract-config)
   (def from
     (if (@ self timer-start)
       (+ (@ self timer-start) 1)
       (.@ contract-config creation-block)))
-  (displayln role ": watching from block " from)
   (def new-log-object {watch self (.@ contract-config contract-address) from})
   ;; TODO: handle the case when there is no log objects
-  (display-object-ln role ": New TX: " (Maybe LogObject) new-log-object)
   (def log-data (.@ new-log-object data))
   (set! (@ self timer-start) (.@ new-log-object blockNumber))
   ;; TODO: process the data in the same method?
@@ -186,15 +181,14 @@
 
 (def (interpret-current-code-block self)
   (let (code-block {get-current-code-block self})
+    (displayln BOLD "\nExecuting code block " (@ self current-code-block-label) " ..." END)
     (for ((statement (code-block-statements code-block)))
       {interpret-participant-statement self statement})))
 
 (def (run-passive-code-block/handshake self role)
   (nest
-   (begin (displayln role ": Reading contract handshake ..."))
    (let (agreement-handshake {read-handshake self}))
    (begin
-     (displayln role ": Verifying contract config ...")
      (force-current-outputs))
    (with-slots (agreement contract-config published-data) agreement-handshake)
    (let (block-ctx (@ self block-ctx)))
@@ -243,23 +237,19 @@
     (when (eq? (@ self status) 'running)
       (if (not contract-config)
         (let ()
-          (displayln role ": deploying contract ...")
           {deploy-contract self}
           (def contract-config (@ self contract-config))
           (def agreement (@ self agreement))
           (def published-data (get-output-u8vector (.@ (@ self block-ctx) outbox)))
           (def handshake (.new AgreementHandshake agreement contract-config published-data))
-          (display-object-ln role ": Handshake: " AgreementHandshake handshake)
           {send-contract-handshake self handshake})
         (let ()
           ;; TODO: Verify asset transfers using previous transaction and balances
           ;; recorded in Message's asset-transfer table during interpretation. Probably
           ;; requires getting TransactionInfo using the TransactionReceipt.
-          (displayln role ": publishing message ...")
           (def contract-address (.@ contract-config contract-address))
           (def message-pretx {prepare-call-function-transaction self contract-address})
           (def new-tx-receipt (post-transaction message-pretx))
-          (display-object-ln role ": Tx Receipt: " TransactionReceipt new-tx-receipt)
           (set! (@ self timer-start) (.@ new-tx-receipt blockNumber)))))))
 
 ;; Sexp <- State
@@ -297,11 +287,8 @@
     (def role (@ self role))
     (def timer-start (.@ (@ self agreement) options maxInitialBlock))
     (def pretx {prepare-create-contract-transaction self})
-    (display-object-ln role ": Deploying contract... " "timer-start: " timer-start)
     (def receipt (post-transaction pretx))
-    (display-object-ln role ": Contract receipt... " "receipt: " receipt)
     (def contract-config (contract-config<-creation-receipt receipt))
-    (display-object-ln role ": Contract config: " ContractConfig contract-config)
     (verify-contract-config contract-config pretx)
     (set! (@ self contract-config) contract-config)))
 
