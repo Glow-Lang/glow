@@ -82,6 +82,8 @@ Other non-Lisp types of interest?
 
 ### Proofs for Blockchain
 
+* [A Survey of Smart Contract Formal Specification and Verification](https://arxiv.org/pdf/2008.02712.pdf)
+
 * Algorand proof of correctness and controversy:
   [announce by runtime verification](https://runtimeverification.com/blog/formally-verifying-algorand-reinforcing-a-chain-of-steel-modeling-and-safety/),
   [medium article](https://medium.com/algorand/formal-verification-of-the-algorand-protocol-bbde5a52b830).
@@ -107,6 +109,7 @@ Other non-Lisp types of interest?
 * [Dark](https://darklang.com), a holistic programming language, editor, and infrastructure for building backends without accidental complexity ([impressions](https://dev.to/syntaxseed/darklang-intro-and-first-impressions-46oi)).
 * [Unison](https://unisonweb.org), an open source functional programming language based on a simple idea with big implications: code is content-addressed and immutable.
 * [Pony](https://www.ponylang.io/), an open-source, object-oriented, actor-model, capabilities-secure, high-performance programming language.
+* [Factor](https://factorcode.org), a practical concatenative language with interactive development capabilities.
 
 ### Blockchain languages to watch
 
@@ -122,6 +125,10 @@ Other non-Lisp types of interest?
 * [LLL](https://lll-docs.readthedocs.io/en/latest/lll_introduction.html)
 * See more in [this file](https://github.com/AlacrisIO/alacrity/blob/master/archive/competition.md)
 * Tooling for Solidity: HardHat.org, truffle, etc. [template](https://github.com/paulrberg/solidity-template)
+
+### Reflection for Security
+
+* [Auditors](http://www.erights.org/elang/kernel/auditors/)
 
 ### Complexity
 
@@ -164,6 +171,7 @@ Other non-Lisp types of interest?
 * [Status](https://status.im/developer_tools/)
 * [MetaMask](https://metamask.io/)
 * [Telegram](https://telegram.org/)
+* [Taquito](https://tezostaquito.io/), a Tezos wallet, automatically generates Michelson + JavaScript from various languages.
 
 ### YubiKey
 
@@ -190,6 +198,7 @@ Other non-Lisp types of interest?
 
 * [Saturn](https://www.saturn.network/blog/what-is-saturn-network/) ([git](https://github.com/saturn-network/))
 * [Paraswap](https://www.paraswap.io/)
+* [Serum, DEX on Solana](https://projectserum.com/serum_white_paper.pdf)
 
 ### State Channels
 
@@ -230,4 +239,11 @@ Other non-Lisp types of interest?
 * [Ergo](https://ergoplatform.org/en/)
 * [THOR](https://thorchain.org/)
 
-Integrate old documents such as the [Legicash FaCTS bibliography](https://github.com/AlacrisIO/legicash-facts/blob/master/bibliography.md) and from the Alacrity archive: [language scope](https://github.com/AlacrisIO/alacrity/blob/master/archive/language-scope.md), [competition](https://github.com/AlacrisIO/alacrity/blob/master/archive/competition.md), [bootstrap plan](https://github.com/AlacrisIO/alacrity/blob/master/docs/bootstrap.md), [state channels](https://github.com/AlacrisIO/alacrity/blob/master/archive/StateChannel.sol).
+Integrate old documents such as the [Legicash FaCTS bibliography](https://github.com/AlacrisIO/legicash-facts/blob/master/bibliography.md) and from the Alacrity archive: [language scope](https://github.com/AlacrisIO/alacrity/blob/master/archive/language-scope.md), [competition](https://github.com/AlacrisIO/alacrity/blob/master/archive/competition.md)
+
+<!-- Done:
+* Alacrity [bootstrap plan](https://github.com/AlacrisIO/alacrity/blob/master/docs/bootstrap.md)
+  => moved to our wiki [Roadmap](https://gitlab.com/mukn/glow/-/wikis/Roadmap)
+* [state channels](https://github.com/AlacrisIO/alacrity/blob/master/archive/StateChannel.sol)
+  => moved to [#112](https://gitlab.com/mukn/glow/-/issues/112)
+-->
