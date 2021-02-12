@@ -52,7 +52,7 @@
     (def ∆ (- b a))
     (if (<= 0 ∆) (iota ∆ a) (iota (- ∆) a -1)))
   (def indexed-options (map cons (range 0 options-count) options))
-  (displayln BOLD name END)
+  (displayln BOLD name ":" END)
   (for ((indexed-option indexed-options))
     (def index (car indexed-option))
     (display (string-append (number->string (+ index 1)) ") "))
@@ -104,11 +104,8 @@
   (displayln CYAN name)
   (display (string-append "> " END)))
 
-(def (ask-contract)
-  (ask-option "Choose contract" ["mukn/glow/examples/buy_sig"]))
-
-(def (ask-interaction contract)
-  (ask-option "Choose interaction" ["payForSignature"]))
+(def (ask-contract-interaction)
+  (ask-option "Choose contract interaction" ["mukn/glow/examples/buy_sig#payForSignature"]))
 
 (def (ask-participants selected-identity selected-role role-names)
   (displayln BOLD "Assign roles" END)
@@ -216,9 +213,7 @@
              (selected-role (ask-role options role-names)))
         (values (<-json InteractionAgreement (json<-string agreement-json-string)) selected-role))
       (nest
-        (let (contract-name (get-or-ask options 'contract (λ () (ask-contract)))))
-        ;; TODO: Extract interaction names from contract
-        (let (interaction-name (get-or-ask options 'interaction (λ () (ask-interaction contract-name)))))
+        (let (interaction (get-or-ask options 'contract (λ () (ask-contract-interaction)))))
         ;; TODO: Extract path from contract-name
         (let (program (compile-contract contract.glow)))
         (let (role-names (filter identity (hash-keys (@ program interactions)))))
@@ -234,7 +229,7 @@
         ;; TODO: Validate agreement, with nice user-friendly error message.
         ;; TODO: Output agreement as a command for the other user to copy paste and automatically fill in arguments.
         (let (agreement
-          {interaction: (string-append contract-name "#" interaction-name)
+          {interaction
           participants: (.<-alist (hash->list participants-table))
           parameters
           glow-version: (software-identifier)
