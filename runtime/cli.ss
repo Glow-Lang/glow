@@ -1,3 +1,4 @@
+#!/usr/bin/env gxi
 (export #t)
 
 (import
@@ -8,21 +9,10 @@
   :clan/persist/db :clan/persist/content-addressing :clan/versioning
   :mukn/ethereum/assets :mukn/ethereum/cli :mukn/ethereum/ethereum :mukn/ethereum/network-config
   :mukn/ethereum/signing :mukn/ethereum/types :mukn/ethereum/json-rpc :mukn/ethereum/known-addresses
-  ./participant-runtime ./reify-contract-parameters ./configuration ./program ./terminal-codes
-  (only-in ../compiler/alpha-convert/alpha-convert init-syms)
-  ../compiler/passes
-  ../compiler/multipass
-  ../compiler/syntax-context)
-
-(def (flush-input port)
-   (input-port-timeout-set! port 0.001)
-   (let loop () (if (not (eof-object? (read-line port))) (loop)))
-   (input-port-timeout-set! port +inf.0))
-
-(def (read-line-from-console)
-   (let ((port (console-port)))
-     (flush-input port)
-     (read-line port)))
+  :mukn/glow/runtime/participant-runtime :mukn/glow/runtime/reify-contract-parameters :mukn/glow/runtime/configuration
+  :mukn/glow/runtime/program :mukn/glow/runtime/terminal-codes
+  (only-in :mukn/glow/compiler/alpha-convert/alpha-convert init-syms)
+  :mukn/glow/compiler/passes :mukn/glow/compiler/multipass :mukn/glow/compiler/syntax-context)
 
 (def common-options
   [(flag 'test "--test"
@@ -161,7 +151,8 @@
 (def (print-command agreement)
   (displayln MAGENTA "One line command for other participants to generate the same agreement:" END)
   (display "./runtime/cli.ss start-interaction --agreement ")
-  (write-json-ln (json<- InteractionAgreement agreement)))
+  (pr (string<-json (json<- InteractionAgreement agreement)))
+  (displayln))
 
 (def (get-or-ask options option ask-function)
   (if-let (option-value (hash-get options option))
@@ -202,28 +193,26 @@
   "Start an interaction based on an agreement"
   (def gopt (getopt/common-options))
   (def options (getopt-parse gopt arguments))
+  (process-common-options options)
   ;; TODO: Extract from name?
   (def contract.glow (source-path "examples/buy_sig.glow"))
+  (def test (hash-get options 'test))
+  (def database (hash-get options 'database))
+  (ensure-db-connection (or database (run-path (if test "testdb" "userdb"))))
+  ;; TODO: validate ethereum network, with nice user-friendly error message
+  (def ethereum-network (hash-get options 'ethereum-network))
+  (ensure-ethereum-connection ethereum-network)
+  (displayln)
+
   (defvalues (agreement selected-role)
-    (if-let (agreement (hash-get options 'agreement))
+    (if-let (agreement-json-string (hash-get options 'agreement))
       ;; TODO: Validate that selected role matches selected identity in the agreement's participant table.
       (let* ((selected-identity (ask-identity options))
              (program (compile-contract contract.glow))
              (role-names (filter identity (hash-keys (@ program interactions))))
              (selected-role (ask-role options role-names)))
-        (values agreement selected-role))
+        (values (<-json InteractionAgreement (json<-string agreement-json-string)) selected-role))
       (nest
-        (begin
-          (process-common-options options))
-        (let (test (hash-get options 'test)))
-        (let (database (hash-get options 'database)))
-        (begin
-          (ensure-db-connection (or database (run-path (if test "testdb" "userdb")))))
-        ;; TODO: validate ethereum network, with nice user-friendly error message
-        (let (ethereum-network (hash-get options 'ethereum-network)))
-        (begin
-          (ensure-ethereum-connection ethereum-network)
-          (displayln))
         (let (contract-name (get-or-ask options 'contract (λ () (ask-contract)))))
         ;; TODO: Extract interaction names from contract
         (let (interaction-name (get-or-ask options 'interaction (λ () (ask-interaction contract-name)))))
@@ -261,3 +250,17 @@
     ;; and output the entire thing as JSON omitting shadowed variables (rather than having conflicts)
     (for-each (match <> ([k t . v] (display-object-ln k "=> " t v)))
               (hash->list/sort environment symbol<?))))
+
+;; UTILS
+(def (flush-input port)
+   (input-port-timeout-set! port 0.001)
+   (let loop () (if (not (eof-object? (read-line port))) (loop)))
+   (input-port-timeout-set! port +inf.0))
+
+(def (read-line-from-console)
+   (let ((port (console-port)))
+     (flush-input port)
+     (read-line port)))
+
+(set-default-entry-point! start-interaction)
+(def main call-entry-point)
