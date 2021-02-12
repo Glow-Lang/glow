@@ -3,7 +3,7 @@
 
 (import
   :gerbil/expander :gerbil/gambit/ports
-  :std/format :std/generic :std/getopt :std/iter :std/misc/hash :std/misc/repr :std/misc/string :std/sugar :std/text/json
+  :std/format :std/generic :std/getopt :std/iter :std/misc/hash :std/misc/repr :std/misc/string :std/srfi/13 :std/sugar :std/text/json
   :clan/base :clan/cli :clan/exit :clan/json :clan/multicall :clan/path-config :clan/syntax
   :clan/poo/brace :clan/poo/debug :clan/poo/object
   :clan/persist/db :clan/persist/content-addressing :clan/versioning
@@ -151,7 +151,10 @@
 (def (print-command agreement)
   (displayln MAGENTA "One line command for other participants to generate the same agreement:" END)
   (display "./runtime/cli.ss start-interaction --agreement ")
-  (pr (string<-json (json<- InteractionAgreement agreement)))
+  (def agreement-string (string<-json (json<- InteractionAgreement agreement)))
+  (if (string-contains agreement-string "'")
+    (pr agreement-string)
+    (display (string-append "'" agreement-string "'")))
   (displayln))
 
 (def (get-or-ask options option ask-function)
@@ -241,9 +244,10 @@
                     escrowAmount: (void)
                     timeoutInBlocks: (* 10 (ethereum-timeout-in-blocks))
                     maxInitialBlock: max-initial-block}}))
-        (values agreement selected-role))))
-  (.call InteractionAgreement .validate agreement)
-  (print-command agreement)
+        (begin
+          (.call InteractionAgreement .validate agreement)
+          (print-command agreement)
+          (values agreement selected-role)))))
   (let (environment (run (symbolify selected-role) agreement))
     (displayln "Final environment:")
     ;; TODO: get run to include type t and pre-alpha-converted labels,
