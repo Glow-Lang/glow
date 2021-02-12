@@ -67,9 +67,8 @@
     (def index (car indexed-option))
     (display (string-append (number->string (+ index 1)) ") "))
     (match (cdr indexed-option)
-      ([option . annotation]
-        ;; TODO: Case on annotation type? Or type directed printing?
-        (displayln option " - " (0x<-address annotation)))
+      ([option . (type . annotation)]
+        (displayln option " - " (.call type .string<- annotation)))
       (option
         (displayln option))))
   (display-prompt "Enter number")
@@ -177,7 +176,13 @@
 
 (def (ask-identity options)
   (get-or-ask options 'identity
-    (λ () (ask-option "Choose your identity" (hash->list address-by-nickname)))))
+    (λ () (ask-option
+            "Choose your identity"
+            (map (match <>
+                  ([nickname . address]
+                    (let (dependent-pair [Address . address])
+                      [nickname . dependent-pair])))
+                (hash->list address-by-nickname))))))
 
 (def (ask-max-initial-block options current-block-number)
   (get-or-ask options 'max-initial-block
