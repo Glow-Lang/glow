@@ -15,9 +15,8 @@
   void
   send-handshake:
   (lambda (handshake)
-    (displayln MAGENTA "\nSend the handshake below to the other participant ---v" END)
-    (write-json-ln (json<- AgreementHandshake handshake))
-    (displayln MAGENTA "^___ Send the handshake above to the other participant\n" END))
+    (displayln MAGENTA "\nSend the handshake below to the other participant:" END)
+    (write-json-ln (json<- AgreementHandshake handshake)))
   receive-handshake:
   (lambda ()
     (displayln MAGENTA "\nPaste below the handshake sent by the other participant:" END)
