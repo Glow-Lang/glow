@@ -6,7 +6,7 @@
   :clan/path-config
   :mukn/ethereum/network-config :mukn/ethereum/json-rpc
   :mukn/glow/compiler/syntax-context :mukn/glow/compiler/multipass :mukn/glow/compiler/passes
-  ./program ./participant-runtime)
+  ./program ./participant-runtime ./terminal-codes)
 
 (.def io-context:terminal
   setup:
@@ -15,12 +15,11 @@
   void
   send-handshake:
   (lambda (handshake)
-    (displayln "\nPLEASE SEND THE HANDSHAKE BELOW TO THE OTHER PARTICIPANT: ---v")
-    (write-json-ln (json<- AgreementHandshake handshake))
-    (displayln "^___ PLEASE SEND THE HANDSHAKE ABOVE TO THE OTHER PARTICIPANT\n"))
+    (displayln MAGENTA "\nSend the handshake below to the other participant:" END)
+    (write-json-ln (json<- AgreementHandshake handshake)))
   receive-handshake:
   (lambda ()
-    (displayln "\nPLEASE PASTE BELOW THE HANDSHAKE SENT BY THE OTHER PARTICIPANT:")
+    (displayln MAGENTA "\nPaste below the handshake sent by the other participant:" END)
     (def handshake-json (json<-port (current-input-port)))
     (<-json AgreementHandshake handshake-json)))
 
