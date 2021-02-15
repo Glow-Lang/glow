@@ -2,7 +2,7 @@
 
 (import
   :gerbil/gambit/bits :gerbil/gambit/bytes :gerbil/gambit/threads
-  :std/iter :std/misc/hash :std/sugar :std/misc/number :std/misc/list :std/sort :std/srfi/1
+  :std/format :std/iter :std/misc/hash :std/sugar :std/misc/number :std/misc/list :std/sort :std/srfi/1 :std/text/json
   :clan/base :clan/exception :clan/io :clan/json :clan/number
   :clan/path-config :clan/ports :clan/syntax :clan/timestamp
   :clan/poo/object :clan/poo/io :clan/poo/debug :clan/debug :clan/crypto/random
@@ -544,7 +544,7 @@
 
       (['input 'Nat tag]
        (let ((tagv {reduce-expression self tag}))
-         (input UInt256 tagv)))
+         (interaction-input UInt256 tagv)))
 
       (['== a b]
         (let ((av {reduce-expression self a})
@@ -574,6 +574,13 @@
          (def variable-value (hash-get (@ self environment) variable-name))
          [variable-type . variable-value])
        (sort live-variables symbol<?))...]))
+
+(def (interaction-input t s)
+  (printf (string-append CYAN "\n~a [~s]\n" END) (if (u8vector? s) (bytes->string s) s) (.@ t sexp))
+  (display (string-append CYAN "> " END))
+  (def result (<-json t (read-json (current-input-port))))
+  (displayln)
+  result)
 
 ;; Block <- Frame
 (def (timer-start<-frame-variables frame-variables)
