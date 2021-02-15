@@ -10,10 +10,13 @@
       ((@make-interaction
         ((@list Buyer Seller))
         (digest0 price)
+        (@debug-label dlb0)
         (deposit! Buyer price)
+        (@debug-label dlb1)
         (@ Seller (def signature (sign digest0)))
         (publish! Seller signature)
         (require! (@app isValidSignature Seller digest0 signature))
+        (@debug-label dlb2)
         (withdraw! Seller price))
        (type:arrow (@list (type:name 'Participant) (type:name 'Participant) (type:name 'Digest) (type:name-subtype 'Nat (type:name 'Int))) (type:tuple (@list))))
       ((deposit! Buyer price) (type:tuple (@list)))

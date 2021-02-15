@@ -1,12 +1,21 @@
 (@module
-(def f () (λ (a1) () (@app + a1 1)))
-(def g () (λ (a2) () (@app * a2 2)))
+(@debug-label dlb)
+(def f () (λ (a1) () (@debug-label dlb0) (@app + a1 1)))
+(@debug-label dlb1)
+(def g () (λ (a2) () (@debug-label dlb2) (@app * a2 2)))
+(@debug-label dlb3)
 (def inter
      ()
      (@make-interaction
       ((@list A B))
       (b x)
       ()
+      (@debug-label dlb4)
       (require! (@app < 0 x))
-      (@ A (def y () (switch b (#t (@app g (@app f x))) (#f (@app f (@app g x))))))
+      (@debug-label dlb5)
+      (@ A (def y ()
+             (switch b
+               (#t (@app g (@app f x)))
+               (#f (@app f (@app g x))))))
+      (@debug-label dlb6)
       (@tuple))))
