@@ -30,7 +30,7 @@
    (option 'interaction "-I" "--interaction" default: #f
            help: "name of interaction within contract")
    (option 'role "-R" "--role" default: #f
-           help: "name of role you want to play in the interaction")
+           help: "role you want to play in the interaction")
    (option 'max-initial-block "-B" default: #f
            help: "maximum block number the contract can begin at")])
 
@@ -119,20 +119,19 @@
     (displayln)
     participants))
 
-(def (ask-input type name)
+(def (console-input type name tag)
   (display-prompt
     (string-append
       "Enter "
       (if (u8vector? name) (bytes->string name) (symbol->string name))
-      " : "
-      (symbol->string (.@ type sexp))))
+      (if tag (str tag) "")))
   (try
     (let (input (read-line-from-console))
       (.call type .<-string input))
     (catch (e)
       (displayln FAIL "\nError parsing input: " (error-message e) END)
       (flush-input (console-port))
-      (ask-input type name))))
+      (console-input type name tag))))
 
 (def (ask-parameters program)
   (displayln BOLD "Define parameters" END)
@@ -140,7 +139,7 @@
         (parameters (make-hash-table)))
     (for ((name parameter-names))
       (def type (lookup-type program name))
-      (def input (ask-input type name))
+      (def input (console-input type name #f))
       (hash-put! parameters name (json<- type input)))
     (displayln)
     parameters))
