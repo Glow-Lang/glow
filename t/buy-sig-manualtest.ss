@@ -5,7 +5,7 @@
   :clan/base :clan/files :clan/json :clan/path-config :clan/shell :clan/versioning
   :clan/poo/object :clan/poo/io
   :clan/crypto/keccak
-  :clan/persist/content-addressing
+  :clan/persist/content-addressing :clan/persist/db
   :mukn/ethereum/types :mukn/ethereum/ethereum :mukn/ethereum/network-config :mukn/ethereum/json-rpc
   :mukn/glow/runtime/participant-runtime :mukn/glow/runtime/reify-contract-parameters
   :mukn/ethereum/testing
@@ -23,6 +23,8 @@
   (test-suite "integration test for ethereum/buy-sig"
     (test-case "buy sig runs successfully"
       (delete-agreement-handshake)
+      (ensure-ethereum-connection "pet")
+      (ensure-db-connection (run-path "testdb"))
 
       (def document "abcdefghijklmnopqrstuvwxyz012345")
       (def digest (keccak256<-string document))
@@ -59,8 +61,6 @@
       (clobber-file agreement-path (cut write-json-ln (json<- InteractionAgreement agreement) <>))
 
       (ensure-addresses-prefunded)
-
-      (def seller-balance-before (eth_getBalance bob 'latest))
 
       ;; TODO: if on another machine, it must connect to the same ethereum network(!) Give instructions for that!
       (displayln
