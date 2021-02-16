@@ -1,6 +1,7 @@
 #lang scribble/manual
 
 @(require "glow-code.rkt"
+          "glow-docs.rkt"
           (only-in scribble/racket make-variable-id)
           (for-label glow)
           (for-syntax racket/base))

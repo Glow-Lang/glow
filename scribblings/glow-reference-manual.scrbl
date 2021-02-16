@@ -2,6 +2,7 @@
 
 @(require syntax/parse/define
           "glow-code.rkt"
+          "glow-docs.rkt"
           (for-syntax racket/base)
           (for-label glow))
 
