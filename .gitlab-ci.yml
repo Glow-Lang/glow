@@ -27,3 +27,4 @@ test:
     when: always
     paths:
       - ./run/*
+  retry: 2
