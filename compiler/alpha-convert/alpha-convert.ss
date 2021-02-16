@@ -34,11 +34,11 @@
     if and or
     block splice switch λ
     == input digest sign
-    interaction verifiably publicly
+    interaction verifiably! publicly!
     publish! verify! require! assert! deposit! withdraw!
     ;; The following are introduced in passes between parsing and typechecking:
     ;; TODO: add support for @make-interaction @app-interaction later in this file.
-    @interaction @verifiably @publicly @make-interaction @app-interaction
+    @interaction @verifiably! @publicly! @make-interaction @app-interaction
     ))
 
 ;; TODO: inherit this list from a map of bindings in our runtime system
@@ -238,15 +238,15 @@
 ;; alpha-convert-stmt : Env StmtStx -> (values Env StmtStx)
 ;; the env result contains only the new symbols introduced by the statement
 (def (alpha-convert-stmt env stx)
-  (syntax-case stx (@ @debug-label interaction verifiably publicly @interaction @verifiably @publicly splice def deftype defdata publish! verify!)
+  (syntax-case stx (@ @debug-label interaction verifiably! publicly! @interaction @verifiably! @publicly! splice def deftype defdata publish! verify!)
     ((@debug-label dlb) (identifier? #'dlb)
      (begin (add-debug-label! #'dlb env) (values env stx)))
     ((@ (interaction . _) _) (ac-stmt-atinteraction env (at-prefix-normalize stx)))
-    ((@ (verifiably _) _) (ac-stmt-wrap-at-keyword-participant env (at-prefix-normalize stx)))
-    ((@ (publicly _) _) (ac-stmt-wrap-at-keyword-participant env (at-prefix-normalize stx)))
+    ((@ (verifiably! _) _) (ac-stmt-wrap-at-keyword-participant env (at-prefix-normalize stx)))
+    ((@ (publicly! _) _) (ac-stmt-wrap-at-keyword-participant env (at-prefix-normalize stx)))
     ((@interaction _ _) (ac-stmt-atinteraction env stx))
-    ((@verifiably _ _) (ac-stmt-wrap-at-keyword-participant env stx))
-    ((@publicly _ _) (ac-stmt-wrap-at-keyword-participant env stx))
+    ((@verifiably! _ _) (ac-stmt-wrap-at-keyword-participant env stx))
+    ((@publicly! _ _) (ac-stmt-wrap-at-keyword-participant env stx))
     ((@ p _) (identifier? #'p) (ac-stmt-at-participant env stx))
     ((splice s ...) (ac-stmt-splice env stx))
     ((deftype . _) (ac-stmt-deftype env stx))

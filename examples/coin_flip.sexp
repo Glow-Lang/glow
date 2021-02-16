@@ -4,7 +4,7 @@
   (λ (wagerAmount escrowAmount)
     ; (@ A (assert! (@app canReach A_wins)))
     (@ A (def randA (@app randomUInt256)))
-    (@ (verifiably A) (def commitment (digest randA)))
+    (@ (verifiably! A) (def commitment (digest randA)))
     (publish! A commitment)
     (deposit! A (+ wagerAmount escrowAmount))
     ; (@ B (assert! (@app canReach B_wins)))

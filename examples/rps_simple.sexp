@@ -7,7 +7,7 @@
                             (input Nat "First player, pick your hand: 0 (Rock), 1 (Paper), 2 (Scissors)")))
                     (@ A (require! (< handA 3)))
                     (@ A (def salt (@app randomUInt256)))
-                    (@ (verifiably A) (def commitment (digest salt handA)))
+                    (@ (verifiably! A) (def commitment (digest salt handA)))
                     (publish! A commitment)
                     (deposit! A wagerAmount)
                     (@ B

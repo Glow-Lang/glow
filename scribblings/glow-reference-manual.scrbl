@@ -226,22 +226,22 @@ consensus and transfers @glowexp{1} to @glowexp{A} and
 participant.
 }
 
-@defglowstm[(\@publicly participant name expr)
-            @|{@publicly(participant) let name = expr;}|]{
+@defglowstm[(\@publicly! participant name expr)
+            @|{@publicly!(participant) let name = expr;}|]{
 Defines @glowexp{name} from the given @glowexp{participant}'s
 evaluation of @glowexp{expr}, in a way that can be published
 and verified on the consensus.
 
 Equivalent to:
 @glowstmblock|{
-@verifiably(participant) let name = expr;
+@verifiably!(participant) let name = expr;
 publish! participant -> name;
 verify! name;
 }|
 }
 
-@defglowstm[(\@verifiably participant name expr)
-            @|{@verifiably(participant) let name = expr;}|]{
+@defglowstm[(\@verifiably! participant name expr)
+            @|{@verifiably!(participant) let name = expr;}|]{
 Defines @glowexp{name} privately for the given
 @glowexp{participant} from their evaluation of
 @glowexp{expr}. The @glowexp{name} remains associated with
@@ -254,7 +254,7 @@ all been published.
 @defglowstm[(verify! names name) @{verify! names;}]{
 Verifies the equation associated with each @glowexp{name} in
 @glowexp{names}. Each equation is determined by the previous
-@glowexp|{@verifiably}| statement defining @glowexp{name}.
+@glowexp|{@verifiably!}| statement defining @glowexp{name}.
 Each @glowexp{name} and its dependencies must all be
 published beforehand, and the equations must hold.
 }
@@ -583,11 +583,11 @@ different salt with the same hand produces a different
 digest, preventing rainbow-table attacks if both the salt
 and hand are private.
 
-Digests are often used with @glowexp|{@verifiably}| and
+Digests are often used with @glowexp|{@verifiably!}| and
 @glowexp{verify!} to commit to a private choice that can't
 be changed later:
 @glowstmblock|{
-    @verifiably(A) let commitment = digest(salt, handA);
+    @verifiably!(A) let commitment = digest(salt, handA);
     publish! A -> commitment;
 }|
 

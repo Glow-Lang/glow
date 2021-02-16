@@ -553,7 +553,7 @@ to be used as an arbitrator in case of later dispute between the two participant
 let payForSignature = (digest : Digest, price : Nat) => {
   deposit! Buyer -> price;
 
-  @publicly(Seller) let signature = sign(digest);
+  @publicly!(Seller) let signature = sign(digest);
   withdraw! Seller price;
 };
 }|
@@ -581,15 +581,15 @@ In the second step, the @glowexp{Seller} publishes their signature, and
 after the contract verifies the signature, withdraws the price:
 
 @glowstmblock|{
-  @publicly(Seller) let signature = sign(digest);
+  @publicly!(Seller) let signature = sign(digest);
   withdraw! Seller <- price;
 }|
 
-Note that the line @glowstm|{@publicly(Seller) let signature = sign(digest);}| above
+Note that the line @glowstm|{@publicly!(Seller) let signature = sign(digest);}| above
 is equivalent to the three statements below:
 
 @glowstmblock|{
-  @verifiably(Seller) let signature = sign(digest);
+  @verifiably!(Seller) let signature = sign(digest);
   publish! Seller -> signature;
   verify! signature;
 }|
@@ -607,7 +607,7 @@ and it is as if the seller didn't do a thing
 (they can try again with a valid signature).
 
 How does the @glowexp{verify!} statement know what to verify?
-Because the let was annotated with @glowexp|{@verifiably}|,
+Because the let was annotated with @glowexp|{@verifiably!}|,
 that records how to verify the definition.
 Thus, the verification will be as if the programmer had written:
 
@@ -620,7 +620,7 @@ Except that you don't need to audit that line, because the compiler did it for y
 This is especially true as verifications can become involved,
 and as the formulas to be verified may evolve through time,
 and manual propagation of changes is sure to introduce subtle bugs sooner or later.
-The use of @glowexp|{@verifiably}| thus makes for shorter, more reliable DApps.
+The use of @glowexp|{@verifiably!}| thus makes for shorter, more reliable DApps.
 
 How do we (the programmers, and the compiler) know there exactly two steps?
 Because that's the number of changes in which participant is @italic{active}:

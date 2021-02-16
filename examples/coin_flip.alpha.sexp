@@ -7,7 +7,7 @@
     (@debug-label dlb0)
     (@ A (def randA (@app randomUInt256)))
     (@debug-label dlb1)
-    (@verifiably (A) (def commitment (digest randA)))
+    (@verifiably! (A) (def commitment (digest randA)))
     (@debug-label dlb2)
     (publish! A commitment)
     (@debug-label dlb3)
