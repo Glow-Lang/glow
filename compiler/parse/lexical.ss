@@ -45,7 +45,7 @@
 
 (def IdentifierName
  (.let* ((s (sat char-alphabetic?))
-         (ps (many (.or  (.let* (c (sat char-alphabetic?)) c)  (.let* (n (sat char-numeric?)) n) #\_ #\$ ))))
+         (ps (many (.or  (.let* (c (sat char-alphabetic?)) c)  (.let* (n (sat char-numeric?)) n) #\_ #\$  #\!))))
   `(IdentifierName ,(list->string (cons s ps)))))
 
 (def NonZeroDigit (sat (cut string-any <> "123456789"))) ;;
@@ -62,7 +62,7 @@
 (def IntegerLiteral (.let* (n (.or DigitIntegerLiteral))
                         (return `(IntegerLiteral, (list->string n)))))
 
-(def Opertor
+(def OperatorToken
     (.let* (op (.or "<<" ">>"
                     "==" "=>" "<=" ">=" "!=" "!" "="  "<-" "<" ">"
                     "++" "+=" "+"
@@ -73,7 +73,7 @@
                     "|||" "||"
                     "&&&" "&&"
                     "^^^" "~~~"  ))
-        (return `(Opertor ,op))))
+        (return `(OperatorToken ,op))))
 
 
 (def Marker
@@ -82,9 +82,9 @@
 
 (def ReservedWord
     (.let* ((rw (.or
-                    "data" "type" "let" "while" "publish" "verify" "if" "while"
-                    "true" "false" "else" "require" "assert" "deposit" "switch"
-                    "withdraw")))
+                    "data" "type" "let" "while" "publish!" "verify!" "if" "while"
+                    "true" "false" "else" "require!" "assert!" "deposit!" "switch"
+                    "withdraw!")))
         `(ReservedWord ,rw)))
 
 
@@ -135,7 +135,7 @@
         ;; Numbers come first because ~.~ is a punctuator
         IntegerLiteral
         StringLiteral
-        Opertor
+        OperatorToken
         Marker
         ))
 
