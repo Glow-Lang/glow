@@ -55,7 +55,7 @@
                   program: program
                   io-context: io-context:terminal))
   {execute runtime}
-  (printf (string-append BOLD "~a interaction finished\n" END) (.@ a interaction))
+  (printf "~a~a interaction finished~a\n" BOLD (.@ a interaction) END)
   ;; TODO: change alpha-converted names to surface names for printing to the user
   ;; TODO: and return type-value pairs
   (program-environment-type-value-pairs program (@ runtime environment)))
