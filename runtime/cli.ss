@@ -3,7 +3,7 @@
 
 (import
   :gerbil/expander :gerbil/gambit/ports
-  :std/format :std/generic :std/getopt :std/iter :std/misc/hash :std/misc/repr :std/misc/string :std/srfi/13 :std/sugar :std/text/json
+  :std/format :std/generic :std/getopt :std/iter :std/misc/hash :std/misc/repr :std/misc/string :std/pregexp :std/sort :std/srfi/13 :std/sugar :std/text/json
   :clan/base :clan/cli :clan/exit :clan/json :clan/multicall :clan/path-config :clan/syntax
   :clan/poo/brace :clan/poo/debug :clan/poo/object
   :clan/persist/db :clan/persist/content-addressing :clan/versioning
@@ -42,7 +42,9 @@
         (test (hash-get options 'test)))
     (backtrace-on-abort? backtrace)
     (cond
-      (test (import-module ':mukn/ethereum/testing #t #t))
+      (test
+        (import-module ':mukn/ethereum/testing #t #t)
+        (eval '(mukn/ethereum/testing#ensure-addresses-prefunded)))
       (else (load-secret-key-ring)))))
 
 (def (ask-option name options)
@@ -59,6 +61,8 @@
     (match (cdr indexed-option)
       ([option . (type . annotation)]
         (displayln option " - " (.call type .string<- annotation)))
+      ([option . option-short]
+        (displayln option-short))
       (option
         (displayln option))))
   (display-prompt "Enter number")
@@ -104,8 +108,11 @@
   (displayln CYAN name)
   (display (string-append "> " END)))
 
-(def (ask-contract-interaction)
-  (ask-option "Choose contract interaction" ["mukn/glow/examples/buy_sig#payForSignature"]))
+(def (ask-contract)
+  (ask-option "Choose contract"
+    [(cons "mukn/glow/examples/coin_flip" "coin_flip")
+     (cons "mukn/glow/examples/buy_sig" "buy_sig")
+     (cons "mukn/glow/examples/rps_simple" "rps_simple")]))
 
 (def (ask-participants selected-identity selected-role role-names)
   (displayln BOLD "Assign roles" END)
@@ -161,21 +168,24 @@
       input)))
 
 (def (ask-role options role-names)
-  (get-or-ask options 'role
+  (get-or-ask options
+    'role
     (λ () (ask-option "Choose your role" role-names))))
 
 (def (ask-identity options)
-  (get-or-ask options 'identity
+  (get-or-ask options
+    'identity
     (λ () (ask-option
             "Choose your identity"
             (map (match <>
                   ([nickname . address]
                     (let (dependent-pair [Address . address])
                       [nickname . dependent-pair])))
-                (hash->list address-by-nickname))))))
+                (hash->list/sort address-by-nickname string<?))))))
 
 (def (ask-max-initial-block options current-block-number)
-  (get-or-ask options 'max-initial-block
+  (get-or-ask options
+    'max-initial-block
     (λ ()
       (ask-number
         (string-append
@@ -186,36 +196,42 @@
   (def compiler-output (run-passes contract.glow pass: 'project show?: #f))
   (parse-compiler-output compiler-output))
 
+(def (extract-contract-path contract-name)
+  (match (pregexp-match "mukn\\/glow\\/([^#]*)#?.*" contract-name)
+    ([_ path] (string-append "./" path ".glow"))
+    (else (error "Bad contract name" contract-name))))
+
 ;; TODO: also accept local interaction parameters
 ;; TODO: accept alternative ethereum networks, etc
 (define-entry-point (start-interaction . arguments)
   "Start an interaction based on an agreement"
   (def gopt (getopt/common-options))
   (def options (getopt-parse gopt arguments))
-  (process-common-options options)
-  ;; TODO: Extract from name?
-  (def contract.glow (source-path "examples/buy_sig.glow"))
   (def test (hash-get options 'test))
   (def database (hash-get options 'database))
   (ensure-db-connection (or database (run-path (if test "testdb" "userdb"))))
   ;; TODO: validate ethereum network, with nice user-friendly error message
   (def ethereum-network (hash-get options 'ethereum-network))
   (ensure-ethereum-connection ethereum-network)
+  (process-common-options options)
   (displayln)
 
   (defvalues (agreement selected-role)
     (if-let (agreement-json-string (hash-get options 'agreement))
       ;; TODO: Validate that selected role matches selected identity in the agreement's participant table.
       (let* ((selected-identity (ask-identity options))
+             (agreement (<-json InteractionAgreement (json<-string agreement-json-string)))
+             (contract.glow (source-path (extract-contract-path (.@ agreement interaction))))
              (program (compile-contract contract.glow))
-             (role-names (filter identity (hash-keys (@ program interactions))))
+             (role-names (sort (filter identity (hash-keys (@ program interactions))) symbol<?))
              (selected-role (ask-role options role-names)))
-        (values (<-json InteractionAgreement (json<-string agreement-json-string)) selected-role))
+        (values agreement selected-role))
       (nest
-        (let (interaction (get-or-ask options 'contract (λ () (ask-contract-interaction)))))
-        ;; TODO: Extract path from contract-name
+        (let (contract-name (get-or-ask options 'contract (λ () (ask-contract)))))
+        (let (contract-path (extract-contract-path contract-name)))
+        (let (contract.glow (source-path contract-path)))
         (let (program (compile-contract contract.glow)))
-        (let (role-names (filter identity (hash-keys (@ program interactions)))))
+        (let (role-names (sort (filter identity (hash-keys (@ program interactions))) symbol<?)))
 
         (let (selected-identity (ask-identity options)))
         (let (selected-role (ask-role options role-names)))
@@ -228,7 +244,7 @@
         ;; TODO: Validate agreement, with nice user-friendly error message.
         ;; TODO: Output agreement as a command for the other user to copy paste and automatically fill in arguments.
         (let (agreement
-          {interaction
+          {interaction: (string-append contract-name "#" (symbol->string (@ program name)))
           participants: (.<-alist (hash->list participants-table))
           parameters
           glow-version: (software-identifier)
