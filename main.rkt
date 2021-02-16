@@ -1,6 +1,6 @@
 #lang racket/base
 
-;; For documentation-rendering purposes
+;; Define dummy bindings for documentation-rendering purposes
 
 (define-syntax-rule (defdums x ...)
   (begin (provide x ...) (define x #f) ...))

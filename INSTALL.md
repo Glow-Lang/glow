@@ -190,8 +190,8 @@ just install them with `gxpkg install` and `gxpkg build`.
 
 ```
 DEPS=(github.com/fare/gerbil-utils
-      github.com/fare/gerbil-crypto
       github.com/fare/gerbil-poo
+      github.com/fare/gerbil-crypto
       github.com/fare/gerbil-persist
       github.com/fare/gerbil-ethereum
       github.com/drewc/gerbil-swank
@@ -217,8 +217,8 @@ to adjust where you'll install those dependencies:
 
 ```
 DEPS=(github.com/fare/gerbil-utils
-      github.com/fare/gerbil-crypto
       github.com/fare/gerbil-poo
+      github.com/fare/gerbil-crypto
       github.com/fare/gerbil-persist
       github.com/fare/gerbil-ethereum
       github.com/drewc/gerbil-swank

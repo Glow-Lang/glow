@@ -1,7 +1,6 @@
 #lang racket/base
 
-(provide Glow
-         hash-lang
+(provide hash-lang
          defglowlang
          defid
          glowmod glowmodblock
@@ -22,8 +21,6 @@
                      racket/match
                      racket/string
                      "glow-parse.rkt"))
-
-(define (Glow) (emph "Glow"))
 
 (define (hash-lang)
   (seclink "hash-lang" (racketmodfont "#lang")))
