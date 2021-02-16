@@ -19,8 +19,8 @@
   ../runtime/program
   ../runtime/participant-runtime)
 
-(def a-address alice)
-(def b-address bob)
+(def a-address croesus)
+(def b-address trent)
 (def wagerAmount (wei<-ether .5))
 (def escrowAmount (wei<-ether .01))
 
@@ -49,10 +49,7 @@
   (test-suite "integration test for ethereum/coin-flip"
     (delete-agreement-handshake)
     (ensure-ethereum-connection "pet")
-    (ensure-db-connection (run-path "testdb"))
-    (DBG "Ensure participants funded")
-    (ensure-addresses-prefunded)
-    (DBG "DONE")
+
     (def compiler-output (run-passes coin_flip.glow pass: 'project show?: #f))
     (def program (parse-compiler-output compiler-output))
 
@@ -64,27 +61,31 @@
 
       (displayln "\nEXECUTING A THREAD ...")
       (def a-thread
-        (spawn/name/logged "A"
+        (spawn/name/params "A"
          (lambda ()
-           (def a-runtime
-             (make-Runtime role: 'A
-                           agreement: agreement
-                           program: program))
-           {execute a-runtime}
-           (displayln "A finished")
-           (@ a-runtime environment))))
+            (with-db-connection (c (run-path "A"))
+              (DBG "Ensure participants funded")
+              (ensure-addresses-prefunded)
+              (def a-runtime
+                (make-Runtime role: 'A
+                              agreement: agreement
+                              program: program))
+              {execute a-runtime}
+              (displayln "A finished")
+              (@ a-runtime environment)))))
 
       (displayln "\nEXECUTING B THREAD ...")
       (def b-thread
-        (spawn/name/logged "B"
+        (spawn/name/params "B"
          (lambda ()
-           (def b-runtime
-             (make-Runtime role: 'B
-                           agreement: agreement
-                           program: program))
-           {execute b-runtime}
-           (displayln "B finished")
-           (@ b-runtime environment))))
+            (with-db-connection (c (run-path "B"))
+              (def b-runtime
+                (make-Runtime role: 'B
+                              agreement: agreement
+                              program: program))
+              {execute b-runtime}
+              (displayln "B finished")
+              (@ b-runtime environment)))))
       (def a-environment (thread-join! a-thread))
       (def b-environment (thread-join! b-thread))
 

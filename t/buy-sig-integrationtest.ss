@@ -24,10 +24,6 @@
     (test-case "buy sig runs successfully"
       (delete-agreement-handshake)
       (ensure-ethereum-connection "pet")
-      (ensure-db-connection (run-path "testdb"))
-
-      (DBG "Ensure participants funded")
-      (ensure-addresses-prefunded)
 
       (def buyer-address alice)
       (def seller-address bob)
@@ -64,26 +60,30 @@
 
       (displayln "\nEXECUTING BUYER THREAD ...")
       (def buyer-thread
-        (spawn/name/logged "Buyer"
+        (spawn/name/params "Buyer"
          (lambda ()
-           (def buyer-runtime
-             (make-Runtime role: 'Buyer
-                           agreement: agreement
-                           program: program))
-           {execute buyer-runtime}
-           (displayln "Buyer finished")
-           (@ buyer-runtime environment))))
+            (with-db-connection (c (run-path "Buyer"))
+              (DBG "Ensure participants funded")
+              (ensure-addresses-prefunded)
+              (def buyer-runtime
+                (make-Runtime role: 'Buyer
+                              agreement: agreement
+                              program: program))
+              {execute buyer-runtime}
+              (displayln "Buyer finished")
+              (@ buyer-runtime environment)))))
 
       (displayln "\nEXECUTING SELLER THREAD ...")
       (def seller-thread
-        (spawn/name/logged "Seller"
+        (spawn/name/params "Seller"
          (lambda ()
-           (def seller-runtime
-             (make-Runtime role: 'Seller
-                           agreement: agreement
-                           program: program))
-           {execute seller-runtime}
-           (displayln "Seller finished"))))
+            (with-db-connection (c (run-path "Seller"))
+              (def seller-runtime
+                (make-Runtime role: 'Seller
+                              agreement: agreement
+                              program: program))
+              {execute seller-runtime}
+              (displayln "Seller finished")))))
 
 
       ;; Get the final environment object from the Buyer

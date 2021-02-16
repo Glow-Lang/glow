@@ -31,8 +31,8 @@ input UInt256: First player, pick your hand: 0 (Rock), 1 (Paper), 2 (Scissors)
   ../runtime/program
   ../runtime/participant-runtime)
 
-(def a-address alice)
-(def b-address bob)
+(def a-address penny)
+(def b-address fortysix)
 (def wagerAmount (wei<-ether .01))
 
 (def rps_simple.glow (source-path "examples/rps_simple.sexp"))
@@ -57,10 +57,7 @@ input UInt256: First player, pick your hand: 0 (Rock), 1 (Paper), 2 (Scissors)
   (test-suite "integration test for ethereum/rps_simple"
     (delete-agreement-handshake)
     (ensure-ethereum-connection "pet")
-    (ensure-db-connection (run-path "testdb"))
-    (DBG "Ensure participants funded")
-    (ensure-addresses-prefunded)
-    (DBG "DONE")
+
     (def compiler-output (run-passes rps_simple.glow pass: 'project show?: #f))
     (def program (parse-compiler-output compiler-output))
 
@@ -69,29 +66,33 @@ input UInt256: First player, pick your hand: 0 (Rock), 1 (Paper), 2 (Scissors)
 
       (displayln "\nEXECUTING A THREAD ...")
       (def a-thread
-        (spawn/name/logged "A"
+        (spawn/name/params "A"
          (lambda ()
           (parameterize ((current-input-port (open-input-string "2\n"))) ; Scissors
-            (def a-runtime
-              (make-Runtime role: 'A
-                            agreement: agreement
-                            program: program))
-            {execute a-runtime}
-            (displayln "A finished")
-            (@ a-runtime environment)))))
+            (with-db-connection (c (run-path "A"))
+              (DBG "Ensure participants funded")
+              (ensure-addresses-prefunded)
+              (def a-runtime
+                (make-Runtime role: 'A
+                              agreement: agreement
+                              program: program))
+              {execute a-runtime}
+              (displayln "A finished")
+              (@ a-runtime environment))))))
 
       (displayln "\nEXECUTING B THREAD ...")
       (def b-thread
-        (spawn/name/logged "B"
+        (spawn/name/params "B"
          (lambda ()
-          (parameterize ((current-input-port (open-input-string "1\n"))) ; Paper
-            (def b-runtime
-              (make-Runtime role: 'B
-                            agreement: agreement
-                            program: program))
-            {execute b-runtime}
-            (displayln "B finished")
-            (@ b-runtime environment)))))
+          (parameterize ((current-input-port (open-input-string "1\n")))  ; Paper
+            (with-db-connection (c (run-path "B"))
+              (def b-runtime
+                (make-Runtime role: 'B
+                              agreement: agreement
+                              program: program))
+              {execute b-runtime}
+              (displayln "B finished")
+              (@ b-runtime environment))))))
 
       (def a-environment (thread-join! a-thread))
       (def b-environment (thread-join! b-thread))
