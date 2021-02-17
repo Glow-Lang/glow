@@ -26,15 +26,14 @@
    maxInitialBlock: [Nat]))
 
 (define-type InteractionAgreement
-  (.+
-   (Record
-    glow-version: [String] ;; e.g. "Glow v0.0-560-gda782c9 on Gerbil-ethereum v0.0-83-g6568bc6" ;; TODO: have a function to compute that from versioning.ss
-    interaction: [String] ;; e.g. "mukn/glow/examples/buy_sig#payForSignature", fully qualified Gerbil symbol
-    participants: [(MonomorphicObject Address)] ;; e.g. {Buyer: alice Seller: bob}
-    parameters: [Json] ;; This Json object to be decoded according to a type descriptor from the interaction (dependent types yay!)
-    reference: [(MonomorphicObject Json)] ;; Arbitrary reference objects from each participant, with some conventional size limits on the Json string.
-    options: [AgreementOptions] ;; See above
-    code-digest: [Digest]))) ;; Make it the digest of Glow source code (in the future, including all Glow libraries transitively used)
+  (Record
+   glow-version: [String] ;; e.g. "Glow v0.0-560-gda782c9 on Gerbil-ethereum v0.0-83-g6568bc6" ;; TODO: have a function to compute that from versioning.ss
+   interaction: [String] ;; e.g. "mukn/glow/examples/buy_sig#payForSignature", fully qualified Gerbil symbol
+   participants: [(MonomorphicObject Address)] ;; e.g. {Buyer: alice Seller: bob}
+   parameters: [Json] ;; This Json object to be decoded according to a type descriptor from the interaction (dependent types yay!)
+   reference: [(MonomorphicObject Json)] ;; Arbitrary reference objects from each participant, with some conventional size limits on the Json string.
+   options: [AgreementOptions] ;; See above
+   code-digest: [Digest])) ;; Make it the digest of Glow source code (in the future, including all Glow libraries transitively used)
 
 (define-type AgreementHandshake
   (Record

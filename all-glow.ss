@@ -69,6 +69,7 @@
   :mukn/glow/runtime/participant-runtime
   :mukn/glow/runtime/consensus-code-generator
   :mukn/glow/runtime/configuration
+  :mukn/glow/runtime/cli
 
   ;;:mukn/glow/compiler/checkpointify/checkpointify
   :clan/crypto/keccak :clan/crypto/secp256k1
@@ -78,7 +79,6 @@
   :mukn/ethereum/assembly :mukn/ethereum/contract-config :mukn/ethereum/contract-runtime
   :mukn/ethereum/nonce-tracker :mukn/ethereum/tx-tracker :mukn/ethereum/batch-send
   :mukn/ethereum/assets :mukn/ethereum/cli
-
 
   ;; Testing Glow
   :mukn/glow/t/common
