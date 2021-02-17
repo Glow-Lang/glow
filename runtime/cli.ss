@@ -245,7 +245,7 @@
         ;; TODO: Output agreement as a command for the other user to copy paste and automatically fill in arguments.
         (let (agreement
           {interaction: (string-append contract-name "#" (symbol->string (@ program name)))
-          participants: (.<-alist (hash->list participants-table))
+          participants: (object<-hash participants-table)
           parameters
           glow-version: (software-identifier)
           code-digest: (digest<-file contract.glow)
