@@ -1,4 +1,3 @@
-#!/usr/bin/env gxi
 (export #t)
 
 (import
@@ -275,6 +274,3 @@
    (let ((port (console-port)))
      (flush-input port)
      (read-line port)))
-
-(set-default-entry-point! start-interaction)
-(def main call-entry-point)
