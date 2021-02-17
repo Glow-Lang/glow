@@ -4,47 +4,32 @@
   :gerbil/expander :gerbil/gambit/ports
   :std/format :std/generic :std/getopt :std/iter :std/misc/hash :std/misc/repr :std/misc/string :std/pregexp :std/sort :std/srfi/13 :std/sugar :std/text/json
   :clan/base :clan/cli :clan/exit :clan/json :clan/multicall :clan/path-config :clan/syntax
-  :clan/poo/brace :clan/poo/debug :clan/poo/object
+  :clan/poo/brace :clan/poo/cli :clan/poo/debug :clan/poo/object
   :clan/persist/db :clan/persist/content-addressing :clan/versioning
   :mukn/ethereum/assets :mukn/ethereum/cli :mukn/ethereum/ethereum :mukn/ethereum/network-config
   :mukn/ethereum/signing :mukn/ethereum/types :mukn/ethereum/json-rpc :mukn/ethereum/known-addresses
   :mukn/glow/runtime/participant-runtime :mukn/glow/runtime/reify-contract-parameters :mukn/glow/runtime/configuration
   :mukn/glow/runtime/program :mukn/glow/runtime/terminal-codes
   (only-in :mukn/glow/compiler/alpha-convert/alpha-convert init-syms)
-  :mukn/glow/compiler/passes :mukn/glow/compiler/multipass :mukn/glow/compiler/syntax-context)
+  :mukn/glow/compiler/passes :mukn/glow/compiler/multipass :mukn/glow/compiler/syntax-context
+  :mukn/glow/cli/contacts)
 
-(def common-options
-  [(flag 'test "--test"
-         help: "enable testing including test identities")
-   (flag 'backtrace "--backtrace"
-         help: "enable backtraces for debugging purposes")
-   (option 'agreement "-A" "--agreement" default: #f
-           help: "interaction parameters as JSON")
-   (option 'ethereum-network "-E" "--ethereum-network" default: "pet"
-           help: "name of ethereum network")
-   (option 'database "-D" "--database" default: #f
-           help: "path to local DApp state database")
-   (option 'contract "-C" "--contract" default: #f
-           help: "path to Glow contract")
-   (option 'interaction "-I" "--interaction" default: #f
-           help: "name of interaction within contract")
-   (option 'role "-R" "--role" default: #f
-           help: "role you want to play in the interaction")
-   (option 'max-initial-block "-B" default: #f
-           help: "maximum block number the contract can begin at")])
-
-(def (getopt/common-options . options)
-  (apply getopt (append common-options options)))
-
-(def (process-common-options options)
-  (let ((backtrace (hash-get options 'backtrace))
-        (test (hash-get options 'test)))
-    (backtrace-on-abort? backtrace)
-    (cond
-      (test
-        (import-module ':mukn/ethereum/testing #t #t)
-        (eval '(mukn/ethereum/testing#ensure-addresses-prefunded)))
-      (else (load-secret-key-ring)))))
+(def options/interaction
+  (make-options
+    [(flag 'backtrace "--backtrace"
+           help: "enable backtraces for debugging purposes")
+     (option 'agreement "-A" "--agreement" default: #f
+             help: "interaction parameters as JSON")
+     (option 'contract "-C" "--contract" default: #f
+             help: "path to Glow contract")
+     (option 'interaction "-I" "--interaction" default: #f
+             help: "name of interaction within contract")
+     (option 'role "-R" "--role" default: #f
+             help: "role you want to play in the interaction")
+     (option 'max-initial-block "-B" default: #f
+             help: "maximum block number the contract can begin at")]
+    []
+    [options/database options/ethereum-network options/test options/contacts]))
 
 (def (ask-option name options)
   (def options-count (length options))
@@ -92,16 +77,20 @@
   result)
 
 ;; TODO: Catch parsing errors and show example inputs.
-(def (ask-address name)
-  (display-prompt (string-append "Enter address of " name))
-  (try
-    (let (input (read-line-from-console))
-      (address<-0x input))
-    (catch (e)
-      (displayln FAIL "\nError parsing address: " (error-message e) END)
-      (displayln "Input should be 0x followed by 40 hexadecimal characters.")
-      (displayln "E.g., 0x73e27C9B8BF6F00A38cD654079413aA3eDBC771A\n")
-      (ask-address name))))
+(def (ask-address name contacts)
+  (ask-option name
+    (map
+      (cut match <>
+        ([nickname . address]
+          (cons nickname [Address . address])))
+      (hash->list contacts))))
+    ;(let (input (read-line-from-console))
+    ;  (address<-0x input))
+    ; (catch (e)
+    ;   (displayln FAIL "\nError parsing address: " (error-message e) END)
+    ;   (displayln "Input should be 0x followed by 40 hexadecimal characters.")
+    ;   (displayln "E.g., 0x73e27C9B8BF6F00A38cD654079413aA3eDBC771A\n")
+    ;   (ask-address name contacts))))
 
 (def (display-prompt name)
   (displayln CYAN name)
@@ -113,14 +102,14 @@
      (cons "mukn/glow/examples/buy_sig" "buy_sig")
      (cons "mukn/glow/examples/rps_simple" "rps_simple")]))
 
-(def (ask-participants selected-identity selected-role role-names)
+(def (ask-participants selected-identity selected-role role-names contacts)
   (displayln BOLD "Assign roles" END)
   (let (participants (make-hash-table))
     (for ((role-name role-names))
       (def role-address
         (if (equal? selected-role role-name)
           (hash-get address-by-nickname selected-identity)
-          (ask-address (symbol->string role-name))))
+          (ask-address (symbol->string role-name) contacts)))
       (hash-put! participants role-name role-address))
     (displayln)
     participants))
@@ -152,7 +141,7 @@
 
 (def (print-command agreement)
   (displayln MAGENTA "One line command for other participants to generate the same agreement:" END)
-  (display "./runtime/cli.ss start-interaction --agreement ")
+  (display "./glow start-interaction --agreement ")
   (def agreement-string (string<-json (json<- InteractionAgreement agreement)))
   (if (string-contains agreement-string "'")
     (pr agreement-string)
@@ -204,15 +193,7 @@
 ;; TODO: accept alternative ethereum networks, etc
 (define-entry-point (start-interaction . arguments)
   "Start an interaction based on an agreement"
-  (def gopt (getopt/common-options))
-  (def options (getopt-parse gopt arguments))
-  (def test (hash-get options 'test))
-  (def database (hash-get options 'database))
-  (ensure-db-connection (or database (run-path (if test "testdb" "userdb"))))
-  ;; TODO: validate ethereum network, with nice user-friendly error message
-  (def ethereum-network (hash-get options 'ethereum-network))
-  (ensure-ethereum-connection ethereum-network)
-  (process-common-options options)
+  (def options (process-options options/interaction arguments))
   (displayln)
 
   (defvalues (agreement selected-role)
@@ -235,7 +216,8 @@
         (let (selected-identity (ask-identity options)))
         (let (selected-role (ask-role options role-names)))
 
-        (let (participants-table (ask-participants selected-identity (symbolify selected-role) role-names)))
+        (let (contacts (load-contacts (hash-get options 'file))))
+        (let (participants-table (ask-participants selected-identity (symbolify selected-role) role-names contacts)))
         (let (parameters (ask-parameters program)))
         (let (current-block-number (eth_blockNumber)))
         (let (max-initial-block (ask-max-initial-block options current-block-number)))
