@@ -12,13 +12,15 @@
   (.+
     (Record
       program: [Any] ; Program
+      name: [Symbol]
       variable-offsets: [(OrFalse (Map Nat <- Symbol))]
       labels: [(OrFalse (Map Nat <- Symbol))]
       bytes: [(OrFalse Bytes)]
       params-end: [(OrFalse Nat)])
     {.make:
-      (lambda (some-program some-timeout)
+      (lambda (some-program some-name some-timeout)
         {program: some-program
+         name: some-name
          variable-offsets: #f
          labels: #f
          bytes: #f
@@ -80,7 +82,7 @@
 ;; Directives to generate the entire bytecode for the contract (minus header / footer)
 ;; Directive <- ConsensusCodeGenerator
 (def (&define-medium-functions self)
-  (def consensus-interaction (get-interaction (.@ self program) #f))
+  (def consensus-interaction (get-interaction (.@ self program) (.@ self name) #f))
   (&begin*
     (append-map (match <> ([code-block-label . code-block]
                           (generate-consensus-code-block self code-block-label code-block)))
@@ -92,20 +94,22 @@
   (def checkpoint-statements (code-block-statements code-block))
   (def frame-size (compute-variable-offsets self code-block-label))
   (def code-block-directives
-    [[&jumpdest (make-checkpoint-label (.@ self program) code-block-label)]
+    [[&jumpdest (make-checkpoint-label (.@ self name) code-block-label)]
       (&check-timeout! timeout: (.@ self timeout))
       (append-map (λ (statement) (compile-consensus-statement self code-block-label statement))
                 checkpoint-statements)...])
   (register-frame-size frame-size)
   (def end-code-block-directive
-    (if (equal? code-block-label (get-last-code-block-label (.@ self program)))
+    (if (equal? code-block-label (get-last-code-block-label (.@ self program) (.@ self name)))
       &end-contract!
       (setup-tail-call self code-block-label code-block)))
   (snoc end-code-block-directive code-block-directives))
 
-;; : Symbol <- Program Symbol
-(def (make-checkpoint-label program checkpoint)
-  (symbolify (@ program name) "--" checkpoint))
+;; : Symbol <- Symbol Symbol
+(def (make-checkpoint-label name checkpoint)
+  (unless (symbol? name)
+    (error 'make-checkpoint-label "expected a symbol, given" name))
+  (symbolify name "--" checkpoint))
 
 ;; (List Directive) <- ConsensusCodeGenerator Symbol Sexp
 (def (compile-consensus-statement self function-name statement)
@@ -301,7 +305,7 @@
 ;; Directive <- ConsensusCodeGenerator Symbol CodeBlock
 (def (setup-tail-call self code-block-label code-block)
   (let* ((next-code-block-label (code-block-exit code-block))
-         (next-code-block-live-variables (sort (lookup-live-variables (.@ self program) next-code-block-label) symbol<?))
+         (next-code-block-live-variables (sort (lookup-live-variables (.@ self program) (.@ self name) next-code-block-label) symbol<?))
          (next-code-block-frame-size (+ (param-length UInt16) (param-length Block)))) ;; 2 for program counter, 2 for timer start,
     (&begin
       (&begin*
@@ -317,7 +321,7 @@
       NUMBER
       ;; TODO: Define only once for every callee.
       ;; [&jumpdest (symbolify 'tail-call-into- next-code-block-label)]
-      (make-checkpoint-label (.@ self program) next-code-block-label) pc-set!
+      (make-checkpoint-label (.@ self name) next-code-block-label) pc-set!
       timer-start-set!
       (&begin*
         (map
@@ -337,7 +341,7 @@
   (def frame-variables (make-hash-table))
   ;; Initial offset computed by global registers, see :mukn/ethereum/contract-runtime
   (def frame-size params-start@)
-  (def live-variables (lookup-live-variables (.@ self program) code-block-label))
+  (def live-variables (lookup-live-variables (.@ self program) (.@ self name) code-block-label))
   (for-each
     (λ (live-variable)
       (let* ((type (lookup-type (.@ self program) live-variable))

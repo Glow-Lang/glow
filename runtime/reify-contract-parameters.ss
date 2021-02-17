@@ -27,9 +27,7 @@
 ;; interaction-agreement->program : InteractionAgreement -> Program
 (def (interaction-agreement->program a)
   (defvalues (modpath name)
-    (match (pregexp-match "^([^#]*)#([^#]*)$" (.@ a interaction))
-      ([_ path name] (values path name))
-      (else (error "Bad interaction name" (.@ a interaction)))))
+    (split-interaction-path-name (.@ a interaction)))
   (def path (glow-module-path->path modpath))
   (def compiler-output (run-passes path pass: 'project show?: #f))
   (parse-compiler-output compiler-output))

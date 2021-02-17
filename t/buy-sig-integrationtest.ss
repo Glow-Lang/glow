@@ -46,7 +46,7 @@
          interaction: "mukn/glow/examples/buy_sig#payForSignature"
          participants: (.o Buyer: buyer-address Seller: seller-address)
          parameters: (hash
-                      (digest0 (json<- Digest digest))
+                      (digest (json<- Digest digest))
                       (price (json<- Ether price)))
          reference: (.o Buyer: "Purchase #42"
                         Seller: "Sale #101")
