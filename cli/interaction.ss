@@ -1,3 +1,4 @@
+#!/usr/bin/env gxi
 (export #t)
 
 (import
@@ -152,7 +153,7 @@
 
 (def (print-command agreement)
   (displayln MAGENTA "One line command for other participants to generate the same agreement:" END)
-  (display "./runtime/cli.ss start-interaction --agreement ")
+  (display "./cli/interaction.ss start --agreement ")
   (def agreement-string (string<-json (json<- InteractionAgreement agreement)))
   (if (string-contains agreement-string "'")
     (pr agreement-string)
@@ -197,18 +198,18 @@
 
 (def (extract-contract-path contract-name)
   (match (pregexp-match "mukn\\/glow\\/([^#]*)#?.*" contract-name)
-    ([_ path] (string-append "./" path ".glow"))
+    ([_ path] (string-append path ".glow"))
     (else (error "Bad contract name" contract-name))))
 
 ;; TODO: also accept local interaction parameters
 ;; TODO: accept alternative ethereum networks, etc
-(define-entry-point (start-interaction . arguments)
+(define-entry-point (start . arguments)
   "Start an interaction based on an agreement"
   (def gopt (getopt/common-options))
   (def options (getopt-parse gopt arguments))
   (def test (hash-get options 'test))
   (def database (hash-get options 'database))
-  (ensure-db-connection (or database (run-path (if test "testdb" "userdb"))))
+  (ensure-db-connection (run-path (or database (if test "testdb" "userdb"))))
   ;; TODO: validate ethereum network, with nice user-friendly error message
   (def ethereum-network (hash-get options 'ethereum-network))
   (ensure-ethereum-connection ethereum-network)
@@ -274,3 +275,6 @@
    (let ((port (console-port)))
      (flush-input port)
      (read-line port)))
+
+(set-default-entry-point! start)
+(def main call-entry-point)
