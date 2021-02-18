@@ -359,7 +359,7 @@ with no possible ambiguity to the auditor, and obvious translation between langu
 
 @subsubsection{Scoping}
 
-In @(Glow), the participant locality annotations such a @code{@Buyer} do not affect scoping rules.
+In @(Glow), the participant locality annotations such a @code|{@Buyer}| do not affect scoping rules.
 A program stripped of its annotations is still a valid program that has the same effects,
 though a less useful program with no actual exchange of assets.
 The scoping rules are thus the same as in JavaScript or ReasonML.
