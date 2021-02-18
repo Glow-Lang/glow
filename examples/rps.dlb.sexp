@@ -20,7 +20,7 @@
     (@debug-label dlb5)
     (@ A (def salt (@app randomUInt256)))
     (@debug-label dlb6)
-    (@ (verifiably A) (def commitment (digest (@tuple salt handA))))
+    (@ (verifiably! A) (def commitment (digest (@tuple salt handA))))
     (@debug-label dlb7)
     (publish! A commitment)
     (@debug-label dlb8)

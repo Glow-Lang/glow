@@ -12,7 +12,7 @@
   block switch =>
   == input digest sign
   publish! verify! require! assert! deposit! withdraw!
-  @interaction @verifiably @publicly @make-interaction @app-interaction
+  @interaction @verifiably! @publicly! @make-interaction @app-interaction
   Unit Int Nat Bool Bytes Digest Assets Signature
   ! <= < > >= + - * / %
   ~~~ &&& \|\|\| ^^^ << >> ; make sure to use `read-accept-bar-quote #f` for `\|\|\|`

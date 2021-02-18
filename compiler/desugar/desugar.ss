@@ -9,7 +9,7 @@
         :mukn/glow/compiler/alpha-convert/fresh
         :mukn/glow/compiler/common)
 
-;; Desugaring away these: @verifiably verify! @publicly defdata deftype and or
+;; Desugaring away these: @verifiably! verify! @publicly! defdata deftype and or
 ;; In the future, let users control desuraging of defdata and deftype with @deriving annotations (?)
 
 ;; desugar-stmts : [Listof StmtStx] -> [Listof StmtStx]
@@ -19,11 +19,11 @@
 ;; accumulate new reduced statements for the current unreduced statement,
 ;; in reversed order at the beginning of the accumulator acc
 (def (desugar-stmt stx)
-  (syntax-case stx (@ @debug-label @interaction @verifiably @publicly deftype defdata publish! def λ)
+  (syntax-case stx (@ @debug-label @interaction @verifiably! @publicly! deftype defdata publish! def λ)
     ((@debug-label . _) stx)
     ((@interaction _ (def _ (λ . _))) (desugar-def-interaction stx))
-    ((@verifiably (p) definition) (restx stx [#'@ #'p (desugar-verifiably stx #'p #'definition)]))
-    ((@publicly (p) definition) (desugar-publicly stx #'p #'definition))
+    ((@verifiably! (p) definition) (restx stx [#'@ #'p (desugar-verifiably stx #'p #'definition)]))
+    ((@publicly! (p) definition) (desugar-publicly stx #'p #'definition))
     ((@ p s) (identifier? #'p)
      (syntax-case #'s (splice)
        ((splice . body) (retail-stx #'s (map-in-order (λ (x) (desugar-stmt (restx x [#'@ #'p x])))

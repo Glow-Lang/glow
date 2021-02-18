@@ -17,7 +17,7 @@
     (_ #f)))
 
 ;; at-prefix-normalize : Stx -> Stx
-;; Normalizes to prefix form, intended to be used for `@verifiably` and `@publicly`
+;; Normalizes to prefix form, intended to be used for `@verifiably!` and `@publicly!`
 (def (at-prefix-normalize stx)
   (syntax-case stx (@)
     ((@ x s) (identifier? #'x)
@@ -27,5 +27,5 @@
     (_ stx)))
 
 ;; prefix-at : Id -> Id
-;; Intended to be used for `@verifiably` and `@publicly`
+;; Intended to be used for `@verifiably!` and `@publicly!`
 (def (prefix-at x) (restx1 x (string->symbol (format "@~a" (stx-e x)))))

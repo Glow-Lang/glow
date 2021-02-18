@@ -1137,7 +1137,7 @@ to be used as an arbitrator in case of later dispute between the two participant
 let payForSignature = (digest : Digest, price : Nat) => {
   deposit! Buyer -> price;
 
-  @publicly(Seller) let signature = sign(digest);
+  @publicly!(Seller) let signature = sign(digest);
   withdraw! Seller <- price;
 }
 ```
@@ -1163,14 +1163,14 @@ with this statement:
 In the second step, the `Seller` publishes his signature, and
 after the contract verifies the signature, withdraws the price:
 ```
-  @publicly(Seller) let signature = sign(digest);
+  @publicly!(Seller) let signature = sign(digest);
   withdraw! Seller <- price;
 ```
 
-Note that the line `@publicly(Seller) let signature = sign(digest);` above
+Note that the line `@publicly!(Seller) let signature = sign(digest);` above
 is equivalent to the three statements below:
 ```
-  @verifiably(Seller) let signature = sign(digest);
+  @verifiably!(Seller) let signature = sign(digest);
   publish! Seller -> signature;
   verify! signature;
 ```
@@ -1188,7 +1188,7 @@ and it is as if the seller didn't do a thing
 (he can try again with a valid signature).
 
 How does the `verify!` statement know what to verify?
-Because the `let` was annotated with `@verifiably`,
+Because the `let` was annotated with `@verifiably!`,
 that records how to verify the definition.
 Thus, the verification will be as if the programmer had written:
 ```
@@ -1199,7 +1199,7 @@ Except that you don't need to audit that line, because the compiler did it for y
 This is especially true as verifications can become involved,
 and as the formulas to be verified may evolve through time,
 and manual propagation of changes is sure to introduce subtle bugs sooner or later.
-The use of `@verifiably` thus makes for shorter, more reliable DApps.
+The use of `@verifiably!` thus makes for shorter, more reliable DApps.
 
 How do we (the programmers, and the compiler) know there exactly two steps?
 Because that's the number of changes in which participant is *active*:
@@ -1336,7 +1336,7 @@ let winner = (handA : Hand, handB : Hand) : Outcome => {
 let rockPaperScissors = (wagerAmount) => {
   @A let handA = Hand.input("First player, pick your hand");
   @A let salt = randomUInt256();
-  @A @verifiably let commitment = digest(salt, handA);
+  @verifiably!(A) let commitment = digest(salt, handA);
   publish! A -> commitment;
   deposit! A -> wagerAmount;
 
@@ -1435,7 +1435,7 @@ The first step is for Alice to enact, as follows:
 ```
   @A let handA = Hand.input("First player, pick your hand");
   @A let salt = randomUInt256();
-  @A @verifiably let commitment = digest([salt, handA]);
+  @verifiably!(A) let commitment = digest([salt, handA]);
   publish! A -> commitment;
   deposit! A -> wagerAmount;
 ```
@@ -1450,7 +1450,7 @@ if she ever does.
 And indeed, the variable `commitment` is published
 by the fourth statement `publish! A -> commitment;`
 
-Moreover, notice how the commitment definition is annotated by `@verifiably`.
+Moreover, notice how the commitment definition is annotated by `@verifiably!`.
 This ensures that the formula used to define it can later be verified with `verify!`.
 
 Also, in the beginning, the `input` statement means that Alice will choose a hand.
@@ -1530,7 +1530,7 @@ Compare with the above, and/or look for lines that include the new variable `esc
 let rockPaperScissors = (wagerAmount, escrowAmount) => {
   @A let handA = Hand.input("First player, pick your hand");
   @A let salt = randomUInt256();
-  @verifiably(A) let commitment = digest(salt, handA);
+  @verifiably!(A) let commitment = digest(salt, handA);
   publish! A -> commitment;
   deposit! A -> wagerAmount;
   deposit! A -> escrowAmount;

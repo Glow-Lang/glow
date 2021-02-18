@@ -44,7 +44,7 @@ let rockPaperScissors = (wagerAmount) => {
     // so we can assume that B's choice is made from information already available at this point,
     @A assert! canReach(end, end.outcome == A_Wins); // inside @A, canReach means that A can win even *against* others.
     @A let salt = randomUInt256();
-    @verifiably(A) let commitment = digest(salt, handA);
+    @verifiably!(A) let commitment = digest(salt, handA);
     publish! A -> commitment;
     deposit! A -> wagerAmount;
     // commit; // Maybe the commit is implicit at the transition between @A and @B ???
@@ -59,7 +59,7 @@ let rockPaperScissors = (wagerAmount) => {
     // commit; // Maybe the commit is implicit at the transition between @B and @A ???
 
     publish! A -> salt, handA; // NB: A will get her escrow back, since that's her last message.
-    verify! commitment; // invokes the recipe from @verifiably, runs *on the consensus*
+    verify! commitment; // invokes the recipe from @verifiably!, runs *on the consensus*
     // require! isHand(handA); // implicitly runs on the consensus because of handA's type
     let outcome = winner(handA, handB);
 

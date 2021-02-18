@@ -7,6 +7,6 @@
          (@debug-label dlb0)
          (deposit! Buyer price)
          (@debug-label dlb1)
-         (@publicly (Seller) (def signature (sign digest0)))
+         (@publicly! (Seller) (def signature (sign digest0)))
          (@debug-label dlb2)
          (withdraw! Seller price)))))

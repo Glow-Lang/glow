@@ -77,11 +77,11 @@
       [`(Comment ,_) `(racketcommentfont ,s)]
       [(or 'WhiteSpace 'LineTerminator) s]
       ;[`(IdentifierName "let") `(racketlink let (racketkeywordfont ,s))]
-      [(or '(Opertor "=") '(Opertor "->") '(Opertor "<-"))
+      [(or '(OperatorToken "=") '(OperatorToken "->") '(OperatorToken "<-"))
        `(racketkeywordfont ,s)]
       [`(ReservedWord ,x) `(racket ,(string->symbol x))]
       [`(IdentifierName ,x) `(racket ,(string->symbol x))]
-      [`(Opertor ,x) `(racket ,(string->symbol x))]
+      [`(OperatorToken ,x) `(racket ,(string->symbol x))]
       ))
 
   (define (tokens->elems ts s [i 0] [d #f])
@@ -100,24 +100,9 @@
               `(token ,_ ,_ WhiteSpace) ...
               `(token ,_ ,b
                       (IdentifierName
-                       ,(and c (or "interaction" "verifiably" "publicly"))))
+                       ,(and c (or "interaction" "verifiably!" "publicly!"))))
               rst)
        (define x (string->symbol (string-append "@" c)))
-       (cond
-         [(equal? d x)
-          (cons `(defid ,x)
-                (tokens->elems rst s b #f))]
-         [else
-          (cons `(racketlink ,x (racketkeywordfont ,(substring s a b)))
-                (tokens->elems rst s b d))])]
-      [(list* `(token ,a ,_
-                      (IdentifierName
-                       ,(and c (or "publish" "verify" "require" "assert"
-                                   "deposit" "withdraw"))))
-              `(token ,_ ,_ WhiteSpace) ...
-              `(token ,_ ,b (Opertor "!"))
-              rst)
-       (define x (string->symbol (string-append c "!")))
        (cond
          [(equal? d x)
           (cons `(defid ,x)

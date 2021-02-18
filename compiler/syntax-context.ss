@@ -12,6 +12,6 @@
 
 (export
   ;;@make-interaction
-  ;;@ @interaction @publicly @verifiably interaction verifiably publicly
+  ;;@ @interaction @publicly! @verifiably! interaction verifiably! publicly!
   λ assert! new
   (import: :gerbil/core))

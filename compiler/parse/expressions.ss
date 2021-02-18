@@ -349,23 +349,23 @@
 
 (def Expression
   (.begin (.or AnnotatedExpression IfExpression SwitchExpression
-    (.begin (peek (match-token-value? (.or "deposit" "withdraw" "assert" "require")))
-      (.let* ((t (item)) (_(match-token-value? "!")))
+    (.begin (peek (match-token-value? (.or "deposit!" "withdraw!" "assert!" "require!")))
+      (.let* (t (item))
         (cond
-          ((string=? (get-token-value t) "withdraw") WithdrawExpression)
-          ((string=? (get-token-value t) "deposit") DepositExpression)
-          ((string=? (get-token-value t) "assert") AssertExpression)
-          ((string=? (get-token-value t) "require") RequireExpression)))) 
+          ((string=? (get-token-value t) "withdraw!") WithdrawExpression)
+          ((string=? (get-token-value t) "deposit!") DepositExpression)
+          ((string=? (get-token-value t) "assert!") AssertExpression)
+          ((string=? (get-token-value t) "require!") RequireExpression)))) 
     ArithmeticExpression)))
 
 (defstruct (publish-statement statement) (id expr) transparent: #t)
 (def PublishStatement
-    (.let* ((_(match-token-value? "!")) (p-id Identifier) (_(match-token-value? "->")) (x-ids (sepby1 Identifier (match-token-value? #\,))) )
+    (.let* ( (p-id Identifier) (_(match-token-value? "->")) (x-ids (sepby1 Identifier (match-token-value? #\,))) )
       (return (publish-statement p-id x-ids))))
 
 (defstruct (verify-statement statement) (id) transparent: #t)
 (def VerifyStatement
-    (.let* ((_(match-token-value? "!")) (ids (sepby1 Identifier (match-token-value? #\,))))
+    (.let* (ids (sepby1 Identifier (match-token-value? #\,)))
       (return (verify-statement ids))))
 
 (def Typarams
@@ -387,11 +387,11 @@
         (return (dataAssignmentStatement name typarams variants))))
 
 (def SubStatement 
-  (.begin (peek (match-token-value? (.or "verify" "publish" "data" "type")))
+  (.begin (peek (match-token-value? (.or "verify!" "publish!" "data" "type")))
     (.let* (t (item))
       (cond
-        ((string=? (get-token-value t) "verify") VerifyStatement)
-        ((string=? (get-token-value t) "publish") PublishStatement)
+        ((string=? (get-token-value t) "verify!") VerifyStatement)
+        ((string=? (get-token-value t) "publish!") PublishStatement)
         ((string=? (get-token-value t) "type") TypeDeclaration)
         ((string=? (get-token-value t) "data") DataAssignmentStatement)))))
 
