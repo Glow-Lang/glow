@@ -18,12 +18,12 @@ to Glow-sexpr syntax objects with unique names.
 
 ## Desugar
 
-From Glow-sexpr with extra syntax niceties like `@verifiably`
+From Glow-sexpr with extra syntax niceties like `@verifiably!`
 
 to Glow-sexpr where those niceties have been expanded into simpler blocks.
 
-`@verifiably` and `verify!` become verification of the original formula
-or equivalent (for, e.g. signatures). `@publicly` becomes `@verifiably`.
+`@verifiably!` and `verify!` become verification of the original formula
+or equivalent (for, e.g. signatures). `@publicly!` becomes `@verifiably!`.
 `data` type definitions automatically generate an `input` function,
 and `toNat` and `ofNat` functions if all constructors are simple.
 `and`, `or` and `if` are reduced to `switch`.

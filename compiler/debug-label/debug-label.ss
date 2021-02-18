@@ -114,11 +114,11 @@
 ;; only inserts debug labels for statements nested *within* `stx`,
 ;; does not insert a label for `stx` itself
 (def (debug-label-stmt stx)
-  (syntax-case stx (@ interaction verifiably publicly @interaction @verifiably @publicly splice def deftype defdata publish! verify!)
+  (syntax-case stx (@ interaction verifiably! publicly! @interaction @verifiably! @publicly! splice def deftype defdata publish! verify!)
     ((@ attr s) (retail-stx stx [#'attr (debug-label-stmt #'s)]))
     ((@interaction attr s) (retail-stx stx [#'attr (debug-label-stmt #'s)]))
-    ((@verifiably attr s) (retail-stx stx [#'attr (debug-label-stmt #'s)]))
-    ((@publicly attr s) (retail-stx stx [#'attr (debug-label-stmt #'s)]))
+    ((@verifiably! attr s) (retail-stx stx [#'attr (debug-label-stmt #'s)]))
+    ((@publicly! attr s) (retail-stx stx [#'attr (debug-label-stmt #'s)]))
     ((splice s ...) (retail-stx stx (debug-label-stmts (syntax->list #'(s ...)))))
     ((deftype . _) stx)
     ((defdata . _) stx)

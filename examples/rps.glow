@@ -36,7 +36,7 @@ let rockPaperScissors = (wagerAmount) => {
     @A let handA = Hand.input("First player, pick your hand");
     // @A assert! canReach(end, end.outcome == A_Wins);
     @A let salt = randomUInt256();
-    @verifiably(A) let commitment = digest((salt, handA));
+    @verifiably!(A) let commitment = digest((salt, handA));
     publish! A -> commitment; deposit! A -> wagerAmount;
 
     // @B assert! canReach(end, end.outcome == B_Wins);

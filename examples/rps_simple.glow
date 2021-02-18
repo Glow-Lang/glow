@@ -8,7 +8,7 @@ let rockPaperScissors = (wagerAmount) => {
     @A let handA = input(Nat, "First player, pick your hand: 0 (Rock), 1 (Paper), 2 (Scissors)");
     @A require! (handA < 3);
     @A let salt = randomUInt256();
-    @verifiably(A) let commitment = digest(salt, handA);
+    @verifiably!(A) let commitment = digest(salt, handA);
     publish! A -> commitment; deposit! A -> wagerAmount;
 
     @B let handB = input(Nat, "Second player, pick your hand: 0 (Rock), 1 (Paper), 2 (Scissors)");

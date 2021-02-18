@@ -13,7 +13,7 @@
        (splice
          (def handA ((@dot Hand input) "First player, pick your hand"))
          (def salt (randomUInt256))))
-    (@ (verifiably A) (def commitment (digest (@tuple salt handA))))
+    (@ (verifiably! A) (def commitment (digest (@tuple salt handA))))
     (publish! A commitment)
     (deposit! A wagerAmount)
 
