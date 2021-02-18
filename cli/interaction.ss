@@ -227,7 +227,6 @@
         (let (max-initial-block (ask-max-initial-block options current-block-number)))
 
         ;; TODO: Validate agreement, with nice user-friendly error message.
-        ;; TODO: Output agreement as a command for the other user to copy paste and automatically fill in arguments.
         (let (agreement
           {interaction: (string-append contract-name "#" (symbol->string (interaction-info-name interaction-info)))
           participants: (object<-hash participants-table)
