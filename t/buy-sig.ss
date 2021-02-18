@@ -60,7 +60,7 @@
    interaction: "mukn/glow/examples/buy_sig#payForSignature"
    participants: (.o Buyer: buyer Seller: seller)
    parameters: (hash
-                (digest0 (json<- Digest digest))
+                (digest (json<- Digest digest))
                 (price (json<- Ether price)))
 
    ;; To be filled in automatically by the DApp infrastructure

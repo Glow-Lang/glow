@@ -287,7 +287,8 @@
   ;; continue : (Args ... -> CpStmtStx SSI) Args ... -> [Listof CpStmtStx] TI
   (def (continue f . args) (apply checkpointify-single-stmt acc ti f stx args))
 
-  (syntax-case stx (@ deftype defdata publish! def return ignore! switch require! assert! deposit! withdraw!)
+  (syntax-case stx (@ @debug-label deftype defdata publish! def return ignore! switch require! assert! deposit! withdraw!)
+    ((@debug-label . _) (simple [] []))
     ((@ p s) (identifier? #'p)
      ;; NOTE: publish! deposit! withdraw! effects are *NOT* allowed within @p,
      ;; so we can just cons stx at the head, after a checkpoint.

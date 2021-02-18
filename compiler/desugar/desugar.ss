@@ -19,7 +19,8 @@
 ;; accumulate new reduced statements for the current unreduced statement,
 ;; in reversed order at the beginning of the accumulator acc
 (def (desugar-stmt stx)
-  (syntax-case stx (@ @interaction @verifiably @publicly deftype defdata publish! def λ)
+  (syntax-case stx (@ @debug-label @interaction @verifiably @publicly deftype defdata publish! def λ)
+    ((@debug-label . _) stx)
     ((@interaction _ (def _ (λ . _))) (desugar-def-interaction stx))
     ((@verifiably (p) definition) (restx stx [#'@ #'p (desugar-verifiably stx #'p #'definition)]))
     ((@publicly (p) definition) (desugar-publicly stx #'p #'definition))

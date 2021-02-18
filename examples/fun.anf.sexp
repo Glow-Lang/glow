@@ -1,11 +1,28 @@
-(@module
-(def identity (λ (x) (return x)))
-(def konstant (λ (x0) (def kx (λ (y) (return x0))) (return kx)))
-(def smelting
-     (λ (x1)
-        (def sx
-             (λ (y0)
-                (def sxy (λ (z) (def xz (@app x1 z)) (def tmp (@app y0 z)) (return (@app xz tmp))))
-                (return sxy)))
-        (return sx)))
-(return (@tuple)))
+(@module (@debug-label dlb)
+         (def identity (λ (x) (@debug-label dlb0) (return x)))
+         (@debug-label dlb1)
+         (def konstant
+              (λ (x0)
+                 (@debug-label dlb2)
+                 (def kx (λ (y) (@debug-label dlb3) (return x0)))
+                 (@debug-label dlb4)
+                 (return kx)))
+         (@debug-label dlb5)
+         (def smelting
+              (λ (x1)
+                 (@debug-label dlb6)
+                 (def sx
+                      (λ (y0)
+                         (@debug-label dlb7)
+                         (def sxy
+                              (λ (z)
+                                 (@debug-label dlb8)
+                                 (def xz (@app x1 z))
+                                 (@debug-label dlb9)
+                                 (def tmp (@app y0 z))
+                                 (return (@app xz tmp))))
+                         (@debug-label dlb10)
+                         (return sxy)))
+                 (@debug-label dlb11)
+                 (return sx)))
+         (return (@tuple)))

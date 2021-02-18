@@ -3,9 +3,13 @@
         bound-as-ctor?
         not-bound-as-ctor?
         bound-as-type?
-        symbol-refer)
+        symbol-refer
+        current-debug-label-table
+        make-debug-label-table
+        add-debug-label!)
 
 (import
+  <expander-runtime>
   :clan/pure/dict/symdict)
 
 ;; An Env is a [Symdictof Entry]
@@ -43,3 +47,12 @@
   (unless (symdict-has-key? env s)
     (error 'alpha-convert "unbound identifier" s))
   (entry-sym (symdict-ref env s)))
+
+;; A DebugLabelTable is a [Hashof Symbol Env]
+(def current-debug-label-table (make-parameter #f))
+(def (make-debug-label-table) (make-hash-table-eq))
+
+;; add-debug-label! : Identifier Env -> Void
+(def (add-debug-label! dlb env)
+  (hash-put! (current-debug-label-table) (stx-e dlb) env))
+

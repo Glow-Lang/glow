@@ -50,8 +50,9 @@
 
 ;; project-stmt : StmtStx CpiTable MPart -> [Listof StmtStx]
 (def (project-stmt stx cpit this-p)
-  (syntax-case stx (@ @label deftype defdata publish! def return ignore! switch require! assert! deposit! withdraw!)
+  (syntax-case stx (@ @label @debug-label deftype defdata publish! def return ignore! switch require! assert! deposit! withdraw!)
     ((@label x) (pure-stmt stx))
+    ((@debug-label x) (pure-stmt stx))
     ((@ p s) (identifier? #'p)
      (append (project-set-participant #'p cpit this-p)
              (cond ((eq? (stx-e #'p) this-p) (pure-stmt #'s))
