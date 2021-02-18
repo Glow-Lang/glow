@@ -2,6 +2,7 @@
 
 @(require "glow-code.rkt"
           "glow-docs.rkt"
+          (only-in "glow-code.rkt" [glowexp code])
           (for-label glow))
 
 @(define em emph)
