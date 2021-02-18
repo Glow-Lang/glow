@@ -20,10 +20,8 @@
            help: "enable backtraces for debugging purposes")
      (option 'agreement "-A" "--agreement" default: #f
              help: "interaction parameters as JSON")
-     (option 'glow-app "-G" "--glow-app" default: #f
-             help: "path to Glow application source")
      (option 'interaction "-I" "--interaction" default: #f
-             help: "name of interaction within contract")
+             help: "path and name of interaction")
      (option 'role "-R" "--role" default: #f
              help: "role you want to play in the interaction")
      (option 'max-initial-block "-B" default: #f
@@ -92,14 +90,18 @@
   (displayln CYAN name)
   (display (string-append "> " END)))
 
-(def (ask-contract)
-  (ask-option "Choose contract"
+(def (ask-application)
+  (ask-option "Choose application"
     [(cons "mukn/glow/examples/coin_flip" "coin_flip")
      (cons "mukn/glow/examples/buy_sig" "buy_sig")
      (cons "mukn/glow/examples/rps_simple" "rps_simple")]))
 
 (def (ask-interaction interactions)
-  (ask-option "Choose interaction" interactions))
+  (match interactions
+    ([interaction]
+      interaction)
+    (else
+      (ask-option "Choose interaction" interactions))))
 
 (def (ask-participants selected-identity selected-role role-names contacts)
   (displayln BOLD "Assign roles" END)
@@ -181,10 +183,10 @@
   (def compiler-output (run-passes contract.glow pass: 'project show?: #f))
   (parse-compiler-output compiler-output))
 
-(def (extract-contract-path contract-name)
-  (match (pregexp-match "mukn\\/glow\\/([^#]*)#?.*" contract-name)
+(def (extract-application-source-path application-name)
+  (match (pregexp-match "mukn\\/glow\\/([^#]*)#?.*" application-name)
     ([_ path] (string-append "./" path ".glow"))
-    (else (error "Bad contract name" contract-name))))
+    (else (error "Bad application name" application-name))))
 
 ;; TODO: also accept local interaction parameters
 ;; TODO: accept alternative ethereum networks, etc
@@ -198,17 +200,17 @@
       ;; TODO: Validate that selected role matches selected identity in the agreement's participant table.
       (let* ((selected-identity (ask-identity options))
              (agreement (<-json InteractionAgreement (json<-string agreement-json-string)))
-             (contract.glow (source-path (extract-contract-path (.@ agreement interaction))))
-             (program (compile-contract contract.glow))
-             (role-names (sort (filter identity (hash-keys (@ program interactions))) symbol<?))
+             (application.glow (source-path (extract-application-source-path (.@ agreement interaction))))
+             (program (compile-contract application.glow))
+             (role-names (sort (filter identity (hash-values (@ program interactions))) symbol<?))
              (selected-role (ask-role options role-names)))
         (values agreement selected-role))
       (nest
-        (let (contract-name
-               (get-or-ask options 'contract (λ () (ask-contract)))))
-        (let (contract-path (extract-contract-path contract-name)))
-        (let (contract.glow (source-path contract-path)))
-        (let (program (compile-contract contract.glow)))
+        (let (application-name
+               (get-or-ask options 'glow-app (λ () (ask-application)))))
+        (let (application-source-path (extract-application-source-path application-name)))
+        (let (application.glow (source-path application-source-path)))
+        (let (program (compile-contract application.glow)))
         (let (interaction-name
                (get-or-ask options 'interaction (λ () (ask-interaction (hash-keys (@ program interactions)))))))
         (let (interaction-info (hash-get (@ program interactions) interaction-name)))
@@ -218,7 +220,7 @@
         (let (selected-identity (ask-identity options)))
         (let (selected-role (ask-role options role-names)))
 
-        (let (contacts (load-contacts (hash-get options 'file))))
+        (let (contacts (load-contacts (hash-get options 'contacts))))
         (let (participants-table
                (ask-participants selected-identity (symbolify selected-role) role-names contacts)))
         (let (parameters (ask-parameters program (interaction-info-parameter-names interaction-info))))
@@ -227,11 +229,11 @@
 
         ;; TODO: Validate agreement, with nice user-friendly error message.
         (let (agreement
-          {interaction: (string-append contract-name "#" (symbol->string (interaction-info-name interaction-info)))
+          {interaction: (string-append application-name "#" (symbol->string (interaction-info-name interaction-info)))
           participants: (object<-hash participants-table)
           parameters
           glow-version: (software-identifier)
-          code-digest: (digest<-file contract.glow)
+          code-digest: (digest<-file application.glow)
           reference: {}
           options: {blockchain: "Private Ethereum Testnet"
                     escrowAmount: (void)
