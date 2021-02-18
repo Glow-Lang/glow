@@ -11,6 +11,7 @@
     nickname: [String]
     address: [Address]
     type: [Symbol]
+    blockchain: [Symbol]
     tags: [(List String)]))
 
 (def ContactList (Map String <- Contact))
@@ -44,8 +45,10 @@
                help: "nickname of contact")
        (option 'address "-A" "--address"
                help: "address of contact")
-       (option 'type "-T" "--type" default: #f
-               help: "type of contact address")]
+       (option 'type "-T" "--type" default: 'kecakk-256
+               help: "type of contact address")
+       (option 'blockchain "-B" "--blockchain" default: 'ethereum
+               help: "blockchain of the address")]
       []
       [options/test options/contacts]))
   (def options (process-options options/add arguments))
@@ -55,8 +58,8 @@
   (def new-contact
     {nickname
      address
-     ;; TODO: Is there a function for getting the full module path to a definition?
-     type: ':mukn/ethereum/signing#Address
+     type: (hash-get options 'type)
+     blockchain: (hash-get options 'blockchain)
      tags: []})
   (with-contacts contacts-file
     (cut hash-put! <> (string-downcase nickname) new-contact))
