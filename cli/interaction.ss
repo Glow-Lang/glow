@@ -5,7 +5,7 @@
   :std/format :std/generic :std/getopt :std/iter :std/misc/hash :std/misc/repr :std/misc/string :std/pregexp :std/sort :std/srfi/13 :std/sugar :std/text/json
   :clan/base :clan/cli :clan/exit :clan/json :clan/multicall :clan/path-config :clan/syntax
   :clan/poo/brace :clan/poo/cli :clan/poo/debug :clan/poo/object
-  :clan/persist/db :clan/persist/content-addressing :clan/versioning
+  :clan/persist/db :clan/persist/content-addressing :clan/versioning :clan/pure/dict/symdict
   :mukn/ethereum/assets :mukn/ethereum/cli :mukn/ethereum/ethereum :mukn/ethereum/network-config
   :mukn/ethereum/signing :mukn/ethereum/types :mukn/ethereum/json-rpc :mukn/ethereum/known-addresses
   :mukn/glow/runtime/participant-runtime :mukn/glow/runtime/reify-contract-parameters :mukn/glow/runtime/configuration
@@ -246,11 +246,11 @@
           (.call InteractionAgreement .validate agreement)
           (print-command agreement)
           (values agreement selected-role)))))
-  (let (environment (run (symbolify selected-role) agreement))
+  (let (environment (run:terminal (symbolify selected-role) agreement))
     (displayln "Final environment:")
     ;; TODO: get run to include type t and pre-alpha-converted labels,
     ;; and output the entire thing as JSON omitting shadowed variables (rather than having conflicts)
-    (for-each (match <> ([k t . v] (display-object-ln k "=> " t v)))
+    (for-each (match <> ([k t . v] (display-object-ln k " => " t v)))
               (hash->list/sort environment symbol<?))))
 
 ;; UTILS
