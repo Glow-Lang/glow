@@ -200,9 +200,12 @@
       ;; TODO: Validate that selected role matches selected identity in the agreement's participant table.
       (let* ((selected-identity (ask-identity options))
              (agreement (<-json InteractionAgreement (json<-string agreement-json-string)))
-             (application.glow (source-path (extract-application-source-path (.@ agreement interaction))))
+             (interaction (.@ agreement interaction))
+             (application.glow (source-path (extract-application-source-path interaction)))
              (program (compile-contract application.glow))
-             (role-names (sort (filter identity (hash-values (@ program interactions))) symbol<?))
+             (interaction-name (symbolify (cadr (string-split interaction #\#))))
+             (interaction-info (hash-get (@ program interactions) interaction-name))
+             (role-names (sort (filter identity (hash-keys (interaction-info-specific-interactions interaction-info))) symbol<?))
              (selected-role (ask-role options role-names)))
         (values agreement selected-role))
       (nest
