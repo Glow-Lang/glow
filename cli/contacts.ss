@@ -2,7 +2,7 @@
 
 (import
   :std/getopt :std/misc/hash :std/srfi/13
-  :clan/json :clan/multicall :clan/syntax
+  :clan/config :clan/json :clan/multicall :clan/syntax
   :clan/poo/brace :clan/poo/cli :clan/poo/io :clan/poo/mop :clan/poo/object :clan/poo/type
   :mukn/ethereum/cli :mukn/ethereum/hex :mukn/ethereum/known-addresses :mukn/ethereum/signing)
 
@@ -33,7 +33,7 @@
 
 (def options/contacts
   (make-options
-    [(option 'file "-F" "--file" default: "run/contacts.json"
+    [(option 'contacts "-C" "--contacts" default: (xdg-config-home "glow" "contacts.json")
              help: "file to load and store contacts")] []))
 
 (define-entry-point (add-contact . arguments)
@@ -51,7 +51,7 @@
   (def options (process-options options/add arguments))
   (def nickname (hash-get options 'nickname))
   (def address (parse-address (hash-get options 'address)))
-  (def contacts-file (hash-get options 'file))
+  (def contacts-file (hash-get options 'contacts))
   (def new-contact
     {nickname
      address
@@ -68,7 +68,7 @@
     (make-options
       [(option 'nickname "-N" "--nickname")] [] [options/contacts]))
   (def options (process-options options/remove arguments))
-  (def contacts-file (hash-get options 'file))
+  (def contacts-file (hash-get options 'contacts))
   (def nickname (hash-get options 'nickname))
   (with-contacts contacts-file
     (cut hash-remove! <> (string-downcase nickname)))
@@ -77,7 +77,7 @@
 (define-entry-point (list-contacts . arguments)
   "List contacts"
   (def options (process-options options/contacts arguments))
-  (def contacts-file (hash-get options 'file))
+  (def contacts-file (hash-get options 'contacts))
   (def contacts (load-contacts contacts-file))
   (for-each
     (match <>
