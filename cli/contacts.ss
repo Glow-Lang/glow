@@ -20,7 +20,7 @@
 
 (def options/contacts
   (make-options
-    [(option 'file "-F" "--file" default: "contacts.json"
+    [(option 'file "-F" "--file" default: "run/contacts.json"
              help: "file to load and store contacts")] []))
 
 (define-entry-point (add-contact . arguments)
@@ -32,7 +32,9 @@
        (option 'address "-A" "--address"
                help: "address of contact")
        (option 'type "-T" "--type" default: #f
-               help: "type of contact address")] [] [options/test options/contacts]))
+               help: "type of contact address")]
+      []
+      [options/test options/contacts]))
   (def options (process-options options/add arguments))
   (def nickname (hash-get options 'nickname))
   (def address (parse-address (hash-get options 'address)))
