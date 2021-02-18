@@ -20,8 +20,8 @@
            help: "enable backtraces for debugging purposes")
      (option 'agreement "-A" "--agreement" default: #f
              help: "interaction parameters as JSON")
-     (option 'contract "-C" "--contract" default: #f
-             help: "path to Glow contract")
+     (option 'glow-app "-G" "--glow-app" default: #f
+             help: "path to Glow application source")
      (option 'interaction "-I" "--interaction" default: #f
              help: "name of interaction within contract")
      (option 'role "-R" "--role" default: #f
