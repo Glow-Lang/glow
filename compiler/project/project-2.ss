@@ -144,7 +144,7 @@
 
 ;; translate-stmt : StmtStx CpiTable MPart -> [Listof SchemeStx]
 (def (translate-stmt stx cpit this-p)
-  (syntax-case stx (@ @label @make-interaction
+  (syntax-case stx (@ @label @debug-label @make-interaction
                     consensus:set-participant participant:set-participant
                     consensus:withdraw participant:withdraw
                     expect-published expect-deposited
@@ -152,6 +152,7 @@
                     deftype defdata publish! def ann return ignore! switch require! assert! deposit! withdraw!)
     ;; TODO: ignore @label whether pure or not
     ((@label x) [])
+    ((@debug-label x) [])
     ((def _ (@make-interaction . _)) (translate-def-interaction stx cpit this-p))
     ((def _ (expect-published . _)) (translate-def-expect-published stx cpit this-p))
     ((consensus:set-participant . _) [stx])

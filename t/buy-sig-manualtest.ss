@@ -36,7 +36,7 @@
          interaction: "mukn/glow/examples/buy_sig#payForSignature"
          participants: (.o Buyer: alice Seller: bob)
          parameters: (hash
-                      (digest0 (json<- Digest digest))
+                      (digest (json<- Digest digest))
                       (price (json<- Ether price)))
 
          ;; Filled in automatically by Glow

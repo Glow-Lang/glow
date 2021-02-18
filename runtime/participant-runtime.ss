@@ -2,6 +2,7 @@
 
 (import
   :gerbil/gambit/bits :gerbil/gambit/bytes :gerbil/gambit/threads
+  :std/pregexp
   :std/format :std/iter :std/misc/hash :std/sugar :std/misc/number :std/misc/list :std/sort :std/srfi/1 :std/text/json
   :clan/base :clan/exception :clan/io :clan/json :clan/number
   :clan/path-config :clan/ports :clan/syntax :clan/timestamp
@@ -10,6 +11,7 @@
   :mukn/ethereum/hex :mukn/ethereum/ethereum :mukn/ethereum/network-config :mukn/ethereum/json-rpc
   :mukn/ethereum/transaction :mukn/ethereum/tx-tracker :mukn/ethereum/watch :mukn/ethereum/assets
   :mukn/ethereum/contract-runtime :mukn/ethereum/contract-config :mukn/ethereum/assembly :mukn/ethereum/types
+  (only-in ../compiler/alpha-convert/env symbol-refer)
   ./program ./block-ctx ./consensus-code-generator ./terminal-codes
   ../compiler/method-resolve/method-resolve
   ../compiler/project/runtime-2)
@@ -46,6 +48,12 @@
   (instance Class
     slots: (.o send-handshake: (.o type: (Fun Unit <- AgreementHandshake))
                receive-handshake: (.o type: (Fun AgreementHandshake <-)))))
+
+;; split-interaction-path-name : String -> (values String Symbol)
+(def (split-interaction-path-name interaction-str)
+  (match (pregexp-match "^([^#]*)#([^#]*)$" interaction-str)
+    ([_ path name] (values path (string->symbol name)))
+    (else (error "Bad interaction name" interaction-str))))
 
 (def (delete-agreement-handshake)
   (def file (special-file:handshake))
@@ -91,11 +99,13 @@
    unprocessed-events ;; : (List LogObjects) ;; ???
    current-code-block-label ;; : Symbol
    current-label ;; : Symbol
+   current-debug-label ;; : (Or Symbol False)
    environment ;; : (Table (Or DependentPair Any) <- Symbol) ;; TODO: have it always typed???
    block-ctx ;; : BlockCtx ;; byte buffer?
    timer-start ;; : Block
    io-context ; : IOContext
    program ;; : Program ;; from program.ss
+   name ;; Symbol ;; the alpha-converted interaction name
    consensus-code-generator) ;; ConsensusCodeGenerator
   constructor: :init!
   transparent: #t)
@@ -106,11 +116,21 @@
       agreement: agreement
       io-context: (io-context io-context:special-file)
       program: program)
+    (defvalues (modpath surface-name)
+      (split-interaction-path-name (.@ agreement interaction)))
+    (def name
+      (symbol-refer (hash-ref (@ program compiler-output) 'AlphaEnv)
+                    surface-name))
+    (def interaction-info
+      (hash-ref (@ program interactions) name))
     (set! (@ self role) role)
     (set! (@ self agreement) agreement)
+    (set! (@ self name) name)
     ;; TODO: extract initial code block label from contract compiler output
-    (set! (@ self current-code-block-label) (@ program initial-code-block-label))
+    (set! (@ self current-code-block-label)
+      (interaction-info-initial-code-block-label interaction-info))
     (set! (@ self current-label) (@ program initial-label))
+    (set! (@ self current-debug-label) #f)
 
     (set! (@ self contract-config) #f)
     (set! (@ self status) 'running) ;; (Enum running stopped completed aborted)
@@ -121,7 +141,7 @@
     (set! (@ self io-context) io-context)
     (set! (@ self program) program)
     (set! (@ self consensus-code-generator)
-      (.call ConsensusCodeGenerator .make program (.@ agreement options timeoutInBlocks)))
+      (.call ConsensusCodeGenerator .make program name (.@ agreement options timeoutInBlocks)))
     (.call ConsensusCodeGenerator .generate (@ self consensus-code-generator))
     {initialize-environment self}))
 
@@ -328,7 +348,7 @@
 (defmethod {get-current-code-block Runtime}
   (λ (self)
     (def participant-interaction
-      (get-interaction (@ self program) (@ self role)))
+      (get-interaction (@ self program) (@ self name) (@ self role)))
     (hash-get participant-interaction (@ self current-code-block-label))))
 
 ;; TODO: map alpha-converted names to names in original source when displaying to user
@@ -336,13 +356,17 @@
 ;; <- Runtime
 (defmethod {initialize-environment Runtime}
   (λ (self)
+    (def inter (hash-ref (@ self program interactions) (@ self name)))
+    (def alba (hash-ref (@ self program compiler-output) 'albatable.sexp))
     (def agreement (@ self agreement))
     (def participants (.@ agreement participants))
-    (for (participant-name (.all-slots/sort participants))
-      {add-to-environment self participant-name (.ref participants participant-name)})
+    (for (participant-name (filter symbol? (hash-keys (interaction-info-specific-interactions inter))))
+      (def participant-surface-name (hash-ref alba participant-name))
+      {add-to-environment self participant-name (.ref participants participant-surface-name)})
     (def parameters (.@ agreement parameters))
-    (for ((values parameter-name-key parameter-json-value) parameters)
-      (def parameter-name (symbolify parameter-name-key))
+    (for (parameter-name (interaction-info-parameter-names inter))
+      (def parameter-surface-name (hash-ref alba parameter-name))
+      (def parameter-json-value (json-object-ref parameters parameter-surface-name))
       (def parameter-type (lookup-type (@ self program) parameter-name))
       (def parameter-value (<-json parameter-type parameter-json-value))
       {add-to-environment self parameter-name parameter-value})))
@@ -444,6 +468,8 @@
 
       (['@label name]
        (set! (@ self current-label) name))
+      (['@debug-label name]
+       (set! (@ self current-debug-label) name))
 
       (['switch variable-name cases ...]
         (let* ((variable-value {reduce-expression self variable-name})
@@ -558,10 +584,10 @@
   (λ (self timer-start code-block-label code-block-participant)
     (def consensus-code-generator (@ self consensus-code-generator))
     (def checkpoint-location
-      (hash-get (.@ consensus-code-generator labels) (make-checkpoint-label (@ self program) code-block-label)))
+      (hash-get (.@ consensus-code-generator labels) (make-checkpoint-label (@ self name) code-block-label)))
     (def active-participant-offset
       (lookup-variable-offset consensus-code-generator code-block-label code-block-participant))
-    (def live-variables (lookup-live-variables (@ self program) code-block-label))
+    (def live-variables (lookup-live-variables (@ self program) (@ self name) code-block-label))
     ;; TODO: ensure keys are sorted in both hash-values
     [[UInt16 . checkpoint-location]
      [Block . timer-start]
@@ -589,3 +615,11 @@
 ;; Sexp <- Frame
 (def (sexp<-frame-variables frame-variables)
   `(list ,@(map (match <> ([v t] `(list ,(sexp<- t v) ,(sexp<- Type t)))) frame-variables)))
+
+;; json-object-ref : JsonObject StringOrSymbol -> Json
+(def (json-object-ref j k)
+  (hash-ref/default j k
+    (lambda ()
+      (hash-ref j
+        (cond ((symbol? k) (symbol->string k))
+              (else        (string->symbol k)))))))

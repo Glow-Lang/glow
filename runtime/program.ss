@@ -13,13 +13,15 @@
 
 ;; (deftype Interaction (Table CodeBlock <- Symbol))
 
+;; An InteractionInfo is an
+;;   (interaction-info Symbol (Listof Symbol) (Table Interaction <- (OrFalse Symbol)) Symbol)
+(defstruct interaction-info (name parameter-names specific-interactions initial-code-block-label)
+  transparent: #t)
+
 (defclass Program
-  (name ;; : String
-   parameter-names ;; : (List Symbol)
-   interactions ;; : (Table Interaction <- (OrFalse Symbol))
+  (interactions ;; : (Table InteractionInfo <- Symbol)
    compiler-output ;; : (Table Sexp <- Symbol) ;; S-expression returned by the project pass.
    initial-label ;; Symbol ;; First label in program, as defined by module header.
-   initial-code-block-label ;; Symbol ;; Label preceding first participant code block.
    small-functions) ;; (Table SmallFunction <- Symbol)
   constructor: :init!
   transparent: #t)
@@ -33,15 +35,16 @@
   program)
 
 (defmethod {:init! Program}
-  (λ (self (n "") (an []) (i (make-hash-table)))
-    (set! (@ self name) n)
-    (set! (@ self parameter-names) an)
-    (set! (@ self interactions) i)
+  (λ (self)
+    (set! (@ self interactions) (make-hash-table))
     (set! (@ self small-functions) (make-hash-table))))
 
-;; Interaction <- Program Symbol
-(def (get-interaction self participant)
-  (hash-get (@ self interactions) participant))
+;; Interaction <- Program Symbol Symbol
+(def (get-interaction self name participant)
+  (def specific-interactions
+    (interaction-info-specific-interactions
+     (hash-get (@ self interactions) name)))
+  (hash-get specific-interactions participant))
 
 ;; TODO: use typemethods table for custom data types
 ;; Runtime type descriptor from alpha-converted symbol
@@ -73,11 +76,14 @@
                (alenv (hash-ref (@ self compiler-output) 'AlphaEnv)))
           (symdict-has-key? alenv (hash-ref alba variable-name))))))
 
-;; : ListOf Symbol <- Program Symbol
-(def (lookup-live-variables self code-block-label)
+;; : ListOf Symbol <- Program Symbol Symbol
+(def (lookup-live-variables self name code-block-label)
   (def live-variable-table (hash-ref (@ self compiler-output) 'cpitable2.sexp))
+  (def specific-interactions
+    (interaction-info-specific-interactions
+     (hash-get (@ self interactions) name)))
   ;; TODO: Store participants in fixed addresses.
-  (def participants (filter (λ (x) x) (hash-keys (@ self interactions))))
+  (def participants (filter (λ (x) x) (hash-keys specific-interactions)))
   (unique (append participants
     (filter (λ (x) (not {definitely-constant? self x}))
           (ci-variables-live (hash-get live-variable-table code-block-label))))))
@@ -160,16 +166,17 @@
                   start-label: start-label-value
                   end-label: end-label-value
                   body: body-value)))
-          (['def name ['@make-interaction [['@list participants ...]] parameter-names labels interactions ...]]
-            (set! (@ program name) name)
-            (set! (@ program parameter-names) parameter-names)
+          (['def name ['@make-interaction [['@list participants ...]] parameter-names labels bodys ...]]
+            (def interactions (@ program interactions))
             (def initial-code-block-label (car labels))
-            (set! (@ program initial-code-block-label) initial-code-block-label)
-            (def interactions-table (make-hash-table))
-            (for ((values name body) (list->hash-table interactions))
-              (hash-put! interactions-table name (process-program initial-code-block-label name body)))
-            (set! (@ program interactions) interactions-table))
+            (def specific-table (make-hash-table))
+            (for ((values p body) (list->hash-table bodys))
+              (hash-put! specific-table p (process-program initial-code-block-label p body)))
+            (hash-put! interactions name
+              (interaction-info name parameter-names specific-table initial-code-block-label)))
           (['@label label]
+            (void))
+          (['@debug-label label]
             (void))
           (['return ['@tuple]]
             (void))
@@ -192,8 +199,11 @@
         {add-statement parse-context statement}))))
   (@ parse-context code))
 
-(def (get-last-code-block-label self)
-  (def consensus-interaction (hash-get (@ self interactions) #f))
+(def (get-last-code-block-label self name)
+  (def specific-interactions
+    (interaction-info-specific-interactions
+     (hash-get (@ self interactions) name)))
+  (def consensus-interaction (hash-get specific-interactions #f))
   (let/cc return
     (for ((values label code-block) (in-hash consensus-interaction))
       (when (equal? (code-block-exit code-block) #f)

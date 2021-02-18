@@ -6,6 +6,7 @@
   :clan/path-config
   :mukn/ethereum/network-config :mukn/ethereum/json-rpc
   :mukn/glow/compiler/syntax-context :mukn/glow/compiler/multipass :mukn/glow/compiler/passes
+  (only-in ../compiler/alpha-convert/env symbol-refer)
   ./program ./participant-runtime ./terminal-codes)
 
 (.def io-context:terminal
@@ -26,15 +27,24 @@
 ;; interaction-agreement->program : InteractionAgreement -> Program
 (def (interaction-agreement->program a)
   (defvalues (modpath name)
-    (match (pregexp-match "^([^#]*)#([^#]*)$" (.@ a interaction))
-      ([_ path name] (values path name))
-      (else (error "Bad interaction name" (.@ a interaction)))))
+    (split-interaction-path-name (.@ a interaction)))
   (def path (glow-module-path->path modpath))
   (def compiler-output (run-passes path pass: 'project show?: #f))
   (parse-compiler-output compiler-output))
 
 ;; A TypeValuePair is a dependent pair of a type and a value of that type:
 ;;   (Σ (value : Type) value)
+
+;; surface-name-environment : AlphaEnv [Hashof Symbol V] -> [Hashof Symbol V]
+;; Takes an environment that uses alpha-names, produces one
+;; that uses surface-names instead, with the same values
+(def (surface-name-environment alpha env)
+  (def new (make-hash-table-eq))
+  (for ((surface-name (hash-keys alpha)))
+    (def alpha-name (symbol-refer alpha surface-name))
+    (when (hash-key? env alpha-name)
+      (hash-put! new surface-name (hash-get env alpha-name))))
+  new)
 
 ;; program-environment-type-value-pairs :
 ;; Program Environment -> [Hashof Symbol TypeValuePair]
@@ -46,7 +56,8 @@
        ((cons k v)
         (cons k (cons (lookup-type prg k) v)))))))
 
-;; run : Symbol InteractionAgreement -> [Hashof Symbol Any]
+;; run : Symbol InteractionAgreement -> [Hashof Symbol TypeValuePair]
+;; Produces an environment mapping surface names to type-value-pairs
 (def (run role a)
   (def program (interaction-agreement->program a))
   (def runtime
@@ -56,9 +67,10 @@
                   io-context: io-context:terminal))
   {execute runtime}
   (printf "~a~a interaction finished~a\n" BOLD (.@ a interaction) END)
-  ;; TODO: change alpha-converted names to surface names for printing to the user
-  ;; TODO: and return type-value pairs
-  (program-environment-type-value-pairs program (@ runtime environment)))
+  (surface-name-environment
+   (hash-get (hash-get (@ program compiler-output) 'DebugLabelTable)
+             (@ runtime current-debug-label))
+   (program-environment-type-value-pairs program (@ runtime environment))))
 
 ;; --------------------------------------------------------
 

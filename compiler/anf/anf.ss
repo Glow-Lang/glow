@@ -87,9 +87,10 @@
 ;; with the syntactic continuation k to the current statement.
 ;; INVARIANT: (anf-stmt stx acc) = (append (anf-stmt stx []) acc)
 (def (anf-stmt k stx acc)
-  (syntax-case stx (@ splice : quote def deftype defdata publish! deposit!)
+  (syntax-case stx (@ splice @debug-label : quote def deftype defdata publish! deposit!)
     ((@ p s) (identifier? #'p) (append (anf-at-participant k stx) acc))
     ((splice . body) (anf-body k #'body acc))
+    ((@debug-label . _) (anf-kontinue-stmt k (cons stx acc)))
     ((defdata . _) (anf-kontinue-stmt k (cons stx acc)))
     ((deftype . _) (anf-kontinue-stmt k (cons stx acc)))
     ((publish! . _) (anf-kontinue-stmt k (cons stx acc)))

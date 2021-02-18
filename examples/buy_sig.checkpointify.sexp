@@ -1,5 +1,6 @@
 (@module (begin end)
 (@label begin)
+(@debug-label dlb)
 (def payForSignature
      (@make-interaction
       ((@list Buyer Seller))
@@ -7,16 +8,19 @@
       (begin0 end0)
       ;; Entry point for the interaction -- from here on user must be Buyer
       (@label begin0)
+      (@debug-label dlb0)
       (@label cp)
       (deposit! Buyer price)
 
       ;; Switching to Seller
+      (@debug-label dlb1)
       (@label cp0)
       (@ Seller (def signature (sign digest0)))
       (publish! Seller signature)
       ;; This part is consensual, but part of the Seller transaction
       (def tmp (@app isValidSignature Seller digest0 signature))
       (require! tmp)
+      (@debug-label dlb2)
       (withdraw! Seller price)
       ;; In a standalone app, return kills the contract.
       ;; In a function called as part of a larger application,

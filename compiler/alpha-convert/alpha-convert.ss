@@ -51,10 +51,11 @@
     randomUInt256 isValidSignature
     canReach mustReach))
 
-;; alpha-convert : ModuleStx -> (values ModuleStx UnusedTable AlphaBackTable Env)
+;; alpha-convert : ModuleStx -> (values ModuleStx UnusedTable AlphaBackTable DebugLabelTable Env)
 (def (alpha-convert module)
   (parameterize ((current-unused-table (make-unused-table))
-                 (current-alpha-back-table (make-alpha-back-table)))
+                 (current-alpha-back-table (make-alpha-back-table))
+                 (current-debug-label-table (make-debug-label-table)))
     (for ((k keyword-syms)) (use/check-unused* k))
     (def init-env
       (for/fold (acc empty-symdict) ((x init-syms))
@@ -65,6 +66,7 @@
          (values (retail-stx module stmts2)
                  (current-unused-table)
                  (current-alpha-back-table)
+                 (current-debug-label-table)
                  env2))))))
 
 ;; alpha-convert-type : Env TypeStx -> TypeStx
@@ -236,7 +238,9 @@
 ;; alpha-convert-stmt : Env StmtStx -> (values Env StmtStx)
 ;; the env result contains only the new symbols introduced by the statement
 (def (alpha-convert-stmt env stx)
-  (syntax-case stx (@ interaction verifiably publicly @interaction @verifiably @publicly splice def deftype defdata publish! verify!)
+  (syntax-case stx (@ @debug-label interaction verifiably publicly @interaction @verifiably @publicly splice def deftype defdata publish! verify!)
+    ((@debug-label dlb) (identifier? #'dlb)
+     (begin (add-debug-label! #'dlb env) (values env stx)))
     ((@ (interaction . _) _) (ac-stmt-atinteraction env (at-prefix-normalize stx)))
     ((@ (verifiably _) _) (ac-stmt-wrap-at-keyword-participant env (at-prefix-normalize stx)))
     ((@ (publicly _) _) (ac-stmt-wrap-at-keyword-participant env (at-prefix-normalize stx)))

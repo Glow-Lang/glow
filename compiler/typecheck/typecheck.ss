@@ -733,7 +733,8 @@
 ;; tc-stmt : MPart Env StmtStx -> (values Env MonoEnv)
 ;; the env result contains only the new entries introduced by the statement
 (def (tc-stmt part env stx)
-  (syntax-case stx (@ @interaction : quote splice def λ deftype defdata publish!)
+  (syntax-case stx (@ @debug-label @interaction : quote splice def λ deftype defdata publish!)
+    ((@debug-label . _) (values empty-symdict empty-symdict))
     ((@ p _) (identifier? #'p) (tc-stmt-at-participant part env stx))
     ((splice s ...) (tc-stmts part env (syntax->list #'(s ...))))
     ((deftype . _) (tc-stmt-deftype part env stx))
