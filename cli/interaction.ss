@@ -78,19 +78,15 @@
 
 ;; TODO: Catch parsing errors and show example inputs.
 (def (ask-address name contacts)
-  (ask-option name
+  (def known-addresses
     (map
       (cut match <>
-        ([nickname . address]
-          (cons nickname [Address . address])))
-      (hash->list contacts))))
-    ;(let (input (read-line-from-console))
-    ;  (address<-0x input))
-    ; (catch (e)
-    ;   (displayln FAIL "\nError parsing address: " (error-message e) END)
-    ;   (displayln "Input should be 0x followed by 40 hexadecimal characters.")
-    ;   (displayln "E.g., 0x73e27C9B8BF6F00A38cD654079413aA3eDBC771A\n")
-    ;   (ask-address name contacts))))
+        ([nickname . address-string]
+          (let (address (address<-0x address-string))
+            (cons nickname [Address . address]))))
+      (hash->list contacts)))
+  (def chosen-contact (ask-option name known-addresses))
+  (address<-0x (hash-get contacts chosen-contact)))
 
 (def (display-prompt name)
   (displayln CYAN name)
@@ -102,6 +98,10 @@
      (cons "mukn/glow/examples/buy_sig" "buy_sig")
      (cons "mukn/glow/examples/rps_simple" "rps_simple")]))
 
+
+(def (ask-interaction interactions)
+  (ask-option "Choose interaction" interactions))
+
 (def (ask-participants selected-identity selected-role role-names contacts)
   (displayln BOLD "Assign roles" END)
   (let (participants (make-hash-table))
@@ -109,9 +109,8 @@
       (def role-address
         (if (equal? selected-role role-name)
           (hash-get address-by-nickname selected-identity)
-          (ask-address (symbol->string role-name) contacts)))
+          (ask-address (string-append "Select address for " (symbol->string role-name)) contacts)))
       (hash-put! participants role-name role-address))
-    (displayln)
     participants))
 
 (def (console-input type name tag)
@@ -128,10 +127,9 @@
       (flush-input (console-port))
       (console-input type name tag))))
 
-(def (ask-parameters program)
+(def (ask-parameters program parameter-names)
   (displayln BOLD "Define parameters" END)
-  (let ((parameter-names (@ program parameter-names))
-        (parameters (make-hash-table)))
+  (let (parameters (make-hash-table))
     (for ((name parameter-names))
       (def type (lookup-type program name))
       (def input (console-input type name #f))
@@ -207,25 +205,31 @@
              (selected-role (ask-role options role-names)))
         (values agreement selected-role))
       (nest
-        (let (contract-name (get-or-ask options 'contract (λ () (ask-contract)))))
+        (let (contract-name
+               (get-or-ask options 'contract (λ () (ask-contract)))))
         (let (contract-path (extract-contract-path contract-name)))
         (let (contract.glow (source-path contract-path)))
         (let (program (compile-contract contract.glow)))
-        (let (role-names (sort (filter identity (hash-keys (@ program interactions))) symbol<?)))
+        (let (interaction-name
+               (get-or-ask options 'interaction (λ () (ask-interaction (hash-keys (@ program interactions)))))))
+        (let (interaction-info (hash-get (@ program interactions) interaction-name)))
+        (let (role-names
+               (sort (filter identity (hash-keys (interaction-info-specific-interactions interaction-info))) symbol<?)))
 
         (let (selected-identity (ask-identity options)))
         (let (selected-role (ask-role options role-names)))
 
         (let (contacts (load-contacts (hash-get options 'file))))
-        (let (participants-table (ask-participants selected-identity (symbolify selected-role) role-names contacts)))
-        (let (parameters (ask-parameters program)))
+        (let (participants-table
+               (ask-participants selected-identity (symbolify selected-role) role-names contacts)))
+        (let (parameters (ask-parameters program (interaction-info-parameter-names interaction-info))))
         (let (current-block-number (eth_blockNumber)))
         (let (max-initial-block (ask-max-initial-block options current-block-number)))
 
         ;; TODO: Validate agreement, with nice user-friendly error message.
         ;; TODO: Output agreement as a command for the other user to copy paste and automatically fill in arguments.
         (let (agreement
-          {interaction: (string-append contract-name "#" (symbol->string (@ program name)))
+          {interaction: (string-append contract-name "#" (symbol->string (interaction-info-name interaction-info)))
           participants: (object<-hash participants-table)
           parameters
           glow-version: (software-identifier)
