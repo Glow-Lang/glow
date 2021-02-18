@@ -81,12 +81,12 @@
   (def known-addresses
     (map
       (match <>
-        ([nickname . address-string]
-          (let (address (address<-0x address-string))
-            (cons nickname [Address . address]))))
+        ([_ . contact]
+          (let (address (.@ contact address))
+            (cons (.@ contact nickname) [Address . address]))))
       (hash->list contacts)))
   (def chosen-contact (ask-option name known-addresses))
-  (address<-0x (hash-get contacts chosen-contact)))
+  (.@ (hash-get contacts (string-downcase chosen-contact)) address))
 
 (def (display-prompt name)
   (displayln CYAN name)
@@ -97,7 +97,6 @@
     [(cons "mukn/glow/examples/coin_flip" "coin_flip")
      (cons "mukn/glow/examples/buy_sig" "buy_sig")
      (cons "mukn/glow/examples/rps_simple" "rps_simple")]))
-
 
 (def (ask-interaction interactions)
   (ask-option "Choose interaction" interactions))
