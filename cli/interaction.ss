@@ -80,7 +80,7 @@
 (def (ask-address name contacts)
   (def known-addresses
     (map
-      (cut match <>
+      (match <>
         ([nickname . address-string]
           (let (address (address<-0x address-string))
             (cons nickname [Address . address]))))

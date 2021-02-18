@@ -61,7 +61,7 @@
   (def contacts-file (hash-get options 'file))
   (def contacts (load-contacts contacts-file))
   (for-each
-    (cut match <>
+    (match <>
       ([nickname . address]
         (displayln nickname " [ " address " ]")))
     (hash->list contacts)))
