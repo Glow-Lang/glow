@@ -17,7 +17,8 @@
   ../compiler/multipass
   ../compiler/syntax-context
   ../runtime/program
-  ../runtime/participant-runtime)
+  ../runtime/participant-runtime
+  ../runtime/reify-contract-parameters)
 
 (def a-address alice)
 (def b-address bob)
@@ -65,33 +66,20 @@
       (displayln "\nEXECUTING A THREAD ...")
       (def a-thread
         (spawn/name/logged "A"
-         (lambda ()
-           (def a-runtime
-             (make-Runtime role: 'A
-                           agreement: agreement
-                           program: program))
-           {execute a-runtime}
-           (displayln "A finished")
-           (@ a-runtime environment))))
+         (lambda () (run:special-file 'A agreement))))
 
       (displayln "\nEXECUTING B THREAD ...")
       (def b-thread
         (spawn/name/logged "B"
-         (lambda ()
-           (def b-runtime
-             (make-Runtime role: 'B
-                           agreement: agreement
-                           program: program))
-           {execute b-runtime}
-           (displayln "B finished")
-           (@ b-runtime environment))))
+         (lambda () (run:special-file 'B agreement))))
+
       (def a-environment (thread-join! a-thread))
       (def b-environment (thread-join! b-thread))
 
       (def a-balance-after (eth_getBalance a-address 'latest))
       (def b-balance-after (eth_getBalance b-address 'latest))
-      (def randA (hash-get a-environment 'randA))
-      (def randB (hash-get a-environment 'randB))
+      (def randA (cdr (hash-get a-environment 'randA)))
+      (def randB (cdr (hash-get a-environment 'randB)))
       (def a-wins? (even? (bitwise-xor randA randB)))
 
       (DDT "DApp completed"
