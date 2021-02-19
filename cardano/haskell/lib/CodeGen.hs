@@ -191,7 +191,7 @@ showType type' =
       addName name1
       addName name2
       typeText <- showType t
-      pure $ "(" <> T.pack (nameBase name1) <> " " <> T.pack (nameBase name2) <> " <- " <> typeText <> ")"
+      pure $ "(" <> T.pack (nameBase name1) <> " " <> T.pack (nameBase name2) <> " -> " <> typeText <> ")"
     AppT (ConT name) x -> do
       addName name
       typeText <- showType x
