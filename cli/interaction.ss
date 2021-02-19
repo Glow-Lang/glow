@@ -194,64 +194,68 @@
   "Start an interaction based on an agreement"
   (def options (process-options options/interaction arguments))
   (displayln)
-
   (defvalues (agreement selected-role)
     (if-let (agreement-json-string (hash-get options 'agreement))
-      ;; TODO: Validate that selected role matches selected identity in the agreement's participant table.
-      (let* ((selected-identity (ask-identity options))
-             (agreement (<-json InteractionAgreement (json<-string agreement-json-string)))
-             (interaction (.@ agreement interaction))
-             (application.glow (source-path (extract-application-source-path interaction)))
-             (program (compile-contract application.glow))
-             (interaction-name (symbolify (cadr (string-split interaction #\#))))
-             (interaction-info (hash-get (@ program interactions) interaction-name))
-             (role-names (sort (filter identity (hash-keys (interaction-info-specific-interactions interaction-info))) symbol<?))
-             (selected-role (ask-role options role-names)))
-        (values agreement selected-role))
-      (nest
-        (let (application-name
-               (get-or-ask options 'glow-app (λ () (ask-application)))))
-        (let (application-source-path (extract-application-source-path application-name)))
-        (let (application.glow (source-path application-source-path)))
-        (let (program (compile-contract application.glow)))
-        (let (interaction-name
-               (get-or-ask options 'interaction (λ () (ask-interaction (hash-keys (@ program interactions)))))))
-        (let (interaction-info (hash-get (@ program interactions) interaction-name)))
-        (let (role-names
-               (sort (filter identity (hash-keys (interaction-info-specific-interactions interaction-info))) symbol<?)))
-
-        (let (selected-identity (ask-identity options)))
-        (let (selected-role (ask-role options role-names)))
-
-        (let (contacts (load-contacts (hash-get options 'contacts))))
-        (let (participants-table
-               (ask-participants selected-identity (symbolify selected-role) role-names contacts)))
-        (let (parameters (ask-parameters program (interaction-info-parameter-names interaction-info))))
-        (let (current-block-number (eth_blockNumber)))
-        (let (max-initial-block (ask-max-initial-block options current-block-number)))
-
-        ;; TODO: Validate agreement, with nice user-friendly error message.
-        (let (agreement
-          {interaction: (string-append application-name "#" (symbol->string (interaction-info-name interaction-info)))
-          participants: (object<-hash participants-table)
-          parameters
-          glow-version: (software-identifier)
-          code-digest: (digest<-file application.glow)
-          reference: {}
-          options: {blockchain: "Private Ethereum Testnet"
-                    escrowAmount: (void)
-                    timeoutInBlocks: (* 10 (ethereum-timeout-in-blocks))
-                    maxInitialBlock: max-initial-block}}))
-        (begin
-          (.call InteractionAgreement .validate agreement)
-          (print-command agreement)
-          (values agreement selected-role)))))
+      (start-interaction/with-agreement options (<-json InteractionAgreement (json<-string agreement-json-string)))
+      (start-interaction/generate-agreement options)))
   (let (environment (run:terminal (symbolify selected-role) agreement))
     (displayln "Final environment:")
     ;; TODO: get run to include type t and pre-alpha-converted labels,
     ;; and output the entire thing as JSON omitting shadowed variables (rather than having conflicts)
     (for-each (match <> ([k t . v] (display-object-ln k " => " t v)))
               (hash->list/sort environment symbol<?))))
+
+;; TODO: Validate that selected role matches selected identity in the agreement's participant table.
+(def (start-interaction/with-agreement options agreement)
+  (let* ((selected-identity (ask-identity options))
+         (interaction (.@ agreement interaction))
+         (application.glow (source-path (extract-application-source-path interaction)))
+         (program (compile-contract application.glow))
+         (interaction-name (symbolify (cadr (string-split interaction #\#))))
+         (interaction-info (hash-get (@ program interactions) interaction-name))
+         (role-names (sort (filter identity (hash-keys (interaction-info-specific-interactions interaction-info))) symbol<?))
+         (selected-role (ask-role options role-names)))
+  (values agreement selected-role)))
+
+(def (start-interaction/generate-agreement options)
+  (nest
+    (let (application-name
+            (get-or-ask options 'glow-app (λ () (ask-application)))))
+    (let (application-source-path (extract-application-source-path application-name)))
+    (let (application.glow (source-path application-source-path)))
+    (let (program (compile-contract application.glow)))
+    (let (interaction-name
+            (get-or-ask options 'interaction (λ () (ask-interaction (hash-keys (@ program interactions)))))))
+    (let (interaction-info (hash-get (@ program interactions) interaction-name)))
+    (let (role-names
+            (sort (filter identity (hash-keys (interaction-info-specific-interactions interaction-info))) symbol<?)))
+
+    (let (selected-identity (ask-identity options)))
+    (let (selected-role (ask-role options role-names)))
+
+    (let (contacts (load-contacts (hash-get options 'contacts))))
+    (let (participants-table
+            (ask-participants selected-identity (symbolify selected-role) role-names contacts)))
+    (let (parameters (ask-parameters program (interaction-info-parameter-names interaction-info))))
+    (let (current-block-number (eth_blockNumber)))
+    (let (max-initial-block (ask-max-initial-block options current-block-number)))
+
+    ;; TODO: Validate agreement, with nice user-friendly error message.
+    (let (agreement
+      {interaction: (string-append application-name "#" (symbol->string (interaction-info-name interaction-info)))
+      participants: (object<-hash participants-table)
+      parameters
+      glow-version: (software-identifier)
+      code-digest: (digest<-file application.glow)
+      reference: {}
+      options: {blockchain: "Private Ethereum Testnet"
+                escrowAmount: (void)
+                timeoutInBlocks: (* 10 (ethereum-timeout-in-blocks))
+                maxInitialBlock: max-initial-block}}))
+    (begin
+      (.call InteractionAgreement .validate agreement)
+      (print-command agreement)
+      (values agreement selected-role))))
 
 ;; UTILS
 (def (flush-input port)
