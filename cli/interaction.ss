@@ -133,8 +133,9 @@
   (let (parameters (make-hash-table))
     (for ((name parameter-names))
       (def type (lookup-type program name))
-      (def input (console-input type (lookup-surface-name program name) #f))
-      (hash-put! parameters name (json<- type input)))
+      (def surface-name (lookup-surface-name program name))
+      (def input (console-input type surface-name #f))
+      (hash-put! parameters surface-name (json<- type input)))
     (displayln)
     parameters))
 
