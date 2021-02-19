@@ -41,9 +41,11 @@
   (def pass-sym (string->symbol pass))
   (for (file files) (run-passes file pass: pass-sym)))
 
-(define-entry-point (digest file-path)
-  "Create a digest of the given file"
-  (displayln (0x<-bytes (digest<-file file-path))))
-
 (register-entry-point "pass" process-to-pass
   help: "Given a pass and files, process them until the end of it")
+
+(def (digest-command file)
+  (displayln (0x<-bytes (digest<-file file))))
+
+(register-entry-point "digest" digest-command
+  help: "Create a digest of the given file")
