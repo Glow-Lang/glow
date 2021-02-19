@@ -4,7 +4,8 @@
   :gerbil/gambit/misc
   :gerbil/expander
   :std/iter
-  :clan/base :clan/exit :clan/filesystem :clan/multicall :clan/path
+  :clan/base :clan/exit :clan/filesystem :clan/multicall :clan/path :clan/persist/content-addressing
+  :mukn/ethereum/hex
   :mukn/glow/path-config
   :mukn/glow/compiler/multipass
   :mukn/glow/compiler/passes)
@@ -39,6 +40,10 @@
   ;; Either way, print test results.
   (def pass-sym (string->symbol pass))
   (for (file files) (run-passes file pass: pass-sym)))
+
+(define-entry-point (digest file-path)
+  "Create a digest of the given file"
+  (displayln (0x<-bytes (digest<-file file-path))))
 
 (register-entry-point "pass" process-to-pass
   help: "Given a pass and files, process them until the end of it")
