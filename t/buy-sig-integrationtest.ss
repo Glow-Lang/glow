@@ -17,7 +17,8 @@
   ../compiler/multipass
   ../compiler/syntax-context
   ../runtime/program
-  ../runtime/participant-runtime)
+  ../runtime/participant-runtime
+  ../runtime/reify-contract-parameters)
 
 (def buy-sig-integrationtest
   (test-suite "integration test for ethereum/buy-sig"
@@ -65,31 +66,17 @@
       (displayln "\nEXECUTING BUYER THREAD ...")
       (def buyer-thread
         (spawn/name/logged "Buyer"
-         (lambda ()
-           (def buyer-runtime
-             (make-Runtime role: 'Buyer
-                           agreement: agreement
-                           program: program))
-           {execute buyer-runtime}
-           (displayln "Buyer finished")
-           (@ buyer-runtime environment))))
+         (lambda () (run:special-file 'Buyer agreement))))
 
       (displayln "\nEXECUTING SELLER THREAD ...")
       (def seller-thread
         (spawn/name/logged "Seller"
-         (lambda ()
-           (def seller-runtime
-             (make-Runtime role: 'Seller
-                           agreement: agreement
-                           program: program))
-           {execute seller-runtime}
-           (displayln "Seller finished"))))
-
+         (lambda () (run:special-file 'Seller agreement))))
 
       ;; Get the final environment object from the Buyer
       (def environment (thread-join! buyer-thread))
 
-      (def signature (hash-get environment 'signature))
+      (def signature (cdr (hash-get environment 'signature)))
       (def valid? (message-signature-valid? bob signature digest))
       (def buyer-balance-after (eth_getBalance alice 'latest))
       (def seller-balance-after (eth_getBalance bob 'latest))

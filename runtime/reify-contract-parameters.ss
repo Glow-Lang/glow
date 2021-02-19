@@ -1,9 +1,9 @@
-(export run)
+(export run run:terminal run:special-file)
 (import
   :std/format :std/iter :std/pregexp :std/misc/string :std/text/json
   :clan/debug :clan/json
   :clan/poo/object :clan/poo/mop :clan/poo/debug
-  :clan/path-config
+  :clan/path-config :clan/pure/dict/symdict
   :mukn/ethereum/network-config :mukn/ethereum/json-rpc
   :mukn/glow/compiler/syntax-context :mukn/glow/compiler/multipass :mukn/glow/compiler/passes
   (only-in ../compiler/alpha-convert/env symbol-refer)
@@ -40,7 +40,7 @@
 ;; that uses surface-names instead, with the same values
 (def (surface-name-environment alpha env)
   (def new (make-hash-table-eq))
-  (for ((surface-name (hash-keys alpha)))
+  (for ((surface-name (symdict-keys alpha)))
     (def alpha-name (symbol-refer alpha surface-name))
     (when (hash-key? env alpha-name)
       (hash-put! new surface-name (hash-get env alpha-name))))
@@ -56,15 +56,21 @@
        ((cons k v)
         (cons k (cons (lookup-type prg k) v)))))))
 
+(def (run:terminal role a)
+  (run io-context:terminal role a))
+
+(def (run:special-file role a)
+  (run io-context:special-file role a))
+
 ;; run : Symbol InteractionAgreement -> [Hashof Symbol TypeValuePair]
 ;; Produces an environment mapping surface names to type-value-pairs
-(def (run role a)
+(def (run ctx role a)
   (def program (interaction-agreement->program a))
   (def runtime
     (make-Runtime role: role
                   agreement: a
                   program: program
-                  io-context: io-context:terminal))
+                  io-context: ctx))
   {execute runtime}
   (printf "~a~a interaction finished~a\n" BOLD (.@ a interaction) END)
   (surface-name-environment

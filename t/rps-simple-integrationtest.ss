@@ -29,7 +29,8 @@ input UInt256: First player, pick your hand: 0 (Rock), 1 (Paper), 2 (Scissors)
   ../compiler/multipass
   ../compiler/syntax-context
   ../runtime/program
-  ../runtime/participant-runtime)
+  ../runtime/participant-runtime
+  ../runtime/reify-contract-parameters)
 
 (def a-address alice)
 (def b-address bob)
@@ -72,38 +73,26 @@ input UInt256: First player, pick your hand: 0 (Rock), 1 (Paper), 2 (Scissors)
         (spawn/name/logged "A"
          (lambda ()
           (parameterize ((current-input-port (open-input-string "2\n"))) ; Scissors
-            (def a-runtime
-              (make-Runtime role: 'A
-                            agreement: agreement
-                            program: program))
-            {execute a-runtime}
-            (displayln "A finished")
-            (@ a-runtime environment)))))
+            (run:special-file 'A agreement)))))
 
       (displayln "\nEXECUTING B THREAD ...")
       (def b-thread
         (spawn/name/logged "B"
          (lambda ()
           (parameterize ((current-input-port (open-input-string "1\n"))) ; Paper
-            (def b-runtime
-              (make-Runtime role: 'B
-                            agreement: agreement
-                            program: program))
-            {execute b-runtime}
-            (displayln "B finished")
-            (@ b-runtime environment)))))
+            (run:special-file 'B agreement)))))
 
       (def a-environment (thread-join! a-thread))
       (def b-environment (thread-join! b-thread))
 
       (for (variable (hash->list/sort a-environment symbol<?))
         (match variable
-          ([name . value]
-            (when (hash-get b-environment name)
-              (check-equal? value (hash-get b-environment name))))))
+          ([name . (type . value)]
+            (when (cdr (hash-get b-environment name))
+              (check-equal? value (cdr (hash-get b-environment name)))))))
 
       ;; if A chose scissors, B chose paper, then outcome 2 (A_Wins)
-      (def outcome (hash-get a-environment 'outcome))
+      (def outcome (cdr (hash-get a-environment 'outcome)))
       (display-object
         ["outcome extracted from contract logs, 0 (B_Wins), 1 (Draw), 2 (A_Wins):" UInt256 outcome])
       (check-equal? outcome 2))))
