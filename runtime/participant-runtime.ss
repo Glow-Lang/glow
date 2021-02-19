@@ -366,7 +366,7 @@
     (def parameters (.@ agreement parameters))
     (for (parameter-name (interaction-info-parameter-names inter))
       (def parameter-surface-name (hash-ref alba parameter-name))
-      (def parameter-json-value (json-object-ref parameters parameter-surface-name))
+      (def parameter-json-value (json-object-ref parameters parameter-name))
       (def parameter-type (lookup-type (@ self program) parameter-name))
       (def parameter-value (<-json parameter-type parameter-json-value))
       {add-to-environment self parameter-name parameter-value})))

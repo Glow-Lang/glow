@@ -64,6 +64,11 @@
   (def t (hash-get type-table variable-name))
   (type-methods t))
 
+;; : Symbol <- Program Symbol
+(def (lookup-surface-name self variable-name)
+  (def alba (hash-ref (@ self compiler-output) 'albatable.sexp))
+  (hash-ref alba variable-name))
+
 ;; A conservative predicate that only returns true when the variable-name
 ;; is definitely a constant.
 ;; Currently, it is a constant if it is in the `init-syms` or in the values in AlphaEnv,
