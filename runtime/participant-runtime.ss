@@ -10,7 +10,7 @@
   :clan/persist/content-addressing
   :mukn/ethereum/hex :mukn/ethereum/ethereum :mukn/ethereum/network-config :mukn/ethereum/json-rpc
   :mukn/ethereum/transaction :mukn/ethereum/tx-tracker :mukn/ethereum/watch :mukn/ethereum/assets
-  :mukn/ethereum/contract-runtime :mukn/ethereum/contract-config :mukn/ethereum/assembly :mukn/ethereum/types
+  :mukn/ethereum/evm-runtime :mukn/ethereum/contract-config :mukn/ethereum/assembly :mukn/ethereum/types
   (only-in ../compiler/alpha-convert/env symbol-refer)
   ./program ./block-ctx ./consensus-code-generator ./terminal-codes
   ../compiler/method-resolve/method-resolve
@@ -330,7 +330,7 @@
     (marshal UInt16 frame-length out)
     (marshal-product-to frame-variables out)))
 
-;; See gerbil-ethereum/contract-runtime.ss for spec.
+;; See gerbil-ethereum/evm-runtime.ss for spec.
 ;; PreTransaction <- Runtime Message.Outbox Block Address
 (defmethod {prepare-call-function-transaction Runtime}
   (λ (self contract-address)

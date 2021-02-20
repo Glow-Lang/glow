@@ -2,10 +2,16 @@
 
 Instructions for installing, testing and running *Glow*.
 
-Long story short, to try *Glow*, you can just use the following one-liner,
-and skip reading the rest of this file (except the warnings and prerequisites):
+## Easy Install
+
+Long story short, you can install the latest stable release of *Glow*
+with just use the following one-liner, and
+skip reading the rest of this file (except the warnings and prerequisites):
 
     curl -L https://glow-lang.org/install/glow-install | sh
+
+Alternatively, if you're rather use Docker than Nix,
+you can `docker pull mukn/glow:stable` then `docker run -it mukn/glow:stable`.
 
 ## Warnings and Prerequisites
 
@@ -25,16 +31,16 @@ and skip reading the rest of this file (except the warnings and prerequisites):
    or type the command `exec $SHELL`, or `. ~/.profile`, or
    `PATH="$HOME/.nix-profile/bin:$PATH"`, etc.
 
-3. Our developers so far have are testing Glow on Linux and macOS on x86_64.
+3. Our developers so far have are testing *Glow* on Linux and macOS on `x86_64`.
    Hopefully it should all work on the Window Subsystem for Linux (WSL),
-   and on other architectures (such as arm64). But we haven't been testing it yet
+   and on other architectures (such as `arm64`). But we haven't been testing it yet
    (try [this recipe](https://nathan.gs/2019/04/12/nix-on-windows/)
    if you have trouble with Nix on WSL).
 
 3. We are using [cachix](https://cachix.org/) to distribute pre-compiled binaries
    for all our packages. But this only works if you are using one of the architectures
    our developers use, which are `x86_64-linux` and `x86_64-darwin`.
-   This *should* also work on WSL on x86_64, but we haven't tried.
+   This *should* also work on WSL on `x86_64`, but we haven't tried.
 
 4. If you're not using one of the above architectures, then the installation will build
    not only *Glow*, but also, at least the first around, a lot of its dependencies.
@@ -82,7 +88,7 @@ so that the Nix-enabled `$PATH` be defined, and other environment variables with
 
 ## Simplified Installation for Implementers
 
-First use, the installation script as above, or, if you're distrusting (as you should be),
+First, use the installation script as above, or, if you're distrusting (as you should be),
 audit it, trace the steps one by one, execute them manually, all in a sandbox, etc.
 
 Then, you can checkout the code of *Glow* (if you haven't already) with
@@ -104,13 +110,18 @@ You can look at the above-mentioned installation scripts, and reproduce their st
 
 ## Trying it out with Docker
 
-We have a Docker image [`mukn/glow:latest`](https://hub.docker.com/repository/docker/mukn/glow)
-with *Glow* and its associated libraries precompiled:
+We have a Docker image [`mukn/glow`](https://hub.docker.com/repository/docker/mukn/glow)
+with *Glow* and its associated libraries precompiled.
+
+For the the most recent stable release (currently alpha quality), use:
+
+    docker pull mukn/glow:stable
+    docker run -it mukn/glow:stable bash
+
+For the latest development code (has most features but can be unstable), use:
 
     docker pull mukn/glow:latest
     docker run -it mukn/glow:latest bash
-
-When we have a stable release, we'll provide an image `mukn/glow:stable` instead.
 
 You can build your own using `scripts/make-docker-image.ss` from
 [gerbil-utils](https://github.com/fare/gerbil-utils).

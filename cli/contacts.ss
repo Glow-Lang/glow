@@ -4,7 +4,7 @@
   :std/getopt :std/misc/hash :std/srfi/13
   :clan/config :clan/json :clan/multicall :clan/syntax
   :clan/poo/brace :clan/poo/cli :clan/poo/io :clan/poo/mop :clan/poo/object :clan/poo/type
-  :mukn/ethereum/cli :mukn/ethereum/hex :mukn/ethereum/known-addresses :mukn/ethereum/signing)
+  :mukn/ethereum/cli :mukn/ethereum/hex :mukn/ethereum/ethereum :mukn/ethereum/known-addresses)
 
 (define-type Contact
   (Record
@@ -17,7 +17,7 @@
 (def ContactList (Map String -> Contact))
 
 (def (load-contacts contacts-file)
-  (def contacts-json (read-file-json contacts-file))
+  (def contacts-json (with-catch (lambda (_) (make-hash-table)) (cut read-file-json contacts-file)))
   (<-json ContactList contacts-json))
 
 (def (store-contacts contacts-file contacts)

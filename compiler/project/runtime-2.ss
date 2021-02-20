@@ -8,9 +8,10 @@
           :clan/poo/type
           :clan/concurrency
           :clan/crypto/random
+          :clan/crypto/secp256k1
           :mukn/ethereum/types
-          :mukn/ethereum/known-addresses
-          :mukn/ethereum/signing))
+          :mukn/ethereum/ethereum
+          :mukn/ethereum/known-addresses))
 
 (import :std/sugar
         :std/format
@@ -26,6 +27,7 @@
         :clan/pure/dict/assq
         :clan/concurrency
         :clan/crypto/random
+        :clan/crypto/secp256k1
         :clan/poo/object
         :clan/poo/io
         :clan/persist/content-addressing
@@ -33,8 +35,8 @@
         :clan/pure/dict/dicteq
         :mukn/glow/compiler/syntax-context
         :mukn/ethereum/types
-        :mukn/ethereum/known-addresses
-        :mukn/ethereum/signing)
+        :mukn/ethereum/ethereum
+        :mukn/ethereum/known-addresses)
 
 (def (set-caddr!  p v) (set-car! (cddr  p) v))
 (def (set-cadddr! p v) (set-car! (cdddr p) v))

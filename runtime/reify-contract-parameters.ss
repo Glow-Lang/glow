@@ -88,7 +88,3 @@
       (source-path (string-append s ".glow"))))
    (else
     (error 'glow-module-path->path "given:" s))))
-
-;; monomorphic-object->hash-table : [MonomorphicPooof V] -> [Hashof Symbol V]
-(def (monomorphic-object->hash-table p)
-  (object-instance (force-object p)))

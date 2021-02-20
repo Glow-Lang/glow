@@ -4,7 +4,7 @@
 // - rental where you sign a key access message that some door's / some car's reader will accept
 // - "Diploma" or other affidavit
 // - Usually for purely digital goods. For physical ones you will want the last step to be
-//   sending the money to an multisig escrow contract.
+//   sending the money to some multisig escrow contract for fall back arbitration.
 
 @interaction([Buyer, Seller])
 let payForSignature = (digest : Digest, price : Nat) => {
@@ -12,12 +12,10 @@ let payForSignature = (digest : Digest, price : Nat) => {
 
   // This line is equivalent to the three below:
   @publicly!(Seller) let signature = sign(digest);
-
   // These three:
   /* @verifiably!(Seller) let signature = sign(digest);
      publish! Seller -> signature;
-     verify! signature; // same as: require! isValidSignature(Seller, signature, digest);
-  */
+     verify! signature; // same as: require! isValidSignature(Seller, signature, digest); */
 
   withdraw! Seller <- price;
 };

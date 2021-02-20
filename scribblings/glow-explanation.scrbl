@@ -33,8 +33,15 @@ with an ambitious Business Model to become the go-to company for all blockchain 
 }
 
 We refer you to the aforementioned Whitepaper for much details on the technology behind @(Glow).
+Indeed, if you are looking for the concepts that underlie @(Glow),
+like interactions, participants, the co-generation of contracts and client/server code,
+verification using Game Semantics, etc., then the technical parts of the
+@hyperlink["https://j.mp/GlowWhitepaper2020"]{Glow Whitepaper}
+are the source of information.
+
 This document aims to give the somewhat technical reader
-a good enough grasp of the principles behind @(Glow)
+a good enough grasp of the principles we follow
+as we design @(Glow) as a language,
 so they can decide what to use it for, when, and how:
 
 @itemize[

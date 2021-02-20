@@ -255,7 +255,7 @@
       reference: {}
       options: {blockchain: "Private Ethereum Testnet"
                 escrowAmount: (void)
-                timeoutInBlocks: (* 10 (ethereum-timeout-in-blocks))
+                timeoutInBlocks: (* 100 (ethereum-timeout-in-blocks))
                 maxInitialBlock: max-initial-block}}))
     (begin
       (.call InteractionAgreement .validate agreement)

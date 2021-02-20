@@ -4,7 +4,7 @@
   :std/sort :std/srfi/1 :std/misc/hash :std/misc/list :std/misc/number
   :clan/base :clan/number :clan/syntax
   :clan/poo/io :clan/poo/object :clan/poo/brace :clan/poo/debug
-  :mukn/ethereum/ethereum :mukn/ethereum/assembly :mukn/ethereum/contract-runtime :mukn/ethereum/signing
+  :mukn/ethereum/ethereum :mukn/ethereum/assembly :mukn/ethereum/evm-runtime :mukn/ethereum/signing
   :mukn/ethereum/assets :mukn/ethereum/types
   ./program)
 
@@ -339,7 +339,7 @@
 ;; Offset <- ConsensusCodeGenerator Symbol
 (def (compute-variable-offsets self code-block-label)
   (def frame-variables (make-hash-table))
-  ;; Initial offset computed by global registers, see :mukn/ethereum/contract-runtime
+  ;; Initial offset computed by global registers, see :mukn/ethereum/evm-runtime
   (def frame-size params-start@)
   (def live-variables (lookup-live-variables (.@ self program) (.@ self name) code-block-label))
   (for-each

@@ -32,7 +32,7 @@
   ;; Clan Utilities
   :clan/net/json-rpc :clan/net/s3 :clan/net/simple-http-client :clan/net/websocket
   :clan/assert :clan/base :clan/basic-parsers :clan/basic-printers
-  :clan/call-limiter :clan/cli :clan/concurrency :clan/config
+  #;:clan/call-limiter :clan/cli :clan/concurrency :clan/config
   :clan/debug :clan/decimal :clan/diceware
   :clan/error :clan/exit
   :clan/failure :clan/ffi :clan/files :clan/filesystem
@@ -41,8 +41,8 @@
   :clan/maybe :clan/memo :clan/multicall :clan/number :clan/option :clan/order
   :clan/path :clan/path-config :clan/peekable-iterator :clan/ports
   :clan/random
-  :clan/source :clan/simple-rpc-client :clan/stateful-avl-map :clan/string
-  :clan/subprocess :clan/syntax
+  :clan/shell :clan/simple-rpc-client :clan/source
+  :clan/stateful-avl-map :clan/string :clan/subprocess :clan/syntax
   :clan/temporary-files :clan/timestamp
   :clan/vector :clan/versioning :clan/watch :clan/with-id
   :clan/persist/db :clan/persist/persist :clan/persist/content-addressing
@@ -77,8 +77,8 @@
   :mukn/ethereum/hex :mukn/ethereum/abi :mukn/ethereum/types :mukn/ethereum/ethereum
   :mukn/ethereum/rlp :mukn/ethereum/signing :mukn/ethereum/known-addresses :mukn/ethereum/logger
   :mukn/ethereum/network-config :mukn/ethereum/json-rpc :mukn/ethereum/transaction :mukn/ethereum/watch
-  :mukn/ethereum/assembly :mukn/ethereum/contract-config :mukn/ethereum/contract-runtime
-  :mukn/ethereum/nonce-tracker :mukn/ethereum/tx-tracker :mukn/ethereum/batch-send
+  :mukn/ethereum/assembly :mukn/ethereum/contract-config :mukn/ethereum/evm-runtime
+  :mukn/ethereum/nonce-tracker :mukn/ethereum/tx-tracker :mukn/ethereum/simple-apps
   :mukn/ethereum/assets :mukn/ethereum/cli
 
   ;; Testing Glow

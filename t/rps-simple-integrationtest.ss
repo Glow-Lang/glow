@@ -22,7 +22,7 @@ input UInt256: First player, pick your hand: 0 (Rock), 1 (Paper), 2 (Scissors)
   :clan/persist/content-addressing :clan/persist/db
   :clan/versioning
   :mukn/ethereum/types :mukn/ethereum/ethereum :mukn/ethereum/known-addresses :mukn/ethereum/json-rpc
-  :mukn/ethereum/batch-send :mukn/ethereum/network-config :mukn/ethereum/assets
+  :mukn/ethereum/simple-apps :mukn/ethereum/network-config :mukn/ethereum/assets
   :mukn/ethereum/signing :mukn/ethereum/hex :mukn/ethereum/transaction :mukn/ethereum/types
   :mukn/ethereum/testing
   ../compiler/passes
