@@ -14,14 +14,14 @@
     blockchain: [Symbol]
     tags: [(List String)]))
 
-(def ContactList (Map String <- Contact))
+(def ContactList (Map String -> Contact))
 
 (def (load-contacts contacts-file)
   (def contacts-json (read-file-json contacts-file))
-  (hash-key-value-map (lambda (k v) (cons k (<-json Contact v))) contacts-json))
+  (<-json ContactList contacts-json))
 
 (def (store-contacts contacts-file contacts)
-  (def contacts-json (hash-key-value-map (lambda (k v) (cons k (json<- Contact v))) contacts))
+  (def contacts-json (json<- ContactList contacts))
   (write-file-json contacts-file contacts-json))
 
 (def (with-contacts contacts-file f)

@@ -4,7 +4,8 @@
   :gerbil/gambit/misc
   :gerbil/expander
   :std/iter
-  :clan/base :clan/exit :clan/filesystem :clan/multicall :clan/path
+  :clan/base :clan/exit :clan/filesystem :clan/multicall :clan/path :clan/persist/content-addressing
+  :mukn/ethereum/hex
   :mukn/glow/path-config
   :mukn/glow/compiler/multipass
   :mukn/glow/compiler/passes)
@@ -42,3 +43,9 @@
 
 (register-entry-point "pass" process-to-pass
   help: "Given a pass and files, process them until the end of it")
+
+(def (digest-command file)
+  (displayln (0x<-bytes (digest<-file file))))
+
+(register-entry-point "digest" digest-command
+  help: "Create a digest of the given file")

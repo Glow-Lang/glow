@@ -82,7 +82,7 @@
         ([_ . contact]
           (let (address (.@ contact address))
             (cons (.@ contact nickname) [Address . address]))))
-      (hash->list contacts)))
+      (hash->list/sort contacts string<?)))
   (def chosen-contact (ask-option name known-addresses))
   (.@ (hash-get contacts (string-downcase chosen-contact)) address))
 
@@ -133,8 +133,9 @@
   (let (parameters (make-hash-table))
     (for ((name parameter-names))
       (def type (lookup-type program name))
-      (def input (console-input type name #f))
-      (hash-put! parameters name (json<- type input)))
+      (def surface-name (lookup-surface-name program name))
+      (def input (console-input type surface-name #f))
+      (hash-put! parameters surface-name (json<- type input)))
     (displayln)
     parameters))
 
@@ -202,7 +203,11 @@
     (displayln "Final environment:")
     ;; TODO: get run to include type t and pre-alpha-converted labels,
     ;; and output the entire thing as JSON omitting shadowed variables (rather than having conflicts)
-    (for-each (match <> ([k t . v] (display-object-ln k " => " t v)))
+    ;; TODO: highlight the returned value in the interaction, and have buy_sig return signature
+    (for-each (match <> ([k t . v]
+                (if (equal? (symbolify k) 'signature)
+                  (display-object-ln BOLD k END " => " t v)
+                  (display-object-ln k " => " t v))))
               (hash->list/sort environment symbol<?))))
 
 ;; TODO: Validate that selected role matches selected identity in the agreement's participant table.

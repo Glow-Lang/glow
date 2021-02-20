@@ -65,11 +65,11 @@
 
 ; glow-cardano-0.1.0.0-CngPKhcIv8FI1Ajum74KPJ
 ; Types:GlowContract
-(define-type GlowContract (Map ExecutionPoint <- (Tuple (List Statement) (Maybe ExecutionPoint))))
+(define-type GlowContract (Map ExecutionPoint -> (Tuple (List Statement) (Maybe ExecutionPoint))))
 
 ; glow-cardano-0.1.0.0-CngPKhcIv8FI1Ajum74KPJ
 ; Types:VariableMap
-(define-type VariableMap (Map ByteString <- Value))
+(define-type VariableMap (Map ByteString -> Value))
 
 ; plutus-ledger-0.1.0.0-E9tyq7JXFRFGbrn5sc8sO2
 ; Ledger.Crypto:PubKey
@@ -79,7 +79,7 @@
 
 ; glow-cardano-0.1.0.0-CngPKhcIv8FI1Ajum74KPJ
 ; Types:DatatypeMap
-(define-type DatatypeMap (Map ByteString <- (List (Tuple ByteString Integer))))
+(define-type DatatypeMap (Map ByteString -> (List (Tuple ByteString Integer))))
 
 ; glow-cardano-0.1.0.0-CngPKhcIv8FI1Ajum74KPJ
 ; Client:MoveParams
