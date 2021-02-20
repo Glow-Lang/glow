@@ -168,7 +168,7 @@
 ; Ledger.Value:Value
 (define-type Value
   (Record
-    getValue: [(Map CurrencySymbol <- (Map TokenName <- Integer))]))
+    getValue: [(Map CurrencySymbol -> (Map TokenName -> Integer))]))
 
 ; plutus-ledger-0.1.0.0-E9tyq7JXFRFGbrn5sc8sO2
 ; Ledger.Tx:TxOut
@@ -195,5 +195,5 @@
     txFee: [Value]
     txValidRange: [SlotRange]
     txForgeScripts: [(Set MonetaryPolicy)]
-    txSignatures: [(Map PubKey <- Signature)]
-    txData: [(Map DatumHash <- Datum)]))
+    txSignatures: [(Map PubKey -> Signature)]
+    txData: [(Map DatumHash -> Datum)]))
