@@ -11,10 +11,10 @@ the [futures](../futures/) directory.
 These tests are not particularly meant to implement code for users,
 but to stress the capabilities of the compiler:
 
-[fun.sexp](fun.sexp),
-[pattern_match.sexp](pattern_match.sexp),
-[type_defs.sexp](type_defs.sexp),
-[type_infer.sexp](type_infer.sexp).
+[passdata/fun.sexp](passdata/fun.sexp),
+[passdata/pattern_match.sexp](passdata/pattern_match.sexp),
+[passdata/type_defs.sexp](passdata/type_defs.sexp),
+[passdata/type_infer.sexp](passdata/type_infer.sexp).
 
 ## Rock, Paper, Scissors
 

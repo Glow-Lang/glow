@@ -36,7 +36,7 @@ input UInt256: First player, pick your hand: 0 (Rock), 1 (Paper), 2 (Scissors)
 (def b-address bob)
 (def wagerAmount (wei<-ether .01))
 
-(def rps_simple.glow (source-path "examples/rps_simple.sexp"))
+(def rps_simple.glow (source-path "examples/rps_simple.glow"))
 
 (def (make-agreement)
   (def timeout (ethereum-timeout-in-blocks))

@@ -124,7 +124,8 @@
 ;; Symbol String Representation+AncillaryDataIn -> Representation+AncillaryDataOut
 ;; TODO: error handling for layer read/write/compare
 ;; TODO: mode for overriding, mode for just-running-without-comparing, mode for warnings, etc.
-(def (run-pass pass-name basename state)
+(def (run-pass pass-name dir basename state)
+  (def basepath (path-expand basename dir))
   (match (registered-pass pass-name)
     ((pass fun inputs outputs)
      (for-each (λ (k) (when (hash-get state k)
@@ -134,7 +135,7 @@
      (def layer-fails [])
      (for ((layer-name outputs) (value results))
        (hash-put! state layer-name value)
-       (def expected-output-file (format "~a.~a" basename layer-name))
+       (def expected-output-file (format "~a.~a" basepath layer-name))
        (def layer (registered-layer layer-name))
        (when (file-exists? expected-output-file)
          (unless (layer? layer)
@@ -150,31 +151,37 @@
                (write/layer layer-name value (current-error-port)))
              (set! layer-fails (cons layer-name layer-fails))))))
      (when (pair? layer-fails)
-       (error 'pass-output-failure pass-name basename (reverse layer-fails)))
+       (error 'pass-output-failure pass-name basepath (reverse layer-fails)))
      state)))
 
 ;; Path layer:  String Representation+AncillaryDataIn -> Representation+AncillaryDataOut
-(def (run-passes filename
-                 layer: (layer (identify-layer filename))
+(def (run-passes filepath
+                 layer: (layer (identify-layer filepath))
                  strategy: (strategy default-strategy)
                  pass: (last-pass #f)
                  show?: (show? #t)
                  ;;override?: (override? #f)
                  save?: (save? #f))
+  (def dir (path-directory filepath))
+  (def filename (path-strip-directory filepath))
   (def passes (relevant-passes layer strategy last-pass))
-  (def in (hash (,layer (read-file/layer layer filename))))
+  (def in (hash (,layer (read-file/layer layer filepath))))
   (def basename (string-trim-suffix (format ".~a" layer) filename))
-  (def out (for/fold (state in) ((pass passes)) (run-pass pass basename state)))
-  (def last-layers (pass-outputs (registered-pass (last passes))))
-  (for ((l last-layers))
-    (def (write-last port)
-      (write/layer l (hash-ref out l) port))
-    (def rl (registered-layer l))
-    (when (and rl (layer-writer rl))
-      (let (path (format "~a.~a" basename l))
-        (when show?
-          (displayln path)
-          (write-last (current-output-port)))
-        (when save?
-          (clobber-file path write-last)))))
-  out)
+  (def passdata-dir
+    (if (equal? [layer] (pass-inputs (registered-pass (car (registered-strategy strategy)))))
+        (path-expand "passdata" dir)
+        dir))
+(def out (for/fold (state in) ((pass passes)) (run-pass pass passdata-dir basename state)))
+(def last-layers (pass-outputs (registered-pass (last passes))))
+(for ((l last-layers))
+  (def (write-last port)
+    (write/layer l (hash-ref out l) port))
+  (def rl (registered-layer l))
+  (when (and rl (layer-writer rl))
+    (let (path (format "~a.~a" (path-expand basename passdata-dir) l))
+      (when show?
+        (displayln path)
+        (write-last (current-output-port)))
+      (when save?
+        (clobber-file path write-last)))))
+out)
