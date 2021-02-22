@@ -4,7 +4,7 @@
   :std/sort :std/srfi/1 :std/misc/hash :std/misc/list :std/misc/number
   :clan/base :clan/number :clan/syntax
   :clan/poo/io :clan/poo/object :clan/poo/brace :clan/poo/debug
-  :mukn/ethereum/ethereum :mukn/ethereum/assembly :mukn/ethereum/evm-runtime :mukn/ethereum/signing
+  :mukn/ethereum/ethereum :mukn/ethereum/assembly :mukn/ethereum/evm-runtime
   :mukn/ethereum/assets :mukn/ethereum/types
   ./program)
 

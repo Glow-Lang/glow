@@ -18,7 +18,7 @@
   :mukn/glow/runtime/participant-runtime :mukn/glow/runtime/reify-contract-parameters
 
   ;; TODO: make sure there's a one-stop-shop to all bindings required for the runtime to work.
-  :mukn/ethereum/signing :mukn/ethereum/assets
+  :mukn/ethereum/assets
   :mukn/glow/compiler/syntax-context
   )
 

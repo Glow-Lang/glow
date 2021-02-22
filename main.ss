@@ -9,7 +9,7 @@
   :mukn/glow/all-glow
   :mukn/glow/t/common
   :mukn/glow/compiler/syntax-context
-  :mukn/ethereum/signing
+  :mukn/ethereum/ethereum
   :mukn/ethereum/types
   :mukn/glow/cli/contacts
   :mukn/glow/cli/interaction

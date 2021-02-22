@@ -6,7 +6,6 @@
   <expander-runtime>
   :mukn/ethereum/types
   :mukn/ethereum/ethereum
-  :mukn/ethereum/signing
   (only-in ../compiler/alpha-convert/alpha-convert init-syms)
   ../compiler/typecheck/type
   ../compiler/checkpointify/checkpointify)

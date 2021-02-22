@@ -7,7 +7,7 @@
   :clan/poo/brace :clan/poo/cli :clan/poo/debug :clan/poo/object
   :clan/persist/db :clan/persist/content-addressing :clan/versioning :clan/pure/dict/symdict
   :mukn/ethereum/assets :mukn/ethereum/cli :mukn/ethereum/ethereum :mukn/ethereum/network-config
-  :mukn/ethereum/signing :mukn/ethereum/types :mukn/ethereum/json-rpc :mukn/ethereum/known-addresses
+  :mukn/ethereum/types :mukn/ethereum/json-rpc :mukn/ethereum/known-addresses
   :mukn/glow/runtime/participant-runtime :mukn/glow/runtime/reify-contract-parameters :mukn/glow/runtime/configuration
   :mukn/glow/runtime/program :mukn/glow/runtime/terminal-codes
   (only-in :mukn/glow/compiler/alpha-convert/alpha-convert init-syms)
