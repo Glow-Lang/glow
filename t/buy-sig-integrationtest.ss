@@ -6,7 +6,7 @@
   :clan/base :clan/concurrency :clan/debug :clan/decimal :clan/exception
   :clan/io :clan/json :clan/path-config :clan/ports
   :clan/poo/object :clan/poo/io :clan/poo/debug
-  :clan/crypto/keccak
+  :clan/crypto/keccak :clan/crypto/secp256k1
   :clan/persist/content-addressing :clan/persist/db
   :clan/versioning
   :mukn/ethereum/types :mukn/ethereum/ethereum :mukn/ethereum/known-addresses :mukn/ethereum/json-rpc

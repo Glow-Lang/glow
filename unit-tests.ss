@@ -5,6 +5,7 @@
 (import :clan/testing)
 (init-test-environment!)
 (import
+  :clan/crypto/secp256k1
   :mukn/ethereum/types :mukn/ethereum/ethereum
   :mukn/glow/all-glow :mukn/glow/version :mukn/glow/t/common :mukn/glow/compiler/syntax-context)
 ;;(import :clan/debug)(DBG foo: (getenv "GERBIL_LOADPATH" #f) load-path)

@@ -8,6 +8,7 @@
   (rename-in :gerbil/core (lambda λ))
   :gerbil/core
   :std/sugar
+  :clan/crypto/secp256k1
   ;;:clan/base
   )
 
