@@ -2,7 +2,6 @@
 
 @(require "glow-code.rkt"
           "glow-docs.rkt"
-          (only-in "glow-code.rkt" [glowexp code])
           (for-label glow))
 
 @(define em emph)
@@ -312,15 +311,15 @@ to illustrate how we interpret this principle of "no surprise".
 
 Our function definition syntax is the same as in ReasonML,
 and almost the same as in JavaScript, modulo the fact that we allow type declarations:
-`let f = x => x + y;`.
+@glowstm{let f = (x) => x + y;}.
 
 There is another function definition syntax in JavaScript that we purposefully do not use,
 probably for the same reason as ReasonML:
-`function f (x) { return x + y ;}`
+@literal|{function f (x) { return x + y ;}}|
 
 Indeed in JavaScript the former syntax returns the value of the last expression,
 whereas the latter returns a unit value when you fall through, and you have to explicitly use
-a `return` statement to override that.
+a @literal{return} statement to override that.
 
 If we used this syntax and changed the semantics so we return the value of the last expression,
 we would create great yet subtle confusion when "code-switching" between two languages,
@@ -342,21 +341,21 @@ Instead, all numbers are IEEE 754 double-precision floating point numbers,
 64-bit total with a 53 bits of mantissa.
 Historically, people have been using those numbers to represent
 all contiguously integers from -2**53 to +2**53 —
-though bitwise operations like `&` only preserve 32 bits of data.
+though bitwise operations like @literal{&} only preserve 32 bits of data.
 But recent versions of JavaScript have introduced a new type of integer "BigInt";
 for backward compatibility reasons (i.e. for existing code to still work),
 BigInt is a disjoint type, and its literals have a "n" suffix to distinguish them,
-so that @code{12345678901234567890} will be a floating point number, approximating away the low digits,
-whereas @code{12345678901234567890n} will be an integer, preserving them.
+so that @literal{12345678901234567890} will be a floating point number, approximating away the low digits,
+whereas @literal{12345678901234567890n} will be an integer, preserving them.
 
 In @(Glow), we only have BigInt-style integers and no floating point,
 because blockchains casually operate on numbers up to 256-bit wide,
 and some blockchains can even go beyond.
-Like in ReasonML and unlike in JavaScript, our integer literals do not have this @code{n} suffix,
+Like in ReasonML and unlike in JavaScript, our integer literals do not have this @literal{n} suffix,
 and it is very clear what we are doing.
 Furthermore, our bitwise operations are tripled,
-so @code{&&&} for bitwise-and, @code{|||} for bitwise-or, @code{^^^} for bitwise-xor,
-and @code{~~~} for bitwise-not, so it is both very obvious to the reader what they do,
+so @glowexp{&&&} for bitwise-and, @glowexp{|||} for bitwise-or, @glowexp{^^^} for bitwise-xor,
+and @glowexp{~~~} for bitwise-not, so it is both very obvious to the reader what they do,
 yet obvious that something must be changed when copying and pasting between @(Glow) and JavaScript,
 where these operations only use 32 bits.
 
