@@ -8,7 +8,7 @@
   :clan/crypto/secp256k1
   :mukn/ethereum/ethereum :mukn/ethereum/types
   :mukn/glow/all-glow :mukn/glow/compiler/syntax-context :mukn/glow/t/common
-  :mukn/glow/cli/contacts :mukn/glow/cli/interaction)
+  :mukn/glow/cli/contacts :mukn/glow/cli/interaction :mukn/glow/cli/identities)
 
 (define-entry-point (git-version)
   "Print the git version that Glow was compiled from"

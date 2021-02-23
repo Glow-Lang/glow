@@ -2,7 +2,7 @@
 
 (import
   :std/getopt :std/misc/hash :std/srfi/13
-  :clan/config :clan/json :clan/multicall :clan/syntax
+  :clan/config :clan/files :clan/json :clan/multicall :clan/syntax
   :clan/poo/brace :clan/poo/cli :clan/poo/io :clan/poo/mop :clan/poo/object :clan/poo/type
   :mukn/ethereum/cli :mukn/ethereum/hex :mukn/ethereum/ethereum :mukn/ethereum/known-addresses)
 
@@ -22,7 +22,7 @@
 
 (def (store-contacts contacts-file contacts)
   (def contacts-json (json<- ContactList contacts))
-  (write-file-json contacts-file contacts-json))
+  (clobber-file contacts-file (string<-json contacts-json) salt?: #t))
 
 (def (with-contacts contacts-file f)
   (def contacts
@@ -63,7 +63,7 @@
      tags: []})
   (with-contacts contacts-file
     (cut hash-put! <> (string-downcase nickname) new-contact))
-  (displayln "Added " nickname " [ " (string<- Address address) " ]"))
+  (displayln "Added contact " nickname " [ " (string<- Address address) " ]"))
 
 (define-entry-point (remove-contact . arguments)
   "Remove contact"
@@ -75,7 +75,7 @@
   (def nickname (hash-get options 'nickname))
   (with-contacts contacts-file
     (cut hash-remove! <> (string-downcase nickname)))
-  (displayln "Removed " nickname))
+  (displayln "Removed contact " nickname))
 
 (define-entry-point (list-contacts . arguments)
   "List contacts"

@@ -12,7 +12,7 @@
   :mukn/glow/runtime/program :mukn/glow/runtime/terminal-codes
   (only-in :mukn/glow/compiler/alpha-convert/alpha-convert init-syms)
   :mukn/glow/compiler/passes :mukn/glow/compiler/multipass :mukn/glow/compiler/syntax-context
-  :mukn/glow/cli/contacts)
+  :mukn/glow/cli/contacts :mukn/glow/cli/identities)
 
 (def options/interaction
   (make-options

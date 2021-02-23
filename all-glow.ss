@@ -71,6 +71,7 @@
   :mukn/glow/runtime/configuration
   :mukn/glow/cli/interaction
   :mukn/glow/cli/contacts
+  :mukn/glow/cli/identities
 
   ;;:mukn/glow/compiler/checkpointify/checkpointify
   :clan/crypto/keccak :clan/crypto/secp256k1
