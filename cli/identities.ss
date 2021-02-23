@@ -1,37 +1,46 @@
 (export #t)
 
 (import
-  :std/getopt :std/misc/hash :std/srfi/13
+  :std/getopt :std/iter :std/misc/hash :std/srfi/13
   :clan/base :clan/config :clan/files :clan/json :clan/multicall :clan/syntax :clan/crypto/secp256k1
   :clan/poo/brace :clan/poo/cli :clan/poo/io :clan/poo/mop :clan/poo/object :clan/poo/type
   :mukn/ethereum/cli :mukn/ethereum/hex :mukn/ethereum/ethereum :mukn/ethereum/known-addresses)
 
-(def (load-identities identities-file)
-  (def identities-json (with-catch (lambda (_) (make-hash-table)) (cut read-file-json identities-file)))
-  (hash-key-value-map
-    (lambda (nickname keypair-json)
-      (cons nickname (import-keypair/json keypair-json)))
-    identities-json))
+(def (secret-key-ring)
+  (xdg-config-home "glow" "secret-key-ring.json"))
 
-(def (store-identities identities-file identities)
+(def (load-identities from: (from (secret-key-ring)))
+  (with-catch
+   (lambda (e)
+     (displayln (error-message e))
+     (error "Failed to read and parse the secret key ring file" from))
+   (lambda ()
+     (hash-key-value-map
+       (lambda (nickname keypair-json)
+         (def keypair (import-keypair/json keypair-json))
+         (register-keypair nickname keypair)
+         (cons nickname (import-keypair/json keypair-json)))
+      (read-file-json from)))))
+
+(def (store-identities identities from: (from (secret-key-ring)))
   (def identities-json
     (hash-key-value-map
       (lambda (nickname keypair)
         (cons nickname (export-keypair/json keypair)))
       identities))
-  (clobber-file identities-file (string<-json identities-json) salt?: #t))
+  (clobber-file from (string<-json identities-json) salt?: #t))
 
-(def (with-identities identities-file f)
+(def (with-identities f from: (from (secret-key-ring)))
   (def identities
-    (if (file-exists? identities-file)
-      (load-identities identities-file)
+    (if (file-exists? from)
+      (load-identities from: from)
       (make-hash-table)))
   (f identities)
-  (store-identities identities-file identities))
+  (store-identities identities from: from))
 
 (def options/identities
   (make-options
-    [(option 'identities "-I" "--identities" default: (xdg-config-home "glow" "secret-key-ring.json")
+    [(option 'identities "-I" "--identities" default: (secret-key-ring)
              help: "file to load and store identities")] []))
 
 (def options/identity-metadata
@@ -61,8 +70,8 @@
     (keypair (<-string Address (hash-get options 'address))
              (<-string PublicKey (hash-get options 'public-key))
              (import-secret-key/bytes (<-string Bytes32 (hash-get options 'secret-key)))))
-  (with-identities (hash-get options 'identities)
-    (cut hash-put! <> (string-downcase nickname) new-keypair))
+  (with-identities (cut hash-put! <> (string-downcase nickname) new-keypair)
+    from: (hash-get options 'identities))
   (displayln "Added identity: " nickname " [ " (string<- Address (keypair-address new-keypair)) " ]"))
 
 (define-entry-point (generate-identity . arguments)
@@ -82,8 +91,8 @@
       (scoring<-prefix prefix)
       (trivial-scoring)))
   (def keypair (generate-keypair scoring: scoring))
-  (with-identities (hash-get options 'identities)
-    (cut hash-put! <> (string-downcase nickname) keypair))
+  (with-identities (cut hash-put! <> (string-downcase nickname) keypair)
+    from: (hash-get options 'identities))
   (displayln "Generated identity: " nickname " [ " (string<- Address (keypair-address keypair)) " ]"))
 
 (define-entry-point (remove-identity . arguments)
@@ -92,17 +101,15 @@
     (make-options
       [(option 'nickname "-N" "--nickname")] [] [options/identities]))
   (def options (process-options options/remove arguments))
-  (def identities-file (hash-get options 'identities))
   (def nickname (hash-get options 'nickname))
-  (with-identities identities-file
-    (cut hash-remove! <> (string-downcase nickname)))
+  (with-identities (cut hash-remove! <> (string-downcase nickname))
+    from: (hash-get options 'identities))
   (displayln "Removed identity " nickname))
 
 (define-entry-point (list-identities . arguments)
   "List identities"
   (def options (process-options options/identities arguments))
-  (def identities-file (hash-get options 'identities))
-  (def identities (load-identities identities-file))
+  (def identities (load-identities from: (hash-get options 'identities)))
   (for-each
     (match <>
       ([nickname . keypair]

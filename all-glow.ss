@@ -68,7 +68,6 @@
   :mukn/glow/compiler/anf/anf
   :mukn/glow/runtime/participant-runtime
   :mukn/glow/runtime/consensus-code-generator
-  :mukn/glow/runtime/configuration
   :mukn/glow/cli/interaction
   :mukn/glow/cli/contacts
   :mukn/glow/cli/identities
