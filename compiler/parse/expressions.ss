@@ -234,10 +234,11 @@
 (def Variant
     (.let* ((name Identifier)
             (marker? (.or (match-token-value? #\( ) #f)))
-            (if (equal? marker? #f) name 
+        (if (equal? marker? #f)
+            name
             (.let* ((typs (sepby1 Type  (match-token-value? #\,)))
-                (_(match-token-value? #\) )) )
-      (cons name typs)))))
+                    (_(match-token-value? #\) )) )
+              (cons name typs)))))
 
 (def Variants
   (.begin (.or (match-token-value? #\|) #t)
@@ -268,6 +269,7 @@
 (defstruct (pattern-or pattern) (pats) transparent: #t)
 (defstruct (pattern-list pattern) (args) transparent: #t)
 (defstruct (pattern-record pattern) (entries) transparent: #t)
+(defstruct (pattern-app-ctor pattern) (id args) transparent: #t)
 (def BasePattern
     (.or
         (.let* (id Identifier) (return (pattern-id id)))
@@ -276,24 +278,17 @@
 
 (def BracketedPattern
   (.begin  (match-token-value? #\()
-           (.let* ((rst (sepby1 BasePattern (match-token-value? #\,))) (_(match-token-value? #\))))
+           (.let* ((rst (sepby1 Pattern (match-token-value? #\,))) (_(match-token-value? #\))))
                 (return (if (length=n? rst 1) (car rst) (pattern-tuple rst))))))
-
-(def BarPattern
-  (.begin (match-token-value? #\|)
-    (.let* (pats (sepby1 BasePattern (match-token-value? #\|))) (return (pattern-or pats)))))
 
 (def BlockPattern
   (.begin (match-token-value? #\[)
-          (.let* ((rst (sepby1 BasePattern (match-token-value? #\,))) (_(match-token-value? #\])))
+          (.let* ((rst (sepby1 Pattern (match-token-value? #\,))) (_(match-token-value? #\])))
                 (return (pattern-list rst)))))
 
 (def AnnotatedPattern
   (.begin (match-token-value? #\@)
-          (.let* ((attr Attribute) (pat BasePattern)) (return (annotated-pattern attr pat)))))
-
-(def TypePattern
-  (.let* ((pat BasePattern) (_(match-token-value? #\:))  (typ Type)) (return (type-pattern pat typ))))
+          (.let* ((attr Attribute) (pat TightPattern)) (return (annotated-pattern attr pat)))))
 
 (def RecordPattern
   (.begin (match-token-value? #\{)
@@ -301,11 +296,30 @@
             (return (pattern-record entries)))))
 
 (def RecordPatEntries
-    (sepby1 (.let* ((id Identifier) (_(match-token-value? #\:)) (pat BasePattern))
+    (sepby1 (.let* ((id Identifier) (_(match-token-value? #\:)) (pat TightPattern))
               (cons id pat))
             (match-token-value? #\,)))
 
-(def Pattern (.or RecordPattern AnnotatedPattern BlockPattern BarPattern BracketedPattern TypePattern BasePattern))
+(def TightPattern
+  (.or RecordPattern BlockPattern BracketedPattern BasePattern))
+
+(def TypePattern
+  (.let* ((pat TightPattern) (_(match-token-value? #\:))  (typ Type)) (return (type-pattern pat typ))))
+
+(def AppCtorPattern
+  (.let* ((id Identifier)
+          (_ (match-token-value? #\( ))
+          (empty? (.or (match-token-value? #\) ) #f))
+          (args (if empty? [] (sepby1 Pattern (match-token-value? #\,))))
+          (_(if (equal? empty? #f)  (match-token-value? #\) ) )))
+    (return (pattern-app-ctor id args))))
+
+(def PatternVariant
+  (.or AnnotatedPattern TypePattern AppCtorPattern TightPattern))
+
+(def Pattern
+  (.let* (pats (sepby1 PatternVariant (match-token-value? #\|)))
+    (return (if (length=n? pats 1) (car pats) (pattern-or pats)))))
 
 
 (defstruct (block-expression expression) (body) transparent: #t)
@@ -355,7 +369,7 @@
           ((string=? (get-token-value t) "withdraw!") WithdrawExpression)
           ((string=? (get-token-value t) "deposit!") DepositExpression)
           ((string=? (get-token-value t) "assert!") AssertExpression)
-          ((string=? (get-token-value t) "require!") RequireExpression)))) 
+          ((string=? (get-token-value t) "require!") RequireExpression))))
     ArithmeticExpression)))
 
 (defstruct (publish-statement statement) (id expr) transparent: #t)
@@ -386,7 +400,7 @@
           (_(match-token-value? #\=)) (variants Variants))
         (return (dataAssignmentStatement name typarams variants))))
 
-(def SubStatement 
+(def SubStatement
   (.begin (peek (match-token-value? (.or "verify!" "publish!" "data" "type")))
     (.let* (t (item))
       (cond
@@ -429,11 +443,11 @@
 (defstruct param-data (id typ) transparent: #t)
 
 (def Param
-  (.let* (param  
+  (.let* (param
       (.let* ((id? (.or Identifier #f)) )
               (if (equal? id? #f) #f
                 (.let* (typ? (.or (.begin (match-token-value? #\:) Type) #f))
-                  (if (equal? typ? #f) 
+                  (if (equal? typ? #f)
                     (return (param-data id? #f))
                     (return (param-data id? typ?))))))) param))
 

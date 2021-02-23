@@ -196,6 +196,7 @@ ReasonML.
    (BNF-seq |[| @nonterm{arg-pats} |]|)
    (BNF-seq |(| @nonterm{arg-pats} |)|)
    (BNF-seq |{| @nonterm{record-pat-entries} |}|)
+   (BNF-seq @nonterm{id} |(| @nonterm{arg-pats} |)|)
    (BNF-seq @nonterm{pat} (kleenestar (BNF-group \| @nonterm{pat}))))
   (list
    @nonterm{arg-pats}
