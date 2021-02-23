@@ -107,21 +107,38 @@
 (def Comment
     (.let* (c (.or SingleLineComment MultiComment)) `(Comment , c)))
 
+(def (char-ascii? c)
+  (and (char<=? #\null c) (char<=? c #\delete)))
+
+(def (double-string-nonesc-char? c)
+  (and (char-ascii? c) (not (memv c '(#\\ #\")))))
+(def DoubleStringNonescCharacter (sat double-string-nonesc-char?))
+
+(def (single-string-nonesc-char? c)
+  (and (char-ascii? c) (not (memv c '(#\\ #\')))))
+(def SingleStringNonescCharacter (sat single-string-nonesc-char?))
+
+(def DoubleStringEscapeSequence
+  (.begin #\\
+    (.or #\\ #\" (.begin #\n (return #\newline)))))
+
+(def SingleStringEscapeSequence
+  (.begin #\\
+    (.or #\\ #\' (.begin #\n (return #\newline)))))
 
 (def DoubleStringCharacter
-    (.begin (.not (.or #\" LineTerminator)) SourceCharacter))
+    (.or DoubleStringNonescCharacter DoubleStringEscapeSequence))
+
+(def SingleStringCharacter
+    (.or SingleStringNonescCharacter SingleStringEscapeSequence))
 
 (def DoubleStringCharacters (many DoubleStringCharacter))
+
+(def SingleStringCharacters (many SingleStringCharacter))
 
 (def DoubleQuoteStringLiteral
     (.let* (cs (bracket #\" DoubleStringCharacters #\"))
         `(DoubleQuoteStringLiteral ,(list->string cs))))
-
-
-(def SingleStringCharacter
-    (.begin (.not (.or #\' LineTerminator)) SourceCharacter))
-
-(def SingleStringCharacters (many SingleStringCharacter))
 
 (def SingleQuoteStringLiteral
     (.let* (cs (bracket #\' SingleStringCharacters #\'))

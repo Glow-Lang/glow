@@ -47,9 +47,11 @@
 ;; lit->sexpr : Literal -> SExpr
 (def (lit->sexpr x)
   (match x
-    ((boolean-literal value) value)
+    ((boolean-literal "true") #t)
+    ((boolean-literal "false") #f)
     ((numeric-literal value) (string->number value))
-    ((string-literal ['DoubleQuoteStringLiteral str]) str)))
+    ((string-literal ['DoubleQuoteStringLiteral str]) str)
+    ((string-literal ['SingleQuoteStringLiteral str]) str)))
 
 ;; type->sexpr : Type -> SExpr
 (def (type->sexpr t)
@@ -159,4 +161,6 @@
     ((pattern-or pats) `(@or-pat ,@(map pat->sexpr pats)))
     ((pattern-list args) `(@list ,@(map pat->sexpr args)))
     ((pattern-record entries)
-     `(@record ,@(map (match <> ([k . v] [(id->sexpr k) (pat->sexpr v)])) entries)))))
+     `(@record ,@(map (match <> ([k . v] [(id->sexpr k) (pat->sexpr v)])) entries)))
+    ((pattern-app-ctor id args)
+     `(@app-ctor ,(id->sexpr id) ,@(map pat->sexpr args)))))

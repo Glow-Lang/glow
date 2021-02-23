@@ -35,17 +35,19 @@
   (Var Int)
   (Lam lcexpr)
   (App lcexpr lcexpr))
-(def omega (App (Lam (App (Var 0) (Var 0)))
-                (Lam (App (Var 0) (Var 0)))))
+(def omega
+  (@app App
+        (@app Lam (@app App (@app Var 0) (@app Var 0)))
+        (@app Lam (@app App (@app Var 0) (@app Var 0)))))
 (def freevars
   (λ ((e : lcexpr))
     (switch e
-      ((Var x) (@list x))
+      ((@app-ctor Var x) (@list x))
       (_ (@list 0 1 2 3 4 5 6 7 8 9))))) ; TODO: fix when we add recursion
 (switch omega
-  ((App (Lam b) a) "beta")
-  ((Lam (App f (Var 0)))
-   (if (not (member 0 (freevars f)))
+  ((@app-ctor App (@app-ctor Lam b) a) "beta")
+  ((@app-ctor Lam (@app-ctor App f (@app-ctor Var 0)))
+   (if (@app not (@app member 0 (@app freevars f)))
        "eta"
        "not immediate"))
   (_ "not immediate"))
@@ -62,7 +64,7 @@
     (switch a
       (Yes #t)
       ((@or-pat No Maybe) #f))))
-(switch (@tuple (possible ans) (definite ans))
+(switch (@tuple (@app possible ans) (@app definite ans))
   ((@tuple #t #t) "yes")
   ((@tuple #t #f) "maybe")
   ((@tuple #f #f) "no")
