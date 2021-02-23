@@ -36,7 +36,8 @@ a block comment */
 @subsection{Naming objects in Glow}
 
 A variable name is made one or more of the characters
-@litchar{[_a-zA-Z0-9]} and doesn't start with a digit.
+@litchar{[_a-zA-Z0-9!$]} but must start with an alphabetic
+character.
 
 Moreover, the variable @racket[_] is reserved to denote a pattern
 that matches anything but whose value is ignored. A few other names are reserved,
@@ -45,7 +46,7 @@ notably for the keywords of the language or a few languages that might be proble
 There are terms that can't be used to name objects,
 as they are already used as Keywords by either Glow or other languages that interact with it:
 
-@racket[abstract] @racket[arguments] @racket[assert] @racket[boolean] @racket[break] @racket[byte] @racket[case] @racket[catch] @racket[class] @racket[char] @racket[const] @racket[continue] @racket[data] @racket[debugger] @racket[default] @racket[delete] @racket[deposit] @racket[do] @racket[double] @racket[else] @racket[enum] @racket[eval] @racket[export] @racket[extends] @racket[false] @racket[final] @racket[finally] @racket[float] @racket[for] @racket[function] @racket[goto] @racket[if] @racket[implements] @racket[import] @racket[in] @racket[instanceof] @racket[int] @racket[interface] @racket[let] @racket[long] @racket[native] @racket[new] @racket[null] @racket[package] @racket[private] @racket[protected] @racket[public] @racket[rec] @racket[require] @racket[return] @racket[short] @racket[static] @racket[sum] @racket[super] @racket[switch] @racket[synchronized] @racket[this] @racket[throw] @racket[throws] @racket[transient] @racket[true] @racket[try] @racket[type] @racket[typeof] @racket[var] @racket[verify] @racket[void] @racket[volatile] @racket[while] @racket[with] @racket[yield] @racket[withdraw]
+@racket[abstract] @racket[arguments] @racket[assert!] @racket[boolean] @racket[break] @racket[byte] @racket[case] @racket[catch] @racket[class] @racket[char] @racket[const] @racket[continue] @racket[data] @racket[debugger] @racket[default] @racket[delete] @racket[deposit!] @racket[do] @racket[double] @racket[else] @racket[enum] @racket[eval] @racket[export] @racket[extends] @racket[false] @racket[final] @racket[finally] @racket[float] @racket[for] @racket[function] @racket[goto] @racket[if] @racket[implements] @racket[import] @racket[in] @racket[instanceof] @racket[int] @racket[interface] @racket[let] @racket[long] @racket[native] @racket[new] @racket[null] @racket[package] @racket[private] @racket[protected] @racket[public] @racket[publicly!] @racket[publish!] @racket[rec] @racket[require] @racket[require!] @racket[return] @racket[short] @racket[static] @racket[sum] @racket[super] @racket[switch] @racket[synchronized] @racket[this] @racket[throw] @racket[throws] @racket[transient] @racket[true] @racket[try] @racket[type] @racket[typeof] @racket[var] @racket[verifiably!] @racket[verify!] @racket[void] @racket[volatile] @racket[while] @racket[with] @racket[yield] @racket[withdraw!]
 
 Capitalization is conventionally used for types, constructors and constants,
 while regular variables conventionally start with lower-case letter and are in "CamelCase".
