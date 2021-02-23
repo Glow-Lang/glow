@@ -13,7 +13,11 @@ Currently GLOW supports three example contracts.
 
 @bold{Buy Signature Agreement}
 
-A buy-sig contract is an interaction between two parties, where the contract specifies the sale price and the hash of the document to be signed. When the seller provides the correct signature proving that they have signed the correct document, the contract releases moves the price amount from the buyer, to the seller.
+A buy-sig contract is an interaction between two parties, where the contract 
+specifies the sale price and the hash of the document to be signed. When the
+seller provides the correct signature proving that they have signed the correct
+document, the contract releases moves the price amount from the buyer, to the
+seller.
 
 Parameters
 @itemize[
@@ -25,7 +29,10 @@ Parameters
 
 @bold{Coin Flip Game}
 
-A coin flip game is an interaction between two parties, where the contract specifies the wager amount and calculates the winner based on integers chosen by each player. When both parties provide their choice, called a "hand", the contract computes the winner and sends the wager to that party.
+A coin flip game is an interaction between two parties, where the contract
+specifies the wager amount and calculates the winner based on integers chosen
+by each player. When both parties provide their choice, called a "hand", the
+contract computes the winner and sends the wager to that party.
 
 Parameters
 @itemize[
@@ -38,7 +45,12 @@ Parameters
 
 @bold{Rock Paper Scissors Game}
 
-A rock-paper-scissors game is an interaction between two parties, where the contract specifies the wager amount and calculates the winner based on simple rules (Rock > Scissors, Scissors > Paper, Paper > Rock). When both parties provide their choice, called a "hand", the contract computes the winner and sends the wager to that party. In the event of a tie, the interaction is complete and the wager does not exchange between the players.
+A rock-paper-scissors game is an interaction between two parties, where the
+ contract specifies the wager amount and calculates the winner based on simple
+ rules (Rock > Scissors, Scissors > Paper, Paper > Rock). When both parties
+ provide their choice, called a "hand", the contract computes the winner and
+ sends the wager to that party. In the event of a tie, the interaction is
+ complete and the wager does not exchange between the players.
 
 Parameters
 @itemize[
