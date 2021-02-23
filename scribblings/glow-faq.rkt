@@ -25,3 +25,4 @@
     @item{Will GLOW allow me to make a full DApp from scratch? Ultimately, you will be able to use GLOW on ANY DApp, but for blockchain-related functions. If you are making a video game and willing to create a physics engine, or if you are looking for neat design features, these aren't what GLOW does. For that, you'll still have to use other languages.}
 
     @item{Will the .GLOW files that I make in the beta be compatible with the next versions of GLOW? Normally, yes! If we ever introduce incompatibilities, we'll do our best to drive the community towards a new workflow.}
+]
