@@ -57,7 +57,7 @@
       maxInitialBlock: (maxInitialBlock #f))
   (set! block (or block (eth_blockNumber)))
   {;; To be filled "manually" from the user inputs
-   interaction: "mukn/glow/examples/buy_sig#payForSignature"
+   interaction: "mukn/glow/dapps/buy_sig#payForSignature"
    participants: (.o Buyer: buyer Seller: seller)
    parameters: (hash
                 (digest (json<- Digest digest))
@@ -68,7 +68,7 @@
 
    ;; Filled in automatically by Glow
    glow-version: (software-identifier)
-   code-digest: (digest<-file (source-path "examples/buy_sig.glow"))
+   code-digest: (digest<-file (source-path "dapps/buy_sig.glow"))
 
    ;; Filled in automatically by the DApp from its blockchain configuration
    options: {blockchain: (.@ (ethereum-config) name)

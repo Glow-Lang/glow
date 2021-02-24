@@ -25,7 +25,7 @@
 (def wagerAmount (wei<-ether .5))
 (def escrowAmount (wei<-ether .01))
 
-(def coin_flip.glow (source-path "examples/coin_flip.glow"))
+(def coin_flip.glow (source-path "dapps/coin_flip.glow"))
 
 (def (make-agreement)
   ;; Should `timeout` be the value of `(ethereum-timeout-in-blocks)`,
@@ -33,7 +33,7 @@
   (def timeout (ethereum-timeout-in-blocks))
   (def initial-timer-start (+ (eth_blockNumber) timeout))
   (.o
-    interaction: "mukn/glow/examples/coin_flip#coinFlip"
+    interaction: "mukn/glow/dapps/coin_flip#coinFlip"
     participants: (.o A: a-address B: b-address)
     parameters: (hash
                   (wagerAmount (json<- Ether wagerAmount))

@@ -1,6 +1,6 @@
 #!/usr/bin/env gxi
 
-;; Runs project-2 on the `.sexp` files in `../../../examples`.
+;; Runs project-2 on the `.sexp` files in `../../../dapps`.
 
 (export #t)
 
@@ -61,7 +61,7 @@
 
 ;; try-project-2-all : -> Void
 (def (try-project-2-all)
-  (try-project-2-files (examples.glow)))
+  (try-project-2-files (dapps.glow)))
 
 (def project-2-test
   (test-suite "test suite for glow/compiler/project"
@@ -69,7 +69,7 @@
       (try-project-2-all)
       ; (try-project-2-files
       ;   (for/collect
-      ;     ((s (examples.glow)
+      ;     ((s (dapps.glow)
       ;         when (or (pregexp-match "buy_sig.glow" s))))
       ;     s))
       (void))))
