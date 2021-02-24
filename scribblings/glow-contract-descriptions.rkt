@@ -1,9 +1,9 @@
 @(require "glow-code.rkt"
           "glow-docs.rkt"
           (for-label glow))
-@title{Glow Contracts Supported}
+@title{@(Glow) DApps Supported}
 
-Currently GLOW supports three example contracts.
+Currently @(Glow) supports three example DApps.
 
 @bold{@itemize[
     @item{Buy Signature Agreement}
@@ -13,10 +13,10 @@ Currently GLOW supports three example contracts.
 
 @bold{Buy Signature Agreement}
 
-A buy-sig contract is an interaction between two parties, where the contract 
+A buy-sig agreement is an interaction between two parties, where the DApp 
 specifies the sale price and the hash of the document to be signed. When the
 seller provides the correct signature proving that they have signed the correct
-document, the contract releases moves the price amount from the buyer, to the
+document, the DApp releases moves the price amount from the buyer, to the
 seller.
 
 Parameters
@@ -29,10 +29,10 @@ Parameters
 
 @bold{Coin Flip Game}
 
-A coin flip game is an interaction between two parties, where the contract
+A coin flip game is an interaction between two parties, where the DApp
 specifies the wager amount and calculates the winner based on integers chosen
 by each player. When both parties provide their choice, called a "hand", the
-contract computes the winner and sends the wager to that party.
+DApp computes the winner and sends the wager to that party.
 
 Parameters
 @itemize[
@@ -46,9 +46,9 @@ Parameters
 @bold{Rock Paper Scissors Game}
 
 A rock-paper-scissors game is an interaction between two parties, where the
- contract specifies the wager amount and calculates the winner based on simple
+ DApp specifies the wager amount and calculates the winner based on simple
  rules (Rock > Scissors, Scissors > Paper, Paper > Rock). When both parties
- provide their choice, called a "hand", the contract computes the winner and
+ provide their choice, called a "hand", the DApp computes the winner and
  sends the wager to that party. In the event of a tie, the interaction is
  complete and the wager does not exchange between the players.
 
