@@ -8,11 +8,11 @@
   :clan/persist/db :clan/persist/content-addressing :clan/versioning :clan/pure/dict/symdict
   :mukn/ethereum/assets :mukn/ethereum/cli :mukn/ethereum/ethereum :mukn/ethereum/network-config
   :mukn/ethereum/types :mukn/ethereum/json-rpc :mukn/ethereum/known-addresses
-  :mukn/glow/runtime/participant-runtime :mukn/glow/runtime/reify-contract-parameters :mukn/glow/runtime/configuration
+  :mukn/glow/runtime/participant-runtime :mukn/glow/runtime/reify-contract-parameters
   :mukn/glow/runtime/program :mukn/glow/runtime/terminal-codes
   (only-in :mukn/glow/compiler/alpha-convert/alpha-convert init-syms)
   :mukn/glow/compiler/passes :mukn/glow/compiler/multipass :mukn/glow/compiler/syntax-context
-  :mukn/glow/cli/contacts)
+  :mukn/glow/cli/contacts :mukn/glow/cli/identities)
 
 (def options/interaction
   (make-options
@@ -27,7 +27,7 @@
      (option 'max-initial-block "-B" default: #f
              help: "maximum block number the contract can begin at")]
     []
-    [options/database options/ethereum-network options/test options/contacts]))
+    [options/database options/ethereum-network options/test options/contacts options/identities]))
 
 (def (ask-option name options)
   (def options-count (length options))
@@ -76,15 +76,29 @@
 
 ;; TODO: Catch parsing errors and show example inputs.
 (def (ask-address name contacts)
-  (def known-addresses
+  (def contacts-copy (hash-copy contacts))
+  (def identity-addresses
     (map
       (match <>
-        ([_ . contact]
+        ([nickname . address]
+          ;; Don't show contacts that are also identities twice.
+          (hash-remove! contacts-copy nickname)
+          (cons nickname [Address . address])))
+      (hash->list/sort address-by-nickname string<?)))
+  (def contact-addresses
+    (map
+      (match <>
+        ([nickname-key . contact]
           (let (address (.@ contact address))
             (cons (.@ contact nickname) [Address . address]))))
-      (hash->list/sort contacts string<?)))
-  (def chosen-contact (ask-option name known-addresses))
-  (.@ (hash-get contacts (string-downcase chosen-contact)) address))
+      (hash->list/sort contacts-copy string<?)))
+  (def chosen-nickname
+    (ask-option name (append identity-addresses contact-addresses)))
+  (if-let (address (hash-get address-by-nickname (string-downcase chosen-nickname)))
+    address
+    (if-let (contact (hash-get contacts (string-downcase chosen-nickname)))
+      (.@ contact address)
+      (error "Invalid selection: " chosen-nickname))))
 
 (def (display-prompt name)
   (displayln CYAN name)
@@ -110,7 +124,9 @@
       (def role-address
         (if (equal? selected-role role-name)
           (hash-get address-by-nickname selected-identity)
-          (ask-address (string-append "Select address for " (symbol->string role-name)) contacts)))
+          (ask-address
+            (string-append "Select address for " (symbol->string role-name))
+            contacts)))
       (hash-put! participants role-name role-address))
     participants))
 
@@ -235,12 +251,13 @@
     (let (role-names
             (sort (filter identity (hash-keys (interaction-info-specific-interactions interaction-info))) symbol<?)))
 
+    (let (identities (load-identities from: (hash-get options 'identities))))
+
     (let (selected-identity (ask-identity options)))
     (let (selected-role (ask-role options role-names)))
 
     (let (contacts (load-contacts (hash-get options 'contacts))))
-    (let (participants-table
-            (ask-participants selected-identity (symbolify selected-role) role-names contacts)))
+    (let (participants-table (ask-participants selected-identity (symbolify selected-role) role-names contacts)))
     (let (parameters (ask-parameters program (interaction-info-parameter-names interaction-info))))
     (let (current-block-number (eth_blockNumber)))
     (let (max-initial-block (ask-max-initial-block options current-block-number)))
