@@ -3,7 +3,7 @@
 @(require "glow-code.rkt"
           "glow-docs.rkt"
           (for-label glow))
-@title{@(Glow) DApps Supported}
+@title{Glow DApps Supported}
 
 Currently @(Glow) supports three example DApps.
 
@@ -13,7 +13,7 @@ Currently @(Glow) supports three example DApps.
     @item{@bold{Rock Paper Scissors Game}}
 ]
 
-@bold{Buy Signature Agreement}
+@subsection{Buy Signature Agreement}
 
 A buy-sig agreement is an interaction between two parties, where the DApp specifies
 the sale price and the hash of the document to be signed. When the seller provides
@@ -28,7 +28,7 @@ Parameters
     @item{Document Hash to be Signed}
 ]
 
-@bold{Coin Flip Game}
+@subsection{Coin Flip Game}
 
 A coin flip game is an interaction between two parties, where the DApp specifies
 the wager amount and calculates the winner based on integers chosen by each player.
@@ -48,7 +48,7 @@ Parameters
     @item{Wager. This amount will be sent from the loser to the winner after execution.}
 ]
 
-@bold{Rock Paper Scissors Game}
+@subsection{Rock Paper Scissors Game}
 
 A rock-paper-scissors game is an interaction between two parties, where the DApp
 specifies the wager amount and calculates the winner based on simple rules
