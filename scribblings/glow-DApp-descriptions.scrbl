@@ -1,3 +1,5 @@
+#lang scribble/manual
+
 @(require "glow-code.rkt"
           "glow-docs.rkt"
           (for-label glow))
