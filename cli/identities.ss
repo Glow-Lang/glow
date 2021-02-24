@@ -126,7 +126,7 @@
     (let ()
       (unless ($ to) (error "Missing recipient. Please use option --to"))
       (def to
-        (if-let (address (hash-get address-by-nickname ($ to)))
+        (if-let (address (keypair-address (hash-get identities ($ to))))
           address
           (parse-address ($ to))))
        ;; *after* the above, so we have croesus, but the user may have their own alice.
