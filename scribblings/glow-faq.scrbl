@@ -4,7 +4,7 @@
           "glow-docs.rkt"
           (for-label glow))
 
-@title{@(Glow) FAQ}
+@title{Glow FAQ}
 
 @itemize[
     @item{Is @(Glow) a platform? A language? Both? Both! @(Glow) is a DSL, a domain-specific
