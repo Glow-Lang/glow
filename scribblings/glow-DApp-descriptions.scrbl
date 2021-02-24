@@ -7,11 +7,11 @@
 
 Currently @(Glow) supports three example DApps.
 
-@bold{@itemize[
-    @item{Buy Signature Agreement}
-    @item{Coin Flip Game}
-    @item{Rock Paper Scissors Game}
-]}
+@itemize[
+    @item{@bold(Buy Signature Agreement)}
+    @item{@bold(Coin Flip Game)}
+    @item{@bold(Rock Paper Scissors Game)}
+]
 
 @bold{Buy Signature Agreement}
 
