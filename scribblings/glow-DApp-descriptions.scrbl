@@ -5,15 +5,15 @@
           (for-label glow))
 @title{Glow DApps Supported}
 
-Currently @(Glow) supports three example DApps.
+Currently Glow supports three example DApps.
 
 @itemize[
-    @item{@bold{Buy Signature Agreement}}
-    @item{@bold{Coin Flip Game}}
-    @item{@bold{Rock Paper Scissors Game}}
+    @item{@secref{Buy_Sign}}
+    @item{@secref{Coin_Flip}}
+    @item{@secref{Rock_Paper_Scissors}}
 ]
 
-@subsection{Buy Signature Agreement}
+@section[#:tag "Buy_Sign"]{Buy Signature Agreement}
 
 A buy-sig agreement is an interaction between two parties, where the DApp specifies
 the sale price and the hash of the document to be signed. When the seller provides
@@ -28,7 +28,7 @@ Parameters
     @item{Document Hash to be Signed}
 ]
 
-@subsection{Coin Flip Game}
+@section[#:tag "Coin_Flip"]{Coin Flip Game}
 
 A coin flip game is an interaction between two parties, where the DApp specifies
 the wager amount and calculates the winner based on integers chosen by each player.
@@ -44,11 +44,11 @@ Parameters
     @item{Player 1 Address}
     @item{Player 1 Integer Choice}
     @item{Player 2 Address}
-    @item{Player 2 Integer Choice. This is provided after the DApp is deployed.}
-    @item{Wager. This amount will be sent from the loser to the winner after execution.}
+    @item{Player 2 Integer Choice - This is provided after the DApp is deployed.}
+    @item{Wager - This amount will be sent from the loser to the winner after execution.}
 ]
 
-@subsection{Rock Paper Scissors Game}
+@section[#:tag "Rock_Paper_Scissors"]{Rock Paper Scissors Game}
 
 A rock-paper-scissors game is an interaction between two parties, where the DApp
 specifies the wager amount and calculates the winner based on simple rules
@@ -62,6 +62,6 @@ Parameters
     @item{Player 1 Address}
     @item{Player 1 Hand}
     @item{Player 2 Address}
-    @item{Player 2 Hand. This is provided after the DApp is deployed.}
-    @item{Wager. This amount will be sent from the loser to the winner after execution.}
+    @item{Player 2 Hand - This is provided after the DApp is deployed.}
+    @item{Wager - This amount will be sent from the loser to the winner after execution.}
 ]
