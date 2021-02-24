@@ -30,12 +30,12 @@ Parameters
 
 A coin flip game is an interaction between two parties, where the DApp specifies
 the wager amount and calculates the winner based on integers chosen by each player.
-When both parties provide their choice (in the form of an integer) the DApp computes
-the winner and sends the wager to that party. This DApp illustrates how untrusting
-participants can generate a number mutually trusted to be random. The uses for this
-protocol are far ranging in a wide number of situations, and the bet on whether the
-number is odd is only meant for illustration, being the simplest way to use the
-randomness to control the distribution of digital assets.
+Each party provides their choice (randomly generated integer) from which the DApp
+computes the winner and sends the wager to that party. This DApp illustrates how
+untrusting participants can generate a number mutually trusted to be random. The
+uses for this protocol are far ranging in a wide number of situations, and the bet
+on whether the number is odd is only meant for illustration, being the simplest way
+to use the randomness to control the distribution of digital assets.
 
 Parameters
 @itemize[
