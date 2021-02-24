@@ -43,17 +43,11 @@
     [(option 'identities "-I" "--identities" default: (secret-key-ring)
              help: "file to load and store identities")] []))
 
-(def options/identity-metadata
-  (make-options
-    [(option 'type "-T" "--type" default: 'kecakk-256
-               help: "type of identity address")
-     (option 'blockchain "-B" "--blockchain" default: 'ethereum
-               help: "blockchain of the address")] []))
-
 (define-entry-point (add-identity . arguments)
   "Add identity"
   (def options/add
     (make-options
+      ;; TODO: Consolidate with contact options
       [(option 'nickname "-N" "--nickname"
                help: "nickname of identity")
        (option 'address "-A" "--address"
@@ -63,7 +57,7 @@
        (option 'secret-key "-S" "--secret-key"
                help: "secret key of identity")]
       []
-      [options/test options/identities options/identity-metadata]))
+      [options/test options/identities]))
   (def options (process-options options/add arguments))
   (def nickname (hash-get options 'nickname))
   (def new-keypair
@@ -83,7 +77,7 @@
        (option 'prefix "-P" "--prefix" default: #f
                help: "hex prefix of generated generated address")]
       []
-      [options/test options/identities options/identity-metadata]))
+      [options/test options/identities]))
   (def options (process-options options/generate arguments))
   (def nickname (hash-get options 'nickname))
   (def scoring

@@ -41,6 +41,8 @@
   "Add contact"
   (def options/add
     (make-options
+      ;; TODO: Store all non-required options as tags
+      ;; TODO: Add network parameter?
       [(option 'nickname "-N" "--nickname"
                help: "nickname of contact")
        (option 'address "-A" "--address"
