@@ -348,9 +348,11 @@ BigInt is a disjoint type, and its literals have a "n" suffix to distinguish the
 so that @literal{12345678901234567890} will be a floating point number, approximating away the low digits,
 whereas @literal{12345678901234567890n} will be an integer, preserving them.
 
-In @(Glow), we only have BigInt-style integers and no floating point,
-because blockchains casually operate on numbers up to 256-bit wide,
-and some blockchains can even go beyond.
+In @(Glow), we only have non-negative integers from 0 up to
+2**256 - 1 and no floating point, because blockchains
+casually operate on numbers up to 256-bit wide.
+In the future we will have BigInt-style integers, as
+described in @secref{Near-Future_Plans}.
 Like in ReasonML and unlike in JavaScript, our integer literals do not have this @literal{n} suffix,
 and it is very clear what we are doing.
 Furthermore, our bitwise operations are tripled,

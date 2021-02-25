@@ -468,8 +468,7 @@ manipulating digital assets on decentralized ledgers,
 according to rules verifiable by blockchain smart contracts.
 Semantically, Glow is an applicative language with a pure functional programming core
 extended with a few primitives and annotations making it suitable for for multiparty computation.
-It has a static type system based on MLsub, and static safety analyses
-that are discharged by a theorem solver. (TODO: complete the static analyses.)
+It has a static type system based on MLsub.
 
 If you are a seasoned developer, you can check our less-detailed and straight-to-the-point grammar,
 our @secref["Glow_Language_Grammar"].
