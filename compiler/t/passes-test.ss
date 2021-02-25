@@ -13,5 +13,5 @@
       (force-current-outputs)
       (test-case (format "Running all passes on ~a" e)
         (run-passes e)))
-    (for-each test-example (examples.sexp))
-    (for-each test-example (examples.glow))))
+    (for-each test-example (dapps.sexp))
+    (for-each test-example (dapps.glow))))

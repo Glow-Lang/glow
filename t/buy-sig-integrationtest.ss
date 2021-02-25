@@ -39,12 +39,12 @@
       (def timeout (ethereum-timeout-in-blocks))
       (def initial-timer-start (+ (eth_blockNumber) timeout))
 
-      (def buy_sig.glow (source-path "examples/buy_sig.glow"))
+      (def buy_sig.glow (source-path "dapps/buy_sig.glow"))
 
       (def agreement
         (.o
          glow-version: (software-identifier)
-         interaction: "mukn/glow/examples/buy_sig#payForSignature"
+         interaction: "mukn/glow/dapps/buy_sig#payForSignature"
          participants: (.o Buyer: buyer-address Seller: seller-address)
          parameters: (hash
                       (digest (json<- Digest digest))

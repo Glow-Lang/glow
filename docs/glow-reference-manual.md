@@ -1246,7 +1246,7 @@ and various other digests:
 ```
 ["interaction-agreement",
   {"glow-version": "v0.0-383-g83524b1",
-    "interaction": "mukn/glow/examples/buy_sig#payForSignature",
+    "interaction": "mukn/glow/dapps/buy_sig#payForSignature",
     "participants": {"Buyer": "0xC54e86DFFb87B9736E2E35DD85c775358F1c31CE",
                      "Seller": "0x9CcaEd210CE8c0Cb49c5Ad1C4f583406c264BA69"},
     "parameters": {"digest": "0x7a33c718fe7f3b9c56bd67b7b3e20fec6e3edf083626a7e11a10bba90243e405"

@@ -3,7 +3,7 @@ To generate from the command-line in the glow directory:
 ./compiler/project/t/project-2-test.ss
 To run from gxi in the glow directory, assuming gerbil-etherum is in a sibling directory:
 > (add-load-path (path-normalize "../gerbil-ethereum"))
-> (import "examples/buy_sig.project-2.ss" :mukn/ethereum/testing :clan/persist/content-addressing)
+> (import "dapps/buy_sig.project-2.ss" :mukn/ethereum/testing :clan/persist/content-addressing)
 > ((payForSignature alice-address bob-address) (digest<-string "hello") 1)
 |#
 (export #t)

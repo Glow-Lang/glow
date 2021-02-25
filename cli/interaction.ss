@@ -106,9 +106,9 @@
 
 (def (ask-application)
   (ask-option "Choose application"
-    [(cons "mukn/glow/examples/coin_flip" "coin_flip")
-     (cons "mukn/glow/examples/buy_sig" "buy_sig")
-     (cons "mukn/glow/examples/rps_simple" "rps_simple")]))
+    [(cons "mukn/glow/dapps/coin_flip" "coin_flip")
+     (cons "mukn/glow/dapps/buy_sig" "buy_sig")
+     (cons "mukn/glow/dapps/rps_simple" "rps_simple")]))
 
 (def (ask-interaction interactions)
   (match interactions

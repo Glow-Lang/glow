@@ -1,6 +1,6 @@
 #!/usr/bin/env gxi
 
-;; Runs the typchecker on the `.sexp` files in `../../examples`.
+;; Runs the typchecker on the `.sexp` files in `../../dapps`.
 
 (export #t)
 
@@ -101,7 +101,7 @@
 
 ;; try-typecheck-all : -> Void
 (def (try-typecheck-all)
-  (try-typecheck-files (examples.sexp)))
+  (try-typecheck-files (dapps.sexp)))
 
 ;; typecheck-test : TestSuite
 (def typecheck-test

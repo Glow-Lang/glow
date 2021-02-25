@@ -10,17 +10,17 @@
   :mukn/glow/compiler/multipass
   :mukn/glow/compiler/passes)
 
-;; examples-dir
-(def (examples-dir)
-  (path-simplify (path-expand "examples" (glow-src))))
+;; dapps-dir
+(def (dapps-dir)
+  (path-simplify (path-expand "dapps" (glow-src))))
 
-;; examples.sexp : -> [Listof Path]
-(def (examples.sexp)
-  (find-files (examples-dir) (λ (x) (equal? (identify-layer x) 'sexp))))
+;; dapps.sexp : -> [Listof Path]
+(def (dapps.sexp)
+  (find-files (dapps-dir) (λ (x) (equal? (identify-layer x) 'sexp))))
 
-;; examples.glow : -> [Listof Path]
-(def (examples.glow)
-  (find-files (examples-dir) (λ (x) (equal? (identify-layer x) 'glow))))
+;; dapps.glow : -> [Listof Path]
+(def (dapps.glow)
+  (find-files (dapps-dir) (λ (x) (equal? (identify-layer x) 'glow))))
 
 (def (ppd x) (pretty-print (syntax->datum x)))
 
