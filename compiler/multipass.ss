@@ -20,7 +20,7 @@
 (import
   :std/format :std/iter :std/misc/ports :std/misc/string
   :std/srfi/1 :std/srfi/13 :std/sugar
-  :clan/base :clan/files :clan/path
+  :clan/base :clan/files :clan/path :clan/path-config
   :mukn/glow/compiler/common :mukn/glow/path-config)
 
 ;; A "layer" of language has a name, a reader and a writer.
@@ -116,7 +116,9 @@
 
 ;; PathString -> Bool
 (def (known-failure? x)
-  (and (with-catch false (cut member (subpath? (path-normalize x) (glow-src)) known-failures)) #t))
+  (and (with-catch false (cut member (subpath? (path-normalize x) (application-source-directory))
+                              known-failures))
+       #t))
 
 ;; A Representation+AncillaryData is a [Hashof Symbol Any]
 ;; where each key is the name of a layer as a symbol

@@ -4,7 +4,8 @@
   :gerbil/gambit/misc
   :gerbil/expander
   :std/getopt :std/iter
-  :clan/base :clan/exit :clan/filesystem :clan/multicall :clan/path :clan/persist/content-addressing
+  :clan/base :clan/exit :clan/filesystem :clan/multicall :clan/path :clan/path-config
+  :clan/persist/content-addressing
   :mukn/ethereum/hex
   :mukn/glow/path-config
   :mukn/glow/compiler/multipass
@@ -12,7 +13,7 @@
 
 ;; dapps-dir
 (def (dapps-dir)
-  (path-simplify (path-expand "dapps" (glow-src))))
+  (source-path "dapps"))
 
 ;; dapps.sexp : -> [Listof Path]
 (def (dapps.sexp)

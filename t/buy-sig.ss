@@ -89,7 +89,7 @@
   (def agreement (make-buy-sig-agreement buyer: buyer seller: seller price: price digest: digest))
 
   ;; TODO: replace the statements below by off-chain communication between buyer and seller
-  (create-directory* (run-path "t"))
+  (create-directory* (transient-path))
   (clobber-file agreement-path (cut write-json-ln (json<- InteractionAgreement agreement) <>))
   (displayln
    "Here is an agreement, also saved to file " agreement-path "\n"

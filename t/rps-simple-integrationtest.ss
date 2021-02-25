@@ -1,15 +1,3 @@
-#|
-In another terminal on `gerbil-ethereum`:
-$ ../gerbil-ethereum/scripts/run-geth-test-net.ss
-In the main terminal in `glow`:
-$ export GERBIL_APPLICATION_HOME=$PWD
-$ gxi
-> (add-load-path (path-normalize "../gerbil-ethereum"))
-> (import :std/test "t/rps-simpl-integrationtest.ss")
-> (run-tests! rps-simpl-integrationtest)
-input UInt256: First player, pick your hand: 0 (Rock), 1 (Paper), 2 (Scissors)
-0
-|#
 (export #t)
 
 (import
@@ -58,7 +46,7 @@ input UInt256: First player, pick your hand: 0 (Rock), 1 (Paper), 2 (Scissors)
   (test-suite "integration test for ethereum/rps_simple"
     (delete-agreement-handshake)
     (ensure-ethereum-connection "pet")
-    (ensure-db-connection (run-path "testdb"))
+    (ensure-db-connection "testdb")
     (DBG "Ensure participants funded")
     (ensure-addresses-prefunded)
     (DBG "DONE")

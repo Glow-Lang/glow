@@ -5,7 +5,7 @@
   :std/pregexp
   :std/format :std/iter :std/misc/hash :std/sugar :std/misc/number :std/misc/list :std/sort :std/srfi/1 :std/text/json
   :clan/base :clan/exception :clan/io :clan/json :clan/number
-  :clan/path-config :clan/ports :clan/syntax :clan/timestamp
+  :clan/path :clan/path-config :clan/ports :clan/syntax :clan/timestamp
   :clan/poo/object :clan/poo/io :clan/poo/debug :clan/debug :clan/crypto/random
   :clan/persist/content-addressing
   :mukn/ethereum/hex :mukn/ethereum/ethereum :mukn/ethereum/network-config :mukn/ethereum/json-rpc
@@ -60,7 +60,7 @@
   (displayln "Deleting any old agreement handshake file " file " ...")
   (ignore-errors (delete-file file)))
 
-(def (special-file:handshake) (run-path "agreement-handshake.json"))
+(def (special-file:handshake) (transient-path "agreement-handshake.json"))
 (def (handshake-timeout-in-seconds) (* 15 (ethereum-timeout-in-blocks)))
 
 ;; TODO: make an alternate version of io-context that
@@ -73,6 +73,7 @@
   (λ (handshake)
     (def file (special-file:handshake))
     (displayln "Writing agreement handshake to file " file " ...")
+    (create-directory* (path-parent file))
     (write-file-json (special-file:handshake) (json<- AgreementHandshake handshake)))
   receive-handshake:
   (λ ()

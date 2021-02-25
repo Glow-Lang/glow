@@ -11,7 +11,7 @@
     language. It is also a platform with libraries. In the long-run, we might name these two
     differently to avoid confusion.}
 
-    @item{What can I do with @(Glow)? DApps with @(Glow) with native tokensInteractions: 
+    @item{What can I do with @(Glow)? DApps with @(Glow) with native tokensInteractions:
     transaction from one person to another who don't trust each otherDirect-style code
     generation: the contract checks every transaction.}
 

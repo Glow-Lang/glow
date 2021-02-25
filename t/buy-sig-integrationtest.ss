@@ -25,7 +25,7 @@
     (test-case "buy sig runs successfully"
       (delete-agreement-handshake)
       (ensure-ethereum-connection "pet")
-      (ensure-db-connection (run-path "testdb"))
+      (ensure-db-connection "testdb")
 
       (DBG "Ensure participants funded")
       (ensure-addresses-prefunded)

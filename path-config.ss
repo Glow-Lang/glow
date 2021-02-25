@@ -7,18 +7,7 @@
 
 ;; TODO: nix: use ${pkgs.gerbilPackages-unstable.glow-lang.src} ?
 ;; TODO: no nix: use gxpkg's ${GERBIL_PATH:-$HOME/.gerbil}/pkg/gitlab.com/mukn/glow ?
-(def build-time-glow-src (path-simplify-directory (this-source-file)))
+(set! default-application-source-directory (path-simplify-directory (this-source-file)))
+(set! default-application-home-directory default-application-source-directory)
 
-(set! application-source-envvar "GLOW_SRC")
-(set! application-home-envvar "GLOW_HOME")
-
-(def (glow-src)
-  (or (getenv "GLOW_SRC" #f)
-      (and (file-exists? build-time-glow-src) build-time-glow-src)))
-(def (glow-home) (or (getenv "GLOW_HOME" #f) (glow-src)))
-(set! source-directory glow-src)
-(set! home-directory glow-home)
-
-(def (in-glow-src)
-  (current-directory (glow-src))
-  ((eval 'add-load-path) (glow-src)))
+(set! application-name (lambda () "glow"))

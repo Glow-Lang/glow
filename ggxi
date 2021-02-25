@@ -23,7 +23,6 @@ fi
 command=(
     gxi
     "${here}/all-glow.ss"
-    # -e "(add-load-path (glow-src))"
     "${swank[@]}" "${interaction[@]}" "$@")
 
 exec "${command[@]}"

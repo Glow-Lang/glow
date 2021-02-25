@@ -90,9 +90,9 @@
 ;; COPY THE LINE BELOW to files you try to debug
 (import :clan/debug)
 
-;;(extern namespace: #f add-load-path) (add-load-path (glow-src))
+;;(extern namespace: #f add-load-path) (add-load-path (application-source-directory))
 
-;;(printf "Welcome, Glow hacker\n")
+;;(displayln "Welcome, Glow hacker")
 
 ;;(##set-debug-settings! 15 3) ;; TODO: remember what this is about
 
