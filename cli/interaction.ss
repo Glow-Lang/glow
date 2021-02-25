@@ -14,21 +14,6 @@
   :mukn/glow/compiler/passes :mukn/glow/compiler/multipass :mukn/glow/compiler/syntax-context
   :mukn/glow/cli/contacts :mukn/glow/cli/identities)
 
-(def options/interaction
-  (make-options
-    [(flag 'backtrace "--backtrace"
-           help: "enable backtraces for debugging purposes")
-     (option 'agreement "-A" "--agreement" default: #f
-             help: "interaction parameters as JSON")
-     (option 'interaction "-I" "--interaction" default: #f
-             help: "path and name of interaction")
-     (option 'role "-R" "--role" default: #f
-             help: "role you want to play in the interaction")
-     (option 'max-initial-block "-B" default: #f
-             help: "maximum block number the contract can begin at")]
-    []
-    [options/database options/evm-network options/test options/contacts options/identities]))
-
 (def (ask-option name options)
   (def options-count (length options))
   ;; TODO: Move this somewhere else, probably gerbil-utils?
@@ -207,24 +192,42 @@
 
 ;; TODO: also accept local interaction parameters
 ;; TODO: accept alternative ethereum networks, etc
-(define-entry-point (start-interaction . arguments)
-  "Start an interaction based on an agreement"
-  (def options (process-options options/interaction arguments))
+(define-entry-point (start-interaction
+                     agreement: (agreement-json-string #f)
+                     interaction: (interaction #f)
+                     role: (role #f)
+                     max-initial-block: (max-initial-block #f)
+                     contacts: (contacts-file #f)
+                     identities: (identities-file #f))
+  (help: "Start an interaction based on an agreement"
+   getopt: (make-options
+            [(option 'agreement "-A" "--agreement" default: #f
+                     help: "interaction parameters as JSON")
+             (option 'interaction "-I" "--interaction" default: #f
+                     help: "path and name of interaction")
+             (option 'role "-R" "--role" default: #f
+                     help: "role you want to play in the interaction")
+             (option 'max-initial-block "-B" default: #f
+                     help: "maximum block number the contract can begin at")]
+            [(lambda (opt) (hash-remove! opt 'test))]
+            [options/contacts options/identities
+             options/evm-network options/database options/test options/backtrace]))
+  (def options (hash (max-initial-block max-initial-block) (role role)))
   (displayln)
   (defvalues (agreement selected-role)
-    (if-let (agreement-json-string (hash-get options 'agreement))
+    (if agreement-json-string
       (start-interaction/with-agreement options (<-json InteractionAgreement (json<-string agreement-json-string)))
-      (start-interaction/generate-agreement options)))
-  (let (environment (run:terminal (symbolify selected-role) agreement))
-    (displayln "Final environment:")
-    ;; TODO: get run to include type t and pre-alpha-converted labels,
-    ;; and output the entire thing as JSON omitting shadowed variables (rather than having conflicts)
-    ;; TODO: highlight the returned value in the interaction, and have buy_sig return signature
-    (for-each (match <> ([k t . v]
-                (if (equal? (symbolify k) 'signature)
-                  (display-object-ln BOLD k END " => " t v)
-                  (display-object-ln k " => " t v))))
-              (hash->list/sort environment symbol<?))))
+      (start-interaction/generate-agreement options contacts: contacts-file identities: identities-file)))
+  (def environment (run:terminal (symbolify selected-role) agreement))
+  (displayln "Final environment:")
+  ;; TODO: get run to include type t and pre-alpha-converted labels,
+  ;; and output the entire thing as JSON omitting shadowed variables (rather than having conflicts)
+  ;; TODO: highlight the returned value in the interaction, and have buy_sig return signature
+  (for-each (match <> ([k t . v]
+              (if (equal? (symbolify k) 'signature)
+                (display-object-ln BOLD k END " => " t v)
+                (display-object-ln k " => " t v))))
+            (hash->list/sort environment symbol<?)))
 
 ;; TODO: Validate that selected role matches selected identity in the agreement's participant table.
 (def (start-interaction/with-agreement options agreement)
@@ -238,7 +241,9 @@
          (selected-role (ask-role options role-names)))
   (values agreement selected-role)))
 
-(def (start-interaction/generate-agreement options)
+(def (start-interaction/generate-agreement
+      options
+      contacts: contacts-file identities: identities-file)
   (nest
     (let (application-name
             (get-or-ask options 'glow-app (λ () (ask-application)))))
@@ -251,12 +256,12 @@
     (let (role-names
             (sort (filter identity (hash-keys (interaction-info-specific-interactions interaction-info))) symbol<?)))
 
-    (let (identities (load-identities from: (hash-get options 'identities))))
+    (let (identities (load-identities from: identities-file)))
 
     (let (selected-identity (ask-identity options)))
     (let (selected-role (ask-role options role-names)))
 
-    (let (contacts (load-contacts (hash-get options 'contacts))))
+    (let (contacts (load-contacts contacts-file)))
     (let (participants-table (ask-participants selected-identity (symbolify selected-role) role-names contacts)))
     (let (parameters (ask-parameters program (interaction-info-parameter-names interaction-info))))
     (let (current-block-number (eth_blockNumber)))

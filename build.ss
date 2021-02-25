@@ -32,7 +32,7 @@
 
 ;; TODO: create version files for all overridden dependencies, too
 (define-entry-point (nix)
-  "Build using nix-build"
+  (help: "Build using nix-build")
   (create-version-file)
   (run-process ["nix-build"] stdin-redirection: #f stdout-redirection: #f)
   (void))

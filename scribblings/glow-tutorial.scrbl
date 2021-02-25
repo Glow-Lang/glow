@@ -61,7 +61,8 @@ You know how to make one for your users,
 but you lack the knowledge and experience in the field of DApps:
 Glow comes with many typical smart-contracts that you can use in your DApps.
 
-You just have to invoke one of our pre-made templates,
+You just have to invoke one of the Glow programs in
+[our standard library](http://gitlab.com/mukn/glow/),
 with parameters suitable to your use-case,
 and our software will let you safely interact with the blockchain.
 

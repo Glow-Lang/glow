@@ -80,7 +80,7 @@
                                (else (void)))}})
 
 (define-entry-point (make-buy-sig-agreement . arguments)
-  "Start an interaction based on an agreement"
+  (help: "Start an interaction based on an agreement")
   )
 
 

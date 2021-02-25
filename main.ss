@@ -11,12 +11,11 @@
   :mukn/glow/cli/contacts :mukn/glow/cli/interaction :mukn/glow/cli/identities)
 
 (define-entry-point (git-version)
-  "Print the git version that Glow was compiled from"
+  (help: "Print the git version that Glow was compiled from" getopt: [])
   (def glow-vstring (cdr (assoc "Glow" software-layers)))
   (def v (match (pregexp-match "^.*-[0-9]+-g([0-9a-f]+)$" glow-vstring)
            ([_ v] v)
            (_ glow-vstring)))
   (displayln v))
 
-(def (main . args)
-  (apply call-entry-point args))
+(define-multicall-main)

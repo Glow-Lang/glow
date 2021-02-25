@@ -49,13 +49,13 @@
        (getenv "GERBIL_LOADPATH" #f) (getenv "GERBIL_PATH" #f)))
 
 (define-entry-point (before-build)
-  "Prepare a build in Gitlab CI"
+  (help: "Prepare a build in Gitlab CI" getopt: [])
   (enable-cachix)
   (show-env-vars 'before-build:)
   (write-file-lines nix-store-pre-build (current-nix-store-paths)))
 
 (define-entry-point (build)
-  "Build in Gitlab CI"
+  (help: "Build in Gitlab CI" getopt: [])
   (displayln "build")
   ;; Compared to a plain "nix-build", this extracts nix version information from git.
   ;; NB: Like nix-build, this runs the unit-tests, but not integration tests.
@@ -65,10 +65,10 @@
                       "--arg" "thunk" "false"
                       "--arg" "precompile" "true"
                       "--pure"
-                      "--command" "./unit-tests.ss version"]))
+                      "--command" "./unit-tests.ss version --complete"]))
 
 (define-entry-point (after-build)
-  "Build in Gitlab CI"
+  (help: "Build in Gitlab CI" getopt: [])
   (displayln "after-build")
   ;;(def previous-paths (read-file-lines nix-store-pre-build))
   ;;(def current-paths (current-nix-store-paths))
@@ -99,7 +99,7 @@
 
 
 (define-entry-point (before-test)
-  "Prepare a test in Gitlab CI"
+  (help: "Prepare a test in Gitlab CI" getopt: [])
   (displayln "before-test")
   (enable-cachix)
   ;; For integration tests, nix-shell --pure causes us to run in an read-only directory,
@@ -118,7 +118,7 @@
   (void))
 
 (define-entry-point (test)
-  "Test in Gitlab CI"
+  (help: "Test in Gitlab CI" getopt: [])
   (displayln "test")
   (set-test-environment-variables)
   ;; NB: Regular unit-tests should already have been taken care of by the build
@@ -130,12 +130,12 @@
   (run-process/batch ["./unit-tests.ss" "check-git-up-to-date"]))
 
 (define-entry-point (after-test)
-  "Cleanup tests in Gitlab CI"
+  (help: "Cleanup tests in Gitlab CI" getopt: [])
   (displayln "after-test")
   (ignore-errors (run-process/batch ["killall" "geth"])))
 
 (define-entry-point (local-all)
-  "Do it all locally on your machine"
+  (help: "Do it all locally on your machine" getopt: [])
   ;; Compared to CI: doesn't build from clean filesystem and environment,
   (before-build)
   (build)
@@ -149,7 +149,7 @@
 
 ;; TODO: local build on docker
 (define-entry-point (docker-all)
-  "Build and test locally in docker containers, emulating CI"
+  (help: "Build and test locally in docker containers, emulating CI" getopt: [])
   (docker-build)
   (docker-test)
   #;(docker-doc)) ;; <- For now, done as part of test
@@ -167,19 +167,20 @@
                       docker-image "bash" "-c" command]))
 
 (define-entry-point (docker-build)
-  "Build locally in a docker container, emulating CI"
+  (help: "Build locally in a docker container, emulating CI" getopt: [])
   (docker-run "/root/glow-source/scripts/ci.ss in-docker-build"))
 
 (define-entry-point (docker-test)
-  "Run tests locally in a docker container, emulating CI"
+  (help: "Run tests locally in a docker container, emulating CI" getopt: [])
   (docker-run "/root/glow-source/scripts/ci.ss in-docker-test"))
 
-#;(define-entry-point (docker-doc)
-  "Build documentation locally in a docker container, emulating CI"
+#;
+(define-entry-point (docker-doc)
+  (help: "Build documentation locally in a docker container, emulating CI" getopt: [])
   (docker-run "/root/glow-source/scripts/ci.ss in-docker-doc"))
 
 (define-entry-point (in-docker-setup)
-  "(Internal) Setup local docker container"
+  (help: "(Internal) Setup local docker container" getopt: [])
   (run-process/batch ["sh" "-c" (string-append
                                  "rm -rf /root/glow ; "
                                  "cp -fax /root/glow-source /root/glow && "
@@ -188,21 +189,21 @@
   (current-directory "/root/glow"))
 
 (define-entry-point (in-docker-build)
-  "(Internal) Emulate CI build inside a local docker container"
+  (help: "(Internal) Emulate CI build inside a local docker container" getopt: [])
   (in-docker-setup)
   (run-process/batch ["./scripts/ci.ss" "before-build"])
   (run-process/batch ["./scripts/ci.ss" "build"])
   (run-process/batch ["./scripts/ci.ss" "after-build"]))
 
 (define-entry-point (in-docker-test)
-  "(Internal) Emulate CI test inside a local docker container"
+  (help: "(Internal) Emulate CI test inside a local docker container" getopt: [])
   (in-docker-setup)
   (run-process/batch ["./scripts/ci.ss" "before-test"])
   (run-process/batch ["./scripts/ci.ss" "test"])
   (run-process/batch ["./scripts/ci.ss" "after-test"]))
 
 #;(define-entry-point (in-docker-doc)
-  "(Internal) Emulate CI doc inside a local docker container"
+  (help: "(Internal) Emulate CI doc inside a local docker container" getopt: [])
   (in-docker-setup)
   (run-process/batch ["./scripts/ci.ss" "before-test"])
   (run-process/batch ["./scripts/ci.ss" "doc"]))

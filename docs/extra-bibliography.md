@@ -447,4 +447,5 @@ Chainlink
 
 * [Loyc](http://loyc.net/), Language-of-your-choice
 
+Diaspora, Scuttlebutt, Dreamwidth, MeWe, Minds, Hive.io, Discussions[CENSORED].app, Flote.app, Hubzilla, Element.io, Signal groups, etc
 -->
