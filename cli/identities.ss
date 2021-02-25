@@ -16,12 +16,14 @@
      (displayln (error-message e))
      (error "Failed to read and parse the secret key ring file" from))
    (lambda ()
-     (hash-key-value-map
-       (lambda (nickname keypair-json)
-         (def keypair (import-keypair/json keypair-json))
-         (register-keypair nickname keypair)
-         (cons nickname (import-keypair/json keypair-json)))
-      (read-file-json from)))))
+     (if (file-exists? from)
+      (hash-key-value-map
+        (lambda (nickname keypair-json)
+          (def keypair (import-keypair/json keypair-json))
+          (register-keypair nickname keypair)
+          (cons nickname (import-keypair/json keypair-json)))
+        (read-file-json from))
+      (make-hash-table)))))
 
 (def (store-identities identities from: (from (secret-key-ring)))
   (def identities-json
