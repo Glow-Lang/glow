@@ -1,9 +1,9 @@
 #|
 To generate from the command-line in the glow directory:
-./unit-tests.ss pass project-2 examples/rps.sexp
+./unit-tests.ss pass project-2 dapps/rps.sexp
 To run from gxi in the glow directory, assuming gerbil-etherum is in a sibling directory:
 > (add-load-path (path-normalize "../gerbil-ethereum"))
-> (import "examples/rps.project-2.ss" :mukn/ethereum/testing :clan/persist/content-addressing)
+> (import "dapps/rps.project-2.ss" :mukn/ethereum/testing :clan/persist/content-addressing)
 > ((rockPaperScissors alice-address bob-address) 1)
 input Hand: First player, pick your hand
 {"tag": "Rock", "value": []}
