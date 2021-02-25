@@ -1,10 +1,11 @@
 (export #t)
 
 (import
-  :std/getopt :std/iter :std/misc/hash :std/srfi/13
+  :std/getopt :std/format :std/iter :std/misc/hash :std/srfi/13 :std/sugar
   :clan/base :clan/config :clan/files :clan/json :clan/multicall :clan/syntax :clan/crypto/secp256k1
   :clan/poo/brace :clan/poo/cli :clan/poo/io :clan/poo/mop :clan/poo/object :clan/poo/type
-  :mukn/ethereum/cli :mukn/ethereum/hex :mukn/ethereum/ethereum :mukn/ethereum/known-addresses)
+  :mukn/ethereum/cli :mukn/ethereum/hex :mukn/ethereum/ethereum :mukn/ethereum/known-addresses :mukn/ethereum/network-config
+  :mukn/ethereum/json-rpc)
 
 (def (secret-key-ring)
   (xdg-config-home "glow" "secret-key-ring.json"))
@@ -15,12 +16,14 @@
      (displayln (error-message e))
      (error "Failed to read and parse the secret key ring file" from))
    (lambda ()
-     (hash-key-value-map
-       (lambda (nickname keypair-json)
-         (def keypair (import-keypair/json keypair-json))
-         (register-keypair nickname keypair)
-         (cons nickname (import-keypair/json keypair-json)))
-      (read-file-json from)))))
+     (if (file-exists? from)
+      (hash-key-value-map
+        (lambda (nickname keypair-json)
+          (def keypair (import-keypair/json keypair-json))
+          (register-keypair nickname keypair)
+          (cons nickname (import-keypair/json keypair-json)))
+        (read-file-json from))
+      (make-hash-table)))))
 
 (def (store-identities identities from: (from (secret-key-ring)))
   (def identities-json
@@ -75,7 +78,7 @@
       [(option 'nickname "-N" "--nickname"
                help: "nickname of identity")
        (option 'prefix "-P" "--prefix" default: #f
-               help: "hex prefix of generated generated address")]
+               help: "hex prefix of generated address")]
       []
       [options/test options/identities]))
   (def options (process-options options/generate arguments))
@@ -83,7 +86,7 @@
   (def scoring
     (if-let (prefix (hash-get options 'prefix))
       (scoring<-prefix prefix)
-      (trivial-scoring)))
+      trivial-scoring))
   (def keypair (generate-keypair scoring: scoring))
   (with-identities (cut hash-put! <> (string-downcase nickname) keypair)
     from: (hash-get options 'identities))
@@ -109,3 +112,34 @@
       ([nickname . keypair]
         (displayln nickname " [ " (string<- Address (keypair-address keypair)) " ]")))
     (hash->list identities)))
+
+(define-entry-point (faucet . arguments)
+  "Fund some accounts from the network faucet"
+  (def options/faucet
+    (make-options [] [] [options/identities options/to]))
+  (def options (process-options options/faucet arguments))
+  (defrule ($ x) (hash-get options 'x))
+  ;; TODO: find the faucet, use it.
+  (let ((identities (load-identities from: ($ identities))) ;; Only needed for side-effect of registering keypairs.
+        (network (.@ (ethereum-config) network))
+        (faucets (.@ (ethereum-config) faucets)))
+    (cond
+    ((equal? (.@ (ethereum-config) name) "Private Ethereum Testnet")
+      (let ()
+        (unless ($ to) (error "Missing recipient. Please use option --to"))
+        (def to (parse-address ($ to)))
+        ;; *after* the above, so we have croesus, but the user may have their own alice.
+        (import-testing-module)
+        (def value-in-ether 5)
+        (def value (wei<-ether value-in-ether))
+        (def token-symbol (.@ (ethereum-config) nativeCurrency symbol))
+        (def from (address<-nickname "t/croesus"))
+        (printf "\nSending ~a ~a from faucet ~a\n to ~a on network ~a:\n\n"
+                value-in-ether token-symbol (0x<-address from) (0x<-address to) network)
+        (cli-send-tx {from to value} confirmations: 0)
+        (printf "\nFinal balance: ~a ~a\n\n" (decimal-string-ether<-wei (eth_getBalance to)) token-symbol)))
+    ((not (null? faucets))
+      (printf "\nVisit the following URL to get ethers on network ~a:\n\n\t~a\n\n"
+              (car faucets) network))
+    (else
+      (printf "\nThere is no faucet for network ~a - Go earn tokens the hard way.\n\n" network)))))
