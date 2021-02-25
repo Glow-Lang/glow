@@ -27,7 +27,7 @@
      (option 'max-initial-block "-B" default: #f
              help: "maximum block number the contract can begin at")]
     []
-    [options/database options/ethereum-network options/test options/contacts options/identities]))
+    [options/database options/evm-network options/test options/contacts options/identities]))
 
 (def (ask-option name options)
   (def options-count (length options))
