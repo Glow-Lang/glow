@@ -17,7 +17,8 @@
 (def (secret-key-ring)
   (xdg-config-home "glow" "secret-key-ring.json"))
 
-(def (load-identities from: (from (secret-key-ring)))
+(def (load-identities from: (from #f))
+  (unless (string? from) (set! from (secret-key-ring)))
   (with-catch
    (lambda (e)
      (displayln (error-message e))
@@ -32,16 +33,18 @@
         (read-file-json from))
       (make-hash-table)))))
 
-(def (store-identities identities from: (from (secret-key-ring)))
+(def (store-identities identities from: (from #f))
+  (unless (string? from) (set! from (secret-key-ring)))
   (def identities-json
     (hash-key-value-map
       (lambda (nickname keypair)
         (cons nickname (export-keypair/json keypair)))
       identities))
+  (create-directory* (path-parent from))
   (clobber-file from (string<-json identities-json) salt?: #t))
 
 (def (call-with-identities f from: (from #f))
-  (set! from (or from (secret-key-ring)))
+  (unless (string? from) (set! from (secret-key-ring)))
   (def identities
     (if (file-exists? from)
       (load-identities from: from)
@@ -51,7 +54,7 @@
 
 (def options/identities
   (make-options
-    [(option 'identities "-I" "--identities" default: (secret-key-ring)
+    [(option 'identities "-I" "--identities" ;;default: #f
              help: "file to load and store identities")] []))
 
 (define-entry-point (add-identity
