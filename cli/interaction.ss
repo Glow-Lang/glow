@@ -3,7 +3,7 @@
 (import
   :gerbil/expander :gerbil/gambit/ports
   :std/format :std/generic :std/getopt :std/iter :std/misc/hash :std/misc/repr :std/misc/string :std/pregexp :std/sort :std/srfi/13 :std/sugar :std/text/json
-  :clan/base :clan/cli :clan/exit :clan/json :clan/multicall :clan/path-config :clan/syntax
+  :clan/base :clan/cli :clan/exit :clan/hash :clan/json :clan/multicall :clan/path-config :clan/syntax
   :clan/poo/brace :clan/poo/cli :clan/poo/debug :clan/poo/object
   :clan/persist/db :clan/persist/content-addressing :clan/versioning :clan/pure/dict/symdict
   :mukn/ethereum/assets :mukn/ethereum/cli :mukn/ethereum/ethereum :mukn/ethereum/network-config
@@ -60,30 +60,15 @@
   result)
 
 ;; TODO: Catch parsing errors and show example inputs.
-(def (ask-address name contacts)
-  (def contacts-copy (hash-copy contacts))
-  (def identity-addresses
+(def (ask-address name)
+  (def known-addresses
     (map
       (match <>
         ([nickname . address]
-          ;; Don't show contacts that are also identities twice.
-          (hash-remove! contacts-copy nickname)
           (cons nickname [Address . address])))
       (hash->list/sort address-by-nickname string<?)))
-  (def contact-addresses
-    (map
-      (match <>
-        ([nickname-key . contact]
-          (let (address (.@ contact address))
-            (cons (.@ contact nickname) [Address . address]))))
-      (hash->list/sort contacts-copy string<?)))
-  (def chosen-nickname
-    (ask-option name (append identity-addresses contact-addresses)))
-  (if-let (address (hash-get address-by-nickname (string-downcase chosen-nickname)))
-    address
-    (if-let (contact (hash-get contacts (string-downcase chosen-nickname)))
-      (.@ contact address)
-      (error "Invalid selection: " chosen-nickname))))
+  (def chosen-nickname (ask-option name known-addresses))
+  (hash-get address-by-nickname (string-downcase chosen-nickname)))
 
 (def (display-prompt name)
   (displayln CYAN name)
@@ -109,9 +94,7 @@
       (def role-address
         (if (equal? selected-role role-name)
           (hash-get address-by-nickname selected-identity)
-          (ask-address
-            (string-append "Select address for " (symbol->string role-name))
-            contacts)))
+          (ask-address (string-append "Select address for " (symbol->string role-name)))))
       (hash-put! participants role-name role-address))
     participants))
 
@@ -282,6 +265,38 @@
       (.call InteractionAgreement .validate agreement)
       (print-command agreement)
       (values agreement selected-role))))
+
+(define-entry-point (transfer from: (from #f)
+                              to: (to #f)
+                              value: (value #f)
+                              identities: (identities-file #f)
+                              contacts: (contacts-file #f))
+  (help: "Send tokens from one account to the other"
+   getopt: (make-options [] [(cut hash-restrict-keys! <> '(from to value identities contacts))]
+                            [options/contacts options/identities options/send]))
+  (let* ((currency (.@ (ethereum-config) nativeCurrency))
+         (token-symbol (.@ currency symbol))
+         (network (.@ (ethereum-config) network)))
+    (load-contacts contacts-file)
+    (load-identities from: identities-file)
+    (set! from (parse-address (or from (error "Missing sender. Please use option --from"))))
+    (set! to (parse-address (or to (error "Missing recipient. Please use option --to"))))
+    (set! value (parse-currency-value
+                (or value (error "Missing value. Please use option --value")) currency))
+    (printf "\nSending ~a ~a from ~a to ~a on network ~a:\n"
+            value token-symbol (0x<-address from) (0x<-address to) network)
+    (printf "\nBalance before\n for ~a: ~a ~a,\n for ~a: ~a ~a\n"
+            ;; TODO: use a function to correctly print with the right number of decimals,
+            ;; with the correct token-symbol, depending on the current network and/or asset
+            (0x<-address from) (decimal-string-ether<-wei (eth_getBalance from)) token-symbol
+            (0x<-address to) (decimal-string-ether<-wei (eth_getBalance to)) token-symbol)
+    (import-testing-module) ;; for debug-send-tx
+    (cli-send-tx {from to value} confirmations: 0)
+    (printf "\nBalance after\n for ~a: ~a ~a,\n for ~a: ~a ~a\n"
+            ;; TODO: use a function to correctly print with the right number of decimals
+            (0x<-address from) (decimal-string-ether<-wei (eth_getBalance from)) token-symbol
+            (0x<-address to) (decimal-string-ether<-wei (eth_getBalance to)) token-symbol)))
+
 
 ;; UTILS
 (def (flush-input port)
