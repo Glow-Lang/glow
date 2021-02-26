@@ -14,4 +14,4 @@
  ;; development will happen within branches with an odd MINOR number, and "releases"
  ;; meant for user consumption will have an even MINOR number in their base tag, and
  ;; only receive relatively stable improvements and security patches.
- base-tag: "v0.1")
+ base-tag: "v0.1.0")
