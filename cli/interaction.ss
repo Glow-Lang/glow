@@ -3,7 +3,7 @@
 (import
   :gerbil/expander :gerbil/gambit/ports
   :std/format :std/generic :std/getopt :std/iter :std/misc/hash :std/misc/repr :std/misc/string :std/pregexp :std/sort :std/srfi/13 :std/sugar :std/text/json
-  :clan/base :clan/cli :clan/exit :clan/json :clan/multicall :clan/path-config :clan/syntax
+  :clan/base :clan/cli :clan/exit :clan/hash :clan/json :clan/multicall :clan/path-config :clan/syntax
   :clan/poo/brace :clan/poo/cli :clan/poo/debug :clan/poo/object
   :clan/persist/db :clan/persist/content-addressing :clan/versioning :clan/pure/dict/symdict
   :mukn/ethereum/assets :mukn/ethereum/cli :mukn/ethereum/ethereum :mukn/ethereum/network-config
@@ -60,30 +60,15 @@
   result)
 
 ;; TODO: Catch parsing errors and show example inputs.
-(def (ask-address name contacts)
-  (def contacts-copy (hash-copy contacts))
-  (def identity-addresses
+(def (ask-address name)
+  (def known-addresses
     (map
       (match <>
         ([nickname . address]
-          ;; Don't show contacts that are also identities twice.
-          (hash-remove! contacts-copy nickname)
           (cons nickname [Address . address])))
       (hash->list/sort address-by-nickname string<?)))
-  (def contact-addresses
-    (map
-      (match <>
-        ([nickname-key . contact]
-          (let (address (.@ contact address))
-            (cons (.@ contact nickname) [Address . address]))))
-      (hash->list/sort contacts-copy string<?)))
-  (def chosen-nickname
-    (ask-option name (append identity-addresses contact-addresses)))
-  (if-let (address (hash-get address-by-nickname (string-downcase chosen-nickname)))
-    address
-    (if-let (contact (hash-get contacts (string-downcase chosen-nickname)))
-      (.@ contact address)
-      (error "Invalid selection: " chosen-nickname))))
+  (def chosen-nickname (ask-option name known-addresses))
+  (hash-get address-by-nickname (string-downcase chosen-nickname)))
 
 (def (display-prompt name)
   (displayln CYAN name)
@@ -109,9 +94,7 @@
       (def role-address
         (if (equal? selected-role role-name)
           (hash-get address-by-nickname selected-identity)
-          (ask-address
-            (string-append "Select address for " (symbol->string role-name))
-            contacts)))
+          (ask-address (string-append "Select address for " (symbol->string role-name)))))
       (hash-put! participants role-name role-address))
     participants))
 

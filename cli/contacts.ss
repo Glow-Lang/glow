@@ -19,7 +19,11 @@
 (def (load-contacts contacts-file)
   (unless (string? contacts-file) (set! contacts-file (default-contacts-file)))
   (def contacts-json (with-catch (lambda (_) (make-hash-table)) (cut read-file-json contacts-file)))
-  (<-json ContactList contacts-json))
+  (def contacts (<-json ContactList contacts-json))
+  (for-each
+    (lambda (contact) (register-address (.@ contact nickname) (.@ contact address)))
+    (hash-values contacts))
+  contacts)
 
 (def (store-contacts contacts-file contacts)
   (unless (string? contacts-file) (set! contacts-file (default-contacts-file)))
