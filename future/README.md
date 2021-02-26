@@ -7,7 +7,7 @@ and other incomplete projects.
 
 ### Selling a signature
 
-[buy_sig.glow](buy_sig.glow): selling signatures that can be used on the same chain,
+[buy_sig.glow](../dapps/buy_sig.glow): selling signatures that can be used on the same chain,
 on a different chain, or even off-chain.
 
 Required Features:
@@ -17,9 +17,12 @@ Required Features:
 
 [coinflip.glow](coinflip.glow): Simple gambling contract, even simpler than Rock, Paper, Scissors.
 Less fun, though.
+NB: compared to the [current code](../dapps/coin_flip.glow), the future version assumes that
+escrows will be automatically added by the compiler.
 
 Required Features:
 - Compiler front-end
+- Support for automatic escrow generation.
 - Support for specifying the safety with assertions.
 
 ### Rock, Papers, Scissors
