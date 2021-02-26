@@ -120,7 +120,7 @@ let
       gerbil-support =
         extendPop pkgs.gerbil-support (gerbil-support: super: {
           # Skip extra files so that we can play with CI configuration yet have the CI reuse cached builds.
-          gerbilSkippableFiles = super.gerbilSkippableFiles ++ [".gitlab.yml" "pkgs.nix" "shell.nix" "default.nix" "docs" "future" "dep" "Dockerfile" "Dockerfile.nixos" "glow-install" "ci.ss"];
+          gerbilSkippableFiles = super.gerbilSkippableFiles ++ [".gitlab.yml" "pkgs.nix" "shell.nix" "default.nix" "docs" "future" "dep" "Dockerfile" "Dockerfile.nixos" "glow-install" "ci.ss" ".build"];
 
           prePackages-unstable = extendPop super.prePackages-unstable (_: super:
             maybeOverrideDep "gerbil-utils" super //

@@ -2,7 +2,8 @@
 
 (import
   :std/getopt :std/format :std/iter :std/misc/hash :std/srfi/13 :std/sugar
-  :clan/base :clan/config :clan/files :clan/hash :clan/json :clan/multicall :clan/syntax :clan/crypto/secp256k1
+  :clan/base :clan/config :clan/files :clan/hash :clan/json :clan/multicall :clan/path :clan/syntax
+  :clan/crypto/secp256k1
   :clan/poo/brace :clan/poo/cli :clan/poo/io :clan/poo/mop :clan/poo/object :clan/poo/type
   :mukn/ethereum/cli :mukn/ethereum/hex :mukn/ethereum/ethereum :mukn/ethereum/known-addresses :mukn/ethereum/network-config
   :mukn/ethereum/json-rpc)

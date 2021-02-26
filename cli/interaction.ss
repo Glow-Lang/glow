@@ -274,7 +274,7 @@
       glow-version: (software-identifier)
       code-digest: (digest<-file application.glow)
       reference: {}
-      options: {blockchain: "Private Ethereum Testnet"
+      options: {blockchain: (.@ (ethereum-config) name)
                 escrowAmount: (void)
                 timeoutInBlocks: (* 100 (ethereum-timeout-in-blocks))
                 maxInitialBlock: max-initial-block}}))

@@ -12,10 +12,11 @@
 ;; Initialize paths from the environment
 (def here (path-directory (path-maybe-normalize (this-source-file))))
 (def glow-home (path-parent here))
-(set! source-directory (lambda () glow-home))
-(set! home-directory (lambda () glow-home))
+(set! application-name (lambda () "glow"))
+(set! default-application-source-directory glow-home)
+(set! default-application-home-directory glow-home)
 (current-directory glow-home)
-(register-software "Glow CI" "0.1")
+(register-software "Glow CI" "0.1.0")
 
 (def tmpdir (getenv "TMPDIR" "/tmp"))
 
@@ -42,7 +43,17 @@
   (def repo-url (git-repo-url repo))
   (def normalized-repo-url (normalize-git-url repo-url))
   (DBG tag
-       here glow-home (run-directory)
+       here glow-home
+       (application-home-envvar)
+       (application-home-directory)
+       (application-source-directory)
+       (build-output-directory)
+       (cache-directory)
+       (config-directory)
+       (data-directory)
+       (log-directory)
+       (transient-directory)
+       (persistent-directory)
        repo repo-url normalized-repo-url
        (getenv "HOME" #f) (getenv "USER" #f) (getenv "UID" #f)
        (getenv "PWD" #f) (getenv "PATH" #f) (getenv "TMPDIR" #f)
@@ -112,7 +123,10 @@
     (run-process/batch ["nix-build" "./pkgs.nix" "-A"
                         "gerbilPackages-unstable.gerbil-ethereum.src"]))
   #;(DBG after: (file-exists? gerbil-ethereum.src) testnet.ss (file-exists? testnet.ss))
-  (create-directory* (run-directory))
+  (for-each create-directory*
+            [(cache-directory) (config-directory) (data-directory) (log-directory)
+             (transient-directory) (persistent-directory)])
+
   (show-env-vars "Running test net:")
   (run-process/batch [testnet.ss])
   (void))

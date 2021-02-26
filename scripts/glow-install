@@ -29,7 +29,9 @@ require_util() {
 require_util curl "to download nix-env"
 if ! command -v nix-env > /dev/null 2>&1 ; then
     echo "Installing Nix..."
-    curl -L https://nixos.org/nix/install | sh
+    (curl -L https://nixos.org/nix/install | sh) ||
+        panic "Failed to install Nix. If on a Mac, try to install nix as follows then retry the glow installation:\n" \
+              "   sh <(curl -L https://nixos.org/nix/install) --darwin-use-unencrypted-nix-store-volume"
     ### For multiuser install, replace the above line with:
     # curl -L https://nixos.org/nix/install > nix-install.tmp && sh nix-install.tmp --daemon && rm nix-install.tmp
 fi

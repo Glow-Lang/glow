@@ -2,7 +2,7 @@
 
 (import
   :std/getopt :std/misc/hash :std/srfi/13
-  :clan/config :clan/files :clan/json :clan/multicall :clan/syntax
+  :clan/config :clan/files :clan/json :clan/multicall :clan/path :clan/syntax
   :clan/poo/brace :clan/poo/cli :clan/poo/io :clan/poo/mop :clan/poo/object :clan/poo/type
   :mukn/ethereum/cli :mukn/ethereum/hex :mukn/ethereum/ethereum :mukn/ethereum/known-addresses)
 
