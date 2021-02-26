@@ -142,7 +142,7 @@
 
 (def (print-command agreement)
   (displayln MAGENTA "One line command for other participants to generate the same agreement:" END)
-  (display "./glow start-interaction --agreement ")
+  (display "glow start-interaction --agreement ")
   (def agreement-string (string<-json (json<- InteractionAgreement agreement)))
   (if (string-contains agreement-string "'")
     (pr agreement-string)
@@ -214,10 +214,11 @@
              options/evm-network options/database options/test options/backtrace]))
   (def options (hash (max-initial-block max-initial-block) (role role)))
   (displayln)
+  (def identities (load-identities from: identities-file))
   (defvalues (agreement selected-role)
     (if agreement-json-string
       (start-interaction/with-agreement options (<-json InteractionAgreement (json<-string agreement-json-string)))
-      (start-interaction/generate-agreement options contacts: contacts-file identities: identities-file)))
+      (start-interaction/generate-agreement options contacts: contacts-file)))
   (def environment (run:terminal (symbolify selected-role) agreement))
   (displayln "Final environment:")
   ;; TODO: get run to include type t and pre-alpha-converted labels,
@@ -243,7 +244,7 @@
 
 (def (start-interaction/generate-agreement
       options
-      contacts: contacts-file identities: identities-file)
+      contacts: contacts-file)
   (nest
     (let (application-name
             (get-or-ask options 'glow-app (λ () (ask-application)))))
@@ -255,8 +256,6 @@
     (let (interaction-info (hash-get (@ program interactions) interaction-name)))
     (let (role-names
             (sort (filter identity (hash-keys (interaction-info-specific-interactions interaction-info))) symbol<?)))
-
-    (let (identities (load-identities from: identities-file)))
 
     (let (selected-identity (ask-identity options)))
     (let (selected-role (ask-role options role-names)))
