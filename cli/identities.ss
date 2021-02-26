@@ -117,33 +117,3 @@
       ([nickname . keypair]
         (displayln nickname " [ " (string<- Address (keypair-address keypair)) " ]")))
     (hash->list/sort identities string<?)))
-
-(define-entry-point (faucet from: (from #f) to: (to #f) identities: (identities #f))
-  (help: "Fund some accounts from the network faucet"
-   getopt: (make-options []
-                         [(cut hash-restrict-keys! <> '(from to value))]
-                         [options/identities options/to]))
-  (def-slots (network faucets name nativeCurrency) (ethereum-config))
-  (load-identities from: identities) ;; Only needed for side-effect of registering keypairs.
-  (cond
-   ((member name '("Private Ethereum Testnet" "Cardano EVM Devnet"))
-    (let ()
-      (unless to (error "Missing recipient. Please use option --to"))
-      (set! to (parse-address to))
-      ;; We import testing *after* the above, so we have *our* t/croesus,
-      ;; but the user may have their own alice.
-      (import-testing-module)
-      (def value-in-ether 5)
-      (def value (wei<-ether value-in-ether))
-      (def token-symbol (.@ nativeCurrency symbol))
-      (def from (address<-nickname "t/croesus"))
-      (printf "\nSending ~a ~a from faucet ~a\n to ~a on network ~a:\n\n"
-              value-in-ether token-symbol (0x<-address from) (0x<-address to) network)
-      (printf "\nInitial balance: ~a ~a\n\n" (decimal-string-ether<-wei (eth_getBalance to)) token-symbol)
-      (cli-send-tx {from to value} confirmations: 0)
-      (printf "\nFinal balance: ~a ~a\n\n" (decimal-string-ether<-wei (eth_getBalance to)) token-symbol)))
-   ((not (null? faucets))
-    (printf "\nVisit the following URL to get ethers on network ~a:\n\n\t~a\n\n"
-            (car faucets) network))
-   (else
-    (printf "\nThere is no faucet for network ~a - Go earn tokens the hard way.\n\n" network))))

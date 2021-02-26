@@ -68,9 +68,7 @@
   :mukn/glow/compiler/anf/anf
   :mukn/glow/runtime/participant-runtime
   :mukn/glow/runtime/consensus-code-generator
-  :mukn/glow/cli/interaction
-  :mukn/glow/cli/contacts
-  :mukn/glow/cli/identities
+  :mukn/glow/cli/interaction :mukn/glow/cli/contacts :mukn/glow/cli/identities :mukn/glow/cli/ethereum
 
   ;;:mukn/glow/compiler/checkpointify/checkpointify
   :clan/crypto/keccak :clan/crypto/secp256k1
