@@ -142,7 +142,7 @@
 
 (def (print-command agreement)
   (displayln MAGENTA "One line command for other participants to generate the same agreement:" END)
-  (display "./glow start-interaction --agreement ")
+  (display "glow start-interaction --agreement ")
   (def agreement-string (string<-json (json<- InteractionAgreement agreement)))
   (if (string-contains agreement-string "'")
     (pr agreement-string)
