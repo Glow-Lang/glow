@@ -557,6 +557,13 @@
         (for/collect ((e es))
           {reduce-expression self e})))
 
+      (['@record . kes]
+       (let ((kvs (for/collect ((ke kes))
+                    (with (([k e] ke))
+                      (cons k {reduce-expression self e})))))
+         (list->vector
+          (map cdr (sort kvs (lambda (a b) (symbol<? (car a) (car b))))))))
+
       (['digest . es]
        (digest
         (for/collect ((e es))
