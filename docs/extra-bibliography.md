@@ -448,4 +448,8 @@ Chainlink
 * [Loyc](http://loyc.net/), Language-of-your-choice
 
 Diaspora, Scuttlebutt, Dreamwidth, MeWe, Minds, Hive.io, Discussions[CENSORED].app, Flote.app, Hubzilla, Element.io, Signal groups, etc
+
+https://en.wikipedia.org/wiki/Obliq
+
+Learning Tezos: https://twitter.com/ArthurB/status/1365642482919301122
 -->
