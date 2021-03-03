@@ -62,7 +62,7 @@ but you lack the knowledge and experience in the field of DApps:
 Glow comes with many typical smart-contracts that you can use in your DApps.
 
 You just have to invoke one of the Glow programs in
-[our standard library](http://gitlab.com/mukn/glow/),
+@hyperlink["http://gitlab.com/mukn/glow/"]{our standard library},
 with parameters suitable to your use-case,
 and our software will let you safely interact with the blockchain.
 
@@ -131,7 +131,7 @@ Sometimes, the users are just victim of the central entity's incompetence,
 or its change of mind that causes the service to be cancelled, disrupted, corrupted,
 or just slow and buggy and never fixed.
 
-An app that runs with being controled by any single entity or consortium of colluding entities
+An app that runs without being controled by any single entity or consortium of colluding entities
 that can unaccountably collude against users is called a DApp,
 which stands for Decentralized Application, and is pronounced either "dap" or "D-app".
 
@@ -449,7 +449,7 @@ there are many differences underneath designed to keep your DApps safe:
   yet differs in many details, wherein we optimize our design for the safety of DApps.
  }
  @item{
-  Though the syntax looks imperative, it is a function language underneath.
+  Though the syntax looks imperative, it is a functional language underneath.
   In particular, you cannot modify bindings to existing variables,
   you can only have new variables shadow old variables.
   You also cannot side-effect data structures, only create new data structures
@@ -506,7 +506,7 @@ except with those special publish! statements.
 
 (Also, note that white spaces and interlines don't matter.
 We didn't implement indentation-based structure, and don't intend to in the short-run.
-It is too easy to introduce subtle with such semi-invisible structure;
+It is too easy to introduce subtle bugs with such semi-invisible structure;
 we prefer bugs to remain painfully obvious, instead.)
 
 The first line of this code specifies through an annotation
@@ -648,4 +648,3 @@ What if the @glowexp{Seller} never gets the handshake or otherwise fails to publ
 Then @italic{they} time out, and the @glowexp{Buyer} can invoke the contract to get their money back.
 All that happened is the @glowexp{Buyer} wasted some time and some transaction fees
 to create and destroy the contract.
-
