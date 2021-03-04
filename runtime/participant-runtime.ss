@@ -541,7 +541,7 @@
       ;; WARNING: This does not support re-entrancy!
       ;; TODO: Enable re-entrancy.
       (['@app name . argument-names]
-        (let* ((small-function (hash-get (@ (@ self program) small-functions) name))
+        (let* ((small-function (hash-get (.@ (@ self program) small-functions) name))
                (zipped-arguments (map cons argument-names (.@ small-function arguments))))
           (unless small-function
             (error "Unknown function " name))

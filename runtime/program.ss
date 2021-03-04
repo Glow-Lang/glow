@@ -89,27 +89,23 @@
     (filter (λ (x) (not (.call Program .definitely-constant? self x)))
           (ci-variables-live (hash-get live-variable-table code-block-label))))))
 
-;; context to parse compiler output and locate labels
-(defclass ParseContext
-  (current-participant ;; : (OrFalse Symbol)
-   current-label ;; : (OrFalse Symbol)
-   code) ;; : Interaction
-  transparent: #t)
-
-(def (new-ParseContext
-        (current-label #f) ;; : (OrFalse Symbol)
-        (code (make-hash-table))) ;; Interaction
-    (def self (make-ParseContext))
-    (set! (@ self current-participant) #f)
-    (set! (@ self current-label) current-label)
-    (set! (@ self code) code))
+(define-type ParseContext
+  (.+
+   (Record
+    current-participant: [(OrFalse Symbol)]
+    current-label: [OrFalse Symbol]
+    code: [Any]) ;; Interaction
+   {.make: (lambda ((current-label #f) (code (make-hash-table)))
+             { current-label
+               code
+               current-participant: #f })}))
 
 ;; ParseContext <- ParseContext Sexp
 (def (add-statement self statement)
-  (match (hash-get (@ self code) (@ self current-label))
+  (match (hash-get (.@ self code) (.@ self current-label))
     ((code-block current-participant statements exits)
       (let ((cb-statements (append statements [statement])))
-        (hash-put! (@ self code) (@ self current-label) (make-code-block current-participant cb-statements exits))
+        (hash-put! (.@ self code) (.@ self current-label) (make-code-block current-participant cb-statements exits))
         self))
     (#f
       self)))
@@ -130,25 +126,25 @@
 
 ;; <- ParseContext (OrFalse Symbol)
 (def (set-participant self new-participant)
-  (unless (and (@ self current-participant) (equal? new-participant (@ self current-participant)))
-    (let (contract (@ self code))
-      (match (hash-get contract (@ self current-label))
+  (unless (and (.@ self current-participant) (equal? new-participant (.@ self current-participant)))
+    (let (contract (.@ self code))
+      (match (hash-get contract (.@ self current-label))
         ((code-block current-participant statements exits)
           (begin
             (match (last statements)
               (['@label last-label]
-                ;;TODO: replace the two statements below by (hash-put! contract (@ self current-label) (make-code-block current-participant statements last-label)) then update all call sites of {get-current-code-block Runtime}
+                ;;TODO: replace the two statements below by (hash-put! contract (.@ self current-label) (make-code-block current-participant statements last-label)) then update all call sites of {get-current-code-block Runtime}
                 (def init-statements (take statements (- (length statements) 1)))
-                (hash-put! contract (@ self current-label) (make-code-block current-participant init-statements last-label))
+                (hash-put! contract (.@ self current-label) (make-code-block current-participant init-statements last-label))
                 (hash-put! contract last-label (make-code-block new-participant [['set-participant new-participant]] #f))
-                (set! (@ self current-participant) new-participant)
-                (set! (@ self current-label) last-label))
+                (set! (.@ self current-participant) new-participant)
+                (set! (.@ self current-label) last-label))
               (else
                 (error "Change of participant with no preceding label")))))
         (#f
           (begin
-            (set! (@ self current-participant) new-participant)
-            (hash-put! contract (@ self current-label) (make-code-block new-participant [] #f))))))))
+            (set! (.@ self current-participant) new-participant)
+            (hash-put! contract (.@ self current-label) (make-code-block new-participant [] #f))))))))
 
 ;; Takes the S-expression from the project pass and creates a Program
 ;; by finding the code-blocks that are transaction boundaries
@@ -189,7 +185,7 @@
 
 ;; : Interaction <- Symbol (List Sexp)
 (def (process-program initial-code-block-label name body)
-  (def parse-context (new-ParseContext initial-code-block-label))
+  (def parse-context (.call ParseContext .make initial-code-block-label))
   (for-each! body (λ (statement)
     (match statement
       (['participant:set-participant new-participant]
@@ -198,7 +194,7 @@
         (set-participant parse-context new-participant))
       (else
         (add-statement parse-context statement)))))
-  (@ parse-context code))
+  (.@ parse-context code))
 
 (def (get-last-code-block-label self name)
   (def specific-interactions
