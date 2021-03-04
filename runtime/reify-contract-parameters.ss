@@ -74,7 +74,7 @@
   {execute runtime}
   (printf "~a~a interaction finished~a\n" BOLD (.@ a interaction) END)
   (surface-name-environment
-   (hash-get (hash-get (@ program compiler-output) 'DebugLabelTable)
+   (hash-get (hash-get (.@ program compiler-output) 'DebugLabelTable)
              (@ runtime current-debug-label))
    (program-environment-type-value-pairs program (@ runtime environment))))
 

@@ -2,7 +2,7 @@
 
 (import
   :std/iter :std/sugar :std/misc/list :std/srfi/1 :clan/base :clan/pure/dict/symdict :clan/poo/object
-  :clan/poo/debug
+  :clan/poo/io :clan/poo/object :clan/poo/brace :clan/poo/debug
   <expander-runtime>
   :mukn/ethereum/types
   :mukn/ethereum/ethereum
@@ -17,39 +17,48 @@
 (defstruct interaction-info (name parameter-names specific-interactions initial-code-block-label)
   transparent: #t)
 
-(defclass Program
-  (interactions ;; : (Table InteractionInfo <- Symbol)
-   compiler-output ;; : (Table Sexp <- Symbol) ;; S-expression returned by the project pass.
-   initial-label ;; Symbol ;; First label in program, as defined by module header.
-   small-functions) ;; (Table SmallFunction <- Symbol)
-  constructor: :init!
-  transparent: #t)
 
-;; Takes the S-expression from the project pass and creates a Program
-;; by finding the code-blocks that are transaction boundaries
-;; <- Sexp
-(def (parse-compiler-output output)
-  (def program (extract-program (hash-ref output 'project.sexp)))
-  (set! (@ program compiler-output) output)
-  program)
+(def InteractionInfo Any)
+(def SExp Any)
 
-(defmethod {:init! Program}
-  (λ (self)
-    (set! (@ self interactions) (make-hash-table))
-    (set! (@ self small-functions) (make-hash-table))))
+(define-type Program
+  (.+
+    (Record
+      interactions: [(Map InteractionInfo <- Symbol)]
+      compiler-output: [(Map SExp <- Symbol)]
+      initial-label: [Symbol]
+      small-functions: [(Map SmallFunction <- Symbol)])
+    {.make:
+      (lambda (some-compiler-output some-initial-label)
+        {interactions: (make-hash-table)
+         compiler-output: some-compiler-output
+         initial-label: some-initial-label
+         small-functions: (make-hash-table)})
+      ;; A conservative predicate that only returns true when the variable-name
+      ;; is definitely a constant.
+      ;; Currently, it is a constant if it is in the `init-syms` or in the values in AlphaEnv,
+      ;; in the future, this may include variables that are defined in the first transaction and
+      ;; precompiled into the contract as first transaction deploys it.
+     .definitely-constant?:
+      (lambda (self variable-name)
+        (or (and (memq variable-name init-syms) #t)
+              (let* ((alba (hash-ref (.@ self compiler-output) 'albatable.sexp))
+                     (alenv (hash-ref (.@ self compiler-output) 'AlphaEnv)))
+                (symdict-has-key? alenv (hash-ref alba variable-name)))))
+    }))
 
 ;; Interaction <- Program Symbol Symbol
 (def (get-interaction self name participant)
   (def specific-interactions
     (interaction-info-specific-interactions
-     (hash-get (@ self interactions) name)))
+     (hash-get (.@ self interactions) name)))
   (hash-get specific-interactions participant))
 
 ;; TODO: use typemethods table for custom data types
 ;; Runtime type descriptor from alpha-converted symbol
 ;; : Type <- Program Symbol
 (def (lookup-type self variable-name)
-  (def type-table (hash-ref (@ self compiler-output) 'typetable.sexp))
+  (def type-table (hash-ref (.@ self compiler-output) 'typetable.sexp))
   (def (type-methods t)
     (match t
       ((type:name 'Bool) Bool)
@@ -65,31 +74,19 @@
 
 ;; : Symbol <- Program Symbol
 (def (lookup-surface-name self variable-name)
-  (def alba (hash-ref (@ self compiler-output) 'albatable.sexp))
+  (def alba (hash-ref (.@ self compiler-output) 'albatable.sexp))
   (hash-ref alba variable-name))
-
-;; A conservative predicate that only returns true when the variable-name
-;; is definitely a constant.
-;; Currently, it is a constant if it is in the `init-syms` or in the values in AlphaEnv,
-;; in the future, this may include variables that are defined in the first transaction and
-;; precompiled into the contract as first transaction deploys it.
-(defmethod {definitely-constant? Program}
-  (λ (self variable-name)
-    (or (and (memq variable-name init-syms) #t)
-        (let* ((alba (hash-ref (@ self compiler-output) 'albatable.sexp))
-               (alenv (hash-ref (@ self compiler-output) 'AlphaEnv)))
-          (symdict-has-key? alenv (hash-ref alba variable-name))))))
 
 ;; : ListOf Symbol <- Program Symbol Symbol
 (def (lookup-live-variables self name code-block-label)
-  (def live-variable-table (hash-ref (@ self compiler-output) 'cpitable2.sexp))
+  (def live-variable-table (hash-ref (.@ self compiler-output) 'cpitable2.sexp))
   (def specific-interactions
     (interaction-info-specific-interactions
-     (hash-get (@ self interactions) name)))
+     (hash-get (.@ self interactions) name)))
   ;; TODO: Store participants in fixed addresses.
   (def participants (filter (λ (x) x) (hash-keys specific-interactions)))
   (unique (append participants
-    (filter (λ (x) (not {definitely-constant? self x}))
+    (filter (λ (x) (not (.call Program .definitely-constant? self x)))
           (ci-variables-live (hash-get live-variable-table code-block-label))))))
 
 ;; context to parse compiler output and locate labels
@@ -97,26 +94,25 @@
   (current-participant ;; : (OrFalse Symbol)
    current-label ;; : (OrFalse Symbol)
    code) ;; : Interaction
-  constructor: :init!
   transparent: #t)
 
-(defmethod {:init! ParseContext}
-  (λ (self (current-label #f) ;; : (OrFalse Symbol)
-           (code (make-hash-table))) ;; Interaction
+(def (new-ParseContext
+        (current-label #f) ;; : (OrFalse Symbol)
+        (code (make-hash-table))) ;; Interaction
+    (def self (make-ParseContext))
     (set! (@ self current-participant) #f)
     (set! (@ self current-label) current-label)
-    (set! (@ self code) code)))
+    (set! (@ self code) code))
 
 ;; ParseContext <- ParseContext Sexp
-(defmethod {add-statement ParseContext}
-  (λ (self statement)
-    (match (hash-get (@ self code) (@ self current-label))
-      ((code-block current-participant statements exits)
-        (let ((cb-statements (append statements [statement])))
-          (hash-put! (@ self code) (@ self current-label) (make-code-block current-participant cb-statements exits))
-          self))
-      (#f
-        self))))
+(def (add-statement self statement)
+  (match (hash-get (@ self code) (@ self current-label))
+    ((code-block current-participant statements exits)
+      (let ((cb-statements (append statements [statement])))
+        (hash-put! (@ self code) (@ self current-label) (make-code-block current-participant cb-statements exits))
+        self))
+    (#f
+      self)))
 
 ;; TODO: rename to CodeBlock ?
 (defstruct code-block
@@ -133,45 +129,46 @@
    body: [(List Any)]))
 
 ;; <- ParseContext (OrFalse Symbol)
-(defmethod {set-participant ParseContext}
-  (λ (self new-participant)
-    (unless (and (@ self current-participant) (equal? new-participant (@ self current-participant)))
-      (let (contract (@ self code))
-        (match (hash-get contract (@ self current-label))
-          ((code-block current-participant statements exits)
-            (begin
-              (match (last statements)
-                (['@label last-label]
-                 ;;TODO: replace the two statements below by (hash-put! contract (@ self current-label) (make-code-block current-participant statements last-label)) then update all call sites of {get-current-code-block Runtime}
-                 (def init-statements (take statements (- (length statements) 1)))
-                 (hash-put! contract (@ self current-label) (make-code-block current-participant init-statements last-label))
-                 (hash-put! contract last-label (make-code-block new-participant [['set-participant new-participant]] #f))
-                 (set! (@ self current-participant) new-participant)
-                 (set! (@ self current-label) last-label))
-                (else
-                 (error "Change of participant with no preceding label")))))
-          (#f
-            (begin
-              (set! (@ self current-participant) new-participant)
-              (hash-put! contract (@ self current-label) (make-code-block new-participant [] #f)))))))))
+(def (set-participant self new-participant)
+  (unless (and (@ self current-participant) (equal? new-participant (@ self current-participant)))
+    (let (contract (@ self code))
+      (match (hash-get contract (@ self current-label))
+        ((code-block current-participant statements exits)
+          (begin
+            (match (last statements)
+              (['@label last-label]
+                ;;TODO: replace the two statements below by (hash-put! contract (@ self current-label) (make-code-block current-participant statements last-label)) then update all call sites of {get-current-code-block Runtime}
+                (def init-statements (take statements (- (length statements) 1)))
+                (hash-put! contract (@ self current-label) (make-code-block current-participant init-statements last-label))
+                (hash-put! contract last-label (make-code-block new-participant [['set-participant new-participant]] #f))
+                (set! (@ self current-participant) new-participant)
+                (set! (@ self current-label) last-label))
+              (else
+                (error "Change of participant with no preceding label")))))
+        (#f
+          (begin
+            (set! (@ self current-participant) new-participant)
+            (hash-put! contract (@ self current-label) (make-code-block new-participant [] #f))))))))
 
+;; Takes the S-expression from the project pass and creates a Program
+;; by finding the code-blocks that are transaction boundaries
 ;; Program <- Sexp
-(def (extract-program module)
+(def (parse-compiler-output compiler-output)
+  (def module (hash-ref compiler-output 'project.sexp))
   (match (syntax->datum module)
     (['@module [initial-label final-label] . statements]
-      (def program (make-Program))
-      (set! (@ program initial-label) initial-label)
+      (def program (.call Program .make compiler-output initial-label))
       (for ((statement (syntax->datum statements)))
         (match statement
           (['def name ['λ arguments-value [start-label-value end-label-value] . body-value]]
-            (def small-functions (@ program small-functions))
+            (def small-functions (.@ program small-functions))
             (hash-put! small-functions name
               (.o arguments: arguments-value
                   start-label: start-label-value
                   end-label: end-label-value
                   body: body-value)))
           (['def name ['@make-interaction [['@list participants ...]] parameter-names labels bodys ...]]
-            (def interactions (@ program interactions))
+            (def interactions (.@ program interactions))
             (def initial-code-block-label (car labels))
             (def specific-table (make-hash-table))
             (for ((values p body) (list->hash-table bodys))
@@ -192,21 +189,21 @@
 
 ;; : Interaction <- Symbol (List Sexp)
 (def (process-program initial-code-block-label name body)
-  (def parse-context (make-ParseContext initial-code-block-label))
+  (def parse-context (new-ParseContext initial-code-block-label))
   (for-each! body (λ (statement)
     (match statement
       (['participant:set-participant new-participant]
-        {set-participant parse-context new-participant})
+        (set-participant parse-context new-participant))
       (['consensus:set-participant new-participant]
-        {set-participant parse-context new-participant})
+        (set-participant parse-context new-participant))
       (else
-        {add-statement parse-context statement}))))
+        (add-statement parse-context statement)))))
   (@ parse-context code))
 
 (def (get-last-code-block-label self name)
   (def specific-interactions
     (interaction-info-specific-interactions
-     (hash-get (@ self interactions) name)))
+     (hash-get (.@ self interactions) name)))
   (def consensus-interaction (hash-get specific-interactions #f))
   (let/cc return
     (for ((values label code-block) (in-hash consensus-interaction))

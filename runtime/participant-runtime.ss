@@ -120,17 +120,17 @@
     (defvalues (modpath surface-name)
       (split-interaction-path-name (.@ agreement interaction)))
     (def name
-      (symbol-refer (hash-ref (@ program compiler-output) 'AlphaEnv)
+      (symbol-refer (hash-ref (.@ program compiler-output) 'AlphaEnv)
                     surface-name))
     (def interaction-info
-      (hash-ref (@ program interactions) name))
+      (hash-ref (.@ program interactions) name))
     (set! (@ self role) role)
     (set! (@ self agreement) agreement)
     (set! (@ self name) name)
     ;; TODO: extract initial code block label from contract compiler output
     (set! (@ self current-code-block-label)
       (interaction-info-initial-code-block-label interaction-info))
-    (set! (@ self current-label) (@ program initial-label))
+    (set! (@ self current-label) (.@ program initial-label))
     (set! (@ self current-debug-label) #f)
 
     (set! (@ self contract-config) #f)
@@ -357,8 +357,8 @@
 ;; <- Runtime
 (defmethod {initialize-environment Runtime}
   (λ (self)
-    (def inter (hash-ref (@ self program interactions) (@ self name)))
-    (def alba (hash-ref (@ self program compiler-output) 'albatable.sexp))
+    (def inter (hash-ref (.@ (@ self program) interactions) (@ self name)))
+    (def alba (hash-ref (.@ (@ self program) compiler-output) 'albatable.sexp))
     (def agreement (@ self agreement))
     (def participants (.@ agreement participants))
     (for (participant-name (filter symbol? (hash-keys (interaction-info-specific-interactions inter))))

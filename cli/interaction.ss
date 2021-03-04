@@ -220,7 +220,7 @@
          (application.glow (source-path (extract-application-source-path interaction)))
          (program (compile-contract application.glow))
          (interaction-name (symbolify (cadr (string-split interaction #\#))))
-         (interaction-info (hash-get (@ program interactions) interaction-name))
+         (interaction-info (hash-get (.@ program interactions) interaction-name))
          (role-names (sort (filter identity (hash-keys (interaction-info-specific-interactions interaction-info))) symbol<?))
          (selected-role (ask-role options role-names)))
   (values agreement selected-role)))
@@ -235,8 +235,8 @@
     (let (application.glow (source-path application-source-path)))
     (let (program (compile-contract application.glow)))
     (let (interaction-name
-            (get-or-ask options 'interaction (λ () (ask-interaction (hash-keys (@ program interactions)))))))
-    (let (interaction-info (hash-get (@ program interactions) interaction-name)))
+            (get-or-ask options 'interaction (λ () (ask-interaction (hash-keys (.@ program interactions)))))))
+    (let (interaction-info (hash-get (.@ program interactions) interaction-name)))
     (let (role-names
             (sort (filter identity (hash-keys (interaction-info-specific-interactions interaction-info))) symbol<?)))
 

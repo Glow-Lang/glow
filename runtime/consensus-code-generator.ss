@@ -11,7 +11,7 @@
 (define-type ConsensusCodeGenerator
   (.+
     (Record
-      program: [Any] ; Program
+      program: [Program] ; Program
       name: [Symbol]
       variable-offsets: [(OrFalse (Map Nat <- Symbol))]
       labels: [(OrFalse (Map Nat <- Symbol))]
@@ -35,7 +35,7 @@
           ;; functions / code block frames. Therefore, medium functions need to be defined before small
           ;; functions, since small functions use the scratch space to store temporary variables.
           (def compiled-medium-functions (&define-medium-functions self))
-          (def compiled-small-functions (&define-small-functions self (@ (.@ self program) small-functions)))
+          (def compiled-small-functions (&define-small-functions self (.@ self program small-functions)))
           ;; NB: you can use #t below to debug with remix.ethereum.org. Do NOT commit that!
           ;; TODO: maybe we should have some more formal debugging mode parameter?
           (def debug #t)
@@ -175,7 +175,7 @@
 (def (find-other-participant self participant)
   (find
     (λ (p) (and (not (equal? #f p)) (not (equal? p participant))))
-    (hash-keys (@ (.@ self program) interactions))))
+    (hash-keys (.@ self program interactions))))
 
 (def (typed-directive<-trivial-expr self function-name expr)
   (def program (.@ self program))
@@ -234,7 +234,7 @@
     ;; WARNING: This does not support re-entrancy!
     ;; TODO: Handle re-entrancy.
     (['@app inner-function-name argument-names ...]
-      (unless (hash-get (@ (.@ self program) small-functions) inner-function-name)
+      (unless (hash-get (.@ self program small-functions) inner-function-name)
         (error "Unknown function " inner-function-name))
       (let (arguments (map (λ (argument-name) (trivial-expression self function-name argument-name)) argument-names))
         [(apply &call inner-function-name arguments)]))
