@@ -15,12 +15,17 @@ you can `docker pull mukn/glow:stable` then `docker run -it mukn/glow:stable`.
 
 ## Warnings and Prerequisites
 
-1. We use the [Nix](https://nixos.org/nix/) package manager
+1. Currently, installing *Glow* requires about 4GB of RAM and 2GB of disk.
+   You will need at least 8GB of RAM and 8GB of swap if you need to recompile it or its dependencies.
+   This includes the case where you will modify *Glow* itself,
+   but also the case where you run it on an architecture that doesn't have precompiled binaries.
+
+2. We use the [Nix](https://nixos.org/nix/) package manager
    for its deterministically reproducible builds:
    if it builds and run for us, it should build and run identically for you.
    *Glow* should work on all supported architectures supported by Nix.
 
-2. The first step of our script above makes sure that Nix is installed.
+3. The first step of our script above makes sure that Nix is installed.
    If that wasn't the case yet, any shell started before that step was complete
    (including the one running the installation, and any previous one)
    will have the wrong `$PATH` variable.
@@ -37,22 +42,22 @@ you can `docker pull mukn/glow:stable` then `docker run -it mukn/glow:stable`.
    (try [this recipe](https://nathan.gs/2019/04/12/nix-on-windows/)
    if you have trouble with Nix on WSL).
 
-3. We are using [cachix](https://cachix.org/) to distribute pre-compiled binaries
+4. We are using [cachix](https://cachix.org/) to distribute pre-compiled binaries
    for all our packages. But this only works if you are using one of the architectures
    our developers use, which are `x86_64-linux` and `x86_64-darwin`.
    This *should* also work on WSL on `x86_64`, but we haven't tried.
 
-4. If you're not using one of the above architectures, then the installation will build
+5. If you're not using one of the above architectures, then the installation will build
    not only *Glow*, but also, at least the first around, a lot of its dependencies.
    This may take a long time (hours?) and consume a lot of memory.
-   Make sure you have at least 16MB of RAM+swap. Also, if you have a lot of cores,
+   Make sure you have at least 16GB of RAM+swap. Also, if you have a lot of cores,
    you might reduce the memory pressure somewhat by passing the argument `--cores 1` or such
    to `nix-env` in the second step of the script:
 
         nix-env --cores 1 -f https://github.com/muknio/nixpkgs/archive/devel.tar.gz \
             -iA glow-lang gerbil-unstable go-ethereum solc
 
-5. Installing *Glow*, or any software, requires that you trust the authors and their infrastructure.
+6. Installing *Glow*, or any software, requires that you trust the authors and their infrastructure.
    To minimize the need for trust, and minimize the opportunity for damage
    from applications that do breach your trust,
    we recommend you use isolated virtual machines for each application.
@@ -301,11 +306,15 @@ and so only works for the Unix user who compiled it.
 
 Now, you can export the `GERBIL_PATH` environment variable
 to point to some place other than your `~/.gerbil`
-for the user who compiles *Glow*,
-and point the `GERBIL_LOADPATH` environment variable at the `$THAT_GERBIL_PATH/lib`
-for the other users who want to use it.
-where Gerbil will compile file and look for compiled files.
+for the user who compiles *Glow*.
+You can also point the `GERBIL_LOADPATH` environment variable
+at a colon-separated list of source and compiled directories.
+Thus, if you want to develop code using software pre-compiled by nix,
+plus some source overrides from `$MYSRC/gerbil-ethereum`, you may use:
+```
+export GERBIL_LOADPATH=$MYSRC/gerbil-ethereum:$HOME/.nix-profile/gerbil/lib
+```
 
-to specify where the compiled files should be stored.
-You may need to either copy the compiled files or re-build them
-for the dependencies as well as for *Glow* itself, if you change the `GERBIL_PATH`.
+To see how *Glow* is installed by its Nix package, see
+[glow-lang.nix](https://github.com/MuKnIO/nixpkgs/blob/devel/pkgs/development/compilers/gerbil/glow-lang.nix)
+in the `devel` branch of our [nixpkgs repo](https://github.com/MuKnIO/nixpkgs/).
