@@ -129,7 +129,7 @@
     (set! (@ self name) name)
     ;; TODO: extract initial code block label from contract compiler output
     (set! (@ self current-code-block-label)
-      (interaction-info-initial-code-block-label interaction-info))
+      (.@ interaction-info initial-code-block-label))
     (set! (@ self current-label) (.@ program initial-label))
     (set! (@ self current-debug-label) #f)
 
@@ -361,11 +361,11 @@
     (def alba (hash-ref (.@ (@ self program) compiler-output) 'albatable.sexp))
     (def agreement (@ self agreement))
     (def participants (.@ agreement participants))
-    (for (participant-name (filter symbol? (hash-keys (interaction-info-specific-interactions inter))))
+    (for (participant-name (filter symbol? (hash-keys (.@ inter specific-interactions))))
       (def participant-surface-name (hash-ref alba participant-name))
       {add-to-environment self participant-name (.ref participants participant-surface-name)})
     (def parameters (.@ agreement parameters))
-    (for (parameter-name (interaction-info-parameter-names inter))
+    (for (parameter-name (.@ inter parameter-names))
       (def parameter-surface-name (hash-ref alba parameter-name))
       (def parameter-json-value (json-object-ref parameters parameter-surface-name))
       (def parameter-type (lookup-type (@ self program) parameter-name))

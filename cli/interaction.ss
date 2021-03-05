@@ -221,7 +221,7 @@
          (program (compile-contract application.glow))
          (interaction-name (symbolify (cadr (string-split interaction #\#))))
          (interaction-info (hash-get (.@ program interactions) interaction-name))
-         (role-names (sort (filter identity (hash-keys (interaction-info-specific-interactions interaction-info))) symbol<?))
+         (role-names (sort (filter identity (hash-keys (.@ interaction-info .specific-interactions))) symbol<?))
          (selected-role (ask-role options role-names)))
   (values agreement selected-role)))
 
@@ -238,20 +238,20 @@
             (get-or-ask options 'interaction (λ () (ask-interaction (hash-keys (.@ program interactions)))))))
     (let (interaction-info (hash-get (.@ program interactions) interaction-name)))
     (let (role-names
-            (sort (filter identity (hash-keys (interaction-info-specific-interactions interaction-info))) symbol<?)))
+            (sort (filter identity (hash-keys (.@ interaction-info .specific-interactions))) symbol<?)))
 
     (let (selected-identity (ask-identity options)))
     (let (selected-role (ask-role options role-names)))
 
     (let (contacts (load-contacts contacts-file)))
     (let (participants-table (ask-participants selected-identity (symbolify selected-role) role-names contacts)))
-    (let (parameters (ask-parameters program (interaction-info-parameter-names interaction-info))))
+    (let (parameters (ask-parameters program (.@ interaction-info .parameter-names))))
     (let (current-block-number (eth_blockNumber)))
     (let (max-initial-block (ask-max-initial-block options current-block-number)))
 
     ;; TODO: Validate agreement, with nice user-friendly error message.
     (let (agreement
-      {interaction: (string-append application-name "#" (symbol->string (interaction-info-name interaction-info)))
+      {interaction: (string-append application-name "#" (symbol->string (.@ interaction-info .name)))
       participants: (object<-hash participants-table)
       parameters
       glow-version: (software-identifier)

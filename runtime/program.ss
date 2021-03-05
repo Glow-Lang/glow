@@ -10,15 +10,22 @@
   ../compiler/typecheck/type
   ../compiler/checkpointify/checkpointify)
 
-;; (deftype Interaction (Table CodeBlock <- Symbol))
+(def Interaction (Map Any <- Symbol)) ; (Map CodeBlock <- Symbol)
 
-;; An InteractionInfo is an
-;;   (interaction-info Symbol (Listof Symbol) (Table Interaction <- (OrFalse Symbol)) Symbol)
-(defstruct interaction-info (name parameter-names specific-interactions initial-code-block-label)
-  transparent: #t)
+(define-type InteractionInfo
+  (.+
+   (Record
+    name: [Symbol]
+    parameter-names: [(List Symbol)]
+    specific-interactions: [(Map Interaction <- (OrFalse Symbol))]
+    initial-code-block-label: [Symbol])
+   {.make: (lambda (name parameter-names specific-interactions initial-code-block-label)
+             { name
+               parameter-names
+               specific-interactions
+               initial-code-block-label})
+   }))
 
-
-(def InteractionInfo Any)
 (def SExp Any)
 
 (define-type Program
@@ -50,8 +57,7 @@
 ;; Interaction <- Program Symbol Symbol
 (def (get-interaction self name participant)
   (def specific-interactions
-    (interaction-info-specific-interactions
-     (hash-get (.@ self interactions) name)))
+        (.@ (hash-get (.@ self interactions) name) specific-interactions))
   (hash-get specific-interactions participant))
 
 ;; TODO: use typemethods table for custom data types
@@ -81,8 +87,7 @@
 (def (lookup-live-variables self name code-block-label)
   (def live-variable-table (hash-ref (.@ self compiler-output) 'cpitable2.sexp))
   (def specific-interactions
-    (interaction-info-specific-interactions
-     (hash-get (.@ self interactions) name)))
+    (.@ (hash-get (.@ self interactions) name) specific-interactions))
   ;; TODO: Store participants in fixed addresses.
   (def participants (filter (λ (x) x) (hash-keys specific-interactions)))
   (unique (append participants
@@ -170,7 +175,7 @@
             (for ((values p body) (list->hash-table bodys))
               (hash-put! specific-table p (process-program initial-code-block-label p body)))
             (hash-put! interactions name
-              (interaction-info name parameter-names specific-table initial-code-block-label)))
+              (.call InteractionInfo .make name parameter-names specific-table initial-code-block-label)))
           (['@label label]
             (void))
           (['@debug-label label]
@@ -198,8 +203,7 @@
 
 (def (get-last-code-block-label self name)
   (def specific-interactions
-    (interaction-info-specific-interactions
-     (hash-get (.@ self interactions) name)))
+    (.@ (hash-get (.@ self interactions) name) specific-interactions))
   (def consensus-interaction (hash-get specific-interactions #f))
   (let/cc return
     (for ((values label code-block) (in-hash consensus-interaction))
