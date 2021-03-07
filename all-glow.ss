@@ -77,7 +77,7 @@
   :mukn/ethereum/network-config :mukn/ethereum/json-rpc :mukn/ethereum/transaction :mukn/ethereum/watch
   :mukn/ethereum/assembly :mukn/ethereum/contract-config :mukn/ethereum/evm-runtime
   :mukn/ethereum/nonce-tracker :mukn/ethereum/tx-tracker :mukn/ethereum/simple-apps
-  :mukn/ethereum/assets :mukn/ethereum/cli
+  :mukn/ethereum/assets :mukn/ethereum/erc20 :mukn/ethereum/cli :mukn/ethereum/meta-create2
 
   ;; Testing Glow
   :mukn/glow/t/common

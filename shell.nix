@@ -21,8 +21,6 @@ in
       echo ${gerbil-poo}
 
       ${glow-lang.postConfigure}
-      ${lib.optionalString ethereum
-        ''export GERBIL_ETHEREUM_SRC="${glow-lang.passthru.pre-pkg.gerbilEthereumSrc}"''}
       export GERBIL_LOADPATH="${glow-lang.passthru.pre-pkg.testGerbilLoadPath}"
       PATH="${glow-lang.out}/bin:$PATH"
       GERBIL_APPLICATION_HOME="$PWD"

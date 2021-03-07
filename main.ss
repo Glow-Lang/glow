@@ -18,4 +18,5 @@
            (_ glow-vstring)))
   (displayln v))
 
+(current-program "glow")
 (define-multicall-main)

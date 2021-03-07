@@ -94,10 +94,6 @@
   (let* ((glow-lang.out
           (run-process ["nix" "eval" "--raw" "-f" "pkgs.nix" "glow-lang"]
                        coprocess: read-all-as-string))
-         (gerbil-ethereum.src
-          (run-process ["nix" "eval" "--raw" "-f" "pkgs.nix"
-                        "glow-lang.passthru.pre-pkg.gerbilEthereumSrc"]
-                       coprocess: read-all-as-string))
          (loadpath (run-process ["nix" "eval" "--raw" "-f" "pkgs.nix"
                           "glow-lang.passthru.pre-pkg.testGerbilLoadPath"]
                          coprocess: read-all-as-string)))
@@ -106,7 +102,7 @@
     (setenv "GERBIL_APPLICATION_HOME" glow-home)
     (setenv "GLOW_HOME" glow-home)
     (setenv "GLOW_SRC" glow-home)
-    (values glow-lang.out gerbil-ethereum.src loadpath)))
+    (values glow-lang.out loadpath)))
 
 
 (define-entry-point (before-test)
@@ -116,19 +112,13 @@
   ;; For integration tests, nix-shell --pure causes us to run in an read-only directory,
   ;; so let' try it a slightly hard way...
   (run-process/batch ["./build.ss" "nix"]) ;; NB: this should use the path from cachix
-  (defvalues (glow-lang.out gerbil-ethereum.src loadpath) (set-test-environment-variables))
-  (def testnet.ss (subpath gerbil-ethereum.src "scripts/run-ethereum-test-net.ss"))
-  #;(DBG before: gerbil-ethereum.src (file-exists? gerbil-ethereum.src) glow-lang.out)
-  (unless (file-exists? gerbil-ethereum.src)
-    (run-process/batch ["nix-build" "./pkgs.nix" "-A"
-                        "gerbilPackages-unstable.gerbil-ethereum.src"]))
-  #;(DBG after: (file-exists? gerbil-ethereum.src) testnet.ss (file-exists? testnet.ss))
+  (defvalues (glow-lang.out loadpath) (set-test-environment-variables))
   (for-each create-directory*
             [(cache-directory) (config-directory) (data-directory) (log-directory)
              (transient-directory) (persistent-directory)])
 
   (show-env-vars "Running test net:")
-  (run-process/batch [testnet.ss])
+  (run-process/batch ["run-ethereum-test-net"])
   (void))
 
 (define-entry-point (test)
