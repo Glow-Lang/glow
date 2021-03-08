@@ -49,32 +49,31 @@
     versions of @(Glow)? Normally, yes! If we ever introduce incompatibilities, we'll do our best
     to drive the community towards a new workflow.}
 
-    @item{At this point how much do you guys need to support another blockchain? That depends on
-    the blockchain.
-    - For most EVM blockchains it should only require a few lines in a config file.
-    - For something else, roughly two to three months of work for the initial version. It would
+    @item{At this point how much time do you need to support another blockchain? That depends on
+    the blockchain. For most EVM blockchains it should only require a few lines in a config file.
+    For something else, roughly two to three months of work for the initial version. It would
     also require two annual contracts, one to prevent the code from bitrotting, and another to
     maintain the backend as we add language features.
-    - Bitcoin? Its script language sucks, so it would require roughly 6 months to work around all
-    the quirks, and even then only the forks would be fully supported. Bitcoin itself is missing
-    some essential capabilities. That is typically something we're considering because of the
-    popularity of Bitcoin, though.
-    - Bitcoin Bitcoin? OK, we can actually do it, but it's 6 more months of work to use clever
+    
+    @item{Bitcoin? Its script language sucks, so it would require roughly 6 months to work around
+    all the quirks, and even then only the forks would be fully supported. Bitcoin itself is
+    missing some essential capabilities. That is typically something we're considering because of
+    the popularity of Bitcoin, though.}
+
+    @item{Bitcoin, really? OK, we can actually do it, but it's 6 more months of work to use clever
     tricks to overcome the limitations, and then the transaction fees will be so high that you'll
     only want to use that for very high value contracts, such as side-chain maintenance. Once
     that is done, keep tripling the price compared to Bitcoin-without-BTC.}
     
-    @item{s there a Glow library for NFT, and ERC20 contracts? Not yet, but this is next on the
+    @item{Is there a @(Glow) library for NFT, and ERC20 contracts? Not yet, but this is next on the
     list of features we're working on.}
 
-    @item{Can you quickly sum-up the benefits of Glow ?
-    1. Writing a DApp that is 10x safer for 1/10th the effort than using say Solidity.
-    2. Writing it once, and having it work everywhere, and not just on EVM blockchains. You don't
-    have to guess where the liquidity will be and then bank on a technology that only works on
-    one network.
-    3. Generating not just the "smart contract", but the client and server code that goes with it
-    for each participant.
-    4. Having a chance at formal methods.}
+    @item{Can you quickly sum-up the benefits of @(Glow)? First, writing a DApp that is 10x safer
+    for 1/10th the effort than using say Solidity. Second, writing it once, and having it work
+    everywhere, and not just on EVM blockchains. You don't have to guess where the liquidity will
+    be and then bank on a technology that only works on one network. Third, generating not just the
+    "smart contract", but the client and server code that goes with it for each participant. Fourth,
+    having a chance at formal methods.}
 
     @item{Does this work on EVM? Just saw that it mentioned Cardano only? It works on the EVM.
     Our default test network is a devnet for a side-chain on Cardano. But it will work on any
@@ -95,17 +94,17 @@
     you look up the hash of the contract's initcode in your offchain database. In this regard,
     you will find many structural differences in Glow, compared to say Solidity.}
 
-    @item{If Glow is CLI based for interacting with the blockchain then how is a smart contract
-    deployed? The CLI client for Glow can generate a contract between you and the other
+    @item{If @(Glow) is CLI based for interacting with the blockchain then how is a smart contract
+    deployed? The CLI client for @(Glow) can generate a contract between you and the other
     participant, or reuse existing contracts. As part of your interaction, the first participant
-    creates the contract, the last participant deletes it. In other words, the glow CLI talks to
-    the blockchain for you, so you don't have to talk to the blockchain yourself, which is a very
-    safety-critical activity.}
+    creates the contract, the last participant deletes it. In other words, the @(Glow) CLI talks
+    to the blockchain for you, so you don't have to talk to the blockchain yourself, which is a
+    very safety-critical activity.}
 
-    @item{Is there a Glow compiler? Glow dynamically compiles code into blockchain smart
-    contracts. Glow interprets code on the client side (where it is 1000000 cheaper than on the
-    blockchain, so if you could accept the 1000000x cost of running on the blockchain, you can
-    easily afford the 10x cost of interpreting vs compilation). Today, you can invoke glow from
+    @item{Is there a @(Glow) compiler? @(Glow) dynamically compiles code into blockchain smart
+    contracts. @(Glow) interprets code on the client side (where it is 1000000 cheaper than on
+    the blockchain, so if you could accept the 1000000x cost of running on the blockchain, you can
+    easily afford the 10x cost of interpreting vs compilation). Today, you can invoke @(Glow) from
     any language by spawning a process. Or you can invoke it from Gerbil Scheme REPL. Tomorrow,
     we'll add an HTTP API and a JS API.}
 
