@@ -243,6 +243,12 @@
     (['input _ _]
       [REVERT])
 
+    (['@tuple . es]
+      (error 'compile-consensus-expression "TODO" expression))
+
+    (['@record . kes]
+      (error 'compile-consensus-expression "TODO" expression))
+
     (else
       [(trivial-expression self function-name expression)])))
 
