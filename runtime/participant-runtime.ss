@@ -11,8 +11,9 @@
   :mukn/ethereum/hex :mukn/ethereum/ethereum :mukn/ethereum/network-config :mukn/ethereum/json-rpc
   :mukn/ethereum/transaction :mukn/ethereum/tx-tracker :mukn/ethereum/watch :mukn/ethereum/assets
   :mukn/ethereum/evm-runtime :mukn/ethereum/contract-config :mukn/ethereum/assembly :mukn/ethereum/types
+  :mukn/ethereum/block-ctx
   (only-in ../compiler/alpha-convert/env symbol-refer)
-  ./program ./block-ctx ./consensus-code-generator ./terminal-codes
+  ./program ./consensus-code-generator ./terminal-codes
   ../compiler/method-resolve/method-resolve
   ../compiler/project/runtime-2)
 
@@ -299,7 +300,7 @@
     (def contract-bytes
       (stateful-contract-init initial-state-digest (.@ (@ self consensus-code-generator) bytes)))
     (create-contract sender-address contract-bytes
-      value: (.@ (@ self block-ctx) deposits))))
+      value: (.call Ether .participant:commit-deposits (@ self block-ctx)))))
 
 ;; PreTransaction <- Runtime Block
 (defmethod {deploy-contract Runtime}
@@ -343,7 +344,7 @@
       ;; default gas value should be (void), i.e. ask for an automatic estimate,
       ;; unless we want to force the TX to happen, e.g. so we can see the failure in Remix
       gas: 1000000 ;; XXX ;;<=== DO NOT COMMIT THIS LINE UNCOMMENTED
-      value: (.@ (@ self block-ctx) deposits))))
+      value: (.call Ether .participant:commit-deposits (@ self block-ctx)))))
 
 ;; CodeBlock <- Runtime
 (defmethod {get-current-code-block Runtime}
@@ -428,18 +429,18 @@
        (let
          ((this-participant {get-active-participant self})
           (amount {reduce-expression self amount-variable}))
-         (.call BlockCtx .add-to-deposit (@ self block-ctx) this-participant amount)))
+         (.call Ether .participant:add-to-deposit (@ self block-ctx) this-participant amount)))
 
       (['expect-deposited amount-variable]
        (let
          ((this-participant {get-active-participant self})
           (amount {reduce-expression self amount-variable}))
-         (.call BlockCtx .add-to-deposit (@ self block-ctx) this-participant amount)))
+         (.call Ether .participant:expect-deposited (@ self block-ctx) this-participant amount)))
 
       (['participant:withdraw address-variable price-variable]
        (let ((address {reduce-expression self address-variable})
              (price {reduce-expression self price-variable}))
-         (.call BlockCtx .add-to-withdraw (@ self block-ctx) address price)))
+         (.call Ether .participant:withdraw (@ self block-ctx) address price)))
 
       (['add-to-publish ['quote publish-name] variable-name]
        (let ((publish-value {reduce-expression self variable-name})
