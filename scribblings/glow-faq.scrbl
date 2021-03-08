@@ -50,30 +50,33 @@
     to drive the community towards a new workflow.}
 
     @item{At this point how much time do you need to support another blockchain? That depends on
-    the blockchain. For most EVM blockchains it should only require a few lines in a config file.
-    For something else, roughly two to three months of work for the initial version. It would
-    also require two annual contracts, one to prevent the code from bitrotting, and another to
-    maintain the backend as we add language features.
-    
-    @item{Bitcoin? Its script language sucks, so it would require roughly 6 months to work around
-    all the quirks, and even then only the forks would be fully supported. Bitcoin itself is
-    missing some essential capabilities. That is typically something we're considering because of
-    the popularity of Bitcoin, though.}
+    the blockchain.
+    @itemlist[
+     @item{For most EVM blockchains it should only require a few lines in a config file.}
+     @item{For something else, roughly two to three months of work for the initial version. It
+     would also require two annual contracts, one to prevent the code from bitrotting, and another
+     to maintain the backend as we add language features.}
+     @item{Bitcoin? Its script language sucks, so it would require roughly 6 months to work around
+     all the quirks, and even then only the forks would be fully supported. Bitcoin itself is
+     missing some essential capabilities. That is typically something we're considering because of
+     the popularity of Bitcoin, though.}
+     @item{Bitcoin, really? OK, we can actually do it, but it's 6 more months of work to use clever
+     tricks to overcome the limitations, and then the transaction fees will be so high that you'll
+     only want to use that for very high value contracts, such as side-chain maintenance. Once that
+     is done, keep tripling the price compared to Bitcoin-without-BTC.}]}
 
-    @item{Bitcoin, really? OK, we can actually do it, but it's 6 more months of work to use clever
-    tricks to overcome the limitations, and then the transaction fees will be so high that you'll
-    only want to use that for very high value contracts, such as side-chain maintenance. Once
-    that is done, keep tripling the price compared to Bitcoin-without-BTC.}
-    
     @item{Is there a @(Glow) library for NFT, and ERC20 contracts? Not yet, but this is next on the
     list of features we're working on.}
 
-    @item{Can you quickly sum-up the benefits of @(Glow)? First, writing a DApp that is 10x safer
-    for 1/10th the effort than using say Solidity. Second, writing it once, and having it work
-    everywhere, and not just on EVM blockchains. You don't have to guess where the liquidity will
-    be and then bank on a technology that only works on one network. Third, generating not just the
-    "smart contract", but the client and server code that goes with it for each participant. Fourth,
-    having a chance at formal methods.}
+    @item{Can you quickly sum-up the benefits of Glow?
+    @itemlist[#:style 'ordered
+     @item{Writing a DApp that is 10x safer for 1/10th the effort than using say Solidity.}
+     @item{Writing it once, and having it work everywhere, and not just on EVM blockchains. You don't
+      have to guess where the liquidity will be and then bank on a technology that only works on
+      one network.}
+     @item{Generating not just the "smart contract", but the client and server code that goes with it
+      for each participant.}
+     @item{Having a chance at formal methods.}]}
 
     @item{Does this work on EVM? Just saw that it mentioned Cardano only? It works on the EVM.
     Our default test network is a devnet for a side-chain on Cardano. But it will work on any
@@ -107,6 +110,4 @@
     easily afford the 10x cost of interpreting vs compilation). Today, you can invoke @(Glow) from
     any language by spawning a process. Or you can invoke it from Gerbil Scheme REPL. Tomorrow,
     we'll add an HTTP API and a JS API.}
-
-
 ]
