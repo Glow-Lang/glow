@@ -25,7 +25,7 @@
   (set! value (parse-currency-value
                (or value (error "Missing value. Please use option --value")) currency))
   (printf "\nSending ~a ~a from ~a to ~a on network ~a:\n"
-          value token-symbol (0x<-address from) (0x<-address to) network)
+          (decimal-string-ether<-wei value) token-symbol (0x<-address from) (0x<-address to) network)
   (printf "\nBalance before\n for ~a: ~a ~a,\n for ~a: ~a ~a\n"
           ;; TODO: use a function to correctly print with the right number of decimals,
           ;; with the correct token-symbol, depending on the current network and/or asset
