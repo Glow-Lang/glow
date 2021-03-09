@@ -67,16 +67,16 @@
 (def (run ctx role a)
   (def program (interaction-agreement->program a))
   (def runtime
-    (make-Runtime role: role
+    (.call Runtime .make role: role
                   agreement: a
                   program: program
                   io-context: ctx))
-  {execute runtime}
+  (execute runtime)
   (printf "~a~a interaction finished~a\n" BOLD (.@ a interaction) END)
   (surface-name-environment
    (hash-get (hash-get (.@ program compiler-output) 'DebugLabelTable)
-             (@ runtime current-debug-label))
-   (program-environment-type-value-pairs program (@ runtime environment))))
+             (.@ runtime current-debug-label))
+   (program-environment-type-value-pairs program (.@ runtime environment))))
 
 ;; --------------------------------------------------------
 
