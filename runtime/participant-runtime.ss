@@ -156,7 +156,7 @@
       (receive self))
     (set! (.@ self block-ctx) #f)
 
-    (match (code-block-exit (get-current-code-block self))
+    (match (.@ (get-current-code-block self) exit)
       (#f
         (displayln)) ; contract finished
       (exit
@@ -166,7 +166,7 @@
 ;; Bool <- Runtime
 (def (is-active-participant self)
   (def current-code-block (get-current-code-block self))
-  (equal? (.@ self role) (code-block-participant current-code-block)))
+  (equal? (.@ self role) (.@ current-code-block participant)))
 
 ;; TODO: everything about this function, from the timer-start and/or wherever we left off
 ;; to timeout or (indefinite future if no timeout???)
@@ -181,7 +181,7 @@
     (watch-contract callback contract-address from-block to-block)))
 
 (def (run-passive-code-block/contract self role contract-config)
-  (displayln BOLD "\nWaiting for " (code-block-participant (get-current-code-block self)) " to make a move ..." END)
+  (displayln BOLD "\nWaiting for " (.@ (get-current-code-block self) participant) " to make a move ..." END)
   ;; TODO: `from` should be calculated using the deadline and not necessarily the previous tx,
   ;; since it may or not be setting the deadline
   (def from
@@ -199,7 +199,7 @@
 (def (interpret-current-code-block self)
   (let (code-block (get-current-code-block self))
     (displayln BOLD "\nExecuting code block " (.@ self current-code-block-label) " ..." END)
-    (for ((statement (code-block-statements code-block)))
+    (for ((statement (.@ code-block statements)))
       (interpret-participant-statement self statement))))
 
 (def (run-passive-code-block/handshake self role)
@@ -278,8 +278,8 @@
 (def (prepare-create-contract-transaction self)
   (def sender-address (get-active-participant self))
   (def code-block (get-current-code-block self))
-  (def next (code-block-exit code-block))
-  (def participant (code-block-participant code-block))
+  (def next (.@ code-block exit))
+  (def participant (.@ code-block participant))
   (def initial-state
     (create-frame-variables
       self

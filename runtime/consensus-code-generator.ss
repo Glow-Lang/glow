@@ -91,7 +91,7 @@
 ;; Directives from a code block
 ;; (List Directive) <- ConsensusCodeGenerator Symbol CodeBlock
 (def (generate-consensus-code-block self code-block-label code-block)
-  (def checkpoint-statements (code-block-statements code-block))
+  (def checkpoint-statements (.@ code-block statements))
   (def frame-size (compute-variable-offsets self code-block-label))
   (def code-block-directives
     [[&jumpdest (make-checkpoint-label (.@ self name) code-block-label)]
@@ -304,7 +304,7 @@
 
 ;; Directive <- ConsensusCodeGenerator Symbol CodeBlock
 (def (setup-tail-call self code-block-label code-block)
-  (let* ((next-code-block-label (code-block-exit code-block))
+  (let* ((next-code-block-label (.@ code-block exit))
          (next-code-block-live-variables (sort (lookup-live-variables (.@ self program) (.@ self name) next-code-block-label) symbol<?))
          (next-code-block-frame-size (+ (param-length UInt16) (param-length Block)))) ;; 2 for program counter, 2 for timer start,
     (&begin

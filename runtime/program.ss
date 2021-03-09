@@ -10,7 +10,7 @@
   ../compiler/typecheck/type
   ../compiler/checkpointify/checkpointify)
 
-(def Interaction (Map Any <- Symbol)) ; (Map CodeBlock <- Symbol)
+(def Interaction (Map CodeBlock <- Symbol))
 
 (define-type InteractionInfo
   (.+
@@ -98,8 +98,8 @@
   (.+
    (Record
     current-participant: [(OrFalse Symbol)]
-    current-label: [OrFalse Symbol]
-    code: [Any]) ;; Interaction
+    current-label: [(OrFalse Symbol)]
+    code: [Interaction])
    {.make: (lambda ((current-label #f) (code (make-hash-table)))
              { current-label
                code
@@ -107,20 +107,26 @@
 
 ;; ParseContext <- ParseContext Sexp
 (def (add-statement self statement)
-  (match (hash-get (.@ self code) (.@ self current-label))
-    ((code-block current-participant statements exits)
-      (let ((cb-statements (append statements [statement])))
-        (hash-put! (.@ self code) (.@ self current-label) (make-code-block current-participant cb-statements exits))
-        self))
-    (#f
-      self)))
+  (let (code-block (hash-get (.@ self code) (.@ self current-label)))
+    (cond
+     ((element? CodeBlock code-block)
+      (with-slots (participant statements exit) code-block
+       (let ((cb-statements (append statements [statement])))
+         (hash-put! (.@ self code) (.@ self current-label) (.call CodeBlock .make participant cb-statements exit))
+         self)))
+     (else
+      self))))
 
-;; TODO: rename to CodeBlock ?
-(defstruct code-block
-  (participant ;; : (OrFalse Symbol)
-   statements ;; : (List Sexp)
-   exit) ;; (OrFalse Symbol)
-  transparent: #t)
+(define-type CodeBlock
+  (.+
+   (Record
+    participant: [(OrFalse Symbol)]
+    statements: [(List SExp)]
+    exit: [(OrFalse Symbol)])
+   {.make: (lambda (participant statements exit)
+             { participant
+               statements
+               exit })}))
 
 (define-type SmallFunction
   (Record
@@ -131,25 +137,27 @@
 
 ;; <- ParseContext (OrFalse Symbol)
 (def (set-participant self new-participant)
-  (unless (and (.@ self current-participant) (equal? new-participant (.@ self current-participant)))
+ (unless (and (.@ self current-participant) (equal? new-participant (.@ self current-participant)))
     (let (contract (.@ self code))
-      (match (hash-get contract (.@ self current-label))
-        ((code-block current-participant statements exits)
-          (begin
-            (match (last statements)
-              (['@label last-label]
-                ;;TODO: replace the two statements below by (hash-put! contract (.@ self current-label) (make-code-block current-participant statements last-label)) then update all call sites of {get-current-code-block Runtime}
-                (def init-statements (take statements (- (length statements) 1)))
-                (hash-put! contract (.@ self current-label) (make-code-block current-participant init-statements last-label))
-                (hash-put! contract last-label (make-code-block new-participant [['set-participant new-participant]] #f))
-                (set! (.@ self current-participant) new-participant)
-                (set! (.@ self current-label) last-label))
-              (else
-                (error "Change of participant with no preceding label")))))
-        (#f
+      (let (code-block (hash-get contract (.@ self current-label)))
+        (cond
+         ((element? CodeBlock code-block)
+          (with-slots (participant statements exit) code-block
+            (begin
+              (match (last statements)
+                (['@label last-label]
+                  ;;TODO: replace the two statements below by (hash-put! contract (.@ self current-label) (make-code-block current-participant statements last-label)) then update all call sites of {get-current-code-block Runtime}
+                  (def init-statements (take statements (- (length statements) 1)))
+                  (hash-put! contract (.@ self current-label) (.call CodeBlock .make participant init-statements last-label))
+                  (hash-put! contract last-label (.call CodeBlock .make new-participant [['set-participant new-participant]] #f))
+                  (set! (.@ self current-participant) new-participant)
+                  (set! (.@ self current-label) last-label))
+                (else
+                 (error "Change of participant with no preceding label"))))))
+         (else
           (begin
             (set! (.@ self current-participant) new-participant)
-            (hash-put! contract (.@ self current-label) (make-code-block new-participant [] #f))))))))
+            (hash-put! contract (.@ self current-label) (.call CodeBlock .make new-participant [] #f)))))))))
 
 ;; Takes the S-expression from the project pass and creates a Program
 ;; by finding the code-blocks that are transaction boundaries
@@ -207,5 +215,5 @@
   (def consensus-interaction (hash-get specific-interactions #f))
   (let/cc return
     (for ((values label code-block) (in-hash consensus-interaction))
-      (when (equal? (code-block-exit code-block) #f)
+      (when (equal? (.@ code-block exit) #f)
         (return label)))))
