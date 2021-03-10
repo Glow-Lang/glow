@@ -1,13 +1,13 @@
-@interaction
-let swap = (A: Participant, basket1: Asset1,
-            B: Participant, basket2: Asset2) => {
-  deposit! A -> basket1;
-  deposit! B -> basket2;
-  withdraw! B <- basket1;
-  withdraw! A <- basket2;
+@interaction({participants: [X, Y], assets: [A, B]})
+let swap = () => {
+  deposit! X -> A;
+
+  deposit! Y -> B;
+  withdraw! Y <- A;
+  withdraw! X <- B;
 }
 
 // Usage example:
 /*
-swap(alice, {USD: 50}, bob, {EUR: 60});
+swap({participants: [alice, bob], assets: [{ADA: 60}, {USD: 50}]);
 */
