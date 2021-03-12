@@ -1,11 +1,13 @@
 #lang racket/base
 
-(provide Glow blockquote not-supported-yet)
+(provide Glow MuKn blockquote not-supported-yet)
 
 (require scribble/manual
          (only-in scribble/core style background-color-property))
 
 (define (Glow) (emph "Glow"))
+
+(define (MuKn) (hyperlink "https://mukn.io" (emph "MuKn")))
 
 (define (blockquote . stuff)
   (apply nested #:style 'inset stuff))
