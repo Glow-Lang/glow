@@ -486,3 +486,15 @@ also known as @(MuKn) (pronounced “Moon”).
 We will gladly sell our services to improve @(Glow), help you use and deploy it;
 and we will also gladly sell our services to help you integrate it to your proprietary systems
 or to your software systems that you keep as trade secrets.
+
+@section{Is @(Glow) Turing-Complete?}
+
+No, @(Glow) is not Turing-Complete at this point.
+
+We do see value in being able to express more elaborate computations,
+but we value safety over versatility.
+Thus, we won't compromise on safety, and we will instead enable more advanced formal methods
+so you can keep proving your DApps correct as they get more elaborate.
+So while we will eventually reach a point when you can express arbitrary computations in @(Glow),
+along the way we will keep ensuring that @(Glow) is and remains at any moment
+the best environment to develop @emph{safe} DApps.

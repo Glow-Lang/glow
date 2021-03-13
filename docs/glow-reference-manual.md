@@ -13,14 +13,6 @@ This manual has been written both
 by nearly total-beginners, and computer science experts,
 so that *Glow* can be learnt without being confusing.
 
-If that's not enough, you can always:
-
-- join us on [our discord channel](https://discord.gg/Zx7p5Pp3yq)
-
-- contact us directly: `contact@mukn.io`
-
-So here's a little rundown...
-
 ### Level 1: I am new to computer programming
 
 Great! Your presence here means our product is becoming mainstream.
@@ -295,42 +287,6 @@ we offer this nixpkgs channel:
 export NIX_PATH=nixpkgs=http://github.com/muknio/nixpkgs/archive/devel.tar.gz
 ```
 
-##### Building from source
-
-Once you have installed *Glow* and all its dependencies via Nix,
-and have downloaded its source code, you can re-build it from source
-
-```
-nix-build
-```
-
-Or you can install the resulting software with
-
-```
-nix-env -iA .
-```
-
-## Trying it out with Docker (levels 3 and 4)
-
-When we have a stable release, we'll directly provide an image
-`mukn/glow:stable` on [Docker](https://hub.docker.com/repository/docker/mukn/glow).
-
-In the meantime, you can build your own with:
-
-```
-docker build -t mukn/glow -f scripts/Dockerfile
-```
-
-## Install Glow the hard way on other systems (levels 3 and 4)
-
-If you don't use either Linux or macOS, and can't use Docker,
-you will have to build and install *Glow* the hard way:
-installing GCC (usually easy), and a bunch of libraries (tedious),
-on top of that Gambit Scheme with the correct options (requires care),
-on top of it Gerbil Scheme, on top of it all Glow.
-
-If you really want to try it this way, you can check our
-[hardcore installation file](../INSTALL.md).
 
 # Languages basics
 
@@ -938,43 +894,3 @@ let rockPaperScissors = (wagerAmount, escrowAmount) => {
 Notice how Bob does *not* need to deposit an escrow,
 because his first message is also his last message,
 so there is no opportunity for him to stop cooperating after he started.
-
-# Contribute to Glow (level 4)
-
-### Development Instructions
-
-[If you have installed](https://gitlab.com/mukn/glow/-/blob/master/INSTALL.md) *Glow* and
-want to experiment with the *Glow* compiler, please read our document about
-[how to hack Glow](https://gitlab.com/mukn/glow/-/blob/master/HACKING.md).
-
-You will probably want to hang out with our developers and the rest of the community
-on [our discord channel](https://discord.gg/Zx7p5Pp3yq).
-
-## Upcoming functionalities
-
-### Turing-completeness
-
-We value safety over versatility:
-we do want to _eventually_ make *Glow* Turing-complete,
-but not by making any compromise about safety—instead we will enable more advanced formal methods
-so you can keep proving your DApps correct as they get more elaborate.
-We will achieve that goal eventually, but more importantly,
-we want *Glow* at any moment along the way to provide the best environment to develop *safe* DApps.
-
-### Web-user interface
-
-**Features we want for early 2021**
-
-- Compiling for Cardano, deploying on the Cardano “Plutus DApp Framework”
-- A nice Web user interface to edit and deploy DApps,
-  probably implemented with [gxQuasar](https://drewc.github.io/gx-quasar/).
-- As an example, running `buy-sig` with the Web user interface.
-- As another example, running RPS with the Web user interface.
-- Be able to create an easy template for `buy-sig`, RPS, etc., so end-users don’t even have to see the code.
-- An omniscient debugger at the granularity of blockchain transactions.
-- Easily input parameters found off-chain (forms or expressions).
-- Available examples on the side easily selectable (like on https://ide.zilliqa.com)
-- Awesome tutorials for many other examples
-  - emails and chat
-  - crypto wallet
-  - video chat service

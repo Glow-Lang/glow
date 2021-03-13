@@ -11,7 +11,7 @@ skip reading the rest of this file (except the warnings and prerequisites):
     curl -L https://glow-lang.org/install/glow-install | sh
 
 Alternatively, if you're rather use Docker than Nix,
-you can `docker pull mukn/glow:stable` then `docker run -it mukn/glow:stable`.
+you can `docker pull mukn/glow:alpha` then `docker run -it mukn/glow:alpha`.
 
 ## Warnings and Prerequisites
 
@@ -120,8 +120,8 @@ with *Glow* and its associated libraries precompiled.
 
 For the the most recent stable release (currently alpha quality), use:
 
-    docker pull mukn/glow:stable
-    docker run -it mukn/glow:stable bash
+    docker pull mukn/glow:alpha
+    docker run -it mukn/glow:alpha bash
 
 For the latest development code (has most features but can be unstable), use:
 
