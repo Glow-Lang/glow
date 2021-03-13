@@ -57,7 +57,7 @@
       maxInitialBlock: (maxInitialBlock #f))
   (set! block (or block (eth_blockNumber)))
   {;; To be filled "manually" from the user inputs
-   interaction: "mukn/glow/dapps/buy_sig#payForSignature"
+   interaction: "buy_sig#payForSignature"
    participants: (.o Buyer: buyer Seller: seller)
    parameters: (hash
                 (digest (json<- Digest digest))

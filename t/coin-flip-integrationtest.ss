@@ -33,7 +33,7 @@
   (def timeout (ethereum-timeout-in-blocks))
   (def initial-timer-start (+ (eth_blockNumber) timeout))
   (.o
-    interaction: "mukn/glow/dapps/coin_flip#coinFlip"
+    interaction: "coin_flip#coinFlip"
     participants: (.o A: a-address B: b-address)
     parameters: (hash
                   (wagerAmount (json<- Ether wagerAmount))
