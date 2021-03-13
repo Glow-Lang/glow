@@ -30,7 +30,7 @@
   (def timeout (ethereum-timeout-in-blocks))
   (def initial-timer-start (+ (eth_blockNumber) timeout))
   (.o
-    interaction: "mukn/glow/dapps/rps_simple#rockPaperScissors"
+    interaction: "rps_simple#rockPaperScissors"
     participants: (.o A: a-address B: b-address)
     parameters: (hash
                   (wagerAmount (json<- Ether wagerAmount)))
