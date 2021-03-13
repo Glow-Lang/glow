@@ -10,7 +10,7 @@
 
 For community help, join (our-discord-channel).
 
-For commercial support, contact us directly at @literal|{contact@mukn.io}|.
+For commercial support, contact us directly at @(contact-email).
 
 @section{How to Install @(Glow)}
 

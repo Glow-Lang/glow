@@ -315,13 +315,13 @@ or reuses an existing blockchain contract when possible.
 Typically, the on-chain smart contract is created or invoked
 as the first participant as the first step in executing the agreement.
 If a new contract was created, it may typically be destroyed
-by the last as the last step in executing the agreement.
+by the last participant in the last step of the agreement execution.
 In between the first and last steps, the @(Glow) clients for each participant
 will handle all interaction with the blockchain and other participants,
 so you don't have to interact with them yourself, which is
 a very error-prone and completely unforgiving yet safety-critical activity.
 
-@subsection{Does @(Glow) compile DApps into client program?}
+@subsection{Does @(Glow) compile DApps into client programs?}
 
 As it executes interactions, @(Glow) also runs every step on each participant's local computer.
 This part is compiled to a virtual machine then interpreted as virtual machine code.
@@ -350,6 +350,7 @@ to track the identities managed for the user,
 the contacts known to the user, and
 the progress of the interactions the user is partaking in,
 so as to ensure they are conducted to completion.
+
 None of that corresponds to generating compiled files from source code
 (compilation is done in-memory),
 but it does count as generating and using files on the participants' machines.

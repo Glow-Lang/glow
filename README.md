@@ -21,4 +21,10 @@ what we are currently working on.
 
 ### More information
 
-For more information on Glow, see our [bibliography](docs/bibliography.md).
+For more information on Glow, see our web site
+[glow-lang.org](https://glow-lang.org), including
+[our documentation](https://glow-lang.org/docs).
+
+If you are a developer, you may also be interested in
+[our wiki](https://gitlab.com/mukn/glow/-/wikis/home), including
+[our Roadmap](https://gitlab.com/mukn/glow/-/wikis/Roadmap).
