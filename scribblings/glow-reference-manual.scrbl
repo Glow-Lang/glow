@@ -12,7 +12,7 @@
 
 @subsection[#:tag "hash-lang"]{The @hash-lang[] @racketmodname[glow] line}
 
-Any program that you write in Glow starts with the mandatory line:
+Any program that you write in @(Glow) starts with the mandatory line:
 
 @glowmodblock|{
 #lang glow
@@ -20,7 +20,7 @@ Any program that you write in Glow starts with the mandatory line:
 
 @subsection{Commenting your code}
 
-To comment your code in Glow, @litchar{//} creates a line comment and
+To comment your code in @(Glow), @litchar{//} creates a line comment and
 @litchar{/*} and @litchar{*/} create a block comment,
 just like in ReasonML and JavaScript:
 
@@ -33,7 +33,7 @@ just like in ReasonML and JavaScript:
 a block comment */
 }|
 
-@subsection{Naming objects in Glow}
+@subsection{Naming objects in @(Glow)}
 
 A variable name is made one or more of the characters
 @litchar{[_a-zA-Z0-9!$]} but must start with an alphabetic
@@ -44,7 +44,7 @@ that matches anything but whose value is ignored. A few other names are reserved
 notably for the keywords of the language or a few languages that might be problematic.
 
 There are terms that can't be used to name objects,
-as they are already used as Keywords by either Glow or other languages that interact with it:
+as they are already used as Keywords by either @(Glow) or other languages that interact with it:
 
 @racket[abstract] @racket[arguments] @racket[assert!] @racket[boolean] @racket[break] @racket[byte] @racket[case] @racket[catch] @racket[class] @racket[char] @racket[const] @racket[continue] @racket[data] @racket[debugger] @racket[default] @racket[delete] @racket[deposit!] @racket[do] @racket[double] @racket[else] @racket[enum] @racket[eval] @racket[export] @racket[extends] @racket[false] @racket[final] @racket[finally] @racket[float] @racket[for] @racket[function] @racket[goto] @racket[if] @racket[implements] @racket[import] @racket[in] @racket[instanceof] @racket[int] @racket[interface] @racket[let] @racket[long] @racket[native] @racket[new] @racket[null] @racket[package] @racket[private] @racket[protected] @racket[public] @racket[publicly!] @racket[publish!] @racket[rec] @racket[require] @racket[require!] @racket[return] @racket[short] @racket[static] @racket[sum] @racket[super] @racket[switch] @racket[synchronized] @racket[this] @racket[throw] @racket[throws] @racket[transient] @racket[true] @racket[try] @racket[type] @racket[typeof] @racket[var] @racket[verifiably!] @racket[verify!] @racket[void] @racket[volatile] @racket[while] @racket[with] @racket[yield] @racket[withdraw!]
 
@@ -335,7 +335,7 @@ moment: just write a non-empty sequence of digits from
 @glowexp{1}, @glowexp{2}, @glowexp{42}, @glowexp{1729} are
 values of type @glowexp{Int}.
 
-At this moment, Glow only supports the type @defid[Nat]
+At this moment, @(Glow) only supports the type @defid[Nat]
 which contains non-negative natural integers.
 
 Furthermore, as an implementation limitation, when deploying
@@ -389,7 +389,7 @@ An attempt to do so will be detected at runtime, result in an error, and
 cause the transaction containing the overflow to be aborted,
 at which point the interaction will remain at its previous state.
 
-For instance, you can't divide by zero; for the moment, Glow doesn't support negative numbers;
+For instance, you can't divide by zero; for the moment, @(Glow) doesn't support negative numbers;
 and currently on our Ethereum backend, all numbers must be less than 2**256.
 
 Also note that you can't perform operations between strings and numbers:
@@ -493,8 +493,8 @@ to execute than code running in private on your local device.
 In this context, concepts like Unicode, valid codepoints, UTF-8,
 normalization forms, etc., are extremely expensive nonsense
 that will rack up immense bills for no benefit whatsoever.
-Thus, when interfacing between Glow and other languages, make sure that
-you represent Glow bytestrings as sequences of bytes in your language, and
+Thus, when interfacing between @(Glow) and other languages, make sure that
+you represent @(Glow) bytestrings as sequences of bytes in your language, and
 not "native" strings of Unicode or any such dangerously misfit type.
 
 @subsection{Digests and Signatures}
@@ -561,8 +561,21 @@ always produces @glowexp{true}.
 
 @subsection{Static Safety Analyses}
 
-In the future, @(Glow) will have static safety analyses that
-are discharged by a theorem solver.
+In the future, @(Glow) will help you prove the safety of your entire applications.
+We will start by helping you prove safety invariants of your interactions
+within the execution model of our language,
+with static analyses that are discharged by a theorem solver.
+
+Eventually, we want to be able to prove entire applications safe, from interface down to hardware,
+which involves proving every program correct, including compilers and runtimes, and even chips.
+However, for now, we are focusing on the most pressing issue for decentralized applications,
+an issue that is not handled by previously existing tools, and that causes millions of dollars every year
+to be lost to mistakes and frauds:
+the correctness of the financial interactions between untrusting participants.
+This involves not just the "contract" on the public blockchain, but
+also the programs on each participant's private computer.
+
+@subsubsection{Specifying Application Invariants}
 
 @defglowstm[(assert! expr) @{assert! expr;}]{
 @not-supported-yet[]
@@ -570,17 +583,69 @@ are discharged by a theorem solver.
 Will check at compile-time that the predicate alway holds
 no matter what, as long as this point in the program was
 reached while the current user and the contract indeed run
-code generated by the Glow compiler, and the underlying
+code generated by the @(Glow) compiler, and the underlying
 infrastructure runs within the allowed parameters.
 Informally, @glowexp{assert!} means
 "if this fails, the program won't even start."
 }
 
 In the future, @glowexp{require!} will be upgraded so that
-the Glow compiler will reject the program unless it can
+the @(Glow) compiler will reject the program unless it can
 prove that the required assertion is indeed satisfiable for
 the active user, and generate code that satisfies the
 assertion.
+
+In the future, @glowexp{assume!} will be another kind of assertion.
+Within an @literal|{@A}| it will mean that the active user assumes the given predicate to be true.
+Outside an @literal|{@A}| it will mean that every user assumes the given predicate to be true.
+Informally, it will mean "you must not run this program unless you know this to be true."
+
+@subsubsection{Logical Invariants}
+
+In the future, you will be able to express the logical invariants for your programs,
+as specified in the body of the assertions above, in terms of a modal logic
+that will have several aspects:
+@itemize[
+@item{@emph{Functional Programming} for the regular predicate logic.}
+@item{@emph{Concurrent Tree Logic} (CTL) to deal with the many possible executions paths.}
+@item{@emph{Temporal Logic} to deal with timeouts.}
+@item{@emph{Epistemic Logic} to deal with multiple participant knowing different things
+  (starting with their secret keys).}
+@item{@emph{Game Semantics} to express interactive proofs and adversarial behavior.}
+@item{@emph{Linear Logic} to deal with resources not being arbitrarily created, duplicated or destroyed.}
+@item{@emph{Game Theory} to express the Economic Equilibrium in.}
+@item{@emph{Refinement Logic} Work at many abstraction levels (optional).}
+@item{@emph{Finitary Logic} to enable zk-proof backends (optional).}
+]
+
+@subsubsection{Security properties we will prove about interactions written in @(Glow)}
+
+@itemize[
+@item{@emph{Non-negativity}:
+  Amounts of assets in any account or sub-account are always non-negative.}
+@item{@emph{Linearity}: Assets cannot be created or destroyed or duplicated or divided,
+  only added via explicit deposits, removed via explicit deposits or transfered between accounts.}
+@item{@emph{Balance}: The amount in sub-accounts of an interaction at the end of the interaction is 0.}
+@item{@emph{Optimality}: Within the participants' respective explicit economic hypotheses,
+  a/the optimal strategy for each participant is to keep executing his program.}
+@item{@emph{Non-loss}: Within the participant's explicit economic hypotheses,
+  whatever the actions of other participants, each participant's wallet will keep its value,
+  except for the payment of transaction fees, which is bounded in gas
+  (though the price of gas itself may float up).}
+@item{@emph{Programmer-defined}: The programmer may specify additional
+  application-dependent invariants of his own to the interaction.}]
+
+The @(Glow) compiler will extract a specification from these invariants, and feed them to a theorem prover.
+It will reject the program if the theorem prover fails to prove any of these invariants.
+It will present any counter-examples found by the theorem provers in a way that is legible
+in terms of execution traces with source-level binding assignments.
+
+@subsubsection{Correctness of the @(Glow) implementation}
+
+In a yet further future, we will want to prove the correctness of the @(Glow) compiler toolchain itself.
+That will be another endeavour that will require much more capital investment than we can currently afford.
+Yet we're confident that our approach will make it much cheaper, more general and more robust
+than our competitors' approaches to eventually prove the correctness of an entire toolchain.
 
 @subsection{Recursive Functions}
 
@@ -682,7 +747,7 @@ integers, and it will not be limited in size as it is now:
 it will allow @tt{BigInt}s in JavaScript parlance
 (or bignums as called in the Lisp tradition).
 
-Nevertheless integer literals in Glow do not and will not
+Nevertheless integer literals in @(Glow) do not and will not
 take a final @litchar{n} at the end like they do in
 JavaScript.
 

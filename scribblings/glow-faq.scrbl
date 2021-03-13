@@ -81,7 +81,7 @@ may require a month of work, maybe two.
 @subsection{What will it take to support another smart-contract blockchain?}
 
 For most non-EVM yet smart-contract-capable blockchains,
-such as EOS, Nervos, Algorand, Tezos, etc.,
+such as PolkaDot, EOS, Nervos, Algorand, Tezos, etc.,
 it should take about two to three months of work
 for @(Glow) to support it.
 
@@ -240,7 +240,7 @@ We have since been working on adding support for many features, including but no
   @item{Support for generalized state channels as a more efficient backend}
 ]
 
-Please inquire on @hyperlink["https://discord.gg/Zx7p5Pp3yq"]{our discord channel}
+Please inquire on @(our-discord-channel)
 for the current precise status of @(Glow) and whether it can handle your desired interactions
 at any given time.
 
@@ -261,8 +261,7 @@ at any given time.
 ]
 
 We keep adding more contracts to our library as we extend the language.
-Please inquire on @hyperlink["https://discord.gg/Zx7p5Pp3yq"]{our discord channel}
-for the latest status.
+Please inquire on @(our-discord-channel) for the latest status.
 
 @subsection{Is there a @(Glow) library for NFTs? for ERC20 contracts?}
 
@@ -394,8 +393,7 @@ Then must make that your correspondants have access to the exact same file,
 placed at the exact same relative path under a directory @emph{their} @literal{$GLOW_PATH}.
 
 @(Glow) is a rapidly changing language, so
-please inquire on @hyperlink["https://discord.gg/Zx7p5Pp3yq"]{our discord channel}
-for the latest ways to write and use contracts.
+please inquire on @(our-discord-channel) for the latest ways to write and use contracts.
 
 @section{How do I run a @literal{.glow} interaction from my programming language?}
 
@@ -473,3 +471,18 @@ the "hardware design and implementation" under that operating system, etc.
 You should not hold the components used by the competitors of @(Glow)
 to a lower (or higher) standard than you hold @(Glow) itself.
 But at least, in the code audit wars, @(Glow) has @emph{much} fewer lines of code to audit.
+
+@section{Is @(Glow) Free Software?}
+
+Yes, @(Glow) is and will forever remain Free Software, Open Source Software,
+or however you like to call it: everyone is free to copy, use, modify and redistribute @(Glow).
+Indeed, we believe this is an essential feature of a decentralized system
+that anyone should be able to see and audit, use and adapt, to fix and improve its code.
+Without these freedoms, it is impossible to trust the code as an ongoing system to use and keep using.
+Do not trust any software that claims to be decentralized yet isn't Free Software.
+
+Now, @(Glow) has so far been developed by US-based company Mutual Knowledge Systems, Inc.,
+also known as @(MuKn) (pronounced “Moon”).
+We will gladly sell our services to improve @(Glow), help you use and deploy it;
+and we will also gladly sell our services to help you integrate it to your proprietary systems
+or to your software systems that you keep as trade secrets.
