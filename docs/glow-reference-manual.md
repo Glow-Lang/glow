@@ -2,49 +2,9 @@
 
 THIS FILE HAS OLD STUFF THAT NEEDS TO BE MOVED TO THE Scribble DOCUMENTATION AND/OR THE Wiki.
 
-## Caveats when using both *Glow* and JavaScript
-
-The syntax or *Glow* was specifically designed to be familiar to those who use
-JavaScript, ReasonML, TypeScript, etc.
-
-One major principle we follow is one to avoid confusion:
-**If program fragment is valid in both *Glow* and JavaScript,
-the *meaning* of that fragment should be the same in both languages, and/or
-any discrepancy in this meaning should be *obvious*.**
-
-If at any point you are confused by how a *Glow* program works
-based on your expectations as a JavaScript or ReasonML or TypeScript programmer,
-or on the contrary if when writing code in JavaScript or ReasonML or TypeScript
-you are led to wrong expectations based on what you read or wrote in *Glow*,
-then this is a serious design issue that we will try to address in a future version of *Glow*.
-
 That said, here are some differences between *Glow* and JavaScript:
 
-- *Glow* integers are all `BigInt`s, yet *Glow* integer literals do not end with an `n`
-  whereas JavaScript `BigInt` literals do, and JavaScript integer literals without an `n`
-  are read as floating point-numbers that only keep 52 bits worth of mantissa information.
-  This difference should be pretty obvious when reading or writing *Glow* or JavaScript programs
-  and translating from one to the other, but bears mentioning.
-
-- *Glow* uses `|` for alternatives in types or in pattern matching, not for bitwise-or.
-  Also, *Glow* does not use `&` or `^` or `~` for bitwise and, xor, not.
-  Instead, *Glow* uses tripled operators `&&&`, `|||`, `^^^`, `~~~`
-  for bitwise and, or, xor, not operations.
-  The syntactic difference is obvious and leaves no room for confusion.
-
-- *Glow* uses `<<` and `>>` for bitwise shift left and right operations.
-  These work the same as in JavaScript as long as you use `BigInt` in JavaScript.
-  Note however that legacy bitwise operations on "normal" numbers in JavaScript
-  first interprets floating-point numbers as 32-bit signed integers,
-  then computes on those 32-bit signed integers;
-  it then provides a special `>>>` "logical" shift right operation
-  that unlike other operations specially treats its left-hand-side argument as
-  an 32-bit *unsigned* integer; this operator is not available on `BigInt`.
-  There again, these differences should be relatively obvious to people dealing
-  with integers in JavaScript vs *Glow*.
-
 ## Compiling your program
-
 At the moment, *Glow* doesn't have much or a user-interface for building and deploying DApps.
 
 But we will include user satisfaction in the design.

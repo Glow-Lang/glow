@@ -340,18 +340,18 @@ For the longest time, JavaScript didn't have an "integer" type of its own.
 Instead, all numbers are IEEE 754 double-precision floating point numbers,
 64-bit total with a 53 bits of mantissa.
 Historically, people have been using those numbers to represent
-all contiguously integers from -2**53 to +2**53 —
+all contiguously integers from @literal{-2**53} to @literal{+2**53} ---
 though bitwise operations like @literal{&} only preserve 32 bits of data.
-But recent versions of JavaScript have introduced a new type of integer "BigInt";
+But recent versions of JavaScript have introduced a new type of integer @tt{BigInt};
 for backward compatibility reasons (i.e. for existing code to still work),
-BigInt is a disjoint type, and its literals have a "n" suffix to distinguish them,
+BigInt is a disjoint type, and its literals have a @literal{n} suffix to distinguish them,
 so that @literal{12345678901234567890} will be a floating point number, approximating away the low digits,
 whereas @literal{12345678901234567890n} will be an integer, preserving them.
 
-In @(Glow), we only have non-negative integers from 0 up to
-2**256 - 1 and no floating point, because blockchains
+In @(Glow), we only have non-negative integers from @literal{0} up to
+@literal{2**256-1} and no floating point, because blockchains
 casually operate on numbers up to 256-bit wide.
-In the future we will have BigInt-style integers, as
+In the future we will have @tt{BigInt}-style integers, as
 described in @secref{Near-Future_Plans}.
 Like in ReasonML and unlike in JavaScript, our integer literals do not have this @literal{n} suffix,
 and it is very clear what we are doing.
