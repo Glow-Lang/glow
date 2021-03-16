@@ -44,7 +44,7 @@
       (def agreement
         (.o
          glow-version: (software-identifier)
-         interaction: "mukn/glow/dapps/buy_sig#payForSignature"
+         interaction: "buy_sig#payForSignature"
          participants: (.o Buyer: buyer-address Seller: seller-address)
          parameters: (hash
                       (digest (json<- Digest digest))

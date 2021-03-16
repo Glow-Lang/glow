@@ -2,14 +2,16 @@
 
 (import
   :gerbil/expander :gerbil/gambit/ports
-  :std/format :std/generic :std/getopt :std/iter :std/misc/hash :std/misc/repr :std/misc/string :std/pregexp :std/sort :std/srfi/13 :std/sugar :std/text/json
-  :clan/base :clan/cli :clan/exit :clan/hash :clan/json :clan/multicall :clan/path-config :clan/syntax
+  :std/format :std/generic :std/getopt :std/iter :std/misc/hash :std/misc/repr :std/misc/string :std/pregexp
+  :std/sort :std/srfi/1 :std/srfi/13 :std/sugar :std/text/json
+  :clan/base :clan/cli :clan/config :clan/exit :clan/filesystem :clan/hash :clan/json
+  :clan/multicall :clan/path :clan/path-config :clan/string :clan/syntax
   :clan/poo/brace :clan/poo/cli :clan/poo/debug :clan/poo/object
   :clan/persist/db :clan/persist/content-addressing :clan/versioning :clan/pure/dict/symdict
   :mukn/ethereum/assets :mukn/ethereum/cli :mukn/ethereum/ethereum :mukn/ethereum/network-config
   :mukn/ethereum/types :mukn/ethereum/json-rpc :mukn/ethereum/known-addresses
   :mukn/glow/runtime/participant-runtime :mukn/glow/runtime/reify-contract-parameters
-  :mukn/glow/runtime/program :mukn/glow/runtime/terminal-codes
+  :mukn/glow/runtime/program :mukn/glow/runtime/terminal-codes :mukn/glow/runtime/glow-path
   (only-in :mukn/glow/compiler/alpha-convert/alpha-convert init-syms)
   :mukn/glow/compiler/passes :mukn/glow/compiler/multipass :mukn/glow/compiler/syntax-context
   :mukn/glow/cli/contacts :mukn/glow/cli/identities)
@@ -73,18 +75,6 @@
 (def (display-prompt name)
   (displayln CYAN name)
   (display (string-append "> " END)))
-
-(def (list-applications)
-  ;; List all of the applications in the search path.
-  (let*
-    ((all-files
-      (apply append (map directory-files (glow-search-path))))
-     (glow-files
-       (filter
-         (lambda (file)
-           (string=? (path-extension file) ".glow"))
-         all-files)))
-    (map path-strip-extension glow-files)))
 
 (def (ask-application)
   (let
@@ -182,28 +172,9 @@
   (def compiler-output (run-passes contract.glow pass: 'project show?: #f))
   (parse-compiler-output compiler-output))
 
-(def (glow-search-path)
-  (let ((path-str
-          (with-catch
-            (lambda (_) (source-path "dapps"))
-            (lambda () (getenv "GLOW_PATH")))))
-    (string-split path-str #\:)))
-
-(def (find-source-file target)
-  (let*
-    ((choices
-       (map
-         (lambda (search-dir) (string-append search-dir "/" target))
-         (glow-search-path)))
-     (present-choices
-       (filter file-exists? choices)))
-    (if (null? present-choices)
-      (error "Source file not found: " target)
-      (car present-choices))))
-
 (def (extract-application-source-path application-name)
   (match (pregexp-match "([^#]*)#?.*" application-name)
-    ([_ path] (string-append "./" path ".glow"))
+    ([_ dapp] (find-glow-dapp dapp))
     (else (error "Bad application name" application-name))))
 
 ;; TODO: also accept local interaction parameters
@@ -226,7 +197,7 @@
              (option 'max-initial-block "-B" default: #f
                      help: "maximum block number the contract can begin at")]
             [(lambda (opt) (hash-remove! opt 'test))]
-            [options/contacts options/identities
+            [options/glow-path options/contacts options/identities
              options/evm-network options/database options/test options/backtrace]))
   (def options (hash (max-initial-block max-initial-block) (role role)))
   (displayln)
@@ -250,7 +221,7 @@
 (def (start-interaction/with-agreement options agreement)
   (let* ((selected-identity (ask-identity options))
          (interaction (.@ agreement interaction))
-         (application.glow (find-source-file (extract-application-source-path interaction)))
+         (application.glow (find-glow-dapp (extract-application-source-path interaction)))
          (program (compile-contract application.glow))
          (interaction-name (symbolify (cadr (string-split interaction #\#))))
          (interaction-info (hash-get (.@ program interactions) interaction-name))
@@ -265,7 +236,7 @@
     (let (application-name
             (get-or-ask options 'glow-app (λ () (ask-application)))))
     (let (application-source-path (extract-application-source-path application-name)))
-    (let (application.glow (find-source-file application-source-path)))
+    (let (application.glow (find-glow-dapp application-source-path)))
     (let (program (compile-contract application.glow)))
     (let (interaction-name
             (get-or-ask options 'interaction (λ () (ask-interaction (hash-keys (.@ program interactions)))))))

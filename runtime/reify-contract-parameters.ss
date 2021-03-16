@@ -7,7 +7,7 @@
   :mukn/ethereum/network-config :mukn/ethereum/json-rpc
   :mukn/glow/compiler/syntax-context :mukn/glow/compiler/multipass :mukn/glow/compiler/passes
   (only-in ../compiler/alpha-convert/env symbol-refer)
-  ./program ./participant-runtime ./terminal-codes)
+  ./program ./participant-runtime ./terminal-codes ./glow-path)
 
 (.def io-context:terminal
   setup:
@@ -26,9 +26,8 @@
 
 ;; interaction-agreement->program : InteractionAgreement -> Program
 (def (interaction-agreement->program a)
-  (defvalues (modpath name)
-    (split-interaction-path-name (.@ a interaction)))
-  (def path (glow-module-path->path modpath))
+  (defvalues (modpath name) (split-interaction-path-name (.@ a interaction)))
+  (def path (find-glow-dapp modpath))
   (def compiler-output (run-passes path pass: 'project show?: #f))
   (parse-compiler-output compiler-output))
 
@@ -78,13 +77,3 @@
              (.@ runtime current-debug-label))
    (program-environment-type-value-pairs program (.@ runtime environment))))
 
-;; --------------------------------------------------------
-
-;; glow-module-path->path : String -> PathString
-(def (glow-module-path->path s)
-  (cond
-   ((string-prefix? "mukn/glow/" s)
-    (let (s (string-trim-prefix "mukn/glow/" s))
-      (source-path (string-append s ".glow"))))
-   (else
-    (error 'glow-module-path->path "given:" s))))
