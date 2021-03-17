@@ -172,9 +172,11 @@
   (def compiler-output (run-passes contract.glow pass: 'project show?: #f))
   (parse-compiler-output compiler-output))
 
+;; Takes an application identifier like "buy_sig#payForSignature" and returns
+;; the part corresponding to a source file/path, e.g. "buy_sig"
 (def (extract-application-source-path application-name)
   (match (pregexp-match "([^#]*)#?.*" application-name)
-    ([_ dapp] (find-dapp-path dapp))
+    ([_ dapp] dapp)
     (else (error "Bad application name" application-name))))
 
 ;; TODO: also accept local interaction parameters
@@ -221,7 +223,7 @@
 (def (start-interaction/with-agreement options agreement)
   (let* ((selected-identity (ask-identity options))
          (interaction (.@ agreement interaction))
-         (application.glow (find-dapp-path (extract-application-source-path interaction)))
+         (application.glow (find-dapp-file (extract-application-source-path interaction)))
          (program (compile-contract application.glow))
          (interaction-name (symbolify (cadr (string-split interaction #\#))))
          (interaction-info (hash-get (.@ program interactions) interaction-name))
