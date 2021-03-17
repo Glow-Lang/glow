@@ -20,11 +20,12 @@
         (for-template :mukn/glow/compiler/syntax-context)
         :mukn/glow/compiler/alpha-convert/alpha-convert
         :mukn/glow/compiler/desugar/desugar
-        :mukn/glow/compiler/typecheck/typecheck)
+        :mukn/glow/compiler/typecheck/typecheck
+        :mukn/glow/runtime/glow-path)
 
 ;; Path -> Path
-(def (sexp-typedecl-version file)
-  (string-append (string-trim-suffix ".sexp" file) ".typedecl.sexp"))
+(def (typedecl-file dapp-name)
+  (find-dapp-path (string-append dapp-name ".typedecl.sexp")))
 
 ;; env->sexpr : Env -> Sexpr
 (def (env->sexpr env)
@@ -82,11 +83,12 @@
            #f))))))
 
 ;; try-typecheck-files : [Listof PathString] -> Void
-(def (try-typecheck-files files)
-  (def decl-files (map sexp-typedecl-version files))
+(def (try-typecheck-files dapp-names)
+  (def files (map (lambda (x) (find-dapp-file x ".sexp")) dapp-names))
+  (def decl-files (map typedecl-file dapp-names))
   (def progs (map read-sexp-module files))
   (def decls
-    (map (lambda (f) (and (file-exists? f) (read-type-env-file f))) decl-files))
+    (map (lambda (f) (and f (read-type-env-file f))) decl-files))
   (def known-fails (map known-failure? decl-files))
   ;; MUTABLE var failed
   (let ((failed '()))

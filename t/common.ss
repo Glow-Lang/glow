@@ -3,13 +3,14 @@
 (import
   :gerbil/gambit/misc
   :gerbil/expander
-  :std/getopt :std/iter
+  :std/getopt :std/iter :std/sort
   :clan/base :clan/exit :clan/filesystem :clan/multicall :clan/path :clan/path-config
   :clan/persist/content-addressing
   :mukn/ethereum/hex
   :mukn/glow/path-config
   :mukn/glow/compiler/multipass
-  :mukn/glow/compiler/passes)
+  :mukn/glow/compiler/passes
+  :mukn/glow/runtime/glow-path)
 
 ;; dapps-dir
 (def (dapps-dir)
@@ -17,11 +18,14 @@
 
 ;; dapps.sexp : -> [Listof Path]
 (def (dapps.sexp)
-  (find-files (dapps-dir) (λ (x) (equal? (identify-layer x) 'sexp))))
+  (def h (find-dapp-files
+          extension: ".sexp" filter: (lambda (name path) (equal? (identify-layer path) 'sexp))))
+  (sort (hash-keys h) string<?))
 
 ;; dapps.glow : -> [Listof Path]
 (def (dapps.glow)
-  (find-files (dapps-dir) (λ (x) (equal? (identify-layer x) 'glow))))
+  (def h (find-dapp-files extension: ".glow"))
+  (sort (hash-keys h) string<?))
 
 (def (ppd x) (pretty-print (syntax->datum x)))
 

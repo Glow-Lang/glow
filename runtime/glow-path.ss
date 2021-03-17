@@ -1,7 +1,7 @@
 (export #t)
 
 (import
-  :std/getopt :std/iter :std/misc/hash :std/sugar
+  :std/getopt :std/iter :std/misc/hash :std/misc/string :std/srfi/13 :std/sugar
   :clan/cli :clan/config :clan/filesystem :clan/hash :clan/multicall
   :clan/path :clan/path-config :clan/string
   :clan/poo/cli)
@@ -14,13 +14,24 @@
                       (getenv-absolute-paths "GLOW_PATH")
                       [(source-path "dapps")])))
 
-(def (initialize-glow-dapps!)
-  (assert! glow-path "You must initialize-glow-path! before you initialize-glow-dapps!")
-  (set! glow-dapps (hash))
+(def (for-each-dapp-file f extension: (extension ".glow"))
+  (assert! glow-path "You must initialize-glow-path! before you search for dapp files!")
   (for (top (reverse glow-path)) ;; reverse so earlier entries override later ones.
-    (for (file (find-files top (cut path-extension-is? <> ".glow")))
-      (let (name (path-strip-extension (path-enough file top)))
-        (hash-put! glow-dapps name file)))))
+    (for (path (find-files top (cut string-suffix? extension <>)))
+      (let (name (string-trim-suffix extension (path-enough path top)))
+        (f name path)))))
+
+(def (find-dapp-files extension: (extension ".glow") filter: (filter true))
+  (def h (hash))
+  (for-each-dapp-file
+   extension: extension
+   (lambda (name path)
+     (when (filter name path)
+       (hash-put! h name path))))
+  h)
+
+(def (initialize-glow-dapps!)
+  (set! glow-dapps (find-dapp-files)))
 
 (def (ensure-glow-dapps)
   (unless glow-dapps (initialize-glow-dapps!))
@@ -38,7 +49,9 @@
   (def apps (hash->list/sort (ensure-glow-dapps) string<?))
   (for-each (lambda (n p) (displayln n "  " p)) (co-pad-strings (map car apps)) (map cdr apps)))
 
-(def (find-glow-dapp dapp)
-  (def relpath (string-append dapp ".glow"))
-  (or (find file-exists? (map (cut subpath <> relpath) glow-path))
-      (error "Glow dapp not found: " dapp)))
+(def (find-dapp-path relpath)
+  (find file-exists? (map (cut subpath <> relpath) glow-path)))
+
+(def (find-dapp-file dapp (extension ".glow"))
+  (def relpath (string-append dapp extension))
+  (or (find-dapp-path relpath) (error "Glow DApp not found: " relpath)))

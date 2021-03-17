@@ -9,9 +9,10 @@
 
 (def passes-test
   (test-suite "test suite for glow/compiler/passes"
-    (def (test-example e)
+    (def (test-example dapp extension)
+      (def relpath (string-append dapp extension))
       (force-current-outputs)
-      (test-case (format "Running all passes on ~a" e)
-        (run-passes e)))
-    (for-each test-example (dapps.sexp))
-    (for-each test-example (dapps.glow))))
+      (test-case (format "Running all passes on ~a" relpath)
+        (run-passes relpath)))
+    (for-each (cut test-example <> ".sexp") (dapps.sexp))
+    (for-each (cut test-example <> ".glow") (dapps.glow))))

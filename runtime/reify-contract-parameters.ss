@@ -27,7 +27,7 @@
 ;; interaction-agreement->program : InteractionAgreement -> Program
 (def (interaction-agreement->program a)
   (defvalues (modpath name) (split-interaction-path-name (.@ a interaction)))
-  (def path (find-glow-dapp modpath))
+  (def path (find-dapp-file modpath))
   (def compiler-output (run-passes path pass: 'project show?: #f))
   (parse-compiler-output compiler-output))
 

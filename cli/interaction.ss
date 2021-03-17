@@ -174,7 +174,7 @@
 
 (def (extract-application-source-path application-name)
   (match (pregexp-match "([^#]*)#?.*" application-name)
-    ([_ dapp] (find-glow-dapp dapp))
+    ([_ dapp] (find-dapp-path dapp))
     (else (error "Bad application name" application-name))))
 
 ;; TODO: also accept local interaction parameters
@@ -221,7 +221,7 @@
 (def (start-interaction/with-agreement options agreement)
   (let* ((selected-identity (ask-identity options))
          (interaction (.@ agreement interaction))
-         (application.glow (find-glow-dapp (extract-application-source-path interaction)))
+         (application.glow (find-dapp-path (extract-application-source-path interaction)))
          (program (compile-contract application.glow))
          (interaction-name (symbolify (cadr (string-split interaction #\#))))
          (interaction-info (hash-get (.@ program interactions) interaction-name))
@@ -236,7 +236,7 @@
     (let (application-name
             (get-or-ask options 'glow-app (λ () (ask-application)))))
     (let (application-source-path (extract-application-source-path application-name)))
-    (let (application.glow (find-glow-dapp application-source-path)))
+    (let (application.glow (find-dapp-file application-source-path)))
     (let (program (compile-contract application.glow)))
     (let (interaction-name
             (get-or-ask options 'interaction (λ () (ask-interaction (hash-keys (.@ program interactions)))))))

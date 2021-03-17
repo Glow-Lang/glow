@@ -1,26 +1,23 @@
-# Examples that work with the current compiler
+# Standard library of DApps that work with the current compiler
 
-These examples demonstrate how to do things with the language as it is
-currently implemented, and double as test vectors for the compiler passes.
+This directory contains DApps written in *Glow* that commonly useful
+and/or illustrative of some features of the language:
 
-For examples of the language as it is intended and envisioned see
-the [futures](../futures/) directory.
+* [buy_sig](buy_sig.glow) is a standard closing contract,
+  wherein a Buyer pays money in exchange for a Seller signing a transaction:
+  digital title transfer, transaction that completes an atomic swap on another chain,
+  certification, room rental agreement, pass to some online event, etc.
+  If the Seller fails to sign on time, the Buyer automatically recovers his stake.
 
-## Tests for various compiler passes
+* [coin_flip](coin_flip.glow) illustrates how to agree on a mutually random number,
+  one that both party agree is random, using a three-step commit-reveal protocol.
+  In this particular contract, the number controls the outcome of a simple bet.
+  But in general, random numbers can serve as the initial seed for a lot of
+  randomized algorithms and cryptographic protocols, and it is important that
+  it is impossible for any party to predict or control it.
 
-These tests are not particularly meant to implement code for users,
-but to stress the capabilities of the compiler:
+* [rps_simple](rps_simple.glow) illustrates another simple multiple-step protocol.
+  In this particular contract, two participants play a simple game of rock-paper-scissors.
 
-[passdata/fun.sexp](passdata/fun.sexp),
-[passdata/pattern_match.sexp](passdata/pattern_match.sexp),
-[passdata/type_defs.sexp](passdata/type_defs.sexp),
-[passdata/type_infer.sexp](passdata/type_infer.sexp).
-
-## Rock, Paper, Scissors
-
-[rps.sexp](rps.sexp)
-
-## Buying (and selling) signatures.
-
-[buy_sig.sexp](buy_sig.sexp)
-
+Further examples of the language as it is envisioned, that are not yet fully supported
+by the current compiler, are in the [futures](../futures/) directory.

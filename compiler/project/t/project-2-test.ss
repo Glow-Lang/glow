@@ -31,9 +31,9 @@
 
 ;; project-2-display : PathString -> Bool
 ;; Produces #t on success, can return #f or raise an exception on failure
-(def (project-2-display file)
+(def (project-2-display dapp-name)
   ;; state : [Hashof LayerName Any]
-  (def state (run-passes file pass: 'checkpoint-liveness show?: #f))
+  (def state (run-passes (string-append dapp-name ".glow") pass: 'checkpoint-liveness show?: #f))
   (def modstx (hash-ref state 'checkpointify.sexp))
   (def unused (hash-ref state 'Unused))
   (def tytbl (hash-ref state 'typetable.sexp))
@@ -67,11 +67,7 @@
   (test-suite "test suite for glow/compiler/project"
     (test-case "testing example glow files"
       (try-project-2-all)
-      ; (try-project-2-files
-      ;   (for/collect
-      ;     ((s (dapps.glow)
-      ;         when (or (pregexp-match "buy_sig.glow" s))))
-      ;     s))
+      ; (try-project-2-files ["buy_sig"])
       (void))))
 
 (def (main . args)

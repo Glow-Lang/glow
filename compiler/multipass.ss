@@ -21,7 +21,7 @@
   :std/format :std/iter :std/misc/ports :std/misc/string
   :std/srfi/1 :std/srfi/13 :std/sugar
   :clan/base :clan/files :clan/path :clan/path-config
-  :mukn/glow/compiler/common :mukn/glow/path-config)
+  :mukn/glow/compiler/common :mukn/glow/path-config :mukn/glow/runtime/glow-path)
 
 ;; A "layer" of language has a name, a reader and a writer.
 ;; - The name, a symbol, is also the file extension of corresponding source files (e.g. 'glow => ".glow").
@@ -126,8 +126,7 @@
 ;; Symbol String Representation+AncillaryDataIn -> Representation+AncillaryDataOut
 ;; TODO: error handling for layer read/write/compare
 ;; TODO: mode for overriding, mode for just-running-without-comparing, mode for warnings, etc.
-(def (run-pass pass-name dir basename state)
-  (def basepath (path-expand basename dir))
+(def (run-pass pass-name dapp-name state)
   (match (registered-pass pass-name)
     ((pass fun inputs outputs)
      (for-each (λ (k) (when (hash-get state k)
@@ -137,50 +136,46 @@
      (def layer-fails [])
      (for ((layer-name outputs) (value results))
        (hash-put! state layer-name value)
-       (def expected-output-file (format "~a.~a" basepath layer-name))
        (def layer (registered-layer layer-name))
-       (when (file-exists? expected-output-file)
-         (unless (layer? layer)
-           (error "expected a registered layer:" layer-name layer))
-         (let ((success? ((layer-comparer layer) value (read-file/layer layer-name expected-output-file)))
-               (success-expected? (not (known-failure? expected-output-file))))
-           (unless (eq? success? success-expected?)
-             (eprintf "output for pass ~a output ~a ~a expectations from ~a:\n"
-                      pass-name layer-name
-                      (if success? "unexpectedly matches" "fails to match")
-                      expected-output-file)
-             (unless success?
-               (write/layer layer-name value (current-error-port)))
-             (set! layer-fails (cons layer-name layer-fails))))))
+       (cond
+        ((find-dapp-path (format "~a.~a" dapp-name layer-name)) =>
+         (lambda (expected-output-file)
+           (unless (layer? layer)
+             (error "expected a registered layer:" layer-name layer))
+           (let ((success? ((layer-comparer layer) value (read-file/layer layer-name expected-output-file)))
+                 (success-expected? (not (known-failure? expected-output-file))))
+             (unless (eq? success? success-expected?)
+               (eprintf "output for pass ~a output ~a ~a expectations from ~a:\n"
+                        pass-name layer-name
+                        (if success? "unexpectedly matches" "fails to match")
+                        expected-output-file)
+               (unless success?
+                 (write/layer layer-name value (current-error-port)))
+               (set! layer-fails (cons layer-name layer-fails))))))))
      (when (pair? layer-fails)
-       (error 'pass-output-failure pass-name basepath (reverse layer-fails)))
+       (error 'pass-output-failure pass-name dapp-name (reverse layer-fails)))
      state)))
 
 ;; Path layer:  String Representation+AncillaryDataIn -> Representation+AncillaryDataOut
-(def (run-passes filepath
-                 layer: (layer (identify-layer filepath))
+(def (run-passes dapp-path
+                 layer: (layer (identify-layer dapp-path))
                  strategy: (strategy default-strategy)
                  pass: (last-pass #f)
                  show?: (show? #t)
                  ;;override?: (override? #f)
                  save?: (save? #f))
-  (def dir (path-directory filepath))
-  (def filename (path-strip-directory filepath))
+  (def filepath (or (find-dapp-path dapp-path) (error "Cannot find" dapp-path)))
   (def passes (relevant-passes layer strategy last-pass))
   (def in (hash (,layer (read-file/layer layer filepath))))
-  (def basename (string-trim-suffix (format ".~a" layer) filename))
-  (def passdata-dir
-    (if (equal? [layer] (pass-inputs (registered-pass (car (registered-strategy strategy)))))
-      (path-expand "passdata" dir)
-      dir))
-  (def out (for/fold (state in) ((pass passes)) (run-pass pass passdata-dir basename state)))
+  (def dapp-name (string-trim-suffix (format ".~a" layer) dapp-path))
+  (def out (for/fold (state in) ((pass passes)) (run-pass pass dapp-name state)))
   (def last-layers (pass-outputs (registered-pass (last passes))))
-  (for ((l last-layers))
+  (for (l last-layers)
     (def (write-last port)
       (write/layer l (hash-ref out l) port))
     (def rl (registered-layer l))
     (when (and rl (layer-writer rl))
-      (let (path (format "~a.~a" (path-expand basename passdata-dir) l))
+      (let (path (format "~a.~a" dapp-name l))
         (when show?
           (displayln path)
           (write-last (current-output-port)))

@@ -11,5 +11,5 @@
   :mukn/glow/all-glow :mukn/glow/version :mukn/glow/t/common :mukn/glow/compiler/syntax-context
   :mukn/glow/cli/interaction :mukn/glow/cli/ethereum :mukn/glow/cli/contacts :mukn/glow/cli/identities
   :mukn/glow/runtime/glow-path)
-(initialize-glow-path! [(source-path "dapps")])
+(initialize-glow-path! [(source-path "dapps") (source-path "t/passdata")])
 ;;(import :clan/debug)(DBG foo: (getenv "GERBIL_LOADPATH" #f) load-path)
