@@ -81,7 +81,7 @@
     ((apps
        (map
         (lambda (app) (cons app app))
-        (list-applications))))
+        (get-glow-app-names))))
     (ask-option "Choose application" apps)))
 
 (def (ask-interaction interactions)
