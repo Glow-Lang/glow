@@ -1,8 +1,8 @@
 (export #t)
 
 (import
-  :std/getopt :std/iter :std/misc/hash :std/misc/string :std/srfi/13 :std/sugar
-  :clan/cli :clan/config :clan/filesystem :clan/hash :clan/multicall
+  :std/getopt :std/iter :std/misc/hash :std/sort :std/misc/string :std/srfi/13
+  :std/sugar :clan/cli :clan/config :clan/filesystem :clan/hash :clan/multicall
   :clan/path :clan/path-config :clan/string
   :clan/poo/cli)
 
@@ -36,6 +36,9 @@
 (def (ensure-glow-dapps)
   (unless glow-dapps (initialize-glow-dapps!))
   glow-dapps)
+
+(def (get-glow-app-names)
+  (sort (hash-keys (ensure-glow-dapps)) string<?))
 
 (def options/glow-path
   (make-options [(option 'glow-path "-G" "--glow-path" help: "search path for Glow DApps"
