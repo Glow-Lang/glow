@@ -18,7 +18,7 @@ Currently Glow supports three example DApps.
 A buy-sig agreement is an interaction between two parties, where the DApp specifies
 the sale price and the hash of the document to be signed. When the seller provides
 the correct signature proving that they have signed the correct document, the DApp
-transfers the assets previously deposited by the Buyer to the Seller. 
+transfers the assets previously deposited by the Buyer to the Seller.
 
 Parameters
 @itemize[

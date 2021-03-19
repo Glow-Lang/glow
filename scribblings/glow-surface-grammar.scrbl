@@ -8,13 +8,13 @@
 
 @title{Glow Language Grammar}
 
-This surface syntax is inspired by ReasonML, Javascript, and Haskell.
-Most forms based on ReasonML. However, @litchar|{@}|
+This surface syntax is inspired by ReScript, Javascript, and Haskell.
+Most forms based on ReScript. However, @litchar|{@}|
 attributes are based on Javascript, and datatype definitions based on
-a combination of ReasonML and Haskell.
+a combination of ReScript and Haskell.
 
 The semantics corresponding to these forms will be most similar to
-ReasonML.
+ReScript.
 
 @;; Literal Tokens
 @(defs

@@ -423,14 +423,14 @@ If you really want to try it this way, you can check our
 @italic{Glow} is a domain-specific language for DApps, Decentralized Applications.
 
 The language syntax is based on that of JavaScript,
-with some inspiration from ReasonML where we have to diverge from JavaScript.
+with some inspiration from ReScript where we have to diverge from JavaScript.
 While it should feel familiar to you if you know JavaScript,
 there are many differences underneath designed to keep your DApps safe:
 
 @itemize[
  @item{
   The language is statically typed.
-  Its type system is in the same general style as ReasonML or TypeScript,
+  Its type system is in the same general style as ReScript or TypeScript,
   yet differs in many details, wherein we optimize our design for the safety of DApps.
  }
  @item{
@@ -486,7 +486,7 @@ For a minimal useful DApp, see @secref{buy_sig} below.
 
 Interactions are specified using annotations, that begin the "at-sign" (a.k.a. arobase): @"@"
 
-If you remove the annotations, it looks like a regular JavaScript or ReasonML program,
+If you remove the annotations, it looks like a regular JavaScript or ReScript program,
 except with those special @glowstm{publish!} statements.
 
 (Also, note that white spaces and interlines don't matter.
@@ -550,7 +550,7 @@ to indicate that it is a glow program indeed.
 
 Then we define a function @glowexp{payForSignature}
 with two parameters @glowexp{digest} and @glowexp{price},
-in a syntax familiar to JavaScript, TypeScript or ReasonML programmers.
+in a syntax familiar to JavaScript, TypeScript or ReScript programmers.
 However, this definition is preceded by an annotation @glowexp|{@interaction([Buyer, Seller])}|
 that indicates that this function involves a blockchain interaction
 with two participant roles:

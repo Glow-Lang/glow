@@ -69,34 +69,34 @@ And, of course, join (our-discord-channel) to discuss with our developer communi
 
 @section{How to Write or Use Custom DApps}
 
-Put your @literal{.glow} files in a directory somewhere,
-and include it in your @literal{GLOW_PATH}. See below for more explanations.
+Put your @tt{.glow} files in a directory somewhere,
+and include it in your @tt{GLOW_PATH}. See below for more explanations.
 
 To specify a file for use at the start of an interaction, refer to it by
-its relative path to the top directory included in the @literal{GLOW_PATH}.
+its relative path to the top directory included in the @tt{GLOW_PATH}.
 Note that @emph{every} participant in an interaction
 must have a copy of the exact same file at the exact same relative path,
 to be able to interact successfully using @(Glow).
 
-The @literal{GLOW_PATH} is the environment variable of that name when defined,
+The @tt{GLOW_PATH} is the environment variable of that name when defined,
 which should be a colon-separated list of absolute filesystem paths.
-If your @literal{GLOW_PATH} isn't defined,
-it will contain the @literal{glow/dapps} subdirectory
-of each of your @literal{XDG_DATA_HOME}
-(which defaults to @literal{~/.local/share} under Linux or BSD Unix,
-but @literal{~/Library} under macOS, and your @literal{LocalAppData} folder under Windows),
-and each directory in your colon-separated @literal{XDG_DATA_DIRS}
-(which defaults to @literal{/usr/local/share:/usr/share} under Unix including macOS,
-and your @literal{AppData} and @literal{CommonAppData} folders under Windows),
-followed by the @literal{dapps} directory of your @(Glow) installation.
+If your @tt{GLOW_PATH} isn't defined,
+it will contain the @tt{glow/dapps} subdirectory
+of each of your @tt{XDG_DATA_HOME}
+(which defaults to @tt{~/.local/share} under Linux or BSD Unix,
+but @tt{~/Library} under macOS, and your @tt{LocalAppData} folder under Windows),
+and each directory in your colon-separated @tt{XDG_DATA_DIRS}
+(which defaults to @tt{/usr/local/share:/usr/share} under Unix including macOS,
+and your @tt{AppData} and @tt{CommonAppData} folders under Windows),
+followed by the @tt{dapps} directory of your @(Glow) installation.
 (Note that Windows is not currently supported except maybe through WSL which then counts as Unix.
 Please contact us if you want to make native Windows support happen.)
 
-If you use the default @literal{GLOW_PATH} configuration,
-we suggest you use the @literal{glow/dapps} subdirectory of your @literal{XDG_DATA_HOME}
-(see above) to store the @literal{.glow} application file.
+If you use the default @tt{GLOW_PATH} configuration,
+we suggest you use the @tt{glow/dapps} subdirectory of your @tt{XDG_DATA_HOME}
+(see above) to store the @tt{.glow} application file.
 
-If you wish to modify the @literal{GLOW_PATH} yet fallback to the default,
-you can query the default value with @literal{glow default-glow-path},
-and e.g. in your @literal{~/.bash_profile} include a configuration line such as:
-@literal{export GLOW_PATH="$HOME/glow-dapps:$(glow default-glow-path)"}
+If you wish to modify the @tt{GLOW_PATH} yet fallback to the default,
+you can query the default value with @tt{glow default-glow-path},
+and e.g. in your @tt{~/.bash_profile} include a configuration line such as:
+@tt{export GLOW_PATH="$HOME/glow-dapps:$(glow default-glow-path)"}

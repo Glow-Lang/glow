@@ -32,7 +32,7 @@
 
 ;; TODO: also represent source location somehow? and unused-table?
 
-;; TODO: Our source layer, with its JavaScript-like, ReasonML-like syntax
+;; TODO: Our source layer, with its JavaScript-like, ReScript-like syntax
 ;; The "read" is open-input-file, since the `parse` pass takes an input port
 (define-layer glow open-input-file error error)
 

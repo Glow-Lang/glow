@@ -31,7 +31,7 @@
 ;; Typechecking glow-sexpr
 
 ;; Type system and scoping rules are closest
-;; to ReasonML, but Record types are structural.
+;; to ReScript, but Record types are structural.
 
 ;; A SymbolNTypeTable is a [Hashof Symbol NType]
 ;; Keys are symbols from unannotated lambda-bound identifiers in the program.

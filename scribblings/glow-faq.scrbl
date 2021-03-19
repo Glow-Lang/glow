@@ -361,7 +361,7 @@ We use Gerbil Scheme as our main programming language,
 which compiles to Gambit Scheme, which has a JavaScript backend.
 We can thus automatically generate JavaScript for all our needs.
 
-We do not use ReasonML or TypeScript, though the language @(Glow) itself
+We do not use ReScript or TypeScript, though the language @(Glow) itself
 sometimes reuses good ideas from their syntax and semantics.
 We do manually write some amount of JavaScript where needed to interface between our code
 and other people's code.
@@ -387,22 +387,22 @@ that will run directly on your browser with no dependencies.
 @section{How do I write and run my custom smart contract in @(Glow)?}
 
 To create a custom smart contract, create a text file in your favorite text editor,
-and give it a name that ends with the extension @literal{.glow}.
-Put that file somewhere under a directory listed in your @literal{$GLOW_PATH}
-(which should be a list of absolute paths for directories, separated by a colon @literal{:}).
+and give it a name that ends with the extension @tt{.glow}.
+Put that file somewhere under a directory listed in your @tt{$GLOW_PATH}
+(which should be a list of absolute paths for directories, separated by a colon @tt{:}).
 Then must make that your correspondants have access to the exact same file,
-placed at the exact same relative path under a directory @emph{their} @literal{$GLOW_PATH}.
+placed at the exact same relative path under a directory @emph{their} @tt{$GLOW_PATH}.
 
 @(Glow) is a rapidly changing language, so
 please inquire on @(our-discord-channel) for the latest ways to write and use contracts.
 
-@section{How do I run a @literal{.glow} interaction from my programming language?}
+@section{How do I run a @tt{.glow} interaction from my programming language?}
 
 If you're using Gerbil Scheme as your programming language,
 you have direct access to all the @(Glow) API.
 
 If you're using another programming language, you must spawn
-a @literal{glow start-interaction} command as a subprocess from your language and interact with it.
+a @tt{glow start-interaction} command as a subprocess from your language and interact with it.
 All languages have at least a shell escape, and can thereby run a Glow interaction.
 We're actively working to improve the user interface,
 so please come on our channel to ask for help, and we'll make sure your needs are fulfilled.
@@ -429,7 +429,7 @@ in your programming language or low-code platform of choice.
 @(MuKn) will help you expose the functionality of @(Glow) to your favorite platform
 if it doesn't do it yet.
 
-@section{Will the @literal{.glow} files I write today be compatible with the next versions of @(Glow)?}
+@section{Will the @tt{.glow} files I write today be compatible with the next versions of @(Glow)?}
 
 We will do our best so your @(Glow) applications keep working as we evolve our language,
 or to offer you a simple way to automatically update your programs so they work

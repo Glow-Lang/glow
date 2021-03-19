@@ -22,7 +22,7 @@ Any program that you write in @(Glow) starts with the mandatory line:
 
 To comment your code in @(Glow), @litchar{//} creates a line comment and
 @litchar{/*} and @litchar{*/} create a block comment,
-just like in ReasonML and JavaScript:
+just like in ReScript and JavaScript:
 
 @glowstmblock|{
 // This is a line comment
@@ -596,8 +596,8 @@ the active user, and generate code that satisfies the
 assertion.
 
 In the future, @glowexp{assume!} will be another kind of assertion.
-Within an @literal|{@A}| it will mean that the active user assumes the given predicate to be true.
-Outside an @literal|{@A}| it will mean that every user assumes the given predicate to be true.
+Within an @tt|{@A}| it will mean that the active user assumes the given predicate to be true.
+Outside an @tt|{@A}| it will mean that every user assumes the given predicate to be true.
 Informally, it will mean "you must not run this program unless you know this to be true."
 
 @subsubsection{Logical Invariants}
