@@ -125,9 +125,9 @@
     ((require! e) (retail-stx stx [(ace #'e)]))
     ((assert! e) (retail-stx stx [(ace #'e)]))
     ((deposit! x e) (identifier? #'x)
-     (retail-stx stx [(identifier-refer env #'x) (ace #'e)]))
+     (alpha-convert-deposit-withdraw env stx))
     ((withdraw! x e) (identifier? #'x)
-     (retail-stx stx [(identifier-refer env #'x) (ace #'e)]))
+     (alpha-convert-deposit-withdraw env stx))
     ((@app-ctor f a ...) (alpha-convert-keyword/sub-exprs env stx))
     ((@app f a ...) (alpha-convert-keyword/sub-exprs env stx))
     ((f a ...)
@@ -162,6 +162,20 @@
 ;; alpha-convert-body : Env StmtStx] -> StmtStx
 (def (alpha-convert-keyword/sub-exprs env stx)
   (retail-stx stx (stx-map (cut alpha-convert-expr env <>) (stx-cdr stx))))
+
+;; alpha-convert-deposit-withdraw : Env ExprStx -> ExprStx
+(def (alpha-convert-deposit-withdraw env stx)
+  ;; ace : ExprStx -> ExprStx
+  (def (ace e) (alpha-convert-expr env e))
+  (syntax-case stx (@record @block)
+    ((_ p (@record (x e) ...))
+     (retail-stx stx
+       [(identifier-refer env #'p)
+        (cons '@record (stx-map list #'(x ...) (stx-map ace #'(e ...))))]))
+    ((_ p (@block x)) (identifier? #'x)
+     (retail-stx stx [(identifier-refer env #'p) ['@record [#'x (ace #'x)]]]))
+    ((_ p e)
+     (retail-stx stx [(identifier-refer env #'p) ['@record ['Ether (ace #'e)]]]))))
 
 ;; alpha-convert-body : Env [Listof StmtStx] -> [Listof StmtStx]
 (def (alpha-convert-body env body)

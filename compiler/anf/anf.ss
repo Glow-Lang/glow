@@ -202,13 +202,21 @@
        (anf-k-reduced-expr k (retail-stx stx [#'type rtag]) acc2)))
     ((require! . _) (anf-k-multiarg-stmt k stx acc))
     ((assert! . _) (anf-k-multiarg-stmt k stx acc))
-    ((deposit! . _) (anf-k-multiarg-stmt k stx acc))
-    ((withdraw! . _) (anf-k-multiarg-stmt k stx acc))
+    ((deposit! . _) (anf-k-deposit-withdraw k stx acc))
+    ((withdraw! . _) (anf-k-deposit-withdraw k stx acc))
     ((digest . _) (anf-k-multiarg-expr k stx acc)) ;; TODO: make an explicit tuple?
     ((sign . _) (anf-k-multiarg-expr k stx acc))
     ((@app . _)
      (let-values (((reduced-expr acc2) (anf-multiarg-expr stx acc)))
        (anf-kontinue-expr k reduced-expr acc2)))))
+
+(def (anf-k-deposit-withdraw k stx acc)
+  (syntax-case stx (@record)
+    ((_ p (@record (x e) ...))
+     (let-values (((rs acc2) (anf-arg-exprs (syntax->list #'(e ...)) acc)))
+       (anf-k-multiarg-stmt k
+         (retail-stx stx [#'p (cons '@record (stx-map list #'(x ...) rs))])
+         acc2)))))
 
 ;; anf-body : KontStx StmtsStx [Listof StmtStx] -> [Listof StmtStx]
 (def (anf-body k stx acc)

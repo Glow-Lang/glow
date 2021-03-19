@@ -139,11 +139,11 @@
     (['require! variable-name]
       [(load-immediate-variable self function-name variable-name Bool) &require!])
 
-    (['expect-deposited amount]
+    (['expect-deposited ['@record ['Ether amount]]]
       (let ((amt (load-immediate-variable self function-name amount Ether)))
         (.call Ether .consensus:expect-deposited amt)))
 
-    (['consensus:withdraw participant amount]
+    (['consensus:withdraw participant ['@record ['Ether amount]]]
       (let ((prt (load-immediate-variable self function-name participant Address))
             (amt (load-immediate-variable self function-name amount Ether)))
         (.call Ether .consensus:withdraw prt amt)))

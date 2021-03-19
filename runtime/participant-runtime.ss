@@ -425,19 +425,19 @@
         ;; is already known.
        (void))
 
-      (['add-to-deposit amount-variable]
+      (['add-to-deposit ['@record ['Ether amount-variable]]]
        (let
          ((this-participant {get-active-participant self})
           (amount {reduce-expression self amount-variable}))
          (.call Ether .participant:add-to-deposit (@ self block-ctx) this-participant amount)))
 
-      (['expect-deposited amount-variable]
+      (['expect-deposited ['@record ['Ether amount-variable]]]
        (let
          ((this-participant {get-active-participant self})
           (amount {reduce-expression self amount-variable}))
          (.call Ether .participant:expect-deposited (@ self block-ctx) this-participant amount)))
 
-      (['participant:withdraw address-variable price-variable]
+      (['participant:withdraw address-variable ['@record ['Ether price-variable]]]
        (let ((address {reduce-expression self address-variable})
              (price {reduce-expression self price-variable}))
          (.call Ether .participant:withdraw (@ self block-ctx) address price)))
