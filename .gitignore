@@ -8,6 +8,8 @@ result
 # Runtime data
 run/
 mukn/
+t/precompiled
+t/solidity
 
 # Editor-generated files
 *~
