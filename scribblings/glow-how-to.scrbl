@@ -8,7 +8,7 @@
 
 @section{How to Get Help about @(Glow)}
 
-For community help, join (our-discord-channel).
+For community help, join @(our-discord-channel).
 
 For commercial support, contact us directly at @(contact-email).
 
@@ -58,14 +58,14 @@ This will give you a shell in which to try running @racket[glow].
 @subsection{Installing the Hard way}
 
 See in our source repository
-@hyperlink["https://gitlab.com/mukn/glow/-/blob/master/INSTALL.md"](INSTALL.md)
+@hyperlink["https://gitlab.com/mukn/glow/-/blob/master/INSTALL.md"]{INSTALL.md}
 for full instructions on installing @(Glow)
 for those who want to modify the language implementation itself.
 
 If so, you should also read
-@hyperlink["https://gitlab.com/mukn/glow/-/blob/master/HACKING.md"](HACKING.md)
+@hyperlink["https://gitlab.com/mukn/glow/-/blob/master/HACKING.md"]{HACKING.md}
 for guidelines on making such modifications and rebuilding the software.
-And, of course, join (our-discord-channel) to discuss with our developer community.
+And, of course, join @(our-discord-channel) to discuss with our developer community.
 
 @section{How to Write or Use Custom DApps}
 
@@ -100,3 +100,21 @@ If you wish to modify the @tt{GLOW_PATH} yet fallback to the default,
 you can query the default value with @tt{glow default-glow-path},
 and e.g. in your @tt{~/.bash_profile} include a configuration line such as:
 @tt{export GLOW_PATH="$HOME/glow-dapps:$(glow default-glow-path)"}
+
+@(Glow) is a rapidly changing language, so
+please inquire on @(our-discord-channel) for the latest ways to write and use contracts.
+
+@section{How do I run a @tt{.glow} interaction from my programming language?}
+
+If you're using Gerbil Scheme as your programming language,
+you have direct access to all the @(Glow) API.
+
+If you're using another programming language, you must spawn
+a @tt{glow start-interaction} command as a subprocess from your language and interact with it.
+All languages have at least a shell escape, and can thereby run a Glow interaction.
+We're actively working to improve the user interface,
+so please come on our channel to ask for help, and we'll make sure your needs are fulfilled.
+
+In the near future, we will also offer a JSON-RPC interface to @(Glow)'s services,
+that you can also invoke from any language, probably more easily.
+Finally, we are actively working to deliver @(Glow) directly to the JavaScript ecosystem.

@@ -6,6 +6,12 @@
 
 @title{Glow FAQ}
 
+@section{How do I ... ?}
+
+For all questions about practical steps, see
+@hyperlink["glow-how-to.html"]{our how-to guide} or
+@hyperlink["glow-reference-manual.html"]{our reference manual}.
+
 @section{Is @(Glow) a platform? A language? Both?}
 
 Both! @(Glow) is a DSL, a domain-specific language.
@@ -383,33 +389,6 @@ and a few JavaScript libraries used by our user interface.
 
 In a further future, @(Glow) will produce for end-users a single JavaScript file
 that will run directly on your browser with no dependencies.
-
-@section{How do I write and run my custom smart contract in @(Glow)?}
-
-To create a custom smart contract, create a text file in your favorite text editor,
-and give it a name that ends with the extension @tt{.glow}.
-Put that file somewhere under a directory listed in your @tt{$GLOW_PATH}
-(which should be a list of absolute paths for directories, separated by a colon @tt{:}).
-Then must make that your correspondants have access to the exact same file,
-placed at the exact same relative path under a directory @emph{their} @tt{$GLOW_PATH}.
-
-@(Glow) is a rapidly changing language, so
-please inquire on @(our-discord-channel) for the latest ways to write and use contracts.
-
-@section{How do I run a @tt{.glow} interaction from my programming language?}
-
-If you're using Gerbil Scheme as your programming language,
-you have direct access to all the @(Glow) API.
-
-If you're using another programming language, you must spawn
-a @tt{glow start-interaction} command as a subprocess from your language and interact with it.
-All languages have at least a shell escape, and can thereby run a Glow interaction.
-We're actively working to improve the user interface,
-so please come on our channel to ask for help, and we'll make sure your needs are fulfilled.
-
-In the near future, we will also offer a JSON-RPC interface to @(Glow)'s services,
-that you can also invoke from any language, probably more easily.
-Finally, we are actively working to deliver @(Glow) directly to the JavaScript ecosystem.
 
 @section{Will @(Glow) allow me to make a full DApp from scratch?}
 

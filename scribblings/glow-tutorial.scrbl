@@ -24,7 +24,7 @@ so that @(Glow) can be learnt without being confusing.
 If that's not enough, you can always:
 
 @itemize[
-  @item{For community help, join (our-discord-channel).}
+  @item{For community help, join @(our-discord-channel).}
   @item{For commercial support, email @(contact-email).}
 ]
 
