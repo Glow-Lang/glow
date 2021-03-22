@@ -5,8 +5,8 @@ Instructions for installing, testing and running *Glow*.
 ## Easy Install
 
 Long story short, you can install the latest stable release of *Glow*
-with just use the following one-liner, and
-skip reading the rest of this file (except the warnings and prerequisites):
+by just using the following one-liner and restarting your shell when it's done;
+you may then skip reading the rest of this file (except the warnings and prerequisites):
 
     curl -L https://glow-lang.org/install/glow-install | sh
 
@@ -54,7 +54,7 @@ you can `docker pull mukn/glow:alpha` then `docker run -it mukn/glow:alpha`.
    you might reduce the memory pressure somewhat by passing the argument `--cores 1` or such
    to `nix-env` in the second step of the script:
 
-        nix-env --cores 1 -f https://github.com/muknio/nixpkgs/archive/devel.tar.gz \
+        nix-env --cores 1 -f https://github.com/muknio/nixpkgs/archive/alpha.tar.gz \
             -iA glow-lang gerbil-unstable go-ethereum solc
 
 6. Installing *Glow*, or any software, requires that you trust the authors and their infrastructure.

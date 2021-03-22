@@ -26,7 +26,8 @@ verify it matches what auditors you trust did vouch for.
 @subsection{Easy Install for Developers}
 
 Currently, @(Glow) is available for installation on Linux and macOS.
-To install, open a terminal and type or copy/paste the following command line:
+To install, open a terminal and type or copy/paste the following command line,
+then restart your terminal after it's done to get the updated configuration:
 
 @racketblock{
     curl -L https://glow-lang.org/install/glow-install | sh
