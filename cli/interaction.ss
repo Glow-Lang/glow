@@ -187,7 +187,8 @@
                      role: (role #f)
                      max-initial-block: (max-initial-block #f)
                      contacts: (contacts-file #f)
-                     identities: (identities-file #f))
+                     identities: (identities-file #f)
+                     handshake: (handshake #f))
   (help: "Start an interaction based on an agreement"
    getopt: (make-options
             [(option 'agreement "-A" "--agreement" default: #f
@@ -197,7 +198,9 @@
              (option 'role "-R" "--role" default: #f
                      help: "role you want to play in the interaction")
              (option 'max-initial-block "-B" default: #f
-                     help: "maximum block number the contract can begin at")]
+                     help: "maximum block number the contract can begin at")
+             (option 'handshake "-H" "--handshake" default: #f
+                     help: "command to use to transfer handshakes")]
             [(lambda (opt) (hash-remove! opt 'test))]
             [options/glow-path options/contacts options/identities
              options/evm-network options/database options/test options/backtrace]))
