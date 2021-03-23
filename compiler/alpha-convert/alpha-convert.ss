@@ -275,14 +275,30 @@
 (def (ac-stmt-atinteraction env stx)
   ;; env/participants : Env [StxListof Identifier] [StxListof Identifier] -> Env
   (def (env/participants env ps ps2)
-    (for/fold (env env) ((p (syntax->datum ps)) (p2 (syntax->datum ps2)))
+    (for/fold (env env) ((p (syntax->datum ps))
+                         (p2 (syntax->datum ps2)))
       (symdict-put env p (entry-val p2))))
-  (syntax-case stx (@list)
+  (syntax-case stx (@record participants assets @list)
+    ((aint ((@record (participants (@list p ...)) (assets (@list a ...)))) s)
+     (stx-andmap identifier? #'(p ... a ...))
+     (let ((ps2 (stx-map identifier-fresh* #'(p ...)))
+           (as (syntax->list #'(a ...))))
+       (def env2 (env/participants env #'(p ...) ps2))
+       (defvalues (env3 stmt3) (alpha-convert-stmt env2 #'s))
+       (values env3
+               (restx stx
+                 [#'aint [['@record ['participants (cons '@list ps2)]
+                                    ['assets (cons '@list as)]]]
+                         stmt3]))))
     ((aint ((@list p ...)) s) (stx-andmap identifier? #'(p ...))
      (let ((ps2 (stx-map identifier-fresh* #'(p ...))))
        (def env2 (env/participants env #'(p ...) ps2))
        (defvalues (env3 stmt3) (alpha-convert-stmt env2 #'s))
-       (values env3 (restx stx [#'aint [(cons '@list ps2)] stmt3]))))))
+       (values env3
+               (restx stx
+                 [#'aint [['@record ['participants (cons '@list ps2)]
+                                    ['assets ['@list 'Ether]]]]
+                         stmt3]))))))
 
 ;; ac-stmt-wrap-simple-keyword : Env StmtStx -> (values Env StmtStx)
 (def (ac-stmt-wrap-simple-keyword env stx)

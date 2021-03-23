@@ -943,11 +943,15 @@
 (def (tc-expr-make-interaction part env stx)
   (when part
     (error 'interaction "not allowed within a specific participant"))
-  (syntax-case stx (@make-interaction @list)
+  (syntax-case stx (@make-interaction @record participants assets @list)
     ;; TODO: when we design a separate way of calling interactions, create a separate
     ;;       type for interaction functions that forces them to be called specially
     ;;       as interactions, not just functions with extra participant arguments
-    ((@make-interaction ((@list p ...)) params ?out-type . body) (stx-andmap identifier? #'(p ...))
+    ((@make-interaction ((@record (participants (@list p ...)) (assets (@list a ...))))
+                        params
+                        ?out-type
+                        . body)
+     (stx-andmap identifier? #'(p ... a ...))
      (tc-expr part env #'(λ ((p : Participant) ... . params) ?out-type . body)))))
 
 ;; tc-stmt-publish : MPart Env StmtStx -> (values Env MonoEnv)
@@ -1145,8 +1149,8 @@
 
 ;; tc-deposit-withdraw : MPart Env ExprStx -> TypingScheme
 (def (tc-deposit-withdraw part env stx)
-  (syntax-case stx ()
-    ((dw participant amount)
+  (syntax-case stx (@record)
+    ((dw participant (@record (asset amount)))
      (let ()
        (when part (error (stx-e #'dw) "only allowed in the consensus"))
        (def pt (tc-expr/check part env #'participant type:Participant))
