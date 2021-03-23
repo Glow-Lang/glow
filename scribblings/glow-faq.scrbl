@@ -53,7 +53,7 @@ If you want @(Glow) to support a particular blockchain,
 Yes, the EVM is the primary target for @(Glow) at the moment, and
 @(Glow) should run on all EVM blockchains.
 
-If you're worried because you saw an annoucement about @(Glow) being launched on Cardano,
+If you're worried because you saw an announcement about @(Glow) being launched on Cardano,
 fear not: we @emph{will} support Plutus on Cardano,
 but the chain we @emph{did} launch on previously was
 a devnet for the upcoming Cardano KEVM sidechain.
