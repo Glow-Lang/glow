@@ -211,7 +211,11 @@
     (if agreement-json-string
       (start-interaction/with-agreement options (<-json InteractionAgreement (json<-string agreement-json-string)))
       (start-interaction/generate-agreement options contacts: contacts-file)))
-  (def environment (run:terminal (symbolify selected-role) agreement))
+  (def environment
+    (let ((role (symbolify selected-role)))
+      (if handshake
+        (run:command ["/usr/bin/env" "sh" "-c" handshake] role agreement)
+        (run:terminal role agreement))))
   (displayln "Final environment:")
   ;; TODO: get run to include type t and pre-alpha-converted labels,
   ;; and output the entire thing as JSON omitting shadowed variables (rather than having conflicts)

@@ -1,9 +1,10 @@
-(export run run:terminal run:special-file)
+(export run run:terminal run:special-file run:command)
 (import
   :std/format :std/iter :std/pregexp :std/misc/string :std/text/json
   :clan/debug :clan/json
   :clan/poo/object :clan/poo/mop :clan/poo/debug
   :clan/path-config :clan/pure/dict/symdict
+  :gerbil/gambit/ports
   :mukn/ethereum/network-config :mukn/ethereum/json-rpc
   :mukn/glow/compiler/syntax-context :mukn/glow/compiler/multipass :mukn/glow/compiler/passes
   (only-in ../compiler/alpha-convert/env symbol-refer)
@@ -23,6 +24,25 @@
     (displayln MAGENTA "\nPaste below the handshake sent by the other participant:" END)
     (def handshake-json (json<-port (current-input-port)))
     (<-json AgreementHandshake handshake-json)))
+
+(def (io-context:command cmd)
+  (def proc (open-process
+              (list
+                path: (car cmd)
+                arguments: (cdr cmd))))
+  (.o
+    (teardown
+      (lambda () (close-port proc)))
+    (send-handshake []
+      (lambda (handshake)
+        (with-output-to-port proc
+          (lambda ()
+            (write-json-ln (json<- AgreementHandshake handshake))))))
+    (receive-handshake
+      (lambda ()
+        (def handshake-json (json<-port proc))
+        (<-json AgreementHandshake handshake-json)))))
+
 
 ;; interaction-agreement->program : InteractionAgreement -> Program
 (def (interaction-agreement->program a)
@@ -57,6 +77,12 @@
 
 (def (run:terminal role a)
   (run io-context:terminal role a))
+
+(def (run:command cmd role a)
+  (def ctx (io-context:command cmd))
+  (with-unwind-protect
+    (lambda () (run ctx role a))
+    (lambda () (.call ctx .teardown))))
 
 (def (run:special-file role a)
   (run io-context:special-file role a))
