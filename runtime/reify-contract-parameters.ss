@@ -83,7 +83,7 @@
   (def ctx (io-context:command cmd))
   (with-unwind-protect
     (lambda () (run ctx role a))
-    (lambda () (.call ctx .teardown))))
+    (lambda () (.call ctx teardown))))
 
 (def (run:special-file role a)
   (run io-context:special-file role a))
