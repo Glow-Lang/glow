@@ -10,6 +10,14 @@
   (only-in ../compiler/alpha-convert/env symbol-refer)
   ./program ./participant-runtime ./terminal-codes ./glow-path)
 
+(def (write-json-handshake handshake port)
+  (write-json-ln (json<- AgreementHandshake handshake) port)
+  (force-output port))
+
+(def (read-json-handshake port)
+  (def handshake-json (json<-port port))
+  (<-json AgreementHandshake handshake-json))
+
 (.def io-context:terminal
   setup:
   (lambda () (assert! (input-port? (current-input-port))))
@@ -18,12 +26,11 @@
   send-handshake:
   (lambda (handshake)
     (displayln MAGENTA "\nSend the handshake below to the other participant:" END)
-    (write-json-ln (json<- AgreementHandshake handshake)))
+    (write-json-handshake handshake (current-output-port)))
   receive-handshake:
   (lambda ()
     (displayln MAGENTA "\nPaste below the handshake sent by the other participant:" END)
-    (def handshake-json (json<-port (current-input-port)))
-    (<-json AgreementHandshake handshake-json)))
+    (read-json-handshake (current-input-port))))
 
 (def (io-context:command cmd)
   (def proc (open-process
@@ -35,14 +42,10 @@
       (lambda () (close-port proc)))
     (send-handshake
       (lambda (handshake)
-        (with-output-to-port proc
-          (lambda ()
-            (write-json-ln (json<- AgreementHandshake handshake))
-            (force-output)))))
+        (write-json-handshake handshake proc)))
     (receive-handshake
       (lambda ()
-        (def handshake-json (json<-port proc))
-        (<-json AgreementHandshake handshake-json)))))
+        (read-json-handshake proc)))))
 
 
 ;; interaction-agreement->program : InteractionAgreement -> Program
