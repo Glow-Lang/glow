@@ -33,11 +33,12 @@
   (.o
     (teardown
       (lambda () (close-port proc)))
-    (send-handshake []
+    (send-handshake
       (lambda (handshake)
         (with-output-to-port proc
           (lambda ()
-            (write-json-ln (json<- AgreementHandshake handshake))))))
+            (write-json-ln (json<- AgreementHandshake handshake))
+            (force-output)))))
     (receive-handshake
       (lambda ()
         (def handshake-json (json<-port proc))
