@@ -26,6 +26,7 @@
       (delete-agreement-handshake)
       (ensure-ethereum-connection "pet")
       (ensure-db-connection "testdb")
+      (register-test-keys)
 
       (DBG "Ensure participants funded")
       (ensure-addresses-prefunded)

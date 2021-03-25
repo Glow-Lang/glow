@@ -8,7 +8,8 @@
   :clan/hash :clan/list :clan/multicall :clan/path-config
   :clan/poo/object :clan/poo/brace :clan/poo/cli :clan/poo/debug
   :clan/persist/db
-  :mukn/ethereum/network-config :mukn/ethereum/types :mukn/ethereum/ethereum :mukn/ethereum/known-addresses :mukn/ethereum/json-rpc :mukn/ethereum/cli :mukn/ethereum/erc20
+  :mukn/ethereum/network-config :mukn/ethereum/types :mukn/ethereum/ethereum :mukn/ethereum/known-addresses
+  :mukn/ethereum/json-rpc :mukn/ethereum/cli :mukn/ethereum/testing :mukn/ethereum/erc20
   ./contacts ./identities)
 
 (define-entry-point (transfer from: (from #f) to: (to #f) value: (value #f)
@@ -51,7 +52,7 @@
       (set! to (parse-address to))
       ;; We import testing *after* the above, so we have *our* t/croesus,
       ;; but the user may have their own alice.
-      (import-testing-module)
+      (register-test-keys)
       (def value-in-ether 5)
       (def value (wei<-ether value-in-ether))
       (def token-symbol (.@ nativeCurrency symbol))

@@ -20,6 +20,7 @@
   ../runtime/participant-runtime
   ../runtime/reify-contract-parameters)
 
+(register-test-keys)
 (def a-address alice)
 (def b-address bob)
 (def wagerAmount (wei<-ether .01))
