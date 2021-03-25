@@ -214,7 +214,7 @@
   (def environment
     (let ((role (symbolify selected-role)))
       (if handshake
-        (run:command ["/usr/bin/env" "sh" "-c" handshake] role agreement)
+        (run:command ["/bin/sh" "-c" handshake] role agreement)
         (run:terminal role agreement))))
   (displayln "Final environment:")
   ;; TODO: get run to include type t and pre-alpha-converted labels,
