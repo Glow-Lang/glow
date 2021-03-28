@@ -1,4 +1,6 @@
-(export answer-questions)
+(export
+  answer-questions
+  read-environment)
 ;; Utility module for using Glow's interactive prompts programmatically,
 ;; for the purposes of integration testing (for "real" development you
 ;; should instead use programmatic interfaces directly).
@@ -28,7 +30,6 @@
         (expect-question (car q-and-a))
         (cadr q-and-a)))
     q-and-as))
-
 
 (def (drop-until matches?)
   ;; Skip past any lines in the input that don't match the predicate `matches?`,
@@ -96,3 +97,29 @@
   ;; Answer a Question object "question" with the provided answer.
   (def option-num (hash-ref (question-options question) answer))
   (displayln option-num))
+
+
+(def (read-environment)
+  ;; Finds the environment logged at the end of a cli run, parses
+  ;; it, and returns it as a hash table.
+  (drop-until
+    (lambda (line) (string=? line "Final environment:")))
+  (def table (make-hash-table))
+  (def (read-all)
+    (def line (read-environment-line))
+    (match line
+      ([key value]
+       (hash-put! table key value)
+       (read-all))
+      (_ (void))))
+  (read-all)
+  table)
+
+(def (read-environment-line)
+  ;; helper for read-environment; reads a single line.
+  (def key (read))
+  (if (equal? key #!eof)
+    #!eof
+    (begin
+      (read) ; skip over the =>
+      [key (read)])))
