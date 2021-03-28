@@ -130,7 +130,6 @@
   ;; For integration tests, could we somehow run in a pure nix-shell?
   (run-process/batch ["nix-shell" "--arg" "thunk" "false" "--arg" "precompile" "true" "--pure" "--command" "./unit-tests.ss integration"])
   #;(run-process/batch ["time" "./unit-tests.ss" "integration"])
-  (run-process/batch ["time" "make" "doc"])
   ;; NB: running the below outside a Nix shell so we can interact with the git repo
   (run-process/batch ["./unit-tests.ss" "check-git-up-to-date"]))
 
