@@ -1,5 +1,6 @@
 (export
   answer-questions
+  supply-parameters
   read-environment)
 ;; Utility module for using Glow's interactive prompts programmatically,
 ;; for the purposes of integration testing (for "real" development you
@@ -98,6 +99,16 @@
   (def option-num (hash-ref (question-options question) answer))
   (displayln option-num))
 
+(def (supply-parameters params)
+  (map
+    (lambda (kv)
+      (def key (car kv))
+      (def value (cadr kv))
+      (def prompt (drop-until (lambda (line) (string-prefix? "Enter " line))))
+      (if (string=? prompt (string-append "Enter " key))
+        (displayln value)
+        (error "expected " key " but got " prompt)))
+    params))
 
 (def (read-environment)
   ;; Finds the environment logged at the end of a cli run, parses

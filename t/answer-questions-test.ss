@@ -40,6 +40,16 @@
            (digest . (bytes<-0x "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"))
            (price . 1)
            (signature . (<-json Signature "cdae76c4904373d48f52dc0f56e8c808fde873e672170bb428eabb49e33091ee46bd2b6af00725f0a7b578ef1289030a78ac60ca992ea78a6913fea2f82627481b")))))
+    (test-case "supply-parameters: buy_sig"
+      (check-parameters
+        ["Define parameters"
+         "Enter digest"
+         ">"
+         "Enter price"
+         ">"]
+        [["digest" "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"]
+         ["price" "1"]]
+        "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470\n1\n"))
     ))
 
 (def (check-answers input-lines answers output)
@@ -59,4 +69,14 @@
       (lambda ()
         (def table (read-environment))
         (hash->list/sort table symbol<?)))
+    output))
+
+(def (check-parameters input-lines params output)
+  (def input (string-join input-lines #\newline))
+  (assert-equal!
+    (with-input-from-string input
+      (lambda ()
+        (with-output-to-string
+          (lambda ()
+            (supply-parameters params)))))
     output))
