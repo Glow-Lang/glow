@@ -1,3 +1,4 @@
+#lang glow
 /*
 	This interaction involves a Buyer, multiple sellers known as Collaborators, and a Market.
 	1. The Buyer deposits a fixed amount into the contract.
