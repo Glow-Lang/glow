@@ -1,0 +1,23 @@
+/*
+	This interaction involves a Buyer, multiple sellers known as Collaborators, and a Market.
+	1. The Buyer deposits a fixed amount into the contract.
+	2. The platform takes a fixed portion.
+	3. The collaborators take an even share of what remains.
+*/
+
+@interaction
+let payForNFT = (digest: Digest, price: TokenAmount, collaboratorCount: Nat) => {
+    // Buyer deposits the total amount
+    deposit! Buyer -> price;
+    // Compute platform commission
+    let commission price = quotient(price, 100);
+    // Have the Market verify the digest of the item
+    @publicly!(Market) let signature = sign(digest);
+    // Give the collaborators their cut
+    ForAllParticipant (Collaborator) {
+      withdraw! Collaborator -> (price - commission) / collaboratorCount;
+    }
+    // Finally, take the commission for the market
+    withdraw! Market -> commmission;
+}
+
