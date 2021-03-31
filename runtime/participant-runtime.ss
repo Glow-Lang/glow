@@ -63,9 +63,6 @@
 (def (special-file:handshake) (transient-path "agreement-handshake.json"))
 (def (handshake-timeout-in-seconds) (* 15 (ethereum-timeout-in-blocks)))
 
-;; TODO: make an alternate version of io-context that
-;;       displays at the terminal for the user to copy/paste and send to
-;;       other participants through an outside channel
 (.def io-context:special-file
   setup: delete-agreement-handshake
   teardown: delete-agreement-handshake
