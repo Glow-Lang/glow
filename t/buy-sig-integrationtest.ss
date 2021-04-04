@@ -62,11 +62,13 @@
                   [["Choose application:"
                     "buy_sig"]
                    ["Choose your identity:"
-                    "t/alice - 0xa71CEb0990dD1f29C2a064c29392Fe66baf05aE1"]
+                    (lambda (id)
+                      (string-prefix? "t/alice " id))]
                    ["Choose your role:"
                     "Buyer"]
                    ["Select address for Seller:"
-                    "t/bob - 0xb0bb1ed229f5Ed588495AC9739eD1555f5c3aabD"]])
+                    (lambda (id)
+                      (string-prefix? "t/bob " id))]])
                 (supply-parameters
                   [["digest" (string-append "0x" (hex-encode digest))]
                    ["price" price]])
@@ -91,7 +93,7 @@
               (lambda ()
                 (answer-questions
                   [["Choose your identity:"
-                    "t/bob - 0xb0bb1ed229f5Ed588495AC9739eD1555f5c3aabD"]
+                    (lambda (id) (string-prefix? "t/bob " id)]
                    ["Choose your role:"
                     "Seller"]])
                 (read-environment))))))

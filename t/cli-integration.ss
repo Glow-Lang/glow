@@ -114,7 +114,15 @@
 
 (def (answer-question question answer)
   ;; Answer a Question object "question" with the provided answer.
-  (def option-num (hash-ref (question-options question) answer))
+  ;; The answer can either be a literal string, or a predicate
+  ;; indicating whether an answer matches. In the latter case,
+  ;; if there is more than one match it is unspecified which is used.
+  (def options (question-options question))
+  (def key
+    (if (string? answer)
+      answer
+      (car (filter answer (hash-keys options)))))
+  (def option-num (hash-ref options key))
   (displayln-now option-num))
 
 (def (supply-parameters params)
