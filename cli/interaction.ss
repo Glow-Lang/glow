@@ -35,7 +35,7 @@
       (option
         (displayln option))))
   (display-prompt "Enter number")
-  (let* ((input (read-line-from-console))
+  (let* ((input (read-line))
          (response (string->number input)))
     (if (<= 1 response options-count)
       (begin
@@ -51,13 +51,13 @@
 
 (def (ask-string name)
   (display-prompt name)
-  (def result (read-line-from-console))
+  (def result (read-line))
   (displayln)
   result)
 
 (def (ask-number name)
   (display-prompt name)
-  (def result (.call Nat .<-string (read-line-from-console)))
+  (def result (.call Nat .<-string (read-line)))
   (displayln)
   result)
 
@@ -110,7 +110,7 @@
       (if (u8vector? name) (bytes->string name) (symbol->string name))
       (if tag (str tag) "")))
   (try
-    (let (input (read-line-from-console))
+    (let (input (read-line))
       (.call type .<-string input))
     (catch (e)
       (displayln FAIL "\nError parsing input: " (error-message e) END)
@@ -286,9 +286,3 @@
    (input-port-timeout-set! port 0.001)
    (let loop () (if (not (eof-object? (read-line port))) (loop)))
    (input-port-timeout-set! port +inf.0))
-
-(def (read-line-from-console)
-  (read-line)
-   #;(let ((port (console-port)))
-     (flush-input port)
-     (read-line port)))
