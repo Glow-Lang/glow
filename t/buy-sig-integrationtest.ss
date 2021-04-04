@@ -86,21 +86,25 @@
                       " --test"
                       " --handshake 'nc localhost 3232'")]]))
 
-      (def environment
+      (def seller-environment
         (with-output-to-port proc-seller
           (lambda ()
             (with-input-from-port proc-seller
               (lambda ()
                 (answer-questions
                   [["Choose your identity:"
-                    (lambda (id) (string-prefix? "t/bob " id)]
+                    (lambda (id) (string-prefix? "t/bob " id))]
                    ["Choose your role:"
                     "Seller"]])
                 (read-environment))))))
 
-      (DBG "Environment: " environment)
+      (def buyer-environment
+        (with-input-from-port proc-buyer read-environment))
+
+      (assert! (equal? buyer-environment seller-environment))
+
       (def signature
-        (match (hash-ref environment 'signature)
+        (match (hash-ref buyer-environment 'signature)
           (['<-json 'Signature signature] (<-json Signature signature))
           (value (error "Unexpected value for signature: " value))))
       (DBG "parsed Signature: " signature)
