@@ -4,7 +4,7 @@
   set-initial-block
   read-peer-command
   read-environment)
-;; Utility module for using Glow's interactive prompts programmatically,
+;; Utility module for using Glow's command line interface programmatically,
 ;; for the purposes of integration testing (for "real" development you
 ;; should instead use programmatic interfaces directly).
 

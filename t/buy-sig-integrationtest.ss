@@ -20,7 +20,7 @@
   ../runtime/program
   ../runtime/participant-runtime
   ../runtime/reify-contract-parameters
-  ./answer-questions)
+  ./cli-integration)
 
 (def buy-sig-integrationtest
   (test-suite "integration test for ethereum/buy-sig"

@@ -2,10 +2,11 @@
 (import
   :std/sugar :std/test :std/misc/hash :std/misc/symbol
   :clan/assert
-  ./answer-questions)
+  ./cli-integration)
+;; Self tests for the cli-integration module
 
-(def answer-questions-test
-  (test-suite "answer-questions"
+(def cli-integration-test
+  (test-suite "cli-integration"
     (test-case "Buy-sig-role: Buyer"
       (check-answers
         ["Choose your role:"
