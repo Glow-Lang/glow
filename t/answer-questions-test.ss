@@ -50,6 +50,10 @@
         [["digest" "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"]
          ["price" "1"]]
         "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470\n1\n"))
+    (test-case "initial block"
+      (check-initial-block
+        "Max initial block [ Current block number is 250 ]"
+        "250\n"))
     ))
 
 (def (check-answers input-lines answers output)
@@ -79,4 +83,13 @@
         (with-output-to-string
           (lambda ()
             (supply-parameters params)))))
+    output))
+
+(def (check-initial-block input output)
+  (assert-equal!
+    (with-output-to-string
+      (lambda ()
+        (with-input-from-string input
+          (lambda ()
+            (set-initial-block)))))
     output))

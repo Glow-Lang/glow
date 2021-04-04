@@ -74,7 +74,8 @@
 
 (def (display-prompt name)
   (displayln CYAN name)
-  (display (string-append "> " END)))
+  (display (string-append "> " END))
+  (force-output))
 
 (def (ask-application)
   (let
@@ -134,7 +135,8 @@
   (if (string-contains agreement-string "'")
     (pr agreement-string)
     (display (string-append "'" agreement-string "'")))
-  (displayln))
+  (displayln)
+  (force-output))
 
 (def (get-or-ask options option ask-function)
   (if-let (option-value (hash-get options option))
@@ -286,6 +288,7 @@
    (input-port-timeout-set! port +inf.0))
 
 (def (read-line-from-console)
-   (let ((port (console-port)))
+  (read-line)
+   #;(let ((port (console-port)))
      (flush-input port)
      (read-line port)))

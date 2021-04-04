@@ -1,12 +1,38 @@
 (export
   answer-questions
   supply-parameters
+  set-initial-block
+  read-peer-command
   read-environment)
 ;; Utility module for using Glow's interactive prompts programmatically,
 ;; for the purposes of integration testing (for "real" development you
 ;; should instead use programmatic interfaces directly).
 
+(import :std/misc/list)
 (import :std/pregexp)
+(import :gerbil/gambit/ports)
+
+(def (remove-terminal-control-seqs str)
+  ;; Remove terminal control sequeneces from the input string.
+  (def (do-filter chars)
+    (if (null? chars)
+      chars
+      (begin
+        (if (is-print? (car chars))
+          (cons (car chars) (do-filter (cdr chars)))
+          (do-filter
+            (cdr (drop-until
+                   (lambda (c) (equal? c #\m))
+                   chars)))))))
+  (list->string (do-filter (string->list str))))
+
+(def (is-print? c)
+  ;; Predicate that reports if the character c is in the printable
+  ;; ascii range, i.e. non-control ascii characters.
+  (def codepoint (char->integer c))
+  (and
+    (<= (char->integer #\space) codepoint)
+    (<= codepoint 127)))
 
 (def (answer-questions q-and-as)
   ;; Read a series of questions from (current-input-port), and feed
@@ -27,30 +53,29 @@
   ;; of sequence or are missing.
   (map
     (lambda (q-and-a)
+      (def q (read-question (car q-and-a)))
       (answer-question
-        (expect-question (car q-and-a))
+        q
         (cadr q-and-a)))
     q-and-as))
 
-(def (drop-until matches?)
+(def (read-clean-line)
+  ;; Read a line from the input, and strip out any terminal escape sequences.
+  (def raw-line (read-line))
+  (if (equal? raw-line #!eof)
+    #!eof
+    (remove-terminal-control-seqs raw-line)))
+
+(def (find-first-line matches?)
   ;; Skip past any lines in the input that don't match the predicate `matches?`,
   ;; and return the first line that does.
-  (def line (read-line))
-  (if (matches? line)
-    line
-    (drop-until matches?)))
-
-;; TODO(isd): this causes an error because Hashof isn't defined in any of our
-;; imports figure out where it lives.
-#;(define-type Question
-  ;; A question that has been parsed from the input.
-  (Record
-    ;; The prompt for the question, e.g. "Choose your role:":
-    prompt: String
-
-    ;; A mapping from the textual answers to the numeric option
-    ;; that must be entered to choose that answer:
-    options: [Hashof String String]))
+  (def line (read-clean-line))
+  (cond
+    ((equal? line #!eof)
+     (error "Unexpected EOF"))
+    ((matches? line) line)
+    (else
+      (find-first-line matches?))))
 
 (defstruct question
   (prompt  ;; The prompt for the question, e.g. "Choose your role:":
@@ -58,10 +83,12 @@
            ;; (as a string) that must be entered to choose that answer:
   ))
 
-(def (read-question)
-  ;; Read in a Question object.
-  (def prompt
-    (drop-until (lambda (line) (string-prefix? "Choose " line))))
+(def (read-question prompt)
+  ;; Look for the provided question prompt in the input, and read in
+  ;; a question struct.
+  (find-first-line
+    (lambda (line)
+      (string=? prompt line)))
   (def options
     (read-options))
   (make-question prompt options))
@@ -71,7 +98,7 @@
   ;; options slot.
   (def table (make-hash-table))
   (def (read-all)
-    (def line (read-line))
+    (def line (read-clean-line))
     (unless (string-prefix? "Enter " line)
       (match (pregexp-match "^([0-9]+)\\) (.*)$" line)
         ([_ no value]
@@ -81,39 +108,54 @@
   (read-all)
   table)
 
-(def (expect-question expected-prompt)
-  ;; Like read-question, but expects a specific prompt, and raises
-  ;; an error if the prompt is different.
-  (def question (read-question))
-  (def actual-prompt (question-prompt question))
-  (unless (string=? actual-prompt expected-prompt)
-    (error
-      "Unexpect question prompt: expected "
-      expected-prompt
-      " but got "
-      actual-prompt))
-  question)
+(def (displayln-now . args)
+  (apply displayln args)
+  (force-output))
 
 (def (answer-question question answer)
   ;; Answer a Question object "question" with the provided answer.
   (def option-num (hash-ref (question-options question) answer))
-  (displayln option-num))
+  (displayln-now option-num))
 
 (def (supply-parameters params)
   (map
     (lambda (kv)
       (def key (car kv))
       (def value (cadr kv))
-      (def prompt (drop-until (lambda (line) (string-prefix? "Enter " line))))
-      (if (string=? prompt (string-append "Enter " key))
-        (displayln value)
+      (def prompt
+        (find-first-line
+          (lambda (line)
+            (or
+              (string-prefix? "Enter " line)
+              (string-prefix? "> Enter " line)))))
+      (if
+        (or
+          (string=? prompt (string-append "Enter " key))
+          (string=? prompt (string-append "> Enter " key)))
+        (displayln-now value)
         (error "expected " key " but got " prompt)))
     params))
+
+(def (set-initial-block)
+  ;; Replies to the probpt "Max initial block [...]", using the current
+  ;; block number as the selection.
+  (def prompt
+    (find-first-line
+      (lambda (line) (string-prefix? "Max initial block [" line))))
+  (def prompt-expr
+    (with-input-from-string (string-append "(" prompt ")") read))
+  (def num (car (filter number? (flatten prompt-expr))))
+  (displayln-now num))
+
+(def (read-peer-command)
+  ;; Scans the input for the command to run on the other side.
+  (find-first-line
+    (lambda (line) (string-prefix? "glow start-interaction --agreement " line))))
 
 (def (read-environment)
   ;; Finds the environment logged at the end of a cli run, parses
   ;; it, and returns it as a hash table.
-  (drop-until
+  (find-first-line
     (lambda (line) (string=? line "Final environment:")))
   (def table (make-hash-table))
   (def (read-all)
@@ -128,9 +170,11 @@
 
 (def (read-environment-line)
   ;; helper for read-environment; reads a single line.
-  (def key (read))
-  (if (equal? key #!eof)
+  (def line (read-clean-line))
+  (if (equal? line #!eof)
     #!eof
-    (begin
-      (read) ; skip over the =>
-      [key (read)])))
+    (with-input-from-string line
+      (lambda ()
+        (def key (read))
+        (read) ; skip over the =>
+        [key (read)]))))
