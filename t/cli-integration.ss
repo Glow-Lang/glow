@@ -1,4 +1,5 @@
 (export
+  with-io-port
   answer-questions
   supply-parameters
   set-initial-block
@@ -11,6 +12,17 @@
 (import :std/misc/list)
 (import :std/pregexp)
 (import :gerbil/gambit/ports)
+
+(def (with-io-port port fn)
+  ;; Run (fn) with both current input and output ports redirected
+  ;; to `port`.
+  ;;
+  ;; TODO: this is a more general utiltiy than just interacting with our own
+  ;; CLI; should we push this into gerbil utils or something? maybe something
+  ;; similar already exists?
+  (with-output-to-port port
+    (lambda ()
+      (with-input-from-port port fn))))
 
 (def (remove-terminal-control-seqs str)
   ;; Remove terminal control sequeneces from the input string.

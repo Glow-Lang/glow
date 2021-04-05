@@ -54,26 +54,24 @@
                        "--handshake" "nc -l 3232"]]))
 
       (def peer-command
-        (with-output-to-port proc-buyer
+        (with-io-port proc-buyer
           (lambda ()
-            (with-input-from-port proc-buyer
-              (lambda ()
-                (answer-questions
-                  [["Choose application:"
-                    "buy_sig"]
-                   ["Choose your identity:"
-                    (lambda (id)
-                      (string-prefix? "t/alice " id))]
-                   ["Choose your role:"
-                    "Buyer"]
-                   ["Select address for Seller:"
-                    (lambda (id)
-                      (string-prefix? "t/bob " id))]])
-                (supply-parameters
-                  [["digest" (string-append "0x" (hex-encode digest))]
-                   ["price" price]])
-                (set-initial-block)
-                (read-peer-command))))))
+            (answer-questions
+              [["Choose application:"
+                "buy_sig"]
+               ["Choose your identity:"
+                (lambda (id)
+                  (string-prefix? "t/alice " id))]
+               ["Choose your role:"
+                "Buyer"]
+               ["Select address for Seller:"
+                (lambda (id)
+                  (string-prefix? "t/bob " id))]])
+            (supply-parameters
+              [["digest" (string-append "0x" (hex-encode digest))]
+               ["price" price]])
+            (set-initial-block)
+            (read-peer-command))))
 
       (def proc-seller
         (open-process
@@ -87,19 +85,17 @@
                       " --handshake 'nc localhost 3232'")]]))
 
       (def seller-environment
-        (with-output-to-port proc-seller
+        (with-io-port proc-seller
           (lambda ()
-            (with-input-from-port proc-seller
-              (lambda ()
-                (answer-questions
-                  [["Choose your identity:"
-                    (lambda (id) (string-prefix? "t/bob " id))]
-                   ["Choose your role:"
-                    "Seller"]])
-                (read-environment))))))
+            (answer-questions
+              [["Choose your identity:"
+                (lambda (id) (string-prefix? "t/bob " id))]
+               ["Choose your role:"
+                "Seller"]])
+            (read-environment))))
 
       (def buyer-environment
-        (with-input-from-port proc-buyer read-environment))
+        (with-io-port proc-buyer read-environment))
 
       (assert! (equal? buyer-environment seller-environment))
 

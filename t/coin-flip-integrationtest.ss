@@ -49,24 +49,22 @@
                        "--handshake" "nc -l 3232"]]))
 
       (def peer-command
-        (with-output-to-port proc-a
+        (with-io-port proc-a
           (lambda ()
-            (with-input-from-port proc-a
-              (lambda ()
-                (answer-questions
-                  [["Choose application:"
-                    "coin_flip"]
-                   ["Choose your identity:"
-                    (lambda (id) (string-prefix? "t/alice " id))]
-                   ["Choose your role:"
-                    "A"]
-                   ["Select address for B:"
-                    (lambda (id) (string-prefix? "t/bob " id))]])
-                (supply-parameters
-                  [["wagerAmount" wagerAmount]
-                   ["escrowAmount" escrowAmount]])
-                (set-initial-block)
-                (read-peer-command))))))
+            (answer-questions
+              [["Choose application:"
+                "coin_flip"]
+               ["Choose your identity:"
+                (lambda (id) (string-prefix? "t/alice " id))]
+               ["Choose your role:"
+                "A"]
+               ["Select address for B:"
+                (lambda (id) (string-prefix? "t/bob " id))]])
+            (supply-parameters
+              [["wagerAmount" wagerAmount]
+               ["escrowAmount" escrowAmount]])
+            (set-initial-block)
+            (read-peer-command))))
 
       (def proc-b
         (open-process
@@ -80,19 +78,17 @@
                       " --handshake 'nc localhost 3232'")]]))
 
       (def b-environment
-        (with-output-to-port proc-b
+        (with-io-port proc-b
           (lambda ()
-            (with-input-from-port proc-b
-              (lambda ()
-                (answer-questions
-                  [["Choose your identity:"
-                    (lambda (id) (string-prefix? "t/bob " id))]
-                   ["Choose your role:"
-                    "B"]])
-                (read-environment))))))
+            (answer-questions
+              [["Choose your identity:"
+                (lambda (id) (string-prefix? "t/bob " id))]
+               ["Choose your role:"
+                "B"]])
+            (read-environment))))
 
       (def a-environment
-        (with-input-from-port proc-a read-environment))
+        (with-io-port proc-a read-environment))
 
       (close-port proc-a)
       (close-port proc-b)
