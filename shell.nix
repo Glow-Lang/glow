@@ -13,7 +13,9 @@ in
       glow-lang.buildInputs ++
       lib.optional ethereum go-ethereum ++
       # To speed this one up: nix path-info -f ./pkgs.nix -r thunkExe | cachix push mukn
-      lib.optional thunk thunkExe);
+      lib.optional thunk thunkExe ++
+      [ netcat ] # used by integration tests
+      );
     shellHook = ''
       echo ${gerbil-poo.src}; echo ${pkgs.gerbilPackages-unstable.gerbil-poo.src} ; echo
       echo ${glow-lang.src}; echo ${pkgs.gerbilPackages-unstable.glow-lang.src} ; echo ${pkgs.gerbilPackages-unstable.glow-lang.src} ; echo ${pkgs.gerbil-support.gerbilPackages-unstable.glow-lang.src} ; echo
