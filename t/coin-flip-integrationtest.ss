@@ -18,34 +18,14 @@
   ../compiler/syntax-context
   ../runtime/program
   ../runtime/participant-runtime
-  ../runtime/reify-contract-parameters)
+  ../runtime/reify-contract-parameters
+  ./cli-integration)
 
 (register-test-keys)
 (def a-address alice)
 (def b-address bob)
 (def wagerAmount (wei<-ether .5))
 (def escrowAmount (wei<-ether .01))
-
-(def coin_flip.glow (source-path "dapps/coin_flip.glow"))
-
-(def (make-agreement)
-  ;; Should `timeout` be the value of `(ethereum-timeout-in-blocks)`,
-  ;; or should it be the `timeoutInBlocks` field of the entry in `config/ethereum_networks.json`?
-  (def timeout (ethereum-timeout-in-blocks))
-  (def initial-timer-start (+ (eth_blockNumber) timeout))
-  (.o
-    interaction: "coin_flip#coinFlip"
-    participants: (.o A: a-address B: b-address)
-    parameters: (hash
-                  (wagerAmount (json<- Ether wagerAmount))
-                  (escrowAmount (json<- Ether escrowAmount)))
-    reference: (.o)
-    options: (.o blockchain: "Private Ethereum Testnet" ;; the `name` field of an entry in `config/ethereum_networks.json`
-                 escrowAmount: (void) ;; manually done for the current coinflip
-                 timeoutInBlocks: timeout ; should be the `timeoutInBlocks` field of the same entry in `config/ethereum_networks.json`
-                 maxInitialBlock: initial-timer-start)
-    glow-version: (software-identifier)
-    code-digest: (digest<-file coin_flip.glow)))
 
 (def coin-flip-integrationtest
   (test-suite "integration test for ethereum/coin-flip"
@@ -55,32 +35,75 @@
     (DBG "Ensure participants funded")
     (ensure-addresses-prefunded)
     (DBG "DONE")
-    (def compiler-output (run-passes coin_flip.glow pass: 'project show?: #f))
-    (def program (parse-compiler-output compiler-output))
 
     (test-case "coin flip executes"
       (def a-balance-before (eth_getBalance a-address 'latest))
       (def b-balance-before (eth_getBalance b-address 'latest))
 
-      (def agreement (make-agreement))
+      (def proc-a
+        (open-process
+          [path: "./glow"
+           arguments: ["start-interaction"
+                       "--evm-network" "pet"
+                       "--test"
+                       "--handshake" "nc -l 3232"]]))
 
-      (displayln "\nEXECUTING A THREAD ...")
-      (def a-thread
-        (spawn/name/logged "A"
-         (lambda () (run:special-file 'A agreement))))
+      (def peer-command
+        (with-output-to-port proc-a
+          (lambda ()
+            (with-input-from-port proc-a
+              (lambda ()
+                (answer-questions
+                  [["Choose application:"
+                    "coin_flip"]
+                   ["Choose your identity:"
+                    (lambda (id) (string-prefix? "t/alice " id))]
+                   ["Choose your role:"
+                    "A"]
+                   ["Select address for B:"
+                    (lambda (id) (string-prefix? "t/bob " id))]])
+                (supply-parameters
+                  [["wagerAmount" wagerAmount]
+                   ["escrowAmount" escrowAmount]])
+                (set-initial-block)
+                (read-peer-command))))))
 
-      (displayln "\nEXECUTING B THREAD ...")
-      (def b-thread
-        (spawn/name/logged "B"
-         (lambda () (run:special-file 'B agreement))))
 
-      (def a-environment (thread-join! a-thread))
-      (def b-environment (thread-join! b-thread))
+      (def proc-b
+        (open-process
+          [path: "/bin/sh"
+           arguments:
+            ["-c" (string-append
+                    "./" peer-command
+                      " --evm-network pet"
+                      " --database /tmp/alt-glow-db"
+                      " --test"
+                      " --handshake 'nc localhost 3232'")]]))
+
+      (def b-environment
+        (with-output-to-port proc-b
+          (lambda ()
+            (with-input-from-port proc-b
+              (lambda ()
+                (answer-questions
+                  [["Choose your identity:"
+                    (lambda (id) (string-prefix? "t/bob " id))]
+                   ["Choose your role:"
+                    "B"]])
+                (read-environment))))))
+
+      (def a-environment
+        (with-input-from-port proc-a read-environment))
+
+      (close-port proc-a)
+      (close-port proc-b)
+
+      (assert! (equal? a-environment b-environment))
 
       (def a-balance-after (eth_getBalance a-address 'latest))
       (def b-balance-after (eth_getBalance b-address 'latest))
-      (def randA (cdr (hash-get a-environment 'randA)))
-      (def randB (cdr (hash-get a-environment 'randB)))
+      (def randA (hash-get a-environment 'randA))
+      (def randB (hash-get a-environment 'randB))
       (def a-wins? (even? (bitwise-xor randA randB)))
 
       (DDT "DApp completed"
