@@ -68,7 +68,6 @@
                 (set-initial-block)
                 (read-peer-command))))))
 
-
       (def proc-b
         (open-process
           [path: "/bin/sh"
