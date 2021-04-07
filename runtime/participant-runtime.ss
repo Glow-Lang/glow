@@ -280,15 +280,15 @@
   (def initial-state
     (create-frame-variables
       self
-      (.@ (.@ self agreement) options maxInitialBlock)
+      (.@ self agreement options maxInitialBlock)
       next
       participant))
   (def initial-state-digest
     (digest-product-f initial-state))
   (def contract-bytes
-    (stateful-contract-init initial-state-digest (.@ (.@ self consensus-code-generator) bytes)))
+    (stateful-contract-init initial-state-digest (.@ self consensus-code-generator bytes)))
   (create-contract sender-address contract-bytes
-    value: (.@ (.@ self block-ctx) deposits)))
+    value: (.@ self block-ctx deposits)))
 
 ;; PreTransaction <- Runtime Block
 (def (deploy-contract self)
