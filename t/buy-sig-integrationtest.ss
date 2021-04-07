@@ -2,7 +2,8 @@
 
 (import
   :gerbil/gambit/os :gerbil/gambit/ports :gerbil/gambit/threads
-  :std/format :std/srfi/1 :std/test :std/sugar :std/iter :std/text/json :std/misc/ports
+  :std/format :std/srfi/1 :std/test :std/sugar :std/iter :std/text/hex :std/text/json
+  :std/misc/ports :std/misc/process
   :clan/base :clan/concurrency :clan/debug :clan/decimal :clan/exception
   :clan/io :clan/json :clan/path-config :clan/ports
   :clan/poo/object :clan/poo/io :clan/poo/debug
@@ -18,7 +19,8 @@
   ../compiler/syntax-context
   ../runtime/program
   ../runtime/participant-runtime
-  ../runtime/reify-contract-parameters)
+  ../runtime/reify-contract-parameters
+  ./cli-integration)
 
 (def buy-sig-integrationtest
   (test-suite "integration test for ethereum/buy-sig"
@@ -40,44 +42,68 @@
       (def timeout (ethereum-timeout-in-blocks))
       (def initial-timer-start (+ (eth_blockNumber) timeout))
 
-      (def buy_sig.glow (source-path "dapps/buy_sig.glow"))
-
-      (def agreement
-        (.o
-         glow-version: (software-identifier)
-         interaction: "buy_sig#payForSignature"
-         participants: (.o Buyer: buyer-address Seller: seller-address)
-         parameters: (hash
-                      (digest (json<- Digest digest))
-                      (price (json<- Ether price)))
-         reference: (.o Buyer: "Purchase #42"
-                        Seller: "Sale #101")
-         options: (.o blockchain: "Private Ethereum Testnet" ;; the `name` field of an entry in `config/ethereum_networks.json`
-                      escrowAmount: (void) ;; not meaningful for buy_sig in particular
-                      timeoutInBlocks: timeout ; should be the `timeoutInBlocks` field of the same entry in `config/ethereum_networks.json`
-                      maxInitialBlock: initial-timer-start)
-         code-digest: (digest<-file buy_sig.glow)))
-
-      (def compiler-output (run-passes buy_sig.glow pass: 'project show?: #f))
-
-      (def program (parse-compiler-output compiler-output))
       (def buyer-balance-before (eth_getBalance alice 'latest))
       (def seller-balance-before (eth_getBalance bob 'latest))
 
-      (displayln "\nEXECUTING BUYER THREAD ...")
-      (def buyer-thread
-        (spawn/name/logged "Buyer"
-         (lambda () (run:special-file 'Buyer agreement))))
+      (def proc-buyer
+        (open-process
+          [path: "./glow"
+           arguments: ["start-interaction"
+                       "--evm-network" "pet"
+                       "--test"
+                       "--handshake" "nc -l 3232"]]))
 
-      (displayln "\nEXECUTING SELLER THREAD ...")
-      (def seller-thread
-        (spawn/name/logged "Seller"
-         (lambda () (run:special-file 'Seller agreement))))
+      (def peer-command
+        (with-io-port proc-buyer
+          (lambda ()
+            (answer-questions
+              [["Choose application:"
+                "buy_sig"]
+               ["Choose your identity:"
+                (lambda (id)
+                  (string-prefix? "t/alice " id))]
+               ["Choose your role:"
+                "Buyer"]
+               ["Select address for Seller:"
+                (lambda (id)
+                  (string-prefix? "t/bob " id))]])
+            (supply-parameters
+              [["digest" (string-append "0x" (hex-encode digest))]
+               ["price" price]])
+            (set-initial-block)
+            (read-peer-command))))
 
-      ;; Get the final environment object from the Buyer
-      (def environment (thread-join! buyer-thread))
+      (def proc-seller
+        (open-process
+          [path: "/bin/sh"
+           arguments:
+            ["-c" (string-append
+                    "./" peer-command
+                      " --evm-network pet"
+                      " --database /tmp/alt-glow-db"
+                      " --test"
+                      " --handshake 'nc localhost 3232'")]]))
 
-      (def signature (cdr (hash-get environment 'signature)))
+      (def seller-environment
+        (with-io-port proc-seller
+          (lambda ()
+            (answer-questions
+              [["Choose your identity:"
+                (lambda (id) (string-prefix? "t/bob " id))]
+               ["Choose your role:"
+                "Seller"]])
+            (read-environment))))
+
+      (def buyer-environment
+        (with-io-port proc-buyer read-environment))
+
+      (assert! (equal? buyer-environment seller-environment))
+
+      (def signature
+        (match (hash-ref buyer-environment 'signature)
+          (['<-json 'Signature signature] (<-json Signature signature))
+          (value (error "Unexpected value for signature: " value))))
+      (DBG "parsed Signature: " signature)
       (def valid? (message-signature-valid? bob signature digest))
       (def buyer-balance-after (eth_getBalance alice 'latest))
       (def seller-balance-after (eth_getBalance bob 'latest))
@@ -85,10 +111,14 @@
       (DDT "DApp completed"
            Signature signature
            Bool valid?
+           (.@ Ether .string<-) price
            (.@ Ether .string<-) buyer-balance-before
            (.@ Ether .string<-) seller-balance-before
            (.@ Ether .string<-) buyer-balance-after
            (.@ Ether .string<-) seller-balance-after)
+
+      (close-port proc-buyer)
+      (close-port proc-seller)
 
       ;; Check that the signature was valid and that the money transfer happened, modulo gas allowance
       (def gas-allowance (wei<-ether .01))

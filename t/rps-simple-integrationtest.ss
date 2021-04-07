@@ -18,30 +18,13 @@
   ../compiler/syntax-context
   ../runtime/program
   ../runtime/participant-runtime
-  ../runtime/reify-contract-parameters)
+  ../runtime/reify-contract-parameters
+  ./cli-integration)
 
 (register-test-keys)
 (def a-address alice)
 (def b-address bob)
 (def wagerAmount (wei<-ether .01))
-
-(def rps_simple.glow (source-path "dapps/rps_simple.glow"))
-
-(def (make-agreement)
-  (def timeout (ethereum-timeout-in-blocks))
-  (def initial-timer-start (+ (eth_blockNumber) timeout))
-  (.o
-    interaction: "rps_simple#rockPaperScissors"
-    participants: (.o A: a-address B: b-address)
-    parameters: (hash
-                  (wagerAmount (json<- Ether wagerAmount)))
-    reference: (.o)
-    options: (.o blockchain: "Private Ethereum Testnet" ;; the `name` field of an entry in `config/ethereum_networks.json`
-                 escrowAmount: (void) ;; manually done for the current coinflip
-                 timeoutInBlocks: timeout ; should be the `timeoutInBlocks` field of the same entry in `config/ethereum_networks.json`
-                 maxInitialBlock: initial-timer-start)
-    glow-version: (software-identifier)
-    code-digest: (digest<-file rps_simple.glow)))
 
 (def rps-simple-integrationtest
   (test-suite "integration test for ethereum/rps_simple"
@@ -51,37 +34,75 @@
     (DBG "Ensure participants funded")
     (ensure-addresses-prefunded)
     (DBG "DONE")
-    (def compiler-output (run-passes rps_simple.glow pass: 'project show?: #f))
-    (def program (parse-compiler-output compiler-output))
 
     (test-case "rps_simple executes"
-      (def agreement (make-agreement))
 
-      (displayln "\nEXECUTING A THREAD ...")
-      (def a-thread
-        (spawn/name/logged "A"
-         (lambda ()
-          (parameterize ((current-input-port (open-input-string "2\n"))) ; Scissors
-            (run:special-file 'A agreement)))))
+      (def proc-a
+        (open-process
+          [path: "./glow"
+           arguments: ["start-interaction"
+                       "--evm-network" "pet"
+                       "--test"
+                       "--handshake" "nc -l 3232"]]))
 
-      (displayln "\nEXECUTING B THREAD ...")
-      (def b-thread
-        (spawn/name/logged "B"
-         (lambda ()
-          (parameterize ((current-input-port (open-input-string "1\n"))) ; Paper
-            (run:special-file 'B agreement)))))
+      (def peer-command
+        (with-io-port proc-a
+          (lambda ()
+            (answer-questions
+              [["Choose application:"
+                "rps_simple"]
+               ["Choose your identity:"
+                (lambda (id) (string-prefix? "t/alice " id))]
+               ["Choose your role:"
+                "A"]
+               ["Select address for B:"
+                (lambda (id) (string-prefix? "t/bob " id))]])
+            (supply-parameters
+              [["wagerAmount" wagerAmount]])
+            (set-initial-block)
+            (read-peer-command))))
 
-      (def a-environment (thread-join! a-thread))
-      (def b-environment (thread-join! b-thread))
+      (def proc-b
+        (open-process
+          [path: "/bin/sh"
+           arguments:
+            ["-c" (string-append
+                    "./" peer-command
+                      " --evm-network pet"
+                      " --database /tmp/alt-glow-db"
+                      " --test"
+                      " --handshake 'nc localhost 3232'")]]))
 
-      (for (variable (hash->list/sort a-environment symbol<?))
-        (match variable
-          ([name . (type . value)]
-            (when (cdr (hash-get b-environment name))
-              (check-equal? value (cdr (hash-get b-environment name)))))))
+      (with-io-port proc-b
+        (lambda ()
+          (answer-questions
+            [["Choose your identity:"
+              (lambda (id) (string-prefix? "t/bob " id))]
+             ["Choose your role:"
+              "B"]])))
+
+      (with-io-port proc-a
+        (lambda ()
+          (displayln "2") ; Scissors
+          (force-output)))
+
+      (def b-environment
+        (with-io-port proc-b
+          (lambda ()
+            (displayln "1") ; Paper
+            (force-output)
+            (read-environment))))
+
+      (def a-environment
+        (with-io-port proc-a read-environment))
+
+      (close-port proc-a)
+      (close-port proc-b)
+
+      (assert! (equal? a-environment b-environment))
 
       ;; if A chose scissors, B chose paper, then outcome 2 (A_Wins)
-      (def outcome (cdr (hash-get a-environment 'outcome)))
+      (def outcome (hash-get a-environment 'outcome))
       (display-object
         ["outcome extracted from contract logs, 0 (B_Wins), 1 (Draw), 2 (A_Wins):" UInt256 outcome])
       (check-equal? outcome 2))))
