@@ -1,4 +1,4 @@
-{ ethereum ? true, thunk ? true, precompile ? false }:
+{ ethereum ? true, thunk ? false, precompile ? false }:
 let
   pkgs = import ./pkgs.nix;
   inherit (pkgs) lib glow-lang gerbil-support gerbilPackages-unstable nixpkgs thunkExe;
