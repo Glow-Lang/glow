@@ -51,7 +51,12 @@
            arguments: ["start-interaction"
                        "--evm-network" "pet"
                        "--test"
-                       "--handshake" "nc -l 3232"]]))
+                       "--handshake" "nc -l 3232"
+                       ;; For the sake of testing both the cli flag and the
+                       ;; console prompt, we supply one parameter here and the
+                       ;; other below.
+                       "--params" (string-append "{\"price\": " (number->string price) "}")
+                       ]]))
 
       (def peer-command
         (with-io-port proc-buyer
@@ -68,8 +73,7 @@
                 (lambda (id)
                   (string-prefix? "t/bob " id))]])
             (supply-parameters
-              [["digest" (string-append "0x" (hex-encode digest))]
-               ["price" price]])
+              [["digest" (string-append "0x" (hex-encode digest))]])
             (set-initial-block)
             (read-peer-command))))
 
