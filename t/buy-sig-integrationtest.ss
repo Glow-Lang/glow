@@ -56,6 +56,13 @@
                        ;; console prompt, we supply one parameter here and the
                        ;; other below.
                        "--params" (string-append "{\"price\": " (number->string price) "}")
+
+                       ;; Similarly, specify one of the participants here. There are only two,
+                       ;; so this test doesn't excercise the logic to read this from stdin,
+                       ;; but the other integration tests do.
+                       ;;
+                       ;; N.b. this is bob's id.
+                       "--participants" "{\"Seller\": \"0xb0bb1ed229f5Ed588495AC9739eD1555f5c3aabD\"}"
                        ]]))
 
       (def peer-command
@@ -68,10 +75,7 @@
                 (lambda (id)
                   (string-prefix? "t/alice " id))]
                ["Choose your role:"
-                "Buyer"]
-               ["Select address for Seller:"
-                (lambda (id)
-                  (string-prefix? "t/bob " id))]])
+                "Buyer"]])
             (supply-parameters
               [["digest" (string-append "0x" (hex-encode digest))]])
             (set-initial-block)
