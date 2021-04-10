@@ -117,16 +117,24 @@
       (flush-input (console-port))
       (console-input type name tag))))
 
-(def (ask-parameters program parameter-names)
+(def (ask-parameter type surface-name)
+  (console-input type surface-name #f))
+
+(def (get-or-ask-parameter parameters type surface-name)
+  (or
+    (hash-get parameters surface-name)
+    (let ((value (json<- type (ask-parameter type surface-name))))
+      (hash-put! parameters surface-name value)
+      value)))
+
+(def (get-or-ask-parameters parameters program parameter-names)
   (displayln BOLD "Define parameters" END)
-  (let (parameters (make-hash-table))
-    (for ((name parameter-names))
-      (def type (lookup-type program name))
-      (def surface-name (lookup-surface-name program name))
-      (def input (console-input type surface-name #f))
-      (hash-put! parameters surface-name (json<- type input)))
-    (displayln)
-    parameters))
+  (for ((name parameter-names))
+    (def type (lookup-type program name))
+    (def surface-name (lookup-surface-name program name))
+    (get-or-ask-parameter parameters type surface-name))
+  (displayln)
+  parameters)
 
 (def (print-command agreement)
   (displayln MAGENTA "One line command for other participants to generate the same agreement:" END)
@@ -181,7 +189,6 @@
     ([_ dapp] dapp)
     (else (error "Bad application name" application-name))))
 
-;; TODO: also accept local interaction parameters
 ;; TODO: accept alternative ethereum networks, etc
 (define-entry-point (start-interaction
                      agreement: (agreement-json-string #f)
@@ -190,11 +197,19 @@
                      max-initial-block: (max-initial-block #f)
                      contacts: (contacts-file #f)
                      identities: (identities-file #f)
-                     handshake: (handshake #f))
+                     handshake: (handshake #f)
+                     params: (params #f))
   (help: "Start an interaction based on an agreement"
    getopt: (make-options
             [(option 'agreement "-A" "--agreement" default: #f
-                     help: "interaction parameters as JSON")
+                     help: "interaction agreement as JSON")
+             (option 'params "-P" "--params" default: (make-hash-table)
+                     value: string->json-object
+                     help: "contract parameters as JSON")
+             ;; TODO: add an option for supplying single parameters with more ergonomic
+             ;; syntax than JSON, like --param foo=bar. We want to be able to specify
+             ;; this mutliple times, which will require upstream changes in gerbil's
+             ;; getopt.
              (option 'interaction "-I" "--interaction" default: #f
                      help: "path and name of interaction")
              (option 'role "-R" "--role" default: #f
@@ -206,7 +221,11 @@
             [(lambda (opt) (hash-remove! opt 'test))]
             [options/glow-path options/contacts options/identities
              options/evm-network options/database options/test options/backtrace]))
-  (def options (hash (max-initial-block max-initial-block) (role role)))
+  (def options
+       (hash
+         (params params)
+         (max-initial-block max-initial-block)
+         (role role)))
   (displayln)
   (def identities (load-identities from: identities-file))
   (defvalues (agreement selected-role)
@@ -260,7 +279,11 @@
 
     (let (contacts (load-contacts contacts-file)))
     (let (participants-table (ask-participants selected-identity (symbolify selected-role) role-names contacts)))
-    (let (parameters (ask-parameters program (.@ interaction-info parameter-names))))
+    (let (parameters
+          (get-or-ask-parameters
+            (hash-ref options 'params)
+            program
+            (.@ interaction-info parameter-names))))
     (let (current-block-number (eth_blockNumber)))
     (let (max-initial-block (ask-max-initial-block options current-block-number)))
 
