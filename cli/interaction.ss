@@ -92,16 +92,18 @@
     (else
       (ask-option "Choose interaction" interactions))))
 
-(def (ask-participants selected-identity selected-role role-names contacts)
+(def (get-or-ask-participants participants selected-identity selected-role role-names contacts)
   (displayln BOLD "Assign roles" END)
-  (let (participants (make-hash-table))
-    (for ((role-name role-names))
-      (def role-address
-        (if (equal? selected-role role-name)
-          (hash-get address-by-nickname selected-identity)
-          (ask-address (string-append "Select address for " (symbol->string role-name)))))
-      (hash-put! participants role-name role-address))
-    participants))
+  (for ((role-name role-names))
+    (if (equal? selected-role role-name)
+      (hash-put! participants role-name
+        (hash-get address-by-nickname selected-identity))
+      (get-or-ask
+        participants
+        role-name
+        (lambda ()
+          (ask-address (string-append "Select address for " (symbol->string role-name)))))))
+  participants)
 
 (def (console-input type name tag)
   (display-prompt
@@ -120,19 +122,15 @@
 (def (ask-parameter type surface-name)
   (console-input type surface-name #f))
 
-(def (get-or-ask-parameter parameters type surface-name)
-  (or
-    (hash-get parameters surface-name)
-    (let ((value (json<- type (ask-parameter type surface-name))))
-      (hash-put! parameters surface-name value)
-      value)))
-
 (def (get-or-ask-parameters parameters program parameter-names)
   (displayln BOLD "Define parameters" END)
   (for ((name parameter-names))
     (def type (lookup-type program name))
     (def surface-name (lookup-surface-name program name))
-    (get-or-ask-parameter parameters type surface-name))
+    (get-or-ask
+      parameters
+      surface-name
+      (lambda () (json<- type (ask-parameter type surface-name)))))
   (displayln)
   parameters)
 
@@ -198,7 +196,8 @@
                      contacts: (contacts-file #f)
                      identities: (identities-file #f)
                      handshake: (handshake #f)
-                     params: (params #f))
+                     params: (params #f)
+                     participants: (participants #f))
   (help: "Start an interaction based on an agreement"
    getopt: (make-options
             [(option 'agreement "-A" "--agreement" default: #f
@@ -206,10 +205,13 @@
              (option 'params "-P" "--params" default: (make-hash-table)
                      value: string->json-object
                      help: "contract parameters as JSON")
-             ;; TODO: add an option for supplying single parameters with more ergonomic
-             ;; syntax than JSON, like --param foo=bar. We want to be able to specify
-             ;; this mutliple times, which will require upstream changes in gerbil's
-             ;; getopt.
+             (option 'participants "-p" "--participants" default: (make-hash-table)
+                     value: string->json-participant-map
+                     help: "participant mapping as JSON")
+             ;; TODO: add an option for supplying single parameters/participants with
+             ;; more ergonomic syntax than JSON, like --param foo=bar. We want to be
+             ;; able to specify this mutliple times, which will require upstream
+             ;; changes in gerbil's getopt.
              (option 'interaction "-I" "--interaction" default: #f
                      help: "path and name of interaction")
              (option 'role "-R" "--role" default: #f
@@ -224,6 +226,7 @@
   (def options
        (hash
          (params params)
+         (participants participants)
          (max-initial-block max-initial-block)
          (role role)))
   (displayln)
@@ -246,6 +249,12 @@
                 (display-object-ln BOLD k END " => " t v)
                 (display-object-ln k " => " t v))))
             (hash->list/sort environment symbol<?)))
+
+(def (string->json-participant-map str)
+  (def object (string->json-object str))
+  (list->hash-table
+    (hash-map
+      (lambda (k v) (cons k (address<-0x v))) object)))
 
 ;; TODO: Validate that selected role matches selected identity in the agreement's participant table.
 (def (start-interaction/with-agreement options agreement)
@@ -278,7 +287,13 @@
     (let (selected-role (ask-role options role-names)))
 
     (let (contacts (load-contacts contacts-file)))
-    (let (participants-table (ask-participants selected-identity (symbolify selected-role) role-names contacts)))
+    (let (participants-table
+           (get-or-ask-participants
+             (hash-ref options 'participants)
+             selected-identity
+             (symbolify selected-role)
+             role-names
+             contacts)))
     (let (parameters
           (get-or-ask-parameters
             (hash-ref options 'params)
