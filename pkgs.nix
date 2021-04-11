@@ -133,8 +133,9 @@ let
               { pre-src = path-src source;
                 inherit source;
                 inherit pkgs;
-                testGerbilLoadPath = "${source}:${
-                  gerbil-support.gerbilLoadPath ([pkgs.glow-lang] ++ params.gerbilInputs)}";});});});
+                testGerbilLoadPath = "${
+                  gerbil-support.gerbilLoadPath ([pkgs.glow-lang] ++ params.gerbilInputs)}:${
+                  source}";});});});
 
       nixThunkHaskellPackages = pkgs.haskell.packages.ghc865.override rec {
         overrides = new: old: rec {

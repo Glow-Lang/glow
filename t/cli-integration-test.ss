@@ -6,7 +6,7 @@
 ;; Self tests for the cli-integration module
 
 (def cli-integration-test
-  (test-suite "cli-integration"
+  (test-suite "test suite for glow/t/cli-integration"
     (test-case "Buy-sig-role: Buyer"
       (check-answers
         ["Choose your role:"
