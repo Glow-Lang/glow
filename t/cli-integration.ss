@@ -132,15 +132,14 @@
   ;; The answer can either be a literal string, or a predicate
   ;; indicating whether an answer matches. In the latter case,
   ;; if there is more than one match it is unspecified which is used.
-  (def options (question-options question))
-  (def key
-    (if (string? answer)
-      answer
-      (car (filter answer (hash-keys options)))))
-  (def option-num (hash-ref/default options key
-                                    (cut error "Missing option"
-                                         (hash->list/sort options string<?) key)))
-  (displayln-now option-num))
+  (let* ((options (question-options question))
+         (key (if (string? answer)
+                answer
+                (car (filter answer (hash-keys options)))))
+         (option-num (hash-ref/default options key
+                                       (cut error "Missing option"
+                                            (hash->list/sort options string<?) key))))
+    (displayln-now option-num)))
 
 (def (supply-parameters params)
   (map
@@ -162,7 +161,7 @@
     params))
 
 (def (set-initial-block)
-  ;; Replies to the probpt "Max initial block [...]", using the current
+  ;; Replies to the prompt "Max initial block [...]", using the current
   ;; block number as the selection.
   (def prompt
     (find-first-line
