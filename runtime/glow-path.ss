@@ -4,6 +4,7 @@
   :std/getopt :std/iter :std/misc/hash :std/sort :std/misc/string :std/srfi/13
   :std/sugar :clan/cli :clan/config :clan/filesystem :clan/hash :clan/multicall
   :clan/config :clan/path :clan/path-config :clan/string
+  :gerbil/gambit/ports
   :clan/poo/cli)
 
 (def glow-path #f)
@@ -43,7 +44,11 @@
   glow-dapps)
 
 (def (get-glow-app-names)
-  (sort (hash-keys (ensure-glow-dapps)) string<?))
+  (let ((result (sort (hash-keys (ensure-glow-dapps)) string<?)))
+    (with-output-to-port (current-error-port)
+      (lambda ()
+        (displayln "(get-glow-app-names) = " result)))
+    result))
 
 (def options/glow-path
   (make-options [(option 'glow-path "-G" "--glow-path" help: "search path for Glow DApps"
