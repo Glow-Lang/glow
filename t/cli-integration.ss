@@ -76,7 +76,10 @@
   (def raw-line (read-line))
   (if (equal? raw-line #!eof)
     #!eof
-    (remove-terminal-control-seqs raw-line)))
+    (let ((line (remove-terminal-control-seqs raw-line)))
+      (with-output-to-port (current-error-port)
+        (lambda () (displayln "Read Line: " line)))
+      line)))
 
 (def (find-first-line matches?)
   ;; Skip past any lines in the input that don't match the predicate `matches?`,
