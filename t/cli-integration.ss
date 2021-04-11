@@ -136,6 +136,8 @@
          (key (if (string? answer)
                 answer
                 (car (filter answer (hash-keys options)))))
+         (_ (DBG answer-questions:
+                 question answer key (hash->list/sort options string<?)))
          (option-num (hash-ref/default options key
                                        (cut error "Missing option"
                                             (hash->list/sort options string<?) key))))
@@ -179,17 +181,14 @@
 (def (read-environment)
   ;; Finds the environment logged at the end of a cli run, parses
   ;; it, and returns it as a hash table.
-  (find-first-line
-    (lambda (line) (string=? line "Final environment:")))
   (def table (make-hash-table))
-  (def (read-all)
-    (def line (read-environment-line))
-    (match line
+  (find-first-line (lambda (line) (string=? line "Final environment:")))
+  (let read-all ()
+    (match (read-environment-line)
       ([key value]
        (hash-put! table key value)
        (read-all))
       (_ (void))))
-  (read-all)
   table)
 
 (def (read-environment-line)

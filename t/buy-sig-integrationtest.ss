@@ -45,8 +45,12 @@
       (def buyer-balance-before (eth_getBalance alice 'latest))
       (def seller-balance-before (eth_getBalance bob 'latest))
 
-      (def proc-buyer
-        (open-process
+      (def proc-buyer #f)
+      (def proc-seller #f)
+
+      (try
+       (set! proc-buyer
+         (open-process
           [path: "./glow"
            arguments: ["start-interaction"
                        "--evm-network" "pet"
@@ -61,14 +65,14 @@
                        ;; so this test doesn't excercise the logic to read this from stdin,
                        ;; but the other integration tests do.
                        ;;
-                       ;; N.b. this is bob's id.
+                       ;; N.B. this is bob's id.
                        "--participants" "{\"Seller\": \"0xb0bb1ed229f5Ed588495AC9739eD1555f5c3aabD\"}"
                        ]]))
 
-      (def peer-command
-        (with-io-port proc-buyer
-          (lambda ()
-            (answer-questions
+       (def peer-command
+         (with-io-port proc-buyer
+           (lambda ()
+             (answer-questions
               [["Choose application:"
                 "buy_sig"]
                ["Choose your identity:"
@@ -76,13 +80,13 @@
                   (string-prefix? "t/alice " id))]
                ["Choose your role:"
                 "Buyer"]])
-            (supply-parameters
+             (supply-parameters
               [["digest" (string-append "0x" (hex-encode digest))]])
-            (set-initial-block)
-            (read-peer-command))))
+             (set-initial-block)
+             (read-peer-command))))
 
-      (def proc-seller
-        (open-process
+       (set! proc-seller
+         (open-process
           [path: "/bin/sh"
            arguments:
             ["-c" (string-append
@@ -92,44 +96,45 @@
                       " --test"
                       " --handshake 'nc localhost 3232'")]]))
 
-      (def seller-environment
-        (with-io-port proc-seller
-          (lambda ()
-            (answer-questions
+       (def seller-environment
+         (with-io-port proc-seller
+           (lambda ()
+             (answer-questions
               [["Choose your identity:"
                 (lambda (id) (string-prefix? "t/bob " id))]
                ["Choose your role:"
                 "Seller"]])
-            (read-environment))))
+             (read-environment))))
 
-      (def buyer-environment
-        (with-io-port proc-buyer read-environment))
+       (def buyer-environment
+         (with-io-port proc-buyer read-environment))
 
-      (assert! (equal? buyer-environment seller-environment))
+       (assert! (equal? buyer-environment seller-environment))
 
-      (def signature
-        (match (hash-ref buyer-environment 'signature)
-          (['<-json 'Signature signature] (<-json Signature signature))
-          (value (error "Unexpected value for signature: " value))))
-      (DBG "parsed Signature: " signature)
-      (def valid? (message-signature-valid? bob signature digest))
-      (def buyer-balance-after (eth_getBalance alice 'latest))
-      (def seller-balance-after (eth_getBalance bob 'latest))
+       (def signature
+         (match (hash-ref buyer-environment 'signature)
+           (['<-json 'Signature signature] (<-json Signature signature))
+           (value (error "Unexpected value for signature: " value))))
+       (DBG "parsed Signature: " signature)
+       (def valid? (message-signature-valid? bob signature digest))
+       (def buyer-balance-after (eth_getBalance alice 'latest))
+       (def seller-balance-after (eth_getBalance bob 'latest))
 
-      (DDT "DApp completed"
-           Signature signature
-           Bool valid?
-           (.@ Ether .string<-) price
-           (.@ Ether .string<-) buyer-balance-before
-           (.@ Ether .string<-) seller-balance-before
-           (.@ Ether .string<-) buyer-balance-after
-           (.@ Ether .string<-) seller-balance-after)
+       (DDT "DApp completed"
+            Signature signature
+            Bool valid?
+            (.@ Ether .string<-) price
+            (.@ Ether .string<-) buyer-balance-before
+            (.@ Ether .string<-) seller-balance-before
+            (.@ Ether .string<-) buyer-balance-after
+            (.@ Ether .string<-) seller-balance-after)
 
-      (close-port proc-buyer)
-      (close-port proc-seller)
+       ;; Check that the signature was valid and that the money transfer happened, modulo gas allowance
+       (def gas-allowance (wei<-ether .01))
+       (assert! valid?)
+       (assert! (<= 0 (- buyer-balance-before buyer-balance-after price) gas-allowance))
+       (assert! (<= 0 (- (+ seller-balance-before price) seller-balance-after) gas-allowance))
 
-      ;; Check that the signature was valid and that the money transfer happened, modulo gas allowance
-      (def gas-allowance (wei<-ether .01))
-      (assert! valid?)
-      (assert! (<= 0 (- buyer-balance-before buyer-balance-after price) gas-allowance))
-      (assert! (<= 0 (- (+ seller-balance-before price) seller-balance-after) gas-allowance)))))
+       (finally
+        (ignore-errors (close-port proc-buyer))
+        (ignore-errors (close-port proc-seller)))))))
