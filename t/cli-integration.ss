@@ -9,9 +9,9 @@
 ;; for the purposes of integration testing (for "real" development you
 ;; should instead use programmatic interfaces directly).
 
-(import :std/misc/list)
-(import :std/pregexp)
-(import :gerbil/gambit/ports)
+(import :gerbil/gambit/ports
+        :std/misc/hash :std/misc/list :std/pregexp
+        :clan/exit)
 
 (def (with-io-port port fn)
   ;; Run (fn) with both current input and output ports redirected
@@ -137,7 +137,9 @@
     (if (string? answer)
       answer
       (car (filter answer (hash-keys options)))))
-  (def option-num (hash-ref options key))
+  (def option-num (hash-ref/default options key
+                                    (cut error "Missing option"
+                                         (hash->list/sort options string<?) key)))
   (displayln-now option-num))
 
 (def (supply-parameters params)
@@ -201,3 +203,6 @@
         (def key (read))
         (read) ; skip over the =>
         [key (read)]))))
+
+(abort-on-error? #t)
+(backtrace-on-abort? #t)
