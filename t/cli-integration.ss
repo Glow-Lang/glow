@@ -127,6 +127,7 @@
   (apply displayln args)
   (force-output))
 
+(import :clan/debug)
 (def (answer-question question answer)
   ;; Answer a Question object "question" with the provided answer.
   ;; The answer can either be a literal string, or a predicate
