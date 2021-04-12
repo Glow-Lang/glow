@@ -148,10 +148,10 @@
     (['require! variable-name]
       [(load-immediate-variable self function-name variable-name Bool) &require!])
 
-    (['expect-deposited amount]
+    (['expect-deposited ['@record ['DefaultToken amount]]]
       [(load-immediate-variable self function-name amount Ether) &deposit!])
 
-    (['consensus:withdraw participant amount]
+    (['consensus:withdraw participant ['@record ['DefaultToken amount]]]
       [(load-immediate-variable self function-name amount Ether)
        (load-immediate-variable self function-name participant Address)
        &withdraw!])

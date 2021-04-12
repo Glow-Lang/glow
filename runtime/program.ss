@@ -176,7 +176,13 @@
                   start-label: start-label-value
                   end-label: end-label-value
                   body: body-value)))
-          (['def name ['@make-interaction [['@list participants ...]] parameter-names labels bodys ...]]
+          (['def name
+             ['@make-interaction
+               [['@record ['participants ['@list participants ...]]
+                          ['assets ['@list assets ...]]]]
+               parameter-names
+               labels
+               bodys ...]]
             (def interactions (.@ program interactions))
             (def initial-code-block-label (car labels))
             (def specific-table (make-hash-table))

@@ -463,19 +463,19 @@
       ;; is already known.
      (void))
 
-    (['add-to-deposit amount-variable]
+    (['add-to-deposit ['@record ['DefaultToken amount-variable]]]
      (let
        ((this-participant (get-active-participant self))
         (amount (reduce-expression self amount-variable)))
        (.call BlockCtx .add-to-deposit (.@ self block-ctx) this-participant amount)))
 
-    (['expect-deposited amount-variable]
+    (['expect-deposited ['@record ['DefaultToken amount-variable]]]
      (let
        ((this-participant (get-active-participant self))
         (amount (reduce-expression self amount-variable)))
        (.call BlockCtx .add-to-deposit (.@ self block-ctx) this-participant amount)))
 
-    (['participant:withdraw address-variable price-variable]
+    (['participant:withdraw address-variable ['@record ['DefaultToken price-variable]]]
      (let ((address (reduce-expression self address-variable))
            (price (reduce-expression self price-variable)))
        (.call BlockCtx .add-to-withdraw (.@ self block-ctx) address price)))

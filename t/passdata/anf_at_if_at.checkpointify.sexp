@@ -19,7 +19,7 @@
          (@debug-label dlb3)
          (def inter
               (@make-interaction
-               ((@list A B))
+               ((@record (participants (@list A B)) (assets (@list DefaultToken))))
                (b x)
                (begin2 end2)
                (@label begin2)
