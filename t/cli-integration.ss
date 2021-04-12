@@ -93,10 +93,10 @@
       (find-first-line matches?))))
 
 (defstruct question
-  (prompt  ;; The prompt for the question, e.g. "Choose your role:":
-   options ;; A hash table mapping the textual answers to the numeric option
-           ;; (as a string) that must be entered to choose that answer:
-  ))
+  (prompt   ;; The prompt for the question, e.g. "Choose your role:":
+   options) ;; A hash table mapping the textual answers to the numeric option
+            ;; (as a string) that must be entered to choose that answer:
+  transparent: #t)
 
 (def (read-question prompt)
   ;; Look for the provided question prompt in the input, and read in
@@ -138,7 +138,9 @@
                 answer
                 (car (filter answer (hash-keys options)))))
          (_ (DBG answer-questions:
-                 question answer key (hash->list/sort options string<?)))
+                 (question-prompt question)
+                 (hash->list/sort (question-options question) string<?)
+                 answer key (hash->list/sort options string<?)))
          (option-num (hash-ref/default options key
                                        (cut error "Missing option"
                                             (hash->list/sort options string<?) key))))
