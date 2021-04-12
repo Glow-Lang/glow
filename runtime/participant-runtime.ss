@@ -472,24 +472,21 @@
       ;; is already known.
      (void))
 
-    (['add-to-deposit amount-variable]
-     (def asset-symbol 'DefaultToken)
+    (['add-to-deposit ['@record [asset-symbol amount-variable]]]
      (let
        ((this-participant (get-active-participant self))
         (asset (hash-ref (.@ self asset-environment) asset-symbol))
         (amount (reduce-expression self amount-variable)))
        (.call BlockCtx .add-to-deposit (.@ self block-ctx) this-participant asset amount)))
 
-    (['expect-deposited amount-variable]
-     (def asset-symbol 'DefaultToken)
+    (['expect-deposited ['@record [asset-symbol amount-variable]]]
      (let
        ((this-participant (get-active-participant self))
         (asset (hash-ref (.@ self asset-environment) asset-symbol))
         (amount (reduce-expression self amount-variable)))
        (.call BlockCtx .add-to-deposit (.@ self block-ctx) this-participant asset amount)))
 
-    (['participant:withdraw address-variable price-variable]
-     (def asset-symbol 'DefaultToken)
+    (['participant:withdraw address-variable ['@record [asset-symbol price-variable]]]
      (let ((address (reduce-expression self address-variable))
            (asset (hash-ref (.@ self asset-environment) asset-symbol))
            (price (reduce-expression self price-variable)))

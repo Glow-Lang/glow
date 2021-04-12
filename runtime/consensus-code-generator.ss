@@ -245,14 +245,12 @@
     (['require! variable-name]
       [(load-immediate-variable self function-name variable-name Bool) &require!])
 
-    (['expect-deposited amount]
-      (def asset-symbol 'DefaultToken)
+    (['expect-deposited ['@record [asset-symbol amount]]]
       (def asset (.call StaticBlockCtx .get-asset (.@ self static-block-ctx) asset-symbol))
       (def add-deposit (.call StaticBlockCtx .add-deposit! (.@ self static-block-ctx) asset-symbol))
       [(load-immediate-variable self function-name amount asset) add-deposit])
 
-    (['consensus:withdraw participant amount]
-      (def asset-symbol 'DefaultToken)
+    (['consensus:withdraw participant ['@record [asset-symbol amount]]]
       (def asset (.call StaticBlockCtx .get-asset (.@ self static-block-ctx) asset-symbol))
       (def add-withdraw (.call StaticBlockCtx .add-withdraw! (.@ self static-block-ctx) asset-symbol participant))
       [(load-immediate-variable self function-name amount asset) add-withdraw])

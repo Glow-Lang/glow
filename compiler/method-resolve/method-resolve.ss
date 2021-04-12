@@ -121,7 +121,9 @@
 ;; get/compute-has-type : ExprStx -> (U Type #f)
 (def (get/compute-has-type stx)
   (or (get-has-type stx)
-      (resolve-type/scheme (get-has-typing-scheme stx))))
+      (let ((ts (get-has-typing-scheme stx)))
+        (unless ts (raise-syntax-error #f "typing scheme not found" stx))
+        (resolve-type/scheme ts))))
 
 ;; mr-expr : ExprStx -> ExprStx
 (def (mr-expr stx)
@@ -153,8 +155,8 @@
     ((input type tag) (retail-stx stx [#'type (mr-expr #'tag)]))
     ((require! . _) (mr-keyword/sub-exprs stx))
     ((assert! . _) (mr-keyword/sub-exprs stx))
-    ((deposit! . _) (mr-keyword/sub-exprs stx))
-    ((withdraw! . _) (mr-keyword/sub-exprs stx))
+    ((deposit! . _) (mr-deposit-withdraw stx))
+    ((withdraw! . _) (mr-deposit-withdraw stx))
     ((digest . _) (mr-keyword/sub-exprs stx))
     ((sign . _) (mr-keyword/sub-exprs stx))
     ((@app-ctor . _) (mr-keyword/sub-exprs stx))
@@ -162,8 +164,12 @@
 
 ;; mr-expr-make-interaction : ExprStx -> ExprStx
 (def (mr-expr-make-interaction stx)
-  (syntax-case stx ()
-    ((_ ((@list p ...)) params out-type body ...)
+  (syntax-case stx (@record @list participants assets)
+    ((_ ((@record (participants (@list p ...)) (assets (@list a ...))))
+        params
+        out-type
+        body
+        ...)
      (let ((xs (mr-params #'params)))
        (def t (get/compute-has-type stx))
        (def pxts (arg-types t))
@@ -171,7 +177,11 @@
                  (append (syntax->list #'(p ...))
                          (syntax->list xs))
                  pxts)
-       (def r (retail-stx stx (cons* #'((@list p ...)) xs (mr-body (syntax->list #'(body ...))))))
+       (def r
+         (retail-stx stx
+           (cons* #'((@record (participants (@list p ...)) (assets (@list a ...))))
+                  xs
+                  (mr-body (syntax->list #'(body ...))))))
        (set-has-type! r t)
        r))))
 
@@ -203,6 +213,14 @@
      (cond (methods-id (restx stx ['@dot methods-id method-sym]))
            (else (error '@dot/type "type does not have methods"))))
     (_ (error '@dot/type "expected a type name, given" (type->sexpr type)))))
+
+;; mr-deposit-withdraw : ExprStx -> ExprStx
+(def (mr-deposit-withdraw stx)
+  (syntax-case stx (@record)
+    ((_ p (@record (x e) ...))
+     (retail-stx stx
+       [(mr-expr #'p)
+        (cons '@record (stx-map list #'(x ...) (stx-map mr-expr #'(e ...))))]))))
 
 ;; mr-keyword/sub-exprs : ExprStx -> ExprStx
 (def (mr-keyword/sub-exprs stx)

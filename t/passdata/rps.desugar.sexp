@@ -31,7 +31,7 @@
 (def rockPaperScissors
      ()
      (@make-interaction
-      ((@list A B))
+      ((@record (participants (@list A B)) (assets (@list DefaultToken))))
       (wagerAmount)
       ()
       (@debug-label dlb4)
@@ -43,14 +43,14 @@
       (@debug-label dlb7)
       (publish! A commitment)
       (@debug-label dlb8)
-      (deposit! A wagerAmount)
+      (deposit! A (@record (DefaultToken wagerAmount)))
 
       (@debug-label dlb9)
       (@ B (def handB0 () (@app (@dot/type Hand input) "Second player, pick your hand")))
       (@debug-label dlb10)
       (publish! B handB0)
       (@debug-label dlb11)
-      (deposit! B wagerAmount)
+      (deposit! B (@record (DefaultToken wagerAmount)))
 
       (@debug-label dlb12)
       (publish! A salt)
@@ -63,13 +63,13 @@
       (@debug-label dlb15)
       (switch outcome
               ((@app-ctor A_Wins) (@debug-label dlb16)
-                                  (withdraw! A (@app * 2 wagerAmount)))
+                                  (withdraw! A (@record (DefaultToken (@app * 2 wagerAmount)))))
               ((@app-ctor B_Wins) (@debug-label dlb17)
-                                  (withdraw! B (@app * 2 wagerAmount)))
+                                  (withdraw! B (@record (DefaultToken (@app * 2 wagerAmount)))))
               ((@app-ctor Draw) (@debug-label dlb18)
-                                (withdraw! A wagerAmount)
+                                (withdraw! A (@record (DefaultToken wagerAmount)))
                                 (@debug-label dlb19)
-                                (withdraw! B wagerAmount)))
+                                (withdraw! B (@record (DefaultToken wagerAmount)))))
 
       (@debug-label dlb20)
       outcome)))
