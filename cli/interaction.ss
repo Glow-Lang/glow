@@ -78,12 +78,8 @@
   (force-output))
 
 (def (ask-application)
-  (let
-    ((apps
-       (map
-        (lambda (app) (cons app app))
-        (get-glow-app-names))))
-    (ask-option "Choose application" apps)))
+  (def apps (get-glow-app-names))
+  (ask-option "Choose application" (map cons apps apps)))
 
 (def (ask-interaction interactions)
   (match interactions

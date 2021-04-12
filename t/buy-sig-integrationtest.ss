@@ -49,6 +49,7 @@
         (open-process
           [path: "./glow"
            arguments: ["start-interaction"
+                       "--glow-path" (source-path "dapps")
                        "--evm-network" "pet"
                        "--test"
                        "--handshake" "nc -l 3232"
@@ -89,6 +90,7 @@
                     "./" peer-command
                       " --evm-network pet"
                       " --database /tmp/alt-glow-db"
+                      " --glow-path " (source-path "dapps")
                       " --test"
                       " --handshake 'nc localhost 3232'")]]))
 
