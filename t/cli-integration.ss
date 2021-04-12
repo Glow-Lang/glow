@@ -17,7 +17,7 @@
   ;; Run (fn) with both current input and output ports redirected
   ;; to `port`.
   ;;
-  ;; TODO: this is a more general utiltiy than just interacting with our own
+  ;; TODO: this is a more general utility than just interacting with our own
   ;; CLI; should we push this into gerbil utils or something? maybe something
   ;; similar already exists?
   (with-output-to-port port
@@ -137,10 +137,6 @@
          (key (if (string? answer)
                 answer
                 (car (filter answer (hash-keys options)))))
-         (_ (DBG answer-questions:
-                 (question-prompt question)
-                 (hash->list/sort (question-options question) string<?)
-                 answer key (hash->list/sort options string<?)))
          (option-num (hash-ref/default options key
                                        (cut error "Missing option"
                                             (hash->list/sort options string<?) key))))
