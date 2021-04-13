@@ -49,9 +49,22 @@
         (open-process
           [path: "./glow"
            arguments: ["start-interaction"
+                       "--glow-path" (source-path "dapps")
                        "--evm-network" "pet"
                        "--test"
-                       "--handshake" "nc -l 3232"]]))
+                       "--handshake" "nc -l 3232"
+                       ;; For the sake of testing both the cli flag and the
+                       ;; console prompt, we supply one parameter here and the
+                       ;; other below.
+                       "--params" (string-append "{\"price\": " (number->string price) "}")
+
+                       ;; Similarly, specify one of the participants here. There are only two,
+                       ;; so this test doesn't excercise the logic to read this from stdin,
+                       ;; but the other integration tests do.
+                       ;;
+                       ;; N.b. this is bob's id.
+                       "--participants" "{\"Seller\": \"0xb0bb1ed229f5Ed588495AC9739eD1555f5c3aabD\"}"
+                       ]]))
 
       (def peer-command
         (with-io-port proc-buyer
@@ -63,13 +76,9 @@
                 (lambda (id)
                   (string-prefix? "t/alice " id))]
                ["Choose your role:"
-                "Buyer"]
-               ["Select address for Seller:"
-                (lambda (id)
-                  (string-prefix? "t/bob " id))]])
+                "Buyer"]])
             (supply-parameters
-              [["digest" (string-append "0x" (hex-encode digest))]
-               ["price" price]])
+              [["digest" (string-append "0x" (hex-encode digest))]])
             (set-initial-block)
             (read-peer-command))))
 
@@ -81,6 +90,7 @@
                     "./" peer-command
                       " --evm-network pet"
                       " --database /tmp/alt-glow-db"
+                      " --glow-path " (source-path "dapps")
                       " --test"
                       " --handshake 'nc localhost 3232'")]]))
 

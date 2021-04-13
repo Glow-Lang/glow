@@ -1,23 +1,23 @@
 (export #t)
 
 (import
-  :std/getopt :std/iter :std/misc/hash :std/sort :std/misc/string :std/srfi/13
+  :std/getopt :std/iter :std/misc/hash :std/misc/string :std/sort :std/misc/string :std/srfi/13
   :std/sugar :clan/cli :clan/config :clan/filesystem :clan/hash :clan/multicall
   :clan/config :clan/path :clan/path-config :clan/string
   :clan/poo/cli)
 
+(def glow-install-path (source-path))
 (def glow-path #f)
 (def glow-dapps #f)
 
 (def (default-glow-path)
   [(map (cut subpath <> "glow/dapps") [(xdg-data-home) (xdg-data-dirs) ...]) ...
-   (source-path "dapps")])
+   (subpath glow-install-path "dapps")])
 
 (def (initialize-glow-path! (user-provided #f))
   (set! glow-path (or user-provided
                       (getenv-absolute-paths "GLOW_PATH")
                       (default-glow-path))))
-
 
 (def (for-each-dapp-file f extension: (extension ".glow"))
   (assert! glow-path "You must initialize-glow-path! before you search for dapp files!")
@@ -56,6 +56,11 @@
    getopt: options/glow-path)
   (def apps (hash->list/sort (ensure-glow-dapps) string<?))
   (for-each (lambda (n p) (displayln n "  " p)) (co-pad-strings (map car apps)) (map cdr apps)))
+
+(define-entry-point (show-glow-path)
+  (help: "Show Glow path"
+   getopt: options/glow-path)
+  (displayln (string-join glow-path ":")))
 
 (def (find-dapp-path relpath)
   (find file-exists? (map (cut subpath <> relpath) glow-path)))

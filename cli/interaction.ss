@@ -78,12 +78,8 @@
   (force-output))
 
 (def (ask-application)
-  (let
-    ((apps
-       (map
-        (lambda (app) (cons app app))
-        (get-glow-app-names))))
-    (ask-option "Choose application" apps)))
+  (def apps (get-glow-app-names))
+  (ask-option "Choose application" (map cons apps apps)))
 
 (def (ask-interaction interactions)
   (match interactions
@@ -92,16 +88,18 @@
     (else
       (ask-option "Choose interaction" interactions))))
 
-(def (ask-participants selected-identity selected-role role-names contacts)
+(def (get-or-ask-participants participants selected-identity selected-role role-names contacts)
   (displayln BOLD "Assign roles" END)
-  (let (participants (make-hash-table))
-    (for ((role-name role-names))
-      (def role-address
-        (if (equal? selected-role role-name)
-          (hash-get address-by-nickname selected-identity)
-          (ask-address (string-append "Select address for " (symbol->string role-name)))))
-      (hash-put! participants role-name role-address))
-    participants))
+  (for ((role-name role-names))
+    (if (equal? selected-role role-name)
+      (hash-put! participants role-name
+        (hash-get address-by-nickname selected-identity))
+      (get-or-ask
+        participants
+        role-name
+        (lambda ()
+          (ask-address (string-append "Select address for " (symbol->string role-name)))))))
+  participants)
 
 (def (console-input type name tag)
   (display-prompt
@@ -117,16 +115,20 @@
       (flush-input (console-port))
       (console-input type name tag))))
 
-(def (ask-parameters program parameter-names)
+(def (ask-parameter type surface-name)
+  (console-input type surface-name #f))
+
+(def (get-or-ask-parameters parameters program parameter-names)
   (displayln BOLD "Define parameters" END)
-  (let (parameters (make-hash-table))
-    (for ((name parameter-names))
-      (def type (lookup-type program name))
-      (def surface-name (lookup-surface-name program name))
-      (def input (console-input type surface-name #f))
-      (hash-put! parameters surface-name (json<- type input)))
-    (displayln)
-    parameters))
+  (for ((name parameter-names))
+    (def type (lookup-type program name))
+    (def surface-name (lookup-surface-name program name))
+    (get-or-ask
+      parameters
+      surface-name
+      (lambda () (json<- type (ask-parameter type surface-name)))))
+  (displayln)
+  parameters)
 
 (def (print-command agreement)
   (displayln MAGENTA "One line command for other participants to generate the same agreement:" END)
@@ -181,7 +183,6 @@
     ([_ dapp] dapp)
     (else (error "Bad application name" application-name))))
 
-;; TODO: also accept local interaction parameters
 ;; TODO: accept alternative ethereum networks, etc
 (define-entry-point (start-interaction
                      agreement: (agreement-json-string #f)
@@ -190,11 +191,23 @@
                      max-initial-block: (max-initial-block #f)
                      contacts: (contacts-file #f)
                      identities: (identities-file #f)
-                     handshake: (handshake #f))
+                     handshake: (handshake #f)
+                     params: (params #f)
+                     participants: (participants #f))
   (help: "Start an interaction based on an agreement"
    getopt: (make-options
             [(option 'agreement "-A" "--agreement" default: #f
-                     help: "interaction parameters as JSON")
+                     help: "interaction agreement as JSON")
+             (option 'params "-P" "--params" default: (make-hash-table)
+                     value: string->json-object
+                     help: "contract parameters as JSON")
+             (option 'participants "-p" "--participants" default: (make-hash-table)
+                     value: string->json-participant-map
+                     help: "participant mapping as JSON")
+             ;; TODO: add an option for supplying single parameters/participants with
+             ;; more ergonomic syntax than JSON, like --param foo=bar. We want to be
+             ;; able to specify this mutliple times, which will require upstream
+             ;; changes in gerbil's getopt.
              (option 'interaction "-I" "--interaction" default: #f
                      help: "path and name of interaction")
              (option 'role "-R" "--role" default: #f
@@ -206,7 +219,12 @@
             [(lambda (opt) (hash-remove! opt 'test))]
             [options/glow-path options/contacts options/identities
              options/evm-network options/database options/test options/backtrace]))
-  (def options (hash (max-initial-block max-initial-block) (role role)))
+  (def options
+       (hash
+         (params params)
+         (participants participants)
+         (max-initial-block max-initial-block)
+         (role role)))
   (displayln)
   (def identities (load-identities from: identities-file))
   (defvalues (agreement selected-role)
@@ -227,6 +245,12 @@
                 (display-object-ln BOLD k END " => " t v)
                 (display-object-ln k " => " t v))))
             (hash->list/sort environment symbol<?)))
+
+(def (string->json-participant-map str)
+  (def object (string->json-object str))
+  (list->hash-table
+    (hash-map
+      (lambda (k v) (cons k (address<-0x v))) object)))
 
 ;; TODO: Validate that selected role matches selected identity in the agreement's participant table.
 (def (start-interaction/with-agreement options agreement)
@@ -259,8 +283,18 @@
     (let (selected-role (ask-role options role-names)))
 
     (let (contacts (load-contacts contacts-file)))
-    (let (participants-table (ask-participants selected-identity (symbolify selected-role) role-names contacts)))
-    (let (parameters (ask-parameters program (.@ interaction-info parameter-names))))
+    (let (participants-table
+           (get-or-ask-participants
+             (hash-ref options 'participants)
+             selected-identity
+             (symbolify selected-role)
+             role-names
+             contacts)))
+    (let (parameters
+          (get-or-ask-parameters
+            (hash-ref options 'params)
+            program
+            (.@ interaction-info parameter-names))))
     (let (current-block-number (eth_blockNumber)))
     (let (max-initial-block (ask-max-initial-block options current-block-number)))
 
