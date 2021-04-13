@@ -9,9 +9,10 @@
 ;; for the purposes of integration testing (for "real" development you
 ;; should instead use programmatic interfaces directly).
 
-(import :std/misc/list)
-(import :std/pregexp)
-(import :gerbil/gambit/ports)
+(import
+  :gerbil/gambit/ports
+  :std/format :std/misc/hash :std/misc/list :std/pregexp
+  :clan/exit)
 
 (def (with-io-port port fn)
   ;; Run (fn) with both current input and output ports redirected
@@ -90,10 +91,10 @@
       (find-first-line matches?))))
 
 (defstruct question
-  (prompt  ;; The prompt for the question, e.g. "Choose your role:":
-   options ;; A hash table mapping the textual answers to the numeric option
-           ;; (as a string) that must be entered to choose that answer:
-  ))
+  (prompt   ;; The prompt for the question, e.g. "Choose your role:":
+   options) ;; A hash table mapping the textual answers to the numeric option
+            ;; (as a string) that must be entered to choose that answer:
+  transparent: #t)
 
 (def (read-question prompt)
   ;; Look for the provided question prompt in the input, and read in
@@ -129,13 +130,14 @@
   ;; The answer can either be a literal string, or a predicate
   ;; indicating whether an answer matches. In the latter case,
   ;; if there is more than one match it is unspecified which is used.
-  (def options (question-options question))
-  (def key
-    (if (string? answer)
-      answer
-      (car (filter answer (hash-keys options)))))
-  (def option-num (hash-ref options key))
-  (displayln-now option-num))
+  (let* ((options (question-options question))
+         (key (if (string? answer)
+                answer
+                (car (filter answer (hash-keys options)))))
+         (option-num (hash-ref/default options key
+                                       (cut error "Missing option"
+                                            (hash->list/sort options string<?) key))))
+    (displayln-now option-num)))
 
 (def (supply-parameters params)
   (map
@@ -157,7 +159,7 @@
     params))
 
 (def (set-initial-block)
-  ;; Replies to the probpt "Max initial block [...]", using the current
+  ;; Replies to the prompt "Max initial block [...]", using the current
   ;; block number as the selection.
   (def prompt
     (find-first-line
@@ -175,17 +177,14 @@
 (def (read-environment)
   ;; Finds the environment logged at the end of a cli run, parses
   ;; it, and returns it as a hash table.
-  (find-first-line
-    (lambda (line) (string=? line "Final environment:")))
   (def table (make-hash-table))
-  (def (read-all)
-    (def line (read-environment-line))
-    (match line
+  (find-first-line (lambda (line) (string=? line "Final environment:")))
+  (let read-all ()
+    (match (read-environment-line)
       ([key value]
        (hash-put! table key value)
        (read-all))
       (_ (void))))
-  (read-all)
   table)
 
 (def (read-environment-line)
@@ -198,3 +197,6 @@
         (def key (read))
         (read) ; skip over the =>
         [key (read)]))))
+
+(abort-on-error? #t)
+(backtrace-on-abort? #t)

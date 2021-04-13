@@ -36,8 +36,10 @@
     (DBG "DONE")
 
     (test-case "rps_simple executes"
-
-      (def proc-a
+      (def proc-a #f)
+      (def proc-b #f)
+      (try
+       (set! proc-a
         (open-process
           [path: "./glow"
            arguments: ["start-interaction"
@@ -46,10 +48,10 @@
                        "--test"
                        "--handshake" "nc -l 3232"]]))
 
-      (def peer-command
-        (with-io-port proc-a
-          (lambda ()
-            (answer-questions
+       (def peer-command
+         (with-io-port proc-a
+           (lambda ()
+             (answer-questions
               [["Choose application:"
                 "rps_simple"]
                ["Choose your identity:"
@@ -58,13 +60,13 @@
                 "A"]
                ["Select address for B:"
                 (lambda (id) (string-prefix? "t/bob " id))]])
-            (supply-parameters
+             (supply-parameters
               [["wagerAmount" wagerAmount]])
-            (set-initial-block)
-            (read-peer-command))))
+             (set-initial-block)
+             (read-peer-command))))
 
-      (def proc-b
-        (open-process
+       (set! proc-b
+         (open-process
           [path: "/bin/sh"
            arguments:
             ["-c" (string-append
@@ -75,36 +77,36 @@
                       " --test"
                       " --handshake 'nc localhost 3232'")]]))
 
-      (with-io-port proc-b
-        (lambda ()
-          (answer-questions
+       (with-io-port proc-b
+         (lambda ()
+           (answer-questions
             [["Choose your identity:"
               (lambda (id) (string-prefix? "t/bob " id))]
              ["Choose your role:"
               "B"]])))
 
-      (with-io-port proc-a
-        (lambda ()
-          (displayln "2") ; Scissors
-          (force-output)))
+       (with-io-port proc-a
+         (lambda ()
+           (displayln "2") ; Scissors
+           (force-output)))
 
-      (def b-environment
-        (with-io-port proc-b
-          (lambda ()
-            (displayln "1") ; Paper
-            (force-output)
-            (read-environment))))
+       (def b-environment
+         (with-io-port proc-b
+           (lambda ()
+             (displayln "1") ; Paper
+             (force-output)
+             (read-environment))))
 
-      (def a-environment
-        (with-io-port proc-a read-environment))
+       (def a-environment
+         (with-io-port proc-a read-environment))
+       (assert! (equal? a-environment b-environment))
 
-      (close-port proc-a)
-      (close-port proc-b)
-
-      (assert! (equal? a-environment b-environment))
-
-      ;; if A chose scissors, B chose paper, then outcome 2 (A_Wins)
-      (def outcome (hash-get a-environment 'outcome))
-      (display-object
+       ;; if A chose scissors, B chose paper, then outcome 2 (A_Wins)
+       (def outcome (hash-get a-environment 'outcome))
+       (display-object
         ["outcome extracted from contract logs, 0 (B_Wins), 1 (Draw), 2 (A_Wins):" UInt256 outcome])
-      (check-equal? outcome 2))))
+       (check-equal? outcome 2)
+
+       (finally
+        (ignore-errors (close-port proc-a))
+        (ignore-errors (close-port proc-b)))))))

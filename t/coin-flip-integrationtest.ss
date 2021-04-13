@@ -40,8 +40,11 @@
       (def a-balance-before (eth_getBalance a-address 'latest))
       (def b-balance-before (eth_getBalance b-address 'latest))
 
-      (def proc-a
-        (open-process
+      (def proc-a #f)
+      (def proc-b #f)
+      (try
+       (set! proc-a
+         (open-process
           [path: "./glow"
            arguments: ["start-interaction"
                        "--glow-path" (source-path "dapps")
@@ -49,10 +52,10 @@
                        "--test"
                        "--handshake" "nc -l 3232"]]))
 
-      (def peer-command
-        (with-io-port proc-a
-          (lambda ()
-            (answer-questions
+       (def peer-command
+         (with-io-port proc-a
+           (lambda ()
+             (answer-questions
               [["Choose application:"
                 "coin_flip"]
                ["Choose your identity:"
@@ -61,14 +64,14 @@
                 "A"]
                ["Select address for B:"
                 (lambda (id) (string-prefix? "t/bob " id))]])
-            (supply-parameters
+             (supply-parameters
               [["wagerAmount" wagerAmount]
                ["escrowAmount" escrowAmount]])
-            (set-initial-block)
-            (read-peer-command))))
+             (set-initial-block)
+             (read-peer-command))))
 
-      (def proc-b
-        (open-process
+       (set! proc-b
+         (open-process
           [path: "/bin/sh"
            arguments:
             ["-c" (string-append
@@ -79,46 +82,47 @@
                       " --test"
                       " --handshake 'nc localhost 3232'")]]))
 
-      (def b-environment
-        (with-io-port proc-b
-          (lambda ()
-            (answer-questions
+       (def b-environment
+         (with-io-port proc-b
+           (lambda ()
+             (answer-questions
               [["Choose your identity:"
                 (lambda (id) (string-prefix? "t/bob " id))]
                ["Choose your role:"
                 "B"]])
-            (read-environment))))
+             (read-environment))))
 
-      (def a-environment
-        (with-io-port proc-a read-environment))
+       (def a-environment
+         (with-io-port proc-a read-environment))
 
-      (close-port proc-a)
-      (close-port proc-b)
+       (assert! (equal? a-environment b-environment))
 
-      (assert! (equal? a-environment b-environment))
+       (def a-balance-after (eth_getBalance a-address 'latest))
+       (def b-balance-after (eth_getBalance b-address 'latest))
+       (def randA (hash-get a-environment 'randA))
+       (def randB (hash-get a-environment 'randB))
+       (def a-wins? (even? (bitwise-xor randA randB)))
 
-      (def a-balance-after (eth_getBalance a-address 'latest))
-      (def b-balance-after (eth_getBalance b-address 'latest))
-      (def randA (hash-get a-environment 'randA))
-      (def randB (hash-get a-environment 'randB))
-      (def a-wins? (even? (bitwise-xor randA randB)))
+       (DDT "DApp completed"
+            UInt256 randA
+            UInt256 randB
+            Bool a-wins?
+            (.@ Ether .string<-) a-balance-before
+            (.@ Ether .string<-) b-balance-before
+            (.@ Ether .string<-) a-balance-after
+            (.@ Ether .string<-) b-balance-after)
 
-      (DDT "DApp completed"
-           UInt256 randA
-           UInt256 randB
-           Bool a-wins?
-           (.@ Ether .string<-) a-balance-before
-           (.@ Ether .string<-) b-balance-before
-           (.@ Ether .string<-) a-balance-after
-           (.@ Ether .string<-) b-balance-after)
+       (def gas-allowance (wei<-ether .01))
+       (def a-outcome (if a-wins? wagerAmount (- wagerAmount)))
+       (def b-outcome (if a-wins? (- wagerAmount) wagerAmount))
+       (assert! (<= 0 (- (+ a-balance-before a-outcome) a-balance-after) gas-allowance))
+       (assert! (<= 0 (- (+ b-balance-before b-outcome) b-balance-after) gas-allowance))
 
-      (def gas-allowance (wei<-ether .01))
-      (def a-outcome (if a-wins? wagerAmount (- wagerAmount)))
-      (def b-outcome (if a-wins? (- wagerAmount) wagerAmount))
-      (assert! (<= 0 (- (+ a-balance-before a-outcome) a-balance-after) gas-allowance))
-      (assert! (<= 0 (- (+ b-balance-before b-outcome) b-balance-after) gas-allowance))
-
-      ;; TODO: check the financial outcome of the interaction, too.
-      (check-equal?
+       ;; TODO: check the financial outcome of the interaction, too.
+       (check-equal?
         (hash->list/sort a-environment symbol<?)
-        (hash->list/sort b-environment symbol<?)))))
+        (hash->list/sort b-environment symbol<?))
+
+       (finally
+        (ignore-errors (close-port proc-a))
+        (ignore-errors (close-port proc-b)))))))
