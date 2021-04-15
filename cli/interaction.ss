@@ -198,11 +198,9 @@
    getopt: (make-options
             [(option 'agreement "-A" "--agreement" default: #f
                      help: "interaction agreement as JSON")
-             (option 'params "-P" "--params" default: (make-hash-table)
-                     value: string->json-object
+             (option 'params "-P" "--params" default: #f
                      help: "contract parameters as JSON")
-             (option 'participants "-p" "--participants" default: (make-hash-table)
-                     value: string->json-participant-map
+             (option 'participants "-p" "--participants" default: #f
                      help: "participant mapping as JSON")
              ;; TODO: add an option for supplying single parameters/participants with
              ;; more ergonomic syntax than JSON, like --param foo=bar. We want to be
@@ -221,8 +219,8 @@
              options/evm-network options/database options/test options/backtrace]))
   (def options
        (hash
-         (params params)
-         (participants participants)
+         (params (string->json-object (or params "{}")))
+         (participants (string->json-participant-map (or participants "{}")))
          (max-initial-block max-initial-block)
          (role role)))
   (displayln)
