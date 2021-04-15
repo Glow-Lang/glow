@@ -189,6 +189,7 @@
                      interaction: (interaction #f)
                      role: (role #f)
                      max-initial-block: (max-initial-block #f)
+                     timeout-in-blocks: (timeout-in-blocks #f)
                      contacts: (contacts-file #f)
                      identities: (identities-file #f)
                      handshake: (handshake #f)
@@ -212,6 +213,8 @@
                      help: "role you want to play in the interaction")
              (option 'max-initial-block "-B" default: #f
                      help: "maximum block number the contract can begin at")
+             (option 'timeout-in-blocks "-T" "--timeout-in-blocks" default: #f
+                     help: "number of blocks after which to time out")
              (option 'handshake "-H" "--handshake" default: #f
                      help: "command to use to transfer handshakes")]
             [(lambda (opt) (hash-remove! opt 'test))]
@@ -222,6 +225,7 @@
          (params (string->json-object (or params "{}")))
          (participants (string->json-participant-map (or participants "{}")))
          (max-initial-block max-initial-block)
+         (timeout-in-blocks timeout-in-blocks)
          (role role)))
   (displayln)
   (def identities (load-identities from: identities-file))
@@ -293,6 +297,7 @@
             (hash-ref options 'params)
             program
             (.@ interaction-info parameter-names))))
+    (let (timeout-in-blocks (hash-ref options 'timeout-in-blocks)))
     (let (current-block-number (eth_blockNumber)))
     (let (max-initial-block (ask-max-initial-block options current-block-number)))
 
@@ -306,7 +311,10 @@
       reference: {}
       options: {blockchain: (.@ (ethereum-config) name)
                 escrowAmount: (void)
-                timeoutInBlocks: (* 100 (ethereum-timeout-in-blocks))
+                timeoutInBlocks:
+                  (if timeout-in-blocks
+                      (string->number timeout-in-blocks)
+                      (* 100 (ethereum-timeout-in-blocks)))
                 maxInitialBlock: max-initial-block}}))
     (begin
       (.call InteractionAgreement .validate agreement)
