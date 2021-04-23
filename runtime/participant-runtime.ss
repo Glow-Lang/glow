@@ -1,7 +1,7 @@
 (export #t)
 
 (import
-  :gerbil/gambit/bits :gerbil/gambit/bytes :gerbil/gambit/threads
+  :gerbil/gambit/bits :gerbil/gambit/bytes :gerbil/gambit/threads :gerbil/gambit/ports
   :std/pregexp
   :std/format :std/iter :std/misc/hash :std/sugar :std/misc/number :std/misc/list :std/sort :std/srfi/1 :std/text/json
   :clan/base :clan/exception :clan/io :clan/json :clan/number
@@ -243,7 +243,7 @@
   (def contract-config (.@ self contract-config))
   (set! (.@ self block-ctx) (.call ActiveBlockCtx .make))
   (when contract-config
-    (publish-frame-data self))
+    (publish-frame-data self (.@ (.@ self block-ctx) outbox)))
   (interpret-current-code-block self)
   (when (eq? (.@ self status) 'running)
     (if (not contract-config)
@@ -304,8 +304,10 @@
   (def io-context (.@ self io-context))
   (.call io-context send-handshake handshake))
 
-(def (publish-frame-data self)
-  (def out (.@ (.@ self block-ctx) outbox))
+;; <- Runtime BytesOutputPort
+;;
+;; Write frame data to `out`, to be sent to the contract for restoration.
+(def (publish-frame-data self out)
   (def frame-variables
     (create-frame-variables
       self
