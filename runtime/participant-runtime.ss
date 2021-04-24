@@ -186,12 +186,31 @@
       (+ (.@ self timer-start) 1)
       (.@ contract-config creation-block)))
   (def new-log-object (watch self (.@ contract-config contract-address) from))
-  ;; TODO: handle the case when there is no log objects
-  (def log-data (.@ new-log-object data))
-  (set! (.@ self timer-start) (.@ new-log-object blockNumber))
-  ;; TODO: process the data in the same method?
-  (set! (.@ self block-ctx) (.call PassiveBlockCtx .make log-data))
-  (interpret-current-code-block self))
+  (if (eq? new-log-object #!void)
+    (let
+      ;; No log objects -- this indicates a timeout. The contract will send us
+      ;; the escrowed funds, but we need to kick it so that it runs.
+      ((address (.@ contract-config contract-address)))
+      (displayln BOLD "Timed out waiting for other participant; claiming escrowed funds..." END)
+      (def outbox-data
+        (call-with-output-u8vector
+          (lambda (out)
+            (publish-frame-data self out)
+            ;; 1 indicates continue:
+            (marshal UInt8 1 out))))
+      (post-transaction
+        (call-function
+          (get-active-participant self)
+          address
+          outbox-data
+          gas: 1000000
+          )))
+    (let ()
+      (def log-data (.@ new-log-object data))
+      (set! (.@ self timer-start) (.@ new-log-object blockNumber))
+      ;; TODO: process the data in the same method?
+      (set! (.@ self block-ctx) (.call PassiveBlockCtx .make log-data))
+      (interpret-current-code-block self))))
 
 (def (interpret-current-code-block self)
   (let (code-block (get-current-code-block self))
@@ -259,7 +278,11 @@
         ;; recorded in Message's asset-transfer table during interpretation. Probably
         ;; requires getting TransactionInfo using the TransactionReceipt.
         (def contract-address (.@ contract-config contract-address))
-        (def message-pretx (prepare-call-function-transaction self contract-address))
+        (def message-pretx
+             (prepare-call-function-transaction
+               self
+               contract-address
+               (.@ (.@ self block-ctx) outbox)))
         (def new-tx-receipt (post-transaction message-pretx))
         (set! (.@ self timer-start) (.@ new-tx-receipt blockNumber))))))
 
@@ -321,8 +344,7 @@
 
 ;; See gerbil-ethereum/evm-runtime.ss for spec.
 ;; PreTransaction <- Runtime Message.Outbox Block Address
-(def (prepare-call-function-transaction self contract-address)
-  (def out (.@ (.@ self block-ctx) outbox))
+(def (prepare-call-function-transaction self contract-address out)
   (marshal UInt8 1 out)
   (def message-bytes (get-output-u8vector out))
   (def sender-address (get-active-participant self))
