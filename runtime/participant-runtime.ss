@@ -317,6 +317,7 @@
 (def (deploy-contract self)
   (def role (.@ self role))
   (def timer-start (.@ (.@ self agreement) options maxInitialBlock))
+  (set! (.@ self timer-start) timer-start)
   (def pretx (prepare-create-contract-transaction self))
   (def receipt (post-transaction pretx))
   (def contract-config (contract-config<-creation-receipt receipt))
