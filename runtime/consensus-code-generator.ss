@@ -95,7 +95,6 @@
   (def frame-size (compute-variable-offsets self code-block-label))
   (def code-block-directives
     [[&jumpdest (make-checkpoint-label (.@ self name) code-block-label)]
-      (&check-timeout! timeout: (.@ self timeout))
       (append-map (λ (statement) (compile-consensus-statement self code-block-label statement))
                 checkpoint-statements)...])
   (register-frame-size frame-size)
