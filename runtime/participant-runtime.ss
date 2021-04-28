@@ -199,18 +199,14 @@
       ;; the escrowed funds, but we need to kick it so that it runs.
       ((address (.@ contract-config contract-address)))
       (displayln BOLD "Timed out waiting for other participant; claiming escrowed funds..." END)
-      (def outbox-data
-        (call-with-output-u8vector
-          (lambda (out)
-            (publish-frame-data self out))))
       (post-transaction
         (call-function
           (get-active-participant self)
           address
-          outbox-data
-          ))
-      #f
-      )
+          (call-with-output-u8vector
+            (lambda (out)
+              (publish-frame-data self out)))))
+      #f)
     (let ()
       (def log-data (.@ new-log-object data))
       (set! (.@ self timer-start) (.@ new-log-object blockNumber))
