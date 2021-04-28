@@ -172,9 +172,13 @@
 ;; ASSUMING a two-participant contract, find the other participant for use in timeouts.
 ;; Symbol <- ConsensusCodeGenerator Symbol
 (def (find-other-participant self participant)
-  (find
-    (λ (p) (and (not (equal? #f p)) (not (equal? p participant))))
-    (hash-keys (.@ self program interactions))))
+  (let*
+    ((interactions (.@ self program interactions))
+     (entry-name (.@ self name))
+     (entry (hash-ref interactions (.@ self name))))
+    (find
+      (λ (p) (and (not (equal? #f p)) (not (equal? p participant))))
+      (hash-keys (.@ entry specific-interactions)))))
 
 (def (typed-directive<-trivial-expr self function-name expr)
   (def program (.@ self program))
