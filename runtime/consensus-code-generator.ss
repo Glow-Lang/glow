@@ -246,7 +246,7 @@
 
 ;; Offset <- ConsensusCodeGenerator Symbol Symbol
 (def (lookup-variable-offset self function-name variable-name)
-  (hash-get (hash-get (.@ self variable-offsets) function-name) variable-name))
+  (hash-ref (hash-ref (.@ self variable-offsets) function-name) variable-name))
 
 ;; Assembly directives to load an immediate variable (i.e. for unboxed type) onto the stack
 ;; : Directives <- ConsensusCodeGenerator Symbol Symbol Type
