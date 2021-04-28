@@ -195,9 +195,7 @@
       (def outbox-data
         (call-with-output-u8vector
           (lambda (out)
-            (publish-frame-data self out)
-            ;; 1 indicates continue:
-            (marshal UInt8 1 out))))
+            (publish-frame-data self out))))
       (post-transaction
         (call-function
           (get-active-participant self)
