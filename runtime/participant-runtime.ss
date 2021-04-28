@@ -147,19 +147,25 @@
 (def (execute self)
   (with-logged-exceptions ()
     (def ccbl (.@ self current-code-block-label))
-
-    (def should-continue
-      (if (is-active-participant self)
-        (publish self)
-        (receive self)))
-    (set! (.@ self block-ctx) #f)
-
-    (match (and should-continue (.@ (get-current-code-block self) exit))
+    (match (execute-1 self)
       (#f
         (displayln)) ; contract finished
       (exit
         (set! (.@ self current-code-block-label) exit)
         (execute self)))))
+
+;; Execute one step in the interaction. Return value indicates whether
+;; we should continue after this step; #f means stop, otherwise the
+;; return value is the next code block label.
+;;
+;; #f | Symbol <- Runtime
+(def (execute-1 self)
+  (def result
+    (if (is-active-participant self)
+      (publish self)
+      (receive self)))
+  (set! (.@ self block-ctx) #f)
+  (and result (.@ (get-current-code-block self) exit)))
 
 ;; Bool <- Runtime
 (def (is-active-participant self)
@@ -244,8 +250,11 @@
      (set! (.@ self contract-config) contract-config)))
   #t)
 
+;; Runs the passive participant's side of the interaction. Return value
+;; indicates whether we should continue executing (#t) or stop now (#f).
+;;
 ;; TODO: rename to RunPassiveCodeBlock or something
-;; <- Runtime
+;; Bool <- Runtime
 (def (receive self)
   (def role (.@ self role))
   (def contract-config (.@ self contract-config))
@@ -259,7 +268,11 @@
   (def io-context (.@ self io-context))
   (.call io-context receive-handshake))
 
-;; <- Runtime
+;; Run the active participant's side of the interaction. Return value
+;; indicates whether we should continue executing (#t) or stop now (#f).
+;;
+;; TODO: rename to RunActiveCodeBlock or something
+;; Bool <- Runtime
 (def (publish self)
   (def role (.@ self role))
   (def contract-config (.@ self contract-config))
