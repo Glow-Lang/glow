@@ -40,7 +40,6 @@
 
 (def (set-caddr!  p v) (set-car! (cddr  p) v))
 (def (set-cadddr! p v) (set-car! (cdddr p) v))
-(def (assq-values a) (map cdr a))
 
 ;; A Message is a:
 ;;   (list 'message Address Bytes [Assqof (U #f Address) Int])

@@ -4,7 +4,7 @@
   :gerbil/gambit/bits :gerbil/gambit/bytes :gerbil/gambit/threads :gerbil/gambit/ports
   :std/pregexp
   :std/format :std/iter :std/misc/hash :std/sugar :std/misc/number :std/misc/list :std/sort :std/srfi/1 :std/text/json
-  :clan/base :clan/exception :clan/io :clan/json :clan/number
+  :clan/base :clan/exception :clan/io :clan/json :clan/number :clan/pure/dict/assq
   :clan/path :clan/path-config :clan/ports :clan/syntax :clan/timestamp
   :clan/poo/object :clan/poo/brace :clan/poo/io :clan/poo/debug :clan/debug :clan/crypto/random
   :clan/persist/content-addressing
@@ -32,6 +32,7 @@
    glow-version: [String] ;; e.g. "Glow v0.0-560-gda782c9 on Gerbil-ethereum v0.0-83-g6568bc6" ;; TODO: have a function to compute that from versioning.ss
    interaction: [String] ;; e.g. "buy_sig#payForSignature", fully qualified Gerbil symbol
    participants: [(MonomorphicObject Address)] ;; e.g. {Buyer: alice Seller: bob}
+   assets: [(MonomorphicObject Asset)] ;; not just asset names such as "ETH", "CED", "QASCED", "PET", or "QASPET", objects from `lookup-asset`
    parameters: [Json] ;; This Json object to be decoded according to a type descriptor from the interaction (dependent types yay!)
    reference: [(MonomorphicObject Json)] ;; Arbitrary reference objects from each participant, with some conventional size limits on the Json string.
    options: [AgreementOptions] ;; See above
@@ -99,6 +100,7 @@
     current-code-block-label: [Symbol]
     current-label: [Symbol]
     current-debug-label: [(Or Symbol False)]
+    asset-environment: [(Map Asset <- Symbol)]
     environment: [(Map (Or Any Any) <- Symbol)] ;; (Table (Or DependentPair Any) <- Symbol) ;; TODO: have it always typed???
     block-ctx: [BlockCtx] ;; byte buffer?
     timer-start: [Block]
@@ -131,6 +133,7 @@
                        current-code-block-label: (.@ interaction-info initial-code-block-label)  ;; TODO: extract initial code block label from contract compiler output
                        current-label: (.@ program initial-label)
                        current-debug-label: #f
+                       asset-environment: (make-hash-table)
                        environment: (make-hash-table)
                        block-ctx: #f
                        timer-start: #f
@@ -344,7 +347,7 @@
   (def contract-bytes
     (stateful-contract-init initial-state-digest (.@ self consensus-code-generator bytes)))
   (create-contract sender-address contract-bytes
-    value: (.@ self block-ctx deposits)))
+    value: (assq-get (.@ self block-ctx deposits) (get-native-asset self) 0)))
 
 ;; PreTransaction <- Runtime Block
 (def (deploy-contract self)
@@ -383,11 +386,13 @@
   (marshal UInt8 1 out)
   (def message-bytes (get-output-u8vector out))
   (def sender-address (get-active-participant self))
+  (def deposits (.@ (.@ self block-ctx) deposits))
+  (def native-asset (get-native-asset self))
   (call-function sender-address contract-address message-bytes
     ;; default gas value should be (void), i.e. ask for an automatic estimate,
     ;; unless we want to force the TX to happen, e.g. so we can see the failure in Remix
     ;; gas: 1000000 ;; XXX ;;<=== DO NOT COMMIT THIS LINE UNCOMMENTED
-    value: (.@ self block-ctx deposits)))
+    value: (assq-get (.@ self block-ctx deposits) (get-native-asset self) 0)))
 
 ;; CodeBlock <- Runtime
 (def (get-current-code-block self)
@@ -406,6 +411,10 @@
   (for (participant-name (filter symbol? (hash-keys (.@ inter specific-interactions))))
     (def participant-surface-name (hash-ref alba participant-name))
     (add-to-environment self participant-name (.ref participants participant-surface-name)))
+  (def assets (.@ agreement assets))
+  (for (asset-name (.@ inter asset-names))
+    (def asset-value (.ref assets asset-name))
+    (hash-put! (.@ self asset-environment) asset-name asset-value))
   (def parameters (.@ agreement parameters))
   (for (parameter-name (.@ inter parameter-names))
     (def parameter-surface-name (hash-ref alba parameter-name))
@@ -413,6 +422,16 @@
     (def parameter-type (lookup-type (.@ self program) parameter-name))
     (def parameter-value (<-json parameter-type parameter-json-value))
     (add-to-environment self parameter-name parameter-value)))
+
+;; get-native-asset : Asset <- Runtime
+(def (get-native-asset self)
+  (def native-name (.@ (ethereum-config) nativeCurrency symbol))
+  ;; native-asset? : Bool <- Asset
+  (def (native-asset? a) (equal? (.@ a .symbol) native-name))
+  (def as (hash-values (.@ self asset-environment)))
+  (def nas (filter native-asset? as))
+  (unless (length=n? nas 1) (error 'get-native-asset native-name nas as))
+  (first nas))
 
 ;; TODO: make sure everything always has a type ???
 ;; Any <- Runtime
@@ -463,22 +482,28 @@
       ;; is already known.
      (void))
 
-    (['add-to-deposit ['@record ['DefaultToken amount-variable]]]
+    (['add-to-deposit ['@record [asset-symbol amount-variable]]]
      (let
        ((this-participant (get-active-participant self))
+        (asset (hash-ref (.@ self asset-environment) asset-symbol))
         (amount (reduce-expression self amount-variable)))
-       (.call BlockCtx .add-to-deposit (.@ self block-ctx) this-participant amount)))
+       ;; TODO: block-ctx hold multiple assets, add to deposit for specific asset
+       (.call BlockCtx .add-to-deposit (.@ self block-ctx) this-participant asset amount)))
 
-    (['expect-deposited ['@record ['DefaultToken amount-variable]]]
+    (['expect-deposited ['@record [asset-symbol amount-variable]]]
      (let
        ((this-participant (get-active-participant self))
+        (asset (hash-ref (.@ self asset-environment) asset-symbol))
         (amount (reduce-expression self amount-variable)))
-       (.call BlockCtx .add-to-deposit (.@ self block-ctx) this-participant amount)))
+       ;; TODO: block-ctx hold multiple assets, add to deposit for specific asset
+       (.call BlockCtx .add-to-deposit (.@ self block-ctx) this-participant asset amount)))
 
-    (['participant:withdraw address-variable ['@record ['DefaultToken price-variable]]]
+    (['participant:withdraw address-variable ['@record [asset-symbol price-variable]]]
      (let ((address (reduce-expression self address-variable))
+           (asset (hash-ref (.@ self asset-environment) asset-symbol))
            (price (reduce-expression self price-variable)))
-       (.call BlockCtx .add-to-withdraw (.@ self block-ctx) address price)))
+       ;; TODO: block-ctx hold multiple assets, add to withdraw for specific asset
+       (.call BlockCtx .add-to-withdraw (.@ self block-ctx) address asset price)))
 
     (['add-to-publish ['quote publish-name] variable-name]
      (let ((publish-value (reduce-expression self variable-name))

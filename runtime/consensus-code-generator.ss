@@ -149,9 +149,11 @@
       [(load-immediate-variable self function-name variable-name Bool) &require!])
 
     (['expect-deposited ['@record ['DefaultToken amount]]]
+      ;; TODO: block-ctx-like holding the balance variables for each asset/resource
       [(load-immediate-variable self function-name amount Ether) &deposit!])
 
     (['consensus:withdraw participant ['@record ['DefaultToken amount]]]
+      ;; TODO: block-ctx-like holding the balance variables for each asset/resource
       [(load-immediate-variable self function-name amount Ether)
        (load-immediate-variable self function-name participant Address)
        &withdraw!])
