@@ -208,7 +208,6 @@
           (get-active-participant self)
           address
           outbox-data
-          gas: 1000000
           ))
       #f
       )
