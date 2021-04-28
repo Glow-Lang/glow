@@ -148,12 +148,13 @@
   (with-logged-exceptions ()
     (def ccbl (.@ self current-code-block-label))
 
-    (if (is-active-participant self)
-      (publish self)
-      (receive self))
+    (def should-continue
+      (if (is-active-participant self)
+        (publish self)
+        (receive self)))
     (set! (.@ self block-ctx) #f)
 
-    (match (.@ (get-current-code-block self) exit)
+    (match (and should-continue (.@ (get-current-code-block self) exit))
       (#f
         (displayln)) ; contract finished
       (exit
@@ -202,13 +203,16 @@
           address
           outbox-data
           gas: 1000000
-          )))
+          ))
+      #f
+      )
     (let ()
       (def log-data (.@ new-log-object data))
       (set! (.@ self timer-start) (.@ new-log-object blockNumber))
       ;; TODO: process the data in the same method?
       (set! (.@ self block-ctx) (.call PassiveBlockCtx .make log-data))
-      (interpret-current-code-block self))))
+      (interpret-current-code-block self)
+      #t)))
 
 (def (interpret-current-code-block self)
   (let (code-block (get-current-code-block self))
@@ -237,7 +241,8 @@
      (interpret-current-code-block self))
    (let (create-pretx (prepare-create-contract-transaction self))
      (verify-contract-config contract-config create-pretx)
-     (set! (.@ self contract-config) contract-config))))
+     (set! (.@ self contract-config) contract-config)))
+  #t)
 
 ;; TODO: rename to RunPassiveCodeBlock or something
 ;; <- Runtime
@@ -282,7 +287,8 @@
                contract-address
                (.@ (.@ self block-ctx) outbox)))
         (def new-tx-receipt (post-transaction message-pretx))
-        (set! (.@ self timer-start) (.@ new-tx-receipt blockNumber))))))
+        (set! (.@ self timer-start) (.@ new-tx-receipt blockNumber)))))
+  #t)
 
 ;; Sexp <- State
 (def (sexp<-state state) (map (match <> ([t . v] (sexp<- t v))) state))
