@@ -162,8 +162,8 @@
 (def (execute-1 self)
   (def result
     (if (is-active-participant self)
-      (publish self)
-      (receive self)))
+      (run-active-code-block self)
+      (run-passive-code-block self)))
   (set! (.@ self block-ctx) #f)
   (and result (.@ (get-current-code-block self) exit)))
 
@@ -253,9 +253,8 @@
 ;; Runs the passive participant's side of the interaction. Return value
 ;; indicates whether we should continue executing (#t) or stop now (#f).
 ;;
-;; TODO: rename to RunPassiveCodeBlock or something
 ;; Bool <- Runtime
-(def (receive self)
+(def (run-passive-code-block self)
   (def role (.@ self role))
   (def contract-config (.@ self contract-config))
   (when (eq? (.@ self status) 'running)
@@ -271,9 +270,8 @@
 ;; Run the active participant's side of the interaction. Return value
 ;; indicates whether we should continue executing (#t) or stop now (#f).
 ;;
-;; TODO: rename to RunActiveCodeBlock or something
 ;; Bool <- Runtime
-(def (publish self)
+(def (run-active-code-block self)
   (def role (.@ self role))
   (def contract-config (.@ self contract-config))
   (set! (.@ self block-ctx) (.call ActiveBlockCtx .make))
