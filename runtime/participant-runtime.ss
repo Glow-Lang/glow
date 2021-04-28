@@ -198,7 +198,7 @@
       ;; No log objects -- this indicates a timeout. The contract will send us
       ;; the escrowed funds, but we need to kick it so that it runs.
       ((address (.@ contract-config contract-address)))
-      (displayln BOLD "Timed out waiting for other participant; claiming escrowed funds..." END)
+      (displayln RED "Timed out waiting for other participant; claiming escrowed funds..." END)
       (post-transaction
         (call-function
           (get-active-participant self)
