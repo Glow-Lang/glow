@@ -327,8 +327,6 @@
 
 ;; --------------------------------------------------------
 
-(def (symdict-values d) (map cdr (symdict->list d)))
-
 ;; typing-scheme-neg-pos-var-sets :
 ;; TypingScheme -> (list [Listof [Listof Sym]] [Listof [Listof Sym]])
 (def (typing-scheme-neg-pos-var-sets ts)
@@ -462,23 +460,6 @@
 ;; type->string : Type -> String
 (def (type->string t) (format "~y" (type->sexpr t)))
 
-;; symdict->repr-sexpr : [Symdictof V] [V -> Sexpr] -> Sexpr
-(def (symdict->repr-sexpr d v->s)
-  `(symdict
-    ,@(for/collect (k (symdict-keys d))
-        `(',k ,(v->s (symdict-ref d k))))))
-
-;; repr-sexpr->symdict : Sexpr [Sexpr -> V] -> [Symdictof V]
-(def (repr-sexpr->symdict s s->v)
-  (match s
-    ((cons 'symdict l)
-     (list->symdict
-      (for/collect (e l)
-        (match e
-          ([['quote k] sv] (cons k (s->v sv)))
-          (_ (error 'repr-sexpr->symdict "bad entry shape"))))))
-    (_ (error 'repr-sexpr->symdict "expected `symdict`"))))
-
 ;; type->repr-sexpr : Type -> Sexpr
 ;; A lossless s-expression representation in "repr" style
 (def (type->repr-sexpr t)
@@ -490,7 +471,7 @@
     ((type:var s) `(type:var ',s))
     ((type:app f as) `(type:app ,(type->repr-sexpr f) ,(list->repr-sexpr as type-variance-pair->repr-sexpr)))
     ((type:tuple as) `(type:tuple ,(list->repr-sexpr as type->repr-sexpr)))
-    ((type:record flds) `(type:record ,(symdict->repr-sexpr flds type->repr-sexpr)))
+    ((type:record flds) `(type:record ,((symdict->repr-sexpr type->repr-sexpr) flds)))
     ((type:arrow as b) `(type:arrow ,(list->repr-sexpr as type->repr-sexpr) ,(type->repr-sexpr b)))
     ((ptype:union ts) `(ptype:union ,(list->repr-sexpr ts type->repr-sexpr)))
     ((ntype:intersection ts) `(ntype:intersection ,(list->repr-sexpr ts type->repr-sexpr)))))
@@ -512,7 +493,7 @@
     (['type:var ['quote s]] (type:var s))
     (['type:app f as] (type:app (repr-sexpr->type f) (repr-sexpr->list as repr-sexpr->type-variance-pair)))
     (['type:tuple as] (type:tuple (repr-sexpr->list as repr-sexpr->type)))
-    (['type:record flds] (type:record (repr-sexpr->symdict flds repr-sexpr->type)))
+    (['type:record flds] (type:record ((repr-sexpr->symdict repr-sexpr->type) flds)))
     (['type:arrow as b] (type:arrow (repr-sexpr->list as repr-sexpr->type) (repr-sexpr->type b)))
     (['ptype:union ts] (ptype:union (repr-sexpr->list ts repr-sexpr->type)))
     (['ntype:intersection ts] (ntype:intersection (repr-sexpr->list ts repr-sexpr->type)))))
@@ -527,7 +508,7 @@
 (def (typing-scheme->repr-sexpr ts)
   (match ts
     ((typing-scheme menv t)
-     `(typing-scheme ,(symdict->repr-sexpr menv type->repr-sexpr)
+     `(typing-scheme ,((symdict->repr-sexpr type->repr-sexpr) menv)
                      ,(type->repr-sexpr t)))))
 
 ;; repr-sexpr->typing-scheme : Sexpr -> TypingScheme
@@ -535,5 +516,5 @@
 (def (repr-sexpr->typing-scheme s)
   (match s
     (['typing-scheme menv t]
-     (typing-scheme (repr-sexpr->symdict menv repr-sexpr->type)
+     (typing-scheme ((repr-sexpr->symdict repr-sexpr->type) menv)
                     (repr-sexpr->type t)))))
