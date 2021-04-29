@@ -67,7 +67,10 @@
            (read-environment)))
 
        (finally
-        (ignore-errors (close-port proc))))
+        (ignore-errors
+          (begin
+            (close-port proc)
+            (process-status proc)))))
 
        (def balance-after (eth_getBalance alice 'latest))
 

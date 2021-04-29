@@ -1,7 +1,7 @@
 (export run run:terminal run:special-file run:command)
 (import
   :std/format :std/iter :std/pregexp :std/misc/string :std/text/json
-  :clan/debug :clan/json
+  :clan/debug :clan/ffi :clan/json
   :clan/poo/object :clan/poo/mop :clan/poo/debug
   :clan/path-config :clan/pure/dict/symdict
   :gerbil/gambit/ports
@@ -39,7 +39,10 @@
                 arguments: (cdr cmd))))
   (.o
     (teardown
-      (lambda () (close-port proc)))
+      (lambda ()
+        (close-port proc)
+        (kill (process-pid proc))
+        (process-status proc)))
     (send-handshake
       (lambda (handshake)
         (write-json-handshake handshake proc)))
