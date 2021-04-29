@@ -265,10 +265,10 @@
                  (repr-sexpr->type t)))))
 
 ;; type-env->repr-sexpr : Env -> Sexpr
-(def (type-env->repr-sexpr env) (symdict->repr-sexpr env env-entry->repr-sexpr))
+(def (type-env->repr-sexpr env) ((symdict->repr-sexpr env-entry->repr-sexpr) env))
 
 ;; repr-sexpr->type-env : Sexpr -> Env
-(def (repr-sexpr->type-env s) (repr-sexpr->symdict s repr-sexpr->env-entry))
+(def (repr-sexpr->type-env s) ((repr-sexpr->symdict repr-sexpr->env-entry) s))
 
 (def (read-type-env-file file)
   ;; TODO: move error handling to `run-pass` or `run-passes` in multipass.ss
