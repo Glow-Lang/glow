@@ -181,7 +181,7 @@
   ;; TODO: (optional) push all the previously processed log objects to the processed list after processing
   (let/cc return
     (def callback (λ (log) (return log))) ;; TODO: handle multiple log entries!!!
-    (def to-block (+ from-block (.@ (.@ self agreement) options timeoutInBlocks)))
+    (def to-block (+ from-block (.@ self agreement options timeoutInBlocks)))
     (watch-contract callback contract-address from-block to-block)))
 
 (def (run-passive-code-block/contract self role contract-config)
@@ -271,7 +271,7 @@
   (def contract-config (.@ self contract-config))
   (set! (.@ self block-ctx) (.call ActiveBlockCtx .make))
   (when contract-config
-    (publish-frame-data self (.@ (.@ self block-ctx) outbox)))
+    (publish-frame-data self (.@ self block-ctx outbox)))
   (interpret-current-code-block self)
   (when (eq? (.@ self status) 'running)
     (if (not contract-config)
@@ -279,7 +279,7 @@
         (deploy-contract self)
         (def contract-config (.@ self contract-config))
         (def agreement (.@ self agreement))
-        (def published-data (get-output-u8vector (.@ (.@ self block-ctx) outbox)))
+        (def published-data (get-output-u8vector (.@ self block-ctx outbox)))
         (def handshake (.new AgreementHandshake agreement contract-config published-data))
         (send-contract-handshake self handshake))
       (let ()
@@ -291,7 +291,7 @@
              (prepare-call-function-transaction
                self
                contract-address
-               (.@ (.@ self block-ctx) outbox)))
+               (.@ self block-ctx outbox)))
         (def new-tx-receipt (post-transaction message-pretx))
         (set! (.@ self timer-start) (.@ new-tx-receipt blockNumber)))))
   #t)
@@ -326,7 +326,7 @@
 ;; PreTransaction <- Runtime Block
 (def (deploy-contract self)
   (def role (.@ self role))
-  (def timer-start (.@ (.@ self agreement) options maxInitialBlock))
+  (def timer-start (.@ self agreement options maxInitialBlock))
   (set! (.@ self timer-start) timer-start)
   (def pretx (prepare-create-contract-transaction self))
   (def receipt (post-transaction pretx))
@@ -363,7 +363,7 @@
     ;; default gas value should be (void), i.e. ask for an automatic estimate,
     ;; unless we want to force the TX to happen, e.g. so we can see the failure in Remix
     gas: 1000000 ;; XXX ;;<=== DO NOT COMMIT THIS LINE UNCOMMENTED
-    value: (.@ (.@ self block-ctx) deposits)))
+    value: (.@ self block-ctx deposits)))
 
 ;; CodeBlock <- Runtime
 (def (get-current-code-block self)
@@ -375,8 +375,8 @@
 ;;       using the alpha-back-table
 ;; <- Runtime
 (def (initialize-environment self)
-  (def inter (hash-ref (.@ (.@ self program) interactions) (.@ self name)))
-  (def alba (hash-ref (.@ (.@ self program) compiler-output) 'albatable.sexp))
+  (def inter (hash-ref (.@ self program interactions) (.@ self name)))
+  (def alba (hash-ref (.@ self program compiler-output) 'albatable.sexp))
   (def agreement (.@ self agreement))
   (def participants (.@ agreement participants))
   (for (participant-name (filter symbol? (hash-keys (.@ inter specific-interactions))))
@@ -555,7 +555,7 @@
     ;; WARNING: This does not support re-entrancy!
     ;; TODO: Enable re-entrancy.
     (['@app name . argument-names]
-      (let* ((small-function (hash-get (.@ (.@ self program) small-functions) name))
+      (let* ((small-function (hash-get (.@ self program small-functions) name))
              (zipped-arguments (map cons argument-names (.@ small-function arguments))))
         (unless small-function
           (error "Unknown function " name))
