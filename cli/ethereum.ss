@@ -5,11 +5,14 @@
   :std/format :std/getopt :std/iter :std/misc/hash
   :std/sort :std/srfi/13 :std/sugar
   :clan/basic-parsers :clan/cli :clan/decimal :clan/exit
-  :clan/hash :clan/list :clan/multicall :clan/path-config
+  :clan/hash :clan/json :clan/list :clan/multicall :clan/path-config
+  :clan/net/json-rpc
   :clan/poo/object :clan/poo/brace :clan/poo/cli :clan/poo/debug
   :clan/persist/db
-  :mukn/ethereum/network-config :mukn/ethereum/types :mukn/ethereum/ethereum :mukn/ethereum/known-addresses
-  :mukn/ethereum/json-rpc :mukn/ethereum/cli :mukn/ethereum/testing :mukn/ethereum/erc20
+  :mukn/ethereum/network-config :mukn/ethereum/types :mukn/ethereum/hex
+  :mukn/ethereum/ethereum :mukn/ethereum/known-addresses
+  :mukn/ethereum/json-rpc :mukn/ethereum/transaction :mukn/ethereum/cli
+  :mukn/ethereum/testing :mukn/ethereum/erc20
   ./contacts ./identities)
 
 (define-entry-point (transfer from: (from #f) to: (to #f) value: (value #f)
@@ -45,11 +48,11 @@
                          [options/identities options/to]))
   (def-slots (network faucets name nativeCurrency) (ethereum-config))
   (load-identities from: identities) ;; Only needed for side-effect of registering keypairs.
+  (unless to (error "Missing recipient. Please use option --to"))
+  (set! to (parse-address to))
   (cond
-   ((member name '("Private Ethereum Testnet" "Cardano EVM Devnet"))
+   ((member name '("Private Ethereum Testnet"))
     (let ()
-      (unless to (error "Missing recipient. Please use option --to"))
-      (set! to (parse-address to))
       ;; We import testing *after* the above, so we have *our* t/croesus,
       ;; but the user may have their own alice.
       (register-test-keys)
@@ -61,6 +64,22 @@
               value-in-ether token-symbol (0x<-address from) (0x<-address to) network)
       (printf "\nInitial balance: ~a ~a\n\n" (decimal-string-ether<-wei (eth_getBalance to)) token-symbol)
       (cli-send-tx {from to value} confirmations: 0)
+      (printf "\nFinal balance: ~a ~a\n\n" (decimal-string-ether<-wei (eth_getBalance to)) token-symbol)))
+   ((member name '("Cardano EVM Devnet"))
+    (let ()
+      (def faucetUrl (car faucets))
+      (def token-symbol (.@ nativeCurrency symbol))
+      (printf "\nRequesting 1.0 ~a token from faucet ~a to address ~a:\n\n"
+              token-symbol faucetUrl (0x<-address to))
+      (printf "\nInitial balance: ~a ~a\n\n" (decimal-string-ether<-wei (eth_getBalance to)) token-symbol)
+      (def txHash
+        (json-rpc faucetUrl "faucet_sendFunds" (vector to)
+                  result-decoder: bytes<-0x
+                  param-encoder: (.@ (Tuple Address) .json<-)
+                  timeout: 15 log: write-json-ln))
+      (def tx (eth_getTransactionByHash txHash))
+      (printf "Transaction:\n  ~s\nWaiting for confirmation...\n" (sexp<- TransactionInformation tx))
+      (def receipt (debug-confirm-tx tx))
       (printf "\nFinal balance: ~a ~a\n\n" (decimal-string-ether<-wei (eth_getBalance to)) token-symbol)))
    ((not (null? faucets))
     (printf "\nVisit the following URL to get ethers on network ~a:\n\n\t~a\n\n"
