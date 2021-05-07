@@ -32,6 +32,7 @@
    glow-version: [String] ;; e.g. "Glow v0.0-560-gda782c9 on Gerbil-ethereum v0.0-83-g6568bc6" ;; TODO: have a function to compute that from versioning.ss
    interaction: [String] ;; e.g. "buy_sig#payForSignature", fully qualified Gerbil symbol
    participants: [(MonomorphicObject Address)] ;; e.g. {Buyer: alice Seller: bob}
+   ;; TODO: rename assets to resources
    assets: [(MonomorphicObject Asset)] ;; not just asset names such as "ETH", "CED", "QASCED", "PET", or "QASPET", objects from `lookup-asset`
    parameters: [Json] ;; This Json object to be decoded according to a type descriptor from the interaction (dependent types yay!)
    reference: [(MonomorphicObject Json)] ;; Arbitrary reference objects from each participant, with some conventional size limits on the Json string.
@@ -487,7 +488,6 @@
        ((this-participant (get-active-participant self))
         (asset (hash-ref (.@ self asset-environment) asset-symbol))
         (amount (reduce-expression self amount-variable)))
-       ;; TODO: block-ctx hold multiple assets, add to deposit for specific asset
        (.call BlockCtx .add-to-deposit (.@ self block-ctx) this-participant asset amount)))
 
     (['expect-deposited ['@record [asset-symbol amount-variable]]]
@@ -495,14 +495,12 @@
        ((this-participant (get-active-participant self))
         (asset (hash-ref (.@ self asset-environment) asset-symbol))
         (amount (reduce-expression self amount-variable)))
-       ;; TODO: block-ctx hold multiple assets, add to deposit for specific asset
        (.call BlockCtx .add-to-deposit (.@ self block-ctx) this-participant asset amount)))
 
     (['participant:withdraw address-variable ['@record [asset-symbol price-variable]]]
      (let ((address (reduce-expression self address-variable))
            (asset (hash-ref (.@ self asset-environment) asset-symbol))
            (price (reduce-expression self price-variable)))
-       ;; TODO: block-ctx hold multiple assets, add to withdraw for specific asset
        (.call BlockCtx .add-to-withdraw (.@ self block-ctx) address asset price)))
 
     (['add-to-publish ['quote publish-name] variable-name]

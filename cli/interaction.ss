@@ -73,13 +73,16 @@
   (def chosen-nickname (ask-option name known-addresses))
   (hash-get address-by-nickname (string-downcase chosen-nickname)))
 
-(def (ask-asset name)
+(def (ask-asset name network)
   (def known-assets
     (map
       (match <>
         ([nickname . asset]
          (cons (symbol->string nickname) [Asset . asset])))
-      (hash->list/sort asset-table symbol<?)))
+      (filter
+       (match <>
+         ([_ . asset] (equal? (asset->network asset) network)))
+       (hash->list/sort asset-table symbol<?))))
   (def chosen-asset (ask-option name known-assets))
   (hash-get asset-table (string->symbol chosen-asset)))
 
@@ -114,14 +117,14 @@
           (ask-address (string-append "Select address for " (symbol->string role-name)))))))
   participants)
 
-;; get-or-ask-assets : (Hashof Symbol Asset) (Listof Symbol) -> (Hashof Symbol AssetType)
-(def (get-or-ask-assets assets asset-names)
+;; get-or-ask-assets : (Hashof Symbol Asset) (Listof Symbol) Network -> (Hashof Symbol AssetType)
+(def (get-or-ask-assets assets asset-names network)
   (displayln BOLD "Assign assets" END)
   (for ((asset-name asset-names))
     (get-or-ask assets
       asset-name
       (lambda ()
-        (ask-asset (string-append "Select asset for " (symbol->string asset-name))))))
+        (ask-asset (string-append "Select asset for " (symbol->string asset-name)) network))))
   assets)
 
 (def (console-input type name tag)
@@ -325,10 +328,12 @@
              (symbolify selected-role)
              role-names
              contacts)))
+    (let (network (ethereum-config)))
     (let (assets-table
           (get-or-ask-assets
             (hash-ref options 'assets)
-            (.@ interaction-info asset-names))))
+            (.@ interaction-info asset-names)
+            network)))
     (let (parameters
           (get-or-ask-parameters
             (hash-ref options 'params)
@@ -338,17 +343,10 @@
     (let (current-block-number (eth_blockNumber)))
     (let (max-initial-block (ask-max-initial-block options current-block-number)))
 
-    (let (network (asset->network (hash-ref assets-table (first (.@ interaction-info asset-names)))))
+    (let (blockchain-name (.@ network name))
       (for (a (hash-values assets-table))
         (unless (equal? network (asset->network a))
           (error "assets must all be on the same network"))))
-    ;; TODO: get the blockchain-name from the assets
-    ;;       assets should determine which network to connect to
-    ;;       only setup (ethereum-config) after knowing the blockchain determined by the assets
-    ;;       instead of the --evm-network flag
-    (let (blockchain-name (.@ (ethereum-config) name))
-      (unless (equal? blockchain-name (.@ network name))
-        (error "network from assets must match ethereum-config name")))
 
     ;; TODO: Validate agreement, with nice user-friendly error message.
     (let (agreement
