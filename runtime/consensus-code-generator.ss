@@ -31,11 +31,21 @@
         (parameterize ((brk-start (box params-start@)))
           (.set! self variable-offsets (make-hash-table))
           (.set! self params-end params-start@)
-          ;; NB: Scratch space begins at the memory location after the maximum size of all the medium
-          ;; functions / code block frames. Therefore, medium functions need to be defined before small
-          ;; functions, since small functions use the scratch space to store temporary variables.
+          ;; NB: the order in which we build medium and small functions is important, because they mutate
+          ;; brk-start in place. &define-medium-functions will allocate the maximum space needed by all
+          ;; medium functions, and &define-small-functions will allocate the *sum* of the space needed
+          ;; by all small functions, since the latter can be live at the same time (but so far we do
+          ;; not support recursion, so we don't need to support more than one frame of the same function).
+          ;; When computing the medium frames, we do this by setting params-end to the max of its current
+          ;; value and what is needed for the frame we're working on, so if we did small functions first
+          ;; this could go awry.
+          ;; TODO(cleanup): change the way this works internally so this isn't so delecate.
           (def compiled-medium-functions (&define-medium-functions self))
           (def compiled-small-functions (&define-small-functions self (.@ self program small-functions)))
+          ;; After the above have run, params-end will be set to the end of the space they need, so
+          ;; update brk-start.
+          ;; TODO: add space for global variables
+          (set-box! (brk-start) (.@ self params-end))
           ;; NB: you can use #t below to debug with remix.ethereum.org. Do NOT commit that!
           ;; TODO: maybe we should have some more formal debugging mode parameter?
           (def debug #t)
@@ -262,7 +272,6 @@
     (else
       (error "Unknown offset for " variable-name " in function " function-name))))
 
-;; TODO: params-end should be the MAX of each frame's params-end.
 ;; Updates variable offsets to account for new local variable, and increments params-end
 ;; <- ConsensusCodeGenerator Symbol Symbol
 (def (add-local-variable-to-frame self function-name variable-name)
