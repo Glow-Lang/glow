@@ -314,7 +314,7 @@
                 timeoutInBlocks:
                   (if timeout-in-blocks
                       (string->number timeout-in-blocks)
-                      (ethereum-timeout-in-blocks))
+                      (* 100 (ethereum-timeout-in-blocks)))
                 maxInitialBlock: max-initial-block}}))
     (begin
       (.call InteractionAgreement .validate agreement)
