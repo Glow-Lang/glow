@@ -174,7 +174,6 @@
 (def (find-other-participant self participant)
   (let*
     ((interactions (.@ self program interactions))
-     (entry-name (.@ self name))
      (entry (hash-ref interactions (.@ self name))))
     (find
       (λ (p) (and (not (equal? #f p)) (not (equal? p participant))))
