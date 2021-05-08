@@ -50,7 +50,7 @@ Required Features:
 - Explicit timeouts
 - Support for safety with explicit timeouts
 - Choice restricted to timeouts.
-- Recursion
+- (Tail) Recursion
 
 ### Auction
 
@@ -68,7 +68,7 @@ Required Features:
 - Explicit timeouts
 - Open set of participants though a finite number at once
 - Choice restricted to timeouts and open participation.
-- Recursion
+- (Tail) Recursion
 
 ### Crowdfunding
 
@@ -81,6 +81,7 @@ Required Features:
 - Explicit timeouts
 - Unrestricted open set of participants
 - Choice restricted to timeouts and open participation.
+- Shared state between multiple small interactions
 
 ### Fungible Tokens in native Glow style
 
@@ -151,6 +152,12 @@ Required Features:
 - Choice with multiple entry points
 - Data structures with containers
 - FFI to Solidity API.
+
+### Staking Rewards
+
+Required features:
+- Shared state
+- Multiple tokens
 
 ### Unanimous multisig
 
