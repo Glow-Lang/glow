@@ -11,11 +11,14 @@
 (define-type ConsensusCodeGenerator
   (.+
     (Record
-      program: [Program] ; Program
+      program: [Program]
       name: [Symbol]
       variable-offsets: [(OrFalse (Map Nat <- Symbol))]
       labels: [(OrFalse (Map Nat <- Symbol))]
       bytes: [(OrFalse Bytes)]
+
+      ; TODO: rename params-end; its actual meaning is all statically-allocated
+      ; space in the executable, incl. globals, so the name should reflect that.
       params-end: [(OrFalse Nat)])
     {.make:
       (lambda (some-program some-name some-timeout)
