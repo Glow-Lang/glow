@@ -29,11 +29,23 @@ require_util() {
 require_util curl "to download nix-env"
 if ! command -v nix-env > /dev/null 2>&1 ; then
     echo "Installing Nix..."
-    (curl -L https://nixos.org/nix/install | sh) ||
-        panic "Failed to install Nix. If on a Mac, try to install nix as follows then retry the glow installation:\n" \
-              "   sh <(curl -L https://nixos.org/nix/install) --darwin-use-unencrypted-nix-store-volume"
-    ### For multiuser install, replace the above line with:
-    # curl -L https://nixos.org/nix/install > nix-install.tmp && sh nix-install.tmp --daemon && rm nix-install.tmp
+    nix_install="$(mktemp -t nix-install.XXXXXXXXXX.sh || \
+          oops "Can't nix install script")"
+    curl -L https://nixos.org/nix/install -o $nix_install
+    cleanup() {
+        rm -f "$nix_install"
+    }
+    trap cleanup EXIT INT QUIT TERM
+    case "$OSTYPE" in
+        darwin*)
+            export NIXPKGS_ALLOW_BROKEN=1
+            sh "$nix_install" ||
+            sh "$nix_install" --darwin-use-unencrypted-nix-store-volume ;;
+        *)
+            ### For multiuser install, replace the below line with:
+            # sh "$nix_install" --daemon ;;
+    esac ||
+        panic "Failed to install Nix."
 fi
 
 # 2. Make sure we're using the binaries from Nix.
@@ -55,10 +67,15 @@ cachix use mukn
 # Racket's scribble is used by Glow implementers for our documentation only;
 # it is only necessary if you are going to modify or rebuild Glow yourself;
 # it shouldn't be necessary for regular users, unless you decide to use the same tool as we do.
-# To compile solidity code, you might also want to install solc, but that won't work on a mac.
-echo "Using Nix to install Glow, and with it gerbil, geth, racket..."
+# To compile solidity code, you might also want to install solc, but that might fail on nix on mac.
+EXTRAPKGS=""
+case "$OSTYPE" in
+  darwin*) : ;;
+  linux*) EXTRAPKGS="racket solc";;
+esac
+echo "Using Nix to install Glow, and with it gerbil, geth, etc."
 nix-env -f $nixpkgs -iA \
-        glow-lang gerbil-unstable gerbilPackages-unstable go-ethereum racket
+        glow-lang gerbil-unstable gerbilPackages-unstable go-ethereum $EXTRAPKGS
 
 # 5. Install nix-thunk (optional, only for developers).
 # See https://github.com/obsidiansystems/nix-thunk
