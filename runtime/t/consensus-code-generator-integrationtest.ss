@@ -10,7 +10,7 @@
   ../glow-path
   ../program)
 
-(def consensus-code-generator-test
+(def consensus-code-generator-integrationtest
   (test-suite "test suite for glow/runtime/consensus-code-generator"
     (test-case "testing scratch space for example glow files"
       (ensure-ethereum-connection "pet")
