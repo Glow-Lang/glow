@@ -14,6 +14,19 @@ Glow is distributed under the Apache License, version 2.0. See the file [LICENSE
 
 See [INSTALL.md](INSTALL.md) for installation instructions.
 
+### Getting started with Glow
+
+After installing Glow, 
+you can get started with a tutorial in our [`Standard Library`](./dapps/README.md).
+
+Alternatively, you can dive into the `glow-cli`:
+``` sh
+glow help # View all available commands
+glow help <command> # View help for a command
+```
+
+The full, in-depth tutorial may be found [here](https://glow-lang.org/docs/Glow_Tutorial.html).
+
 ### Being worked on
 
 You can watch on our [gitlab repository](https://gitlab.com/mukn/glow)
