@@ -51,7 +51,10 @@ fi
 # 2. Make sure we're using the binaries from Nix.
 # If somehow the nix install doesn't do that for your shell,
 # you may have to add lines to your shell configuration files to achieve the same effect:
-PATH="$HOME/.nix-profile/bin:$PATH"
+if ! grep -c "/[.]nix-profile/" "$HOME/.zshenv" > /dev/null 2>&1 ; then
+    echo 'source $HOME/.nix-profile/etc/profile.d/nix.sh' >> "$HOME/.zshenv"
+fi
+. $HOME/.nix-profile/etc/profile.d/nix.sh
 
 # 3. Install and configure the cachix client, so you can download the Glow packages
 # instead of having your computer take an hour to rebuild them.
@@ -93,4 +96,13 @@ nix-env -f $nixpkgs -iA \
 : echo "Checking out the Glow repository"
 : git clone https://gitlab.com/mukn/glow.git
 
+# Last, tell the user how to enable Nix in the current shell
+echo
+echo "Glow was installed through the Nix package manager."
+echo "Your bash and zsh shell configurations were updated to see Nix packages,"
+echo "but this only applies to new shells, in new terminal windows or tabs."
+echo "To enable Nix in your current shell, run the following command:"
+echo; echo '    . $HOME/.nix-profile/etc/profile.d/nix.sh'; echo
+echo "Then you will be able to run Glow with, e.g."
+echo; echo '    glow help'; echo
 } # End of wrapping
