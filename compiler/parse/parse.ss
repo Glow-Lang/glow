@@ -1,4 +1,5 @@
-(export parse)
+(export parse
+        parseStr) ;; for testing
 (import :drewc/smug
         :mukn/glow/compiler/parse/lexical
         :mukn/glow/compiler/parse/expressions
@@ -10,6 +11,10 @@
   (unless (string=? lang-line "#lang glow")
     (error 'parse "expected `#lang glow` on first line"))
   (def str (read-line in #f))
+  (parseStr str))
+
+;; parseStr : String -> SExpr
+(def (parseStr str)
   (def lex (lexify str))
   (def fsl (run FunctionStatementList lex))
   (fsl->module fsl))
