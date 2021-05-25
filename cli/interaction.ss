@@ -83,6 +83,8 @@
 
 (def (ask-interaction interactions)
   (match interactions
+    ([]
+      (error "No interactions found"))
     ([interaction]
       interaction)
     (else
