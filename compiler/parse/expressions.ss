@@ -437,19 +437,17 @@
 
 (def Params
   (.let* ((_(match-token-value? #\())
-          (params (sepby1 Param (match-token-value? #\,)))
+          (params (sepby Param (match-token-value? #\,)))
           (_(match-token-value? #\)))) params))
 
 (defstruct param-data (id typ) transparent: #t)
 
+;; Param ::= Identifier | Identifier:Type
 (def Param
-  (.let* (param
-      (.let* ((id? (.or Identifier #f)) )
-              (if (equal? id? #f) #f
-                (.let* (typ? (.or (.begin (match-token-value? #\:) Type) #f))
-                  (if (equal? typ? #f)
-                    (return (param-data id? #f))
-                    (return (param-data id? typ?))))))) param))
+  (.let* ((id (.or Identifier FAIL)))
+    (.let* ((typ? (.or (.begin (match-token-value? #\:) Type) #f)))
+      (return (param-data id typ?))
+        )))
 
 (defstruct (annotationStatement statement) (attribute stat) transparent: #t)
 (def AnnotationStatement
