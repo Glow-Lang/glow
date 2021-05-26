@@ -12,9 +12,10 @@ let payForSignature = (digest : Digest, price : Nat) => {
 
   @publicly!(Seller) let signature = sign(digest);
   // The line above is equivalent to the three below:
-  /* @verifiably!(Seller) let signature = sign(digest);
-     publish! Seller -> signature;
-     verify! signature; // same as: require! isValidSignature(Seller, signature, digest); */
+  //// @verifiably!(Seller) let signature = sign(digest);
+  //// publish! Seller -> signature;
+  //// verify! signature; // This line is itself the same as the one below:
+  ////// require! isValidSignature(Seller, signature, digest);
 
   withdraw! Seller <- price;
 };
