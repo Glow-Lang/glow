@@ -54,8 +54,8 @@ you can `docker pull mukn/glow:alpha` then `docker run -it mukn/glow:alpha`.
    you might reduce the memory pressure somewhat by passing the argument `--cores 1` or such
    to `nix-env` in the second step of the script:
 
-        nix-env --cores 1 -f https://github.com/muknio/nixpkgs/archive/alpha.tar.gz \
-            -iA glow-lang gerbil-unstable go-ethereum solc
+        nixpkgs=https://github.com/muknio/nixpkgs/archive/devel.tar.gz
+        nix-env --cores 1 -f $nixpkgs -iA glow-lang gerbil-unstable go-ethereum solc
 
 6. Installing *Glow*, or any software, requires that you trust the authors and their infrastructure.
    To minimize the need for trust, and minimize the opportunity for damage
@@ -172,7 +172,7 @@ is only available on a few platforms, in which case you can go get a binary pack
 but could also use Nix as above.
 In other cases, get its source code and compile it
 according to [its instructions](https://cons.io/guide/#source-code).
-You will need release 0.16 or later, possibly a even more recent development version.
+You will need a recent development version; release 0.16 is not enough.
 
 For instance, on macOS using [homebrew](https://brew.sh/), you could use:
 
@@ -180,7 +180,8 @@ For instance, on macOS using [homebrew](https://brew.sh/), you could use:
 
 On Nix (recommended, but could skip to the last step as above), you could have used:
 
-    nix-env -f http://github.com/muknio/nixpkgs/archive/devel.tar.gz -iA gerbil-unstable
+    nixpkgs=https://github.com/muknio/nixpkgs/archive/devel.tar.gz
+    nix-env -f $nixpkgs -iA gerbil-unstable
 
 Note that to avoid conflict with other versions of Gerbil, you may have to make sure that
 
