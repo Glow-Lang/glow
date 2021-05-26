@@ -94,7 +94,6 @@
     role: [Symbol]
     agreement: [InteractionAgreement]
     contract-config: [ContractConfig]
-    status: SExp ;; (Enum running completed aborted stopped)
     processed-events: [(List SExp)] ;; : (List LogObjects) ;; ???
     unproceed-events: [(List SExp)] ;; : (List LogObjects) ;; ???
     current-code-block-label: [Symbol]
@@ -123,7 +122,6 @@
                      { role
                        agreement
                        contract-config: #f
-                       status: 'running
                        processed-events: '()
                        unprocessed-events: '()
                        current-code-block-label: (.@ interaction-info initial-code-block-label)  ;; TODO: extract initial code block label from contract compiler output
@@ -252,10 +250,9 @@
 (def (run-passive-code-block self)
   (def role (.@ self role))
   (def contract-config (.@ self contract-config))
-  (when (eq? (.@ self status) 'running)
-    (if contract-config
-      (run-passive-code-block/contract self role contract-config)
-      (run-passive-code-block/handshake self role))))
+  (if contract-config
+    (run-passive-code-block/contract self role contract-config)
+    (run-passive-code-block/handshake self role)))
 
 ;; : AgreementHandshake <- Runtime
 (def (read-handshake self)
@@ -273,27 +270,26 @@
   (when contract-config
     (publish-frame-data self (.@ self block-ctx outbox)))
   (interpret-current-code-block self)
-  (when (eq? (.@ self status) 'running)
-    (if (not contract-config)
-      (let ()
-        (deploy-contract self)
-        (def contract-config (.@ self contract-config))
-        (def agreement (.@ self agreement))
-        (def published-data (get-output-u8vector (.@ self block-ctx outbox)))
-        (def handshake (.new AgreementHandshake agreement contract-config published-data))
-        (send-contract-handshake self handshake))
-      (let ()
-        ;; TODO: Verify asset transfers using previous transaction and balances
-        ;; recorded in Message's asset-transfer table during interpretation. Probably
-        ;; requires getting TransactionInfo using the TransactionReceipt.
-        (def contract-address (.@ contract-config contract-address))
-        (def message-pretx
-             (prepare-call-function-transaction
-               self
-               contract-address
-               (.@ self block-ctx outbox)))
-        (def new-tx-receipt (post-transaction message-pretx))
-        (set! (.@ self timer-start) (.@ new-tx-receipt blockNumber)))))
+  (if (not contract-config)
+    (let ()
+      (deploy-contract self)
+      (def contract-config (.@ self contract-config))
+      (def agreement (.@ self agreement))
+      (def published-data (get-output-u8vector (.@ self block-ctx outbox)))
+      (def handshake (.new AgreementHandshake agreement contract-config published-data))
+      (send-contract-handshake self handshake))
+    (let ()
+      ;; TODO: Verify asset transfers using previous transaction and balances
+      ;; recorded in Message's asset-transfer table during interpretation. Probably
+      ;; requires getting TransactionInfo using the TransactionReceipt.
+      (def contract-address (.@ contract-config contract-address))
+      (def message-pretx
+           (prepare-call-function-transaction
+             self
+             contract-address
+             (.@ self block-ctx outbox)))
+      (def new-tx-receipt (post-transaction message-pretx))
+      (set! (.@ self timer-start) (.@ new-tx-receipt blockNumber))))
   #t)
 
 ;; Sexp <- State
