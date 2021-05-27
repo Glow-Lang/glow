@@ -134,8 +134,11 @@ You can build your own using `scripts/make-docker-image.ss` from
 ## Installing *Glow* the Hard Way
 
 If you are going to be modifying the implementation of *Glow*,
-you may want to install things the hard way as below
-before you look at the file [HACKING](HACKING.md) for development guidance.
+you may want to install things the hard way as below. 
+This installs the same dependencies as those in [the easy way](INSTALL.md#easy-install),
+but also installs source code you can modify.
+
+After that you can look at the file [HACKING](HACKING.md) for development guidance.
 
 If you don't use either Linux or macOS, and can't use Docker,
 or if you insist on not using Nix, or on reproducing every step manually for audit purposes,
@@ -253,6 +256,21 @@ for i in ${DEPS[@]} ; do
 done)
 ```
 
+### Fifth, install Go Ethereum 
+
+[`geth`](https://geth.ethereum.org/) is necessary to run integration tests.
+
+For Nix users (recommended):
+```sh
+nixpkgs=https://github.com/muknio/nixpkgs/archive/devel.tar.gz
+nix-env -f $nixpkgs -iA go-ethereum
+```
+
+The `nixpkgs` archive above ensures you have a `geth` matching the one used in development.
+
+For non-Nix users,
+other installation steps can be found [here](https://geth.ethereum.org/downloads/).
+
 ### Last but not least, build *Glow*
 
 After you have installed dependencies as above, you should be all ready to go.
@@ -279,9 +297,9 @@ And you can run our integration tests with:
 
     ./unit-tests.ss integration
 
-However, mind that integration tests may require you
-to have a local private `geth` running
-(typically using the `script/run-ethereum-test-net.ss`
+However, mind that integration tests require you
+to have a local private [`geth`](https://geth.ethereum.org/) running
+(typically using the [`script/run-ethereum-test-net.ss`](https://github.com/fare/gerbil-ethereum/blob/master/scripts/run-ethereum-test-net.ss)
 from [gerbil-ethereum](https://github.com/fare/gerbil-ethereum))
 and may maintain state in a `run` directory
 that you might have to wipe with `rm -rf run`
