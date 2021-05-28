@@ -23,6 +23,10 @@
    .add-to-deposit: ;; <- @ Nat
    (λ (self address amount)
      (modify! (.@ self deposits) (cut + <> amount)))
+
+   .total-withdrawal: ;; Nat <- @
+   (λ (self)
+      (apply + (map cdr (.@ self withdrawals))))
    })
 
 (define-type PassiveBlockCtx

@@ -102,6 +102,7 @@
     environment: [(Map (Or Any Any) <- Symbol)] ;; (Table (Or DependentPair Any) <- Symbol) ;; TODO: have it always typed???
     block-ctx: [BlockCtx] ;; byte buffer?
     timer-start: [Block]
+    contract-balance: [UInt256]
     io-context: [IOContext]
     program: [Program]
     name: [Symbol]
@@ -130,6 +131,7 @@
                        environment: (make-hash-table)
                        block-ctx: #f
                        timer-start: #f
+                       contract-balance: 0
                        io-context
                        program
                        name
@@ -164,6 +166,17 @@
       (run-passive-code-block self)))
   (set! (.@ self block-ctx) #f)
   (and result (.@ (get-current-code-block self) exit)))
+
+;; Update the stored balance of the contract based on the deposits and withdrawals
+;; in the block context.
+;;
+;; <- Runtime
+(def (update-contract-balance self)
+  (set!
+    (.@ self contract-balance)
+    (+ (.@ self contract-balance)
+       (- (.@ self block-ctx deposits)
+          (.call BlockCtx .total-withdrawal (.@ self block-ctx))))))
 
 ;; Bool <- Runtime
 (def (is-active-participant self)
@@ -217,7 +230,8 @@
   (let (code-block (get-current-code-block self))
     (displayln BOLD "\nExecuting code block " (.@ self current-code-block-label) " ..." END)
     (for ((statement (.@ code-block statements)))
-      (interpret-participant-statement self statement))))
+      (interpret-participant-statement self statement))
+    (update-contract-balance self)))
 
 (def (run-passive-code-block/handshake self role)
   (nest
@@ -597,9 +611,11 @@
     (hash-get (.@ consensus-code-generator labels) (make-checkpoint-label (.@ self name) code-block-label)))
   (def active-participant-offset
     (lookup-variable-offset consensus-code-generator code-block-label code-block-participant))
+  (def balance (.@ self contract-balance))
   (def live-variables (lookup-live-variables (.@ self program) (.@ self name) code-block-label))
   ;; TODO: ensure keys are sorted in both hash-values
   [[UInt16 . checkpoint-location]
+   [UInt256 .  balance]
    [Block . timer-start]
    ;; [UInt16 . active-participant-offset]
    ;; TODO: designate participant addresses as global variables that are stored outside of frames

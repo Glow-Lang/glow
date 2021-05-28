@@ -49,17 +49,14 @@
           ;; update brk-start.
           ;; TODO: add space for global variables
           (set-box! (brk-start) (.@ self params-end))
-          ;; NB: you can use #t below to debug with remix.ethereum.org. Do NOT commit that!
-          ;; TODO: maybe we should have some more formal debugging mode parameter?
-          (def debug #t)
           (defvalues (bytes-value labels-value)
             (assemble
               (&begin
                 (&simple-contract-prelude)
                 &define-tail-call
                 &define-simple-logging
-                (&define-check-participant-or-timeout debug: debug)
-                (&define-end-contract debug: debug)
+                (&define-check-participant-or-timeout)
+                (&define-end-contract)
                 compiled-small-functions
                 compiled-medium-functions
                 [&label 'brk-start@ (unbox (brk-start))])))
@@ -320,7 +317,7 @@
 (def (setup-tail-call self code-block-label code-block)
   (let* ((next-code-block-label (.@ code-block exit))
          (next-code-block-live-variables (sort (lookup-live-variables (.@ self program) (.@ self name) next-code-block-label) symbol<?))
-         (next-code-block-frame-size (+ (param-length UInt16) (param-length Block)))) ;; 2 for program counter, 2 for timer start,
+         (next-code-block-frame-size (- params-start@ frame@)))
     (&begin
       (&begin*
         (map
