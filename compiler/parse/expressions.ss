@@ -47,7 +47,10 @@
           (return (if (length=n? exps 1) (car exps) (bracket-expression exps))))))
 
 (def TightExpression
-  (.begin #t (.or BracketExpression CompoundExpression RecordExpr BlockExpression Identifier Literal)))
+  (.begin #t (.or BracketExpression CompoundExpression RecordExpr BlockExpression Identifier Literal
+                  ;; NOTE: this .begin must be after Literal
+                  ;; TODO: figure out why, and when fixed move it back to being part of BracketExpression
+                  (.begin (match-token-value? #\() (match-token-value? #\) ) (return (bracket-expression []))))))
 
 (def PrimaryExpression
   ; CallExpression | DotExpression | TightExpression
