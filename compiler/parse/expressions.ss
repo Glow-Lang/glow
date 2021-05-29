@@ -187,6 +187,12 @@
               (_(match-token-value? #\])))
       (return (compound-expression ce)))))
 
+(defstruct (return-expression expression) () transparent: #t)
+(def ReturnExpression
+  (.begin (match-token-value? #\()
+    (.let*  (_(match-token-value? #\)))
+      (return (return-expression)))))
+
 (def IdentifierTokenName
   (.begin (peek (match-token-type? 'IdentifierName))
           (peek (match-token-value? (.not ReservedWord)))
@@ -362,7 +368,7 @@
 
 
 (def Expression
-  (.begin (.or AnnotatedExpression IfExpression SwitchExpression
+  (.begin (.or AnnotatedExpression IfExpression SwitchExpression ReturnExpression
     (.begin (peek (match-token-value? (.or "deposit!" "withdraw!" "assert!" "require!")))
       (.let* (t (item))
         (cond
