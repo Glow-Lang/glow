@@ -144,7 +144,7 @@
     (.let* (cs (bracket #\' SingleStringCharacters #\'))
         `(SingleQuoteStringLiteral ,(list->string cs))))
 
-(def StringLiteral (.let* (str (.or  SingleQuoteStringLiteral  DoubleQuoteStringLiteral)) `(StringLiteral ,str)))
+(def StringLiteral (.let* (str (.or  SingleQuoteStringLiteral  DoubleQuoteStringLiteral)) str))
 
 (def CommonToken
     (.or
