@@ -40,10 +40,10 @@
 
 (defstruct (bracket-expression expression) (exps) transparent: #t)
 (def BracketExpression
-  (.begin (match-token-value? #\()
+  (.begin (match-token-type? 'LeftPrenPunctuator)
     (.let* (
            (exps (sepby1 Expression  (match-token-value? #\,)))
-            (_(match-token-value? #\) )))
+            (_(match-token-type? 'RightPrenPunctuator)))
           (return (if (length=n? exps 1) (car exps) (bracket-expression exps))))))
 
 (def TightExpression
@@ -59,10 +59,10 @@
 
 (defstruct (arguments expression) (list) transparent: #t)
 (def Arguments
-  (.let* ((_ (match-token-value? #\())
-          (empty? (.or (match-token-value? #\)) #f))
+  (.let* ((_ (match-token-type? 'LeftPrenPunctuator))
+          (empty? (.or (match-token-type? 'RightPrenPunctuator) #f))
           (args (if empty? [] ArgumentList))
-          (_(if (equal? empty? #f)  (match-token-value? #\)) )))
+          (_(if (equal? empty? #f)  (match-token-type? 'RightPrenPunctuator) )))
     (return (arguments args))))
 
 (def ArgumentList (.begin #t (sepby1 Expression (match-token-value? #\,))))
@@ -141,9 +141,9 @@
 
 (def Attribute
   (.or (.let* ((id Identifier)
-               (_(match-token-value? #\( ) )
+               (_(match-token-type? 'LeftPrenPunctuator))
                (arg-expr Expression) ; TODO: multiple Arguments
-               (_(match-token-value? #\) )) )
+               (_(match-token-type? 'RightPrenPunctuator)) )
          (attribute id [arg-expr]))
        (.let* (id Identifier) (attribute id #f))))
 
@@ -174,7 +174,7 @@
 
 (defstruct (annotated-expression expression) (attr  expr) transparent: #t)
 (def AnnotatedExpression
-  (.begin (match-token-value? #\@)
+  (.begin (match-token-type? 'Annotation)
     (.let* ((attr Attribute) (exp PrimaryExpression))
       (return (annotated-expression attr exp)))))
 
@@ -182,15 +182,15 @@
 
 (defstruct (compound-expression expression) (expressions) transparent: #t)
 (def CompoundExpression
-  (.begin (match-token-value? #\[)
+  (.begin (match-token-type? 'LeftBracketPunctuator)
     (.let*  ((ce (sepby1  Expression (match-token-value? #\,)))
-              (_(match-token-value? #\])))
+              (_(match-token-type? 'RightBracketPunctuator)))
       (return (compound-expression ce)))))
 
 (defstruct (return-expression expression) () transparent: #t)
 (def ReturnExpression
-  (.begin (match-token-value? #\()
-    (.let*  (_(match-token-value? #\)))
+  (.begin (match-token-type? 'LeftPrenPunctuator)
+    (.let*  (_(match-token-type? 'RightPrenPunctuator))
       (return (return-expression)))))
 
 (def IdentifierTokenName
@@ -211,16 +211,16 @@
         (.let* ( (id IdentifierTokenName)) (return (type-var id))))))
 
 (def AnnotatedType
-   (.begin (match-token-value? #\@)
+   (.begin (match-token-type? 'Annotation)
         (.let* ((attr Attribute) (typ BaseType)) (return (annotated-type attr typ)))))
 
 (def BracketedType
-  (.begin (match-token-value? #\( )
-        (.let* ((typs (sepby1 BaseType  (match-token-value? #\,))) (_(match-token-value? #\))  ))
+  (.begin (match-token-type? 'LeftPrenPunctuator)
+        (.let* ((typs (sepby1 BaseType  (match-token-value? #\,))) (_(match-token-value? 'RightPrenPunctuator)))
                  (return (if (length=n? typs 1) (car typs) (type-tuple typs))))))
 (def RecordType
-      (.begin (match-token-value? #\{)
-        (.let* ((entries  RecordTypeEntries)  (_(match-token-value? #\}))) (return (type-record entries)))))
+      (.begin (match-token-type? 'LeftBracePunctuator)
+        (.let* ((entries  RecordTypeEntries)  (_(match-token-type? 'RightBracePunctuator))) (return (type-record entries)))))
 
 (def RecordTypeEntry
     (.let* ((id Identifier) (_(match-token-value? #\:)) (typ Type)) (cons id typ)))
@@ -239,11 +239,11 @@
 
 (def Variant
     (.let* ((name Identifier)
-            (marker? (.or (match-token-value? #\( ) #f)))
+            (marker? (.or (match-token-type? 'LeftPrenPunctuator) #f)))
         (if (equal? marker? #f)
             name
             (.let* ((typs (sepby1 Type  (match-token-value? #\,)))
-                    (_(match-token-value? #\) )) )
+                    (_(match-token-value? 'RightPrenPunctuator)))
               (cons name typs)))))
 
 (def Variants
@@ -252,9 +252,9 @@
 
 (defstruct (record-expr expression) (entries) transparent: #t)
 (def RecordExpr
-  (.begin (match-token-value? #\{)
+  (.begin (match-token-type? 'LeftBracePunctuator)
           (.let* ((records RecordExprEntries)
-                  (_(match-token-value? #\})))
+                  (_(match-token-type? 'RightBracePunctuator)))
             (return (record-expr records)))))
 
 (def RecordExprEntries
@@ -283,22 +283,22 @@
         (.let* (lit Literal) (return (pattern-lit lit)))))
 
 (def BracketedPattern
-  (.begin  (match-token-value? #\()
-           (.let* ((rst (sepby1 Pattern (match-token-value? #\,))) (_(match-token-value? #\))))
+  (.begin  (match-token-type? 'LeftPrenPunctuator)
+           (.let* ((rst (sepby1 Pattern (match-token-value? #\,))) (_(match-token-type? 'RightPrenPunctuator)))
                 (return (if (length=n? rst 1) (car rst) (pattern-tuple rst))))))
 
 (def BlockPattern
-  (.begin (match-token-value? #\[)
-          (.let* ((rst (sepby1 Pattern (match-token-value? #\,))) (_(match-token-value? #\])))
+  (.begin (match-token-type? 'LeftBracketPunctuator)
+          (.let* ((rst (sepby1 Pattern (match-token-value? #\,))) (_(match-token-type? 'RightBracketPunctuator)))
                 (return (pattern-list rst)))))
 
 (def AnnotatedPattern
-  (.begin (match-token-value? #\@)
+  (.begin (match-token-type? 'Annotation)
           (.let* ((attr Attribute) (pat TightPattern)) (return (annotated-pattern attr pat)))))
 
 (def RecordPattern
-  (.begin (match-token-value? #\{)
-          (.let* ((entries RecordPatEntries)  (_(match-token-value? #\})))
+  (.begin (match-token-type? 'LeftBracePunctuator)
+          (.let* ((entries RecordPatEntries)  (_(match-token-type? 'RightBracePunctuator)))
             (return (pattern-record entries)))))
 
 (def RecordPatEntries
@@ -314,10 +314,10 @@
 
 (def AppCtorPattern
   (.let* ((id Identifier)
-          (_ (match-token-value? #\( ))
+          (_ (match-token-type? 'LeftPrenPunctuator))
           (empty? (.or (match-token-value? #\) ) #f))
           (args (if empty? [] (sepby1 Pattern (match-token-value? #\,))))
-          (_(if (equal? empty? #f)  (match-token-value? #\) ) )))
+          (_(if (equal? empty? #f)  (match-token-type? 'RightPrenPunctuator))))
     (return (pattern-app-ctor id args))))
 
 (def PatternVariant
@@ -330,29 +330,29 @@
 
 (defstruct (block-expression expression) (body) transparent: #t)
 (def BlockExpression
-  (.begin (match-token-value? #\{)
-    (.let* ((body  Body) (_(match-token-value? #\})))
+  (.begin (match-token-type? 'LeftBracePunctuator)
+    (.let* ((body  Body) (_(match-token-type? 'RightBracePunctuator)))
       (return (block-expression body)))))
 
 (defstruct (if-expression expression) (exp body-then body-else) transparent: #t)
 (def IfExpression
-  (.begin (match-token-value? "if") (match-token-value? #\()
+  (.begin (match-token-value? "if") (match-token-type? 'LeftPrenPunctuator)
     (.let* ((expr ConditionalExpression)
-          (_ (match-token-value? #\)))
-          (body-then (bracket (match-token-value? #\{) Body (match-token-value? #\})))
+          (_ (match-token-type? 'RightPrenPunctuator))
+          (body-then (bracket (match-token-type? 'LeftBracePunctuator) Body (match-token-type? 'RightBracePunctuator)))
           (e (.or (match-token-value? "else") #f))
-          (body-else (if (equal? e #f)  [] (bracket (match-token-value? #\{) Body (match-token-value? #\})))))
+          (body-else (if (equal? e #f)  [] (bracket (match-token-type? 'LeftBracePunctuator) Body (match-token-type? 'RightBracePunctuator)))))
       (return (if-expression expr body-then body-else)))))
 
 (defstruct (switch expression) (expression cases) transparent: #t)
 (def SwitchExpression
-    (.begin (match-token-value? "switch") (match-token-value? #\()
+    (.begin (match-token-value? "switch") (match-token-type? 'LeftPrenPunctuator)
       (.let* ((expr ArithmeticExpression)
-              (_ (match-token-value? #\) ))
-              (_ (match-token-value? #\{ ))
-              (empty? (.or (match-token-value? #\} ) #f))
+              (_ (match-token-type? 'RightPrenPunctuator))
+              (_ (match-token-type? 'LeftBracePunctuator))
+              (empty? (.or (match-token-type? 'RightBracePunctuator) #f))
               (cases (if empty? [] Cases))
-              (_ (if (equal? empty? #f)  (match-token-value? #\} ) #f)))
+              (_ (if (equal? empty? #f)  (match-token-type? 'RightBracePunctuator) #f)))
         (return (switch expr cases)))))
 
 
@@ -394,7 +394,7 @@
 (defstruct (type-declaration statement) (identifier typarams typ) transparent: #t)
 (def TypeDeclaration
       (.let*  ((name Identifier)
-              (typarams (.or (bracket  (match-token-value? #\() Typarams (match-token-value? #\))) #f))
+              (typarams (.or (bracket  (match-token-type? 'LeftPrenPunctuator) Typarams (match-token-type? 'RightPrenPunctuator)) #f))
               (_(match-token-value? #\=))  (typ Type) )
             (return (type-declaration name typarams typ))))
 
@@ -402,7 +402,7 @@
 (defstruct (dataAssignmentStatement statement) (identifier typarams variants) transparent: #t)
 (def DataAssignmentStatement
     (.let* ((name Identifier)
-          (typarams  (.or (bracket (match-token-value? #\() Typarams (match-token-value? #\))) #f))
+          (typarams  (.or (bracket (match-token-type? 'LeftPrenPunctuator) Typarams (match-token-type? 'RightPrenPunctuator)) #f))
           (_(match-token-value? #\=)) (variants Variants))
         (return (dataAssignmentStatement name typarams variants))))
 
@@ -442,9 +442,9 @@
 (def LetStatement (.begin (match-token-value? "let") (.or FunctionDeclaration  AssignmentStatement)))
 
 (def Params
-  (.let* ((_(match-token-value? #\())
+  (.let* ((_(match-token-type? 'LeftPrenPunctuator))
           (params (sepby Param (match-token-value? #\,)))
-          (_(match-token-value? #\)))) params))
+          (_(match-token-type? 'RightPrenPunctuator))) params))
 
 (defstruct param-data (id typ) transparent: #t)
 
@@ -452,12 +452,11 @@
 (def Param
   (.let* ((id (.or Identifier FAIL)))
     (.let* ((typ? (.or (.begin (match-token-value? #\:) Type) #f)))
-      (return (param-data id typ?))
-        )))
+      (return (param-data id typ?)))))
 
 (defstruct (annotationStatement statement) (attribute stat) transparent: #t)
 (def AnnotationStatement
-  (.begin (match-token-value? #\@)
+  (.begin (match-token-type? 'Annotation)
     (.let* ((attr Attribute) (stat  Statement))
         (return (annotationStatement attr stat)))))
 
