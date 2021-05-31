@@ -196,8 +196,7 @@
 
 ;; Stx -> [Listof Stx]
 (def (desugar-body body)
-  (def b (syntax->list body))
-  (if (stx-null? b) [] (append (desugar-stmts (butlast b)) [(desugar-expr (last b))])))
+  (desugar-stmts (syntax->list body)))
 
 (def (desugar-switch-case stx)
   (syntax-case stx () ((pat body ...) (retail-stx stx (desugar-body #'(body ...))))))

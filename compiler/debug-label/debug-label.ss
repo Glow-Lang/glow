@@ -74,7 +74,7 @@
     ([] [['@debug-label (symbol-fresh 'dlb)]])
     ([e]
      (let ((dlb (symbol-fresh 'dlb)))
-       [['@debug-label dlb] (debug-label-expr e)]))
+       [['@debug-label dlb] (debug-label-stmt e)]))
     ([stmt . rst]
      (let ((dlb (symbol-fresh 'dlb))
            (stmt2 (debug-label-stmt stmt)))

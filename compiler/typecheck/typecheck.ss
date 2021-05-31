@@ -713,8 +713,8 @@
 
 ;; tc-body : MPart Env BodyStx -> TypingScheme
 (def (tc-body part env stx)
-  (cond ((stx-null? stx) (typing-scheme empty-symdict (type:tuple [])))
-        ((stx-null? (stx-cdr stx)) (tc-expr part env (stx-car stx)))
+  (cond ((stx-null? stx) (typing-scheme empty-symdict type:Unit))
+        ((stx-null? (stx-cdr stx)) (tc-expr/stmt part env (stx-car stx)))
         (else
          (let-values (((penv nenv) (tc-stmt part env (stx-car stx))))
            (typing-scheme/menv nenv (tc-body part (env-put/env env penv) (stx-cdr stx)))))))
@@ -725,7 +725,7 @@
          (unless (or (not expected-ty) (subtype? type:Unit expected-ty))
            (error 'tc-body/check "type mismatch with implicit unit at end of body"))
          (typing-scheme empty-symdict (or expected-ty type:Unit)))
-        ((stx-null? (stx-cdr stx)) (tc-expr/check part env (stx-car stx) expected-ty))
+        ((stx-null? (stx-cdr stx)) (tc-expr/stmt/check part env (stx-car stx) expected-ty))
         (else
          (let-values (((penv nenv) (tc-stmt part env (stx-car stx))))
            (typing-scheme/menv nenv (tc-body/check part (env-put/env env penv) (stx-cdr stx) expected-ty))))))
@@ -959,19 +959,30 @@
            ;; TODO LATER: check that v is a variable with a *data* type.
            (values (env-publish env (stx-e #'v)) (typing-scheme-menv pt)))))))
 
+;; tc-expr/stmt : MPart  Env StmtStx -> TypingScheme
+(def (tc-expr/stmt part env stx)
+  (def ts (tc-expr* part env stx))
+  (cond (ts   (*as-expr stx ts))
+        (else (let-values (((p n) (tc-stmt part env stx)))
+                (typing-scheme n type:Unit)))))
+
 ;; tc-expr : MPart Env ExprStx -> TypingScheme
 (def (tc-expr part env stx)
-  (def ts (tc-expr* part env stx))
+  (*as-expr stx (tc-expr* part env stx)))
+
+;; *as-expr : ExprStx [Maybe TypingScheme] -> TypingScheme
+(def (*as-expr stx ts)
+  (unless ts (raise-syntax-error #f "expected an expression" stx))
   (set-has-typing-scheme stx ts)
   ts)
 
-;; tc-expr* : MPart Env ExprStx -> TypingScheme
+;; tc-expr* : MPart Env ExprStx -> [Maybe TypingScheme]
 (def (tc-expr* part env stx)
   ;; tce : ExprStx -> TypingScheme
   (def (tce e) (tc-expr part env e))
   ;; tce/bool : ExprStx -> TypingScheme
   (def (tce/bool e) (tc-expr/check part env e type:Bool))
-  (syntax-case stx (: ann @dot @dot/type @tuple @record @list @app and or if block splice == sign λ @make-interaction switch input digest require! assert! deposit! withdraw!)
+  (syntax-case stx (: ann @dot @dot/type @tuple @record @list @app-ctor @app and or if block splice == sign λ @make-interaction switch input digest require! assert! deposit! withdraw!)
     ((ann expr type)
      (tc-expr/check part env #'expr (parse-type part env covariant empty-symdict #'type)))
     (x (identifier? #'x) (tc-expr-id part env stx))
@@ -1035,7 +1046,8 @@
     ((withdraw! x e) (identifier? #'x)
      (tc-deposit-withdraw part env stx))
     ((@app-ctor f a ...) (tc-expr-app part env stx))
-    ((@app f a ...) (tc-expr-app part env stx))))
+    ((@app f a ...) (tc-expr-app part env stx))
+    (_ #f)))
 
 ;; tc-expr-app : MPart Env Stx -> TypingScheme
 (def (tc-expr-app part env stx)
@@ -1075,7 +1087,8 @@
           (typing-scheme-bisubst
            bisub
            (typing-scheme (menvs-meet (cons (typing-scheme-menv ft) (map typing-scheme-menv atss)))
-                          (type:var bv)))))))))
+                          (type:var bv))))
+         (t (error s "expected a function, given" (typing-scheme->repr-sexpr ft))))))))
 
 ;; tc-expr-id : MPart Env Identifier -> TypingScheme
 (def (tc-expr-id part env x)
@@ -1134,6 +1147,10 @@
   (unless (or (not expected-ty) (ntype? expected-ty))
     (error 'tc-expr/check "expected (U #f Type) for 4th argument" expected-ty))
   (def actual-ts (tc-expr part env stx))
+  (typing-scheme/check actual-ts expected-ty))
+
+;; typing-scheme/check : TypingScheme (U #f NType) -> TypingSchemeOrError
+(def (typing-scheme/check actual-ts expected-ty)
   (cond
     ((not expected-ty) actual-ts)
     (else
@@ -1142,6 +1159,13 @@
        (def ts-before (typing-scheme menv expected-ty))
        (def ts-after (typing-scheme-bisubst bity ts-before))
        ts-after))))
+
+;; tc-expr/stmt/check : MPart Env Expr (U #f NType) -> TypingSchemeOrError
+(def (tc-expr/stmt/check part env stx expected-ty)
+  (unless (or (not expected-ty) (ntype? expected-ty))
+    (error 'tc-expr/check "expected (U #f Type) for 4th argument" expected-ty))
+  (def actual-ts (tc-expr/stmt part env stx))
+  (typing-scheme/check actual-ts expected-ty))
 
 ;; tc-deposit-withdraw : MPart Env ExprStx -> TypingScheme
 (def (tc-deposit-withdraw part env stx)
