@@ -130,7 +130,7 @@
   (set-has-type! stx* t)
   stx*)
 (def (mr-expr* stx)
-  (syntax-case stx (ann @make-interaction @tuple @list @record @dot @dot/type block splice if switch λ == input require! assert! deposit! withdraw! digest sign @app)
+  (syntax-case stx (ann @make-interaction @tuple @list @record @dot @dot/type block splice if switch λ == input require! assert! deposit! withdraw! digest sign @app-ctor @app)
     (x (trivial-expr? #'x) stx)
     ((ann expr type) (mr-expr (track-has-typing-scheme stx #'expr)))
     ((@make-interaction parts params out-type body ...)
@@ -157,6 +157,7 @@
     ((withdraw! . _) (mr-keyword/sub-exprs stx))
     ((digest . _) (mr-keyword/sub-exprs stx))
     ((sign . _) (mr-keyword/sub-exprs stx))
+    ((@app-ctor . _) (mr-keyword/sub-exprs stx))
     ((@app . _) (mr-keyword/sub-exprs stx))))
 
 ;; mr-expr-make-interaction : ExprStx -> ExprStx
@@ -191,11 +192,7 @@
   (restx1 stx (stx-map head-id stx)))
 
 ;; mr-body : [Listof StmtStx] -> [Listof StmtStx]
-(def (mr-body body)
-  (match body
-    ([] [])
-    ([e] [(mr-expr e)])
-    ([a . bs] (append (mr-stmt a) (mr-body bs)))))
+(def (mr-body body) (mr-stmts body))
 
 ;; mr-expr-dot/type : ExprStx Type Symbol -> ExprStx
 (def (mr-expr-dot/type stx type method-sym)

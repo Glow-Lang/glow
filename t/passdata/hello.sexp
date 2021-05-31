@@ -6,5 +6,4 @@
       (publish! A ha)
 
       (@ B (def hb "Hello, A. I am B. How do YOU do?"))
-      (publish! B hb)
-      (@tuple)))))
+      (publish! B hb)))))

@@ -159,18 +159,13 @@
 ;; Used by special forms with a variable number of arguments that are regular expressions,
 ;; like @list, @tuple, and, or.
 ;; It could even be used by other keywords that have a constant number of arguments, but isn't.
-;; alpha-convert-body : Env StmtStx] -> StmtStx
+;; alpha-convert-keyword/sub-exprs : Env StmtStx -> StmtStx
 (def (alpha-convert-keyword/sub-exprs env stx)
   (retail-stx stx (stx-map (cut alpha-convert-expr env <>) (stx-cdr stx))))
 
 ;; alpha-convert-body : Env [Listof StmtStx] -> [Listof StmtStx]
 (def (alpha-convert-body env body)
-  (match body
-    ([] [])
-    ([e] [(alpha-convert-expr env e)])
-    ([stmt . rst]
-     (let-values (((env2 stmt2) (alpha-convert-stmt env stmt)))
-       (cons stmt2 (alpha-convert-body (env-put/env env env2) rst))))))
+  (let-values (((env2 body2) (alpha-convert-stmts env body))) body2))
 
 ;; ac-expr-function : Env ExprStx -> ExprStx
 (def (ac-expr-function env stx)

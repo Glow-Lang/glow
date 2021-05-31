@@ -7,5 +7,4 @@ let publishHello = () => {
 
     @B let hb = "Hello, A. I am B. How do YOU do?";
     publish! B -> hb;
-    ()
 };
