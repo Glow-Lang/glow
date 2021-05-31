@@ -55,7 +55,6 @@
     ((boolean-literal "true") #t)
     ((boolean-literal "false") #f)
     ((numeric-literal value) (string->number value))
-    ((string-literal str) str)
     ((string-literal str) str)))
 
 ;; type->sexpr : Type -> SExpr
