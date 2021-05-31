@@ -89,6 +89,24 @@ We do not have a Glow mode for Emacs yet, but you can use `javascript-mode` for 
 
 ## Hacking the Glow compiler
 
+## Running tests
+
+Commands to get you started.
+
+Help for test-suite CLI:
+```
+./unit-tests.ss help # general help for top-level commands
+./unit-tests.ss help <command> # help for a command
+```
+
+Running tests:
+```
+./unit-tests.ss # Run full unit-test suite
+./unit-tests.ss integration # Run full integration-test suite
+./unit-tests.ss test <file> # Run a single test single-file
+./unit-tests.ss pass <pass> <file> # Run compiler pass up to <pass> for <file>
+```
+
 ### Writing tests
 
 After you have installed our dependencies,
