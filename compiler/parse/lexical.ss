@@ -4,6 +4,7 @@
         :drewc/smug
         :std/srfi/13)
 
+;; TODO: Upstream to :drewc/smug-gerbil
 (def (sat-token-reader? p (reader token-value))
   (.let* (val ((liftP reader) ITEM))
     (sat p (return val))))
