@@ -4,6 +4,10 @@
         :drewc/smug
         :std/srfi/13)
 
+(def (sat-token-reader? p (reader token-value))
+  (.let* (val ((liftP reader) ITEM))
+    (sat p (return val))))
+
 (def SourceCharacter (item))
 
 (def (abr code) (.char=? (if (integer? code) (integer->char code) code)))
@@ -144,7 +148,7 @@
     (.let* (cs (bracket #\' SingleStringCharacters #\'))
         `(SingleQuoteStringLiteral ,(list->string cs))))
 
-(def StringLiteral (.let* (str (.or  SingleQuoteStringLiteral  DoubleQuoteStringLiteral)) `(StringLiteral ,str)))
+(def StringLiteral (.or  SingleQuoteStringLiteral  DoubleQuoteStringLiteral))
 
 (def CommonToken
     (.or
@@ -195,6 +199,8 @@
   (if t (tpv t) (.let* (t (item)) (return (get-token-value t)))))
 (def (match-token-type? p) (token-reader? p token-production-type))
 (def (match-token-value? p) (token-reader? p get-token-value))
+(def (equal-token-value? v) (sat-token-reader? (cut equal? v <>) get-token-value))
+(def (member-token-value? l) (sat-token-reader? (cut member <> l) get-token-value))
 
 
 (defstruct lex-tokens (vector list) transparent: #t)
