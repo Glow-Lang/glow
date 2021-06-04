@@ -146,9 +146,9 @@ then you will have to build and install *Glow* the Hard Way:
 installing GCC, on top of it Gambit Scheme, on top of it Gerbil Scheme,
 on top of it a bunch of libraries, and finally, *Glow*.
 
-You might be able to use [homebrew](https://brew.sh/) on macOS,
-or your Linux distribution's package management tools
-to skip a few steps, if it supports a recent enough version of Gambit or Gerbil.
+Beware that the version of Gambit and/or Gerbil that you might install
+from your Linux distribution's package manager or from [homebrew](https://brew.sh/) on macOS
+might *not* be recent enough version to build *Glow*.
 
 ### First, install GCC
 
@@ -177,14 +177,16 @@ In other cases, get its source code and compile it
 according to [its instructions](https://cons.io/guide/#source-code).
 You will need a recent development version; release 0.16 is not enough.
 
-For instance, on macOS using [homebrew](https://brew.sh/), you could use:
-
-    brew install gerbil-scheme
-
-On Nix (recommended, but could skip to the last step as above), you could have used:
+We recommend you use Nix with our own repo and branch of nixpkgs,
+so you get a known-working recent version:
 
     nixpkgs=https://github.com/muknio/nixpkgs/archive/devel.tar.gz
     nix-env -f $nixpkgs -iA gerbil-unstable
+
+You could try to install Gerbil via your Linux distribution's package manager
+or via macOS's [homebrew](https://brew.sh/), but it is likely not to provide
+a recent enough version of Gerbil to build *Glow*, at which point you will have
+to build from source.
 
 Note that to avoid conflict with other versions of Gerbil, you may have to make sure that
 
@@ -256,7 +258,7 @@ for i in ${DEPS[@]} ; do
 done)
 ```
 
-### Fifth, install Go Ethereum 
+### Fifth, install Go-Ethereum
 
 [`geth`](https://geth.ethereum.org/) is necessary to run integration tests.
 
