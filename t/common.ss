@@ -5,6 +5,7 @@
   :gerbil/expander
   :std/getopt :std/iter :std/sort
   :clan/base :clan/exit :clan/filesystem :clan/multicall :clan/path :clan/path-config
+  :clan/poo/cli
   :clan/persist/content-addressing
   :mukn/ethereum/hex
   :mukn/glow/path-config
@@ -46,8 +47,10 @@
 (define-entry-point (process-to-pass pass . files)
   (name: 'pass
    help: "Given a pass and files, process them until the end of it"
-   getopt: [(argument 'pass help: "pass up to which to process the files" value: string->symbol)
-            (rest-arguments 'files help: "files to process through the compiler")])
+   getopt: (make-options
+             [(argument 'pass help: "pass up to which to process the files" value: string->symbol)
+              (rest-arguments 'files help: "files to process through the compiler")] []
+              [options/glow-path]))
   (for (file files) (run-passes file pass: pass)))
 
 ;; TODO: make the choice of the digest algorithm controllable,

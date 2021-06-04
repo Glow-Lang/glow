@@ -62,8 +62,10 @@
    getopt: options/glow-path)
   (displayln (string-join glow-path ":")))
 
-(def (find-dapp-path relpath)
-  (find file-exists? (map (cut subpath <> relpath) glow-path)))
+(def (find-dapp-path path)
+  (if (absolute-path? path)
+    (and (file-exists? path) path)
+    (find file-exists? (map (cut subpath <> path) glow-path))))
 
 (def (find-dapp-file dapp (extension ".glow"))
   (def relpath (string-append dapp extension))
