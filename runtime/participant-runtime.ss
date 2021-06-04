@@ -183,27 +183,30 @@
   (def current-code-block (get-current-code-block self))
   (equal? (.@ self role) (.@ current-code-block participant)))
 
-;; TODO: everything about this function, from the timer-start and/or wherever we left off
-;; to timeout or (indefinite future if no timeout???)
-;; : LogObject <- Runtime Address Block
-(def (watch self contract-address from-block)
+;; TODO: Watch from some event in some block, until timeout
+;; The Runtime object must remember a cursor to the next block and/or event-within-block
+;; that hasn't been processed yet, e.g. "next block to visit is block 70, we've seen 3 events in it",
+;; or "next block to visit is block 71, we've seen 0 events in it". When all events in the block have
+;; been processed, moved to "next block, 0" even if it's in the future.
+;; IMPORTANT: only process CONFIRMED blocks---or else, it's speculative only.
+;; TODO MUCH LATER: present results of speculative execution to user.
+;; : LogObject <- Runtime
+(def (watch self)
   ;; TODO: consult unprocessed log objects first, if none is available, then use getLogs
   ;; TODO: be able to split getLogs into smaller requests if it a bigger request times out.
   ;; TODO: (optional) push all the previously processed log objects to the processed list after processing
+  (def-slots (timer-start contract-address first-unprocessed-block first-unprocessed-event-in-block)
+    self)
   (let/cc return
     (def callback (λ (log) (return log))) ;; TODO: handle multiple log entries!!!
-    (def to-block (+ from-block (.@ self agreement options timeoutInBlocks)))
+    (def from-block first-unprocessed-block)
+    (def to-block (+ timer-start (.@ self agreement options timeoutInBlocks)))
+    ;; TODO: watch-contract should take a from-event: first-unprocessed-event-in-block argument.
     (watch-contract callback contract-address from-block to-block)))
 
 (def (run-passive-code-block/contract self role contract-config)
   (displayln BOLD "\nWaiting for " (.@ (get-current-code-block self) participant) " to make a move ..." END)
-  ;; TODO: `from` should be calculated using the deadline and not necessarily the previous tx,
-  ;; since it may or not be setting the deadline
-  (def from
-    (if (.@ self timer-start)
-      (+ (.@ self timer-start) 1)
-      (.@ contract-config creation-block)))
-  (def new-log-object (watch self (.@ contract-config contract-address) from))
+  (def new-log-object (watch self)) ;; TODO: do we need pass a timeout explicitly???
   (if (eq? new-log-object #!void)
     (let
       ;; No log objects -- this indicates a timeout. The contract will send us
