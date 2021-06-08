@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # This script starts a Gerbil interpreter with all of Glow loaded,
 # so you can interact with it at the REPL.
 # You can use this file as your M-x run-scheme interpreter
