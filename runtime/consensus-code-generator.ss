@@ -66,18 +66,11 @@
           (.set! self labels labels-value)))
     }))
 
-;; Wish List:
-;;   StaticBlockCtx with methods:
-;;     make with order determined by the order of asset-parameters in the interaction-definition
-;;     .get-assets : [StaticBlockCtx -> [Listof Asset]]
-;;     .get-asset : [StaticBlockCtx Symbol -> Asset]
-;;     .get-deposit : [StaticBlockCtx Symbol -> EvmThunk]
-;;     .add-deposit! : [StaticBlockCtx Symbol -> EvmThunk]
-;;     .get-withdraw : [StaticBlockCtx Symbol Symbol -> EvmThunk]
-;;     .add-withdraw! : [StaticBlockCtx Symbol Symbol -> EvmThunk]
 (define-type StaticBlockCtx
-  { ;; .get-assets : [StaticBlockCtx -> [Listof Asset]]
-    .get-assets: (lambda (sbc) (for/collect (n (.@ sbc asset-names)) (.ref (.@ sbc assets) n)))
+  { ;; .get-asset-names : [StaticBlockCtx -> [Listof Symbol]]
+    .get-asset-names: (lambda (sbc) (.@ sbc asset-names))
+    ;; .get-participant-names : [StaticBlockCtx -> [Listof Symbol]]
+    .get-participant-names: (lambda (sbc) (.@ sbc participant-names))
     ;; .get-asset : [StaticBlockCtx Symbol -> Asset]
     .get-asset: (lambda (sbc sym) (.ref (.@ sbc assets) sym))
     ;; .get-deposit : [StaticBlockCtx Symbol -> EvmThunk]
@@ -130,7 +123,7 @@
                 (for/collect ((np asset-participant-names)
                               (w [&add-withdraw0! &add-withdraw1! &add-withdraw2! &add-withdraw3! &add-withdraw4! &add-withdraw5!]))
                   (cons np w))))
-             { asset-names assets deposits add-deposits withdraws add-withdraws }) })
+             { asset-names participant-names assets deposits add-deposits withdraws add-withdraws }) })
 
 ;; Logging the data, simple version, optimal for messages less than 6000 bytes of data.
 ;; TESTING STATUS: Used by buy-sig.
@@ -139,22 +132,22 @@
   ; TODO: actual tmp@, constant offset to a 100-byte scratch buffer
   ; Pair with Ian / ISD
   (def tmp@ tmp100@)
-  (def assets (.call StaticBlockCtx .get-assets sbc))
-  (def participants [])
-  (def native-asset (lookup-native-asset))
-  (def other-assets (remq native-asset assets))
+  (def assets (.call StaticBlockCtx .get-asset-names sbc))
+  (def participants (.call StaticBlockCtx .get-participant-names sbc))
   (&begin
    [&jumpdest 'commit-contract-call] ;; -- return-address
    ;; TODO: for each asset, do something like this,
    ;; for ERC20 assets this will use transfer-from
-   (for/collect ((a assets))
-     (.call a .commit-deposit! (.call StaticBlockCtx .get-deposit sbc a) tmp@))
+   (for/collect ((an assets))
+     (def a (.call StaticBlockCtx .get-asset sbc an))
+     (.call a .commit-deposit! (.call StaticBlockCtx .get-deposit sbc an) tmp@))
    ...
    ;; TODO: for each participant, commit the withdrawls
    (flatten1
-    (for/collect (a assets)
+    (for/collect (an assets)
      (for/collect (p participants)
-      (.call a .commit-withdraw! p (.call StaticBlockCtx .get-withdraw a p) tmp@))))
+      (def a (.call StaticBlockCtx .get-asset sbc an))
+      (.call a .commit-withdraw! p (.call StaticBlockCtx .get-withdraw sbc an p) tmp@))))
    ...
    calldatanew DUP1 CALLDATASIZE SUB ;; -- logsz cdn ret
    SWAP1 ;; -- cdn logsz ret
