@@ -1,7 +1,7 @@
 (export #t)
 
 (import
-  :std/sort :std/srfi/1 :std/misc/hash :std/misc/list :std/misc/number
+  :std/iter :std/sort :std/srfi/1 :std/misc/hash :std/misc/list :std/misc/number
   :clan/base :clan/number :clan/syntax
   :clan/poo/io :clan/poo/object :clan/poo/brace :clan/poo/debug
   :mukn/ethereum/ethereum :mukn/ethereum/assembly :mukn/ethereum/evm-runtime
@@ -13,6 +13,7 @@
     (Record
       program: [Program]
       name: [Symbol]
+      static-block-ctx: [StaticBlockCtx]
       variable-offsets: [(OrFalse (Map Nat <- Symbol))]
       labels: [(OrFalse (Map Nat <- Symbol))]
       bytes: [(OrFalse Bytes)]
@@ -21,9 +22,10 @@
       ; space in the executable, incl. globals, so the name should reflect that.
       params-end: [(OrFalse Nat)])
     {.make:
-      (lambda (some-program some-name some-timeout)
+      (lambda (some-program some-name some-timeout assets)
         {program: some-program
          name: some-name
+         static-block-ctx: (.call StaticBlockCtx .make some-program some-name assets)
          variable-offsets: #f
          labels: #f
          bytes: #f
@@ -54,7 +56,7 @@
               (&begin
                 (&simple-contract-prelude)
                 &define-tail-call
-                &define-simple-logging
+                (&define-commit-contract-call/simple (.@ self static-block-ctx))
                 (&define-check-participant-or-timeout)
                 (&define-end-contract)
                 compiled-small-functions
@@ -63,6 +65,105 @@
           (.set! self bytes bytes-value)
           (.set! self labels labels-value)))
     }))
+
+;; Wish List:
+;;   StaticBlockCtx with methods:
+;;     make with order determined by the order of asset-parameters in the interaction-definition
+;;     .get-assets : [StaticBlockCtx -> [Listof Asset]]
+;;     .get-asset : [StaticBlockCtx Symbol -> Asset]
+;;     .get-deposit : [StaticBlockCtx Symbol -> EvmThunk]
+;;     .add-deposit! : [StaticBlockCtx Symbol -> EvmThunk]
+;;     .get-withdraw : [StaticBlockCtx Symbol Symbol -> EvmThunk]
+;;     .add-withdraw! : [StaticBlockCtx Symbol Symbol -> EvmThunk]
+(define-type StaticBlockCtx
+  { ;; .get-assets : [StaticBlockCtx -> [Listof Asset]]
+    .get-assets: (lambda (sbc) (for/collect (n (.@ sbc asset-names)) (.ref (.@ sbc assets) n)))
+    ;; .get-asset : [StaticBlockCtx Symbol -> Asset]
+    .get-asset: (lambda (sbc sym) (.ref (.@ sbc assets) sym))
+    ;; .get-deposit : [StaticBlockCtx Symbol -> EvmThunk]
+    .get-deposit: (lambda (sbc sym) (hash-ref (.@ sbc deposits) sym))
+    ;; .add-deposit! : [StaticBlockCtx Symbol -> EvmThunk]
+    .add-deposit!: (lambda (sbc sym) (hash-ref (.@ sbc add-deposits) sym))
+    ;; .get-withdraw : [StaticBlockCtx Symbol Symbol -> EvmThunk]
+    .get-withdraw: (lambda (sbc asset-sym participant)
+                     (hash-ref/default (.@ sbc withdraws) [asset-sym participant]
+                       (lambda ()
+                         (error "StaticBlockCtx.get-withdraw: key not found"
+                                [asset-sym participant]
+                                "in"
+                                (hash-keys (.@ sbc withdraws))))))
+    ;; .add-withdraw! : [StaticBlockCtx Symbol Symbol -> EvmThunk]
+    .add-withdraw!: (lambda (sbc asset-sym participant)
+                      (hash-ref/default (.@ sbc add-withdraws) [asset-sym participant]
+                        (lambda ()
+                         (error "StaticBlockCtx.add-withdraw!: key not found"
+                                [asset-sym participant]
+                                "in"
+                                (hash-keys (.@ sbc withdraws))))))
+    .make: (lambda (program name assets)
+             (def inter (hash-ref (.@ program interactions) name))
+             (def asset-names (.@ inter asset-names))
+             (def participant-names (.@ inter participant-names))
+             (unless (length<=n? asset-names 3)
+               (error "too many assets"))
+             (unless (length<=n? participant-names 2)
+               (error "too many participants"))
+             (def asset-participant-names
+               (cartesian-product asset-names participant-names))
+             (def deposits
+               (list->hash-table-eq
+                (for/collect ((n asset-names)
+                              (d [deposit0 deposit1 deposit2]))
+                  [n . d])))
+             (def add-deposits
+               (list->hash-table-eq
+                (for/collect ((n asset-names)
+                              (d [&add-deposit0! &add-deposit1! &add-deposit2!]))
+                  [n . d])))
+             (def withdraws
+               (list->hash-table
+                (for/collect ((np asset-participant-names)
+                              (w [withdraw0 withdraw1 withdraw2 withdraw3 withdraw4 withdraw5]))
+                  (cons np w))))
+             (def add-withdraws
+               (list->hash-table
+                (for/collect ((np asset-participant-names)
+                              (w [&add-withdraw0! &add-withdraw1! &add-withdraw2! &add-withdraw3! &add-withdraw4! &add-withdraw5!]))
+                  (cons np w))))
+             { asset-names assets deposits add-deposits withdraws add-withdraws }) })
+
+;; Logging the data, simple version, optimal for messages less than 6000 bytes of data.
+;; TESTING STATUS: Used by buy-sig.
+;; TODO: move into glow
+(def (&define-commit-contract-call/simple sbc)
+  ; TODO: actual tmp@, constant offset to a 100-byte scratch buffer
+  ; Pair with Ian / ISD
+  (def tmp@ tmp100@)
+  (def assets (.call StaticBlockCtx .get-assets sbc))
+  (def participants [])
+  (def native-asset (lookup-native-asset))
+  (def other-assets (remq native-asset assets))
+  (&begin
+   [&jumpdest 'commit-contract-call] ;; -- return-address
+   ;; TODO: for each asset, do something like this,
+   ;; for ERC20 assets this will use transfer-from
+   (for/collect ((a assets))
+     (.call a .commit-deposit! (.call StaticBlockCtx .get-deposit sbc a) tmp@))
+   ...
+   ;; TODO: for each participant, commit the withdrawls
+   (flatten1
+    (for/collect (a assets)
+     (for/collect (p participants)
+      (.call a .commit-withdraw! p (.call StaticBlockCtx .get-withdraw a p) tmp@))))
+   ...
+   calldatanew DUP1 CALLDATASIZE SUB ;; -- logsz cdn ret
+   SWAP1 ;; -- cdn logsz ret
+   DUP2 ;; logsz cdn logsz ret
+   0 SWAP2 ;; -- cdn logsz 0 logsz ret
+   DUP3 ;; -- 0 cdn logsz 0 logsz ret
+   CALLDATACOPY ;; -- 0 logsz ret
+   LOG0 JUMP))
+
 
 ;; Directives to generate bytecode for small functions, usually defined in the header.
 ;; Directive <- ConsensusCodeGenerator (Map SmallFunction <- Symbol)
@@ -148,15 +249,15 @@
     (['require! variable-name]
       [(load-immediate-variable self function-name variable-name Bool) &require!])
 
-    (['expect-deposited ['@record ['DefaultToken amount]]]
-      ;; TODO: block-ctx-like holding the balance variables for each asset/resource
-      [(load-immediate-variable self function-name amount Ether) &deposit!])
+    (['expect-deposited ['@record [asset-symbol amount]]]
+      (let ((asset (.call StaticBlockCtx .get-asset (.@ self static-block-ctx) asset-symbol))
+            (add-deposit (.call StaticBlockCtx .add-deposit! (.@ self static-block-ctx) asset-symbol)))
+        [(load-immediate-variable self function-name amount asset) add-deposit]))
 
-    (['consensus:withdraw participant ['@record ['DefaultToken amount]]]
-      ;; TODO: block-ctx-like holding the balance variables for each asset/resource
-      [(load-immediate-variable self function-name amount Ether)
-       (load-immediate-variable self function-name participant Address)
-       &withdraw!])
+    (['consensus:withdraw participant ['@record [asset-symbol amount]]]
+      (let ((asset (.call StaticBlockCtx .get-asset (.@ self static-block-ctx) asset-symbol))
+            (add-withdraw (.call StaticBlockCtx .add-withdraw! (.@ self static-block-ctx) asset-symbol participant)))
+        [(load-immediate-variable self function-name amount asset) add-withdraw]))
 
    (['return ['@tuple]]
       [])
@@ -365,3 +466,18 @@
   (when (or (not (.@ self params-end)) (> frame-size (.@ self params-end)))
     (.set! self params-end frame-size))
   frame-size)
+
+;; cartesian-product : [Listof A] ... -> [Listof [List A ...]]
+(def (cartesian-product . lol) (cartesian-product* lol))
+
+;; cartesian-product* : [List [Listof A] ...] -> [Listof [List A ...]]
+(def (cartesian-product* lol)
+  (match lol
+    ([] [[]])
+    ([[] . _] [])
+    ([l . rst]
+     (let (rst* (cartesian-product* rst))
+       (flatten1
+        (for/collect (e l)
+          (for/collect (r rst*)
+            (cons e r))))))))

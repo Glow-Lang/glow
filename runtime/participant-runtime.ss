@@ -144,10 +144,10 @@
                        io-context
                        program
                        name
-                       consensus-code-generator: (.call ConsensusCodeGenerator .make program name (.@ agreement options timeoutInBlocks))
+                       consensus-code-generator: (.call ConsensusCodeGenerator .make program name (.@ agreement options timeoutInBlocks) (.@ agreement assets))
                        }))
                (set! (.@ self consensus-code-generator)
-                 (.call ConsensusCodeGenerator .make program name (.@ agreement options timeoutInBlocks)))
+                 (.call ConsensusCodeGenerator .make program name (.@ agreement options timeoutInBlocks) (.@ agreement assets)))
                (.call ConsensusCodeGenerator .generate (.@ self consensus-code-generator))
                (initialize-environment self)
                self))}))
@@ -348,7 +348,7 @@
   (def contract-bytes
     (stateful-contract-init initial-state-digest (.@ self consensus-code-generator bytes)))
   (create-contract sender-address contract-bytes
-    value: (assq-get (.@ self block-ctx deposits) (get-native-asset self) 0)))
+    value: (assq-get (.@ self block-ctx deposits) (lookup-native-asset) 0)))
 
 ;; PreTransaction <- Runtime Block
 (def (deploy-contract self)
@@ -388,12 +388,12 @@
   (def message-bytes (get-output-u8vector out))
   (def sender-address (get-active-participant self))
   (def deposits (.@ (.@ self block-ctx) deposits))
-  (def native-asset (get-native-asset self))
+  (def native-asset (lookup-native-asset))
   (call-function sender-address contract-address message-bytes
     ;; default gas value should be (void), i.e. ask for an automatic estimate,
     ;; unless we want to force the TX to happen, e.g. so we can see the failure in Remix
     ;; gas: 1000000 ;; XXX ;;<=== DO NOT COMMIT THIS LINE UNCOMMENTED
-    value: (assq-get (.@ self block-ctx deposits) (get-native-asset self) 0)))
+    value: (assq-get (.@ self block-ctx deposits) native-asset 0)))
 
 ;; CodeBlock <- Runtime
 (def (get-current-code-block self)
@@ -423,16 +423,6 @@
     (def parameter-type (lookup-type (.@ self program) parameter-name))
     (def parameter-value (<-json parameter-type parameter-json-value))
     (add-to-environment self parameter-name parameter-value)))
-
-;; get-native-asset : Asset <- Runtime
-(def (get-native-asset self)
-  (def native-name (.@ (ethereum-config) nativeCurrency symbol))
-  ;; native-asset? : Bool <- Asset
-  (def (native-asset? a) (equal? (.@ a .symbol) native-name))
-  (def as (hash-values (.@ self asset-environment)))
-  (def nas (filter native-asset? as))
-  (unless (length=n? nas 1) (error 'get-native-asset native-name nas as))
-  (first nas))
 
 ;; TODO: make sure everything always has a type ???
 ;; Any <- Runtime
