@@ -83,7 +83,7 @@
                 "Buyer"]])
              (supply-parameters
               [["digest" (string-append "0x" (hex-encode digest))]])
-             (set-initial-block)
+             (set-initial-block 10000)
              (read-peer-command))))
 
        (set! proc-seller
