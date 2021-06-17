@@ -4,6 +4,7 @@
 
 (import
   :std/pregexp
+  :clan/path-config
   :clan/multicall :clan/versioning
   :clan/crypto/secp256k1
   :mukn/ethereum/ethereum :mukn/ethereum/types
@@ -12,5 +13,5 @@
   :mukn/glow/runtime/glow-path)
 
 (current-program "glow")
-(initialize-glow-path! [])
+(initialize-glow-path!)
 (define-multicall-main)
