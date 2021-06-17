@@ -29,7 +29,7 @@
          "(return (@tuple))"
          "(@label end0)"
          ""
-         "buy_sig#payForSignature interaction finished"
+         "closing#payForSignature interaction finished"
          "Final environment:"
          "Buyer => (address<-0x \"0xa71CEb0990dD1f29C2a064c29392Fe66baf05aE1\")"
          "Seller => (address<-0x \"0xb0bb1ed229f5Ed588495AC9739eD1555f5c3aabD\")"
@@ -41,7 +41,7 @@
            (digest . (bytes<-0x "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"))
            (price . 1)
            (signature . (<-json Signature "cdae76c4904373d48f52dc0f56e8c808fde873e672170bb428eabb49e33091ee46bd2b6af00725f0a7b578ef1289030a78ac60ca992ea78a6913fea2f82627481b")))))
-    (test-case "supply-parameters: buy_sig"
+    (test-case "supply-parameters: closing"
       (check-parameters
         ["Define parameters"
          "Enter digest"

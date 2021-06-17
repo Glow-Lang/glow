@@ -75,7 +75,7 @@
            (lambda ()
              (answer-questions
               [["Choose application:"
-                "buy_sig"]
+                "closing"]
                ["Choose your identity:"
                 (lambda (id)
                   (string-prefix? "t/alice " id))]

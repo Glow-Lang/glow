@@ -178,8 +178,8 @@
   (def compiler-output (run-passes contract.glow pass: 'project show?: #f))
   (parse-compiler-output compiler-output))
 
-;; Takes an application identifier like "buy_sig#payForSignature" and returns
-;; the part corresponding to a source file/path, e.g. "buy_sig"
+;; Takes an application identifier like "closing#payForSignature" and returns
+;; the part corresponding to a source file/path, e.g. "closing"
 (def (extract-application-source-path application-name)
   (match (pregexp-match "([^#]*)#?.*" application-name)
     ([_ dapp] dapp)
@@ -243,7 +243,7 @@
   (displayln "Final environment:")
   ;; TODO: get run to include type t and pre-alpha-converted labels,
   ;; and output the entire thing as JSON omitting shadowed variables (rather than having conflicts)
-  ;; TODO: highlight the returned value in the interaction, and have buy_sig return signature
+  ;; TODO: highlight the returned value in the interaction, and have closing return signature
   (for-each (match <> ([k t . v]
               (if (equal? (symbolify k) 'signature)
                 (display-object-ln BOLD k END " => " t v)
