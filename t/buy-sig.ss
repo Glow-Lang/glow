@@ -50,7 +50,7 @@
   (def index (with-committed-tx (tx) (post-increment! agreement-index)))
   (json<- Digest (hash<-context (cons (keypair<-address address) agreement-index))))
 
-(def (make-buy-sig-agreement
+(def (make-closing-agreement
       buyer: buyer seller: seller price: price digest: digest
       buyer-reference: (buyer-reference (void))
       seller-reference: (buyer-reference (void))
@@ -79,14 +79,14 @@
                                ((not maxInitialBlock) (+ (eth_blockNumber timeoutInBlocks)))
                                (else (void)))}})
 
-(define-entry-point (make-buy-sig-agreement . arguments)
+(define-entry-point (make-closing-agreement . arguments)
   (help: "Start an interaction based on an agreement")
   )
 
 
 
-(def (buy-sig role buyer: buyer seller: seller price: price digest: digest)
-  (def agreement (make-buy-sig-agreement buyer: buyer seller: seller price: price digest: digest))
+(def (closing role buyer: buyer seller: seller price: price digest: digest)
+  (def agreement (make-closing-agreement buyer: buyer seller: seller price: price digest: digest))
 
   ;; TODO: replace the statements below by off-chain communication between buyer and seller
   (create-directory* (transient-path))

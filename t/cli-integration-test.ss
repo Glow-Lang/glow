@@ -23,7 +23,7 @@
          "Enter number "]
         [["Choose your role:" "Seller"]]
         "2\n"))
-    (test-case "read-environment: buy-sig"
+    (test-case "read-environment: closing"
       (check-environment
         ["(participant:withdraw Seller price)"
          "(return (@tuple))"
