@@ -83,7 +83,13 @@
                 "Buyer"]])
              (supply-parameters
               [["digest" (string-append "0x" (hex-encode digest))]])
-             (set-initial-block)
+             (set-initial-block 1000) ; Provides an offset from the current-block,
+                                      ; so we have ample time (in blocks) to create a contract
+                                      ; and for other active participants to run side
+                                      ; of the interaction before timeout.
+                                      ;
+                                      ; Also used for regression testing against:
+                                      ; https://gitlab.com/mukn/glow/-/issues/195
              (read-peer-command))))
 
        (set! proc-seller

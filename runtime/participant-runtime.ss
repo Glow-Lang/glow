@@ -95,13 +95,16 @@
     agreement: [InteractionAgreement]
     contract-config: [ContractConfig]
     processed-events: [(List SExp)] ;; : (List LogObjects) ;; ???
-    unproceed-events: [(List SExp)] ;; : (List LogObjects) ;; ???
+    unprocessed-events: [(List SExp)] ;; (List LogObjects) ;; ???
     current-code-block-label: [Symbol]
     current-label: [Symbol]
     current-debug-label: [(Or Symbol False)]
     environment: [(Map (Or Any Any) <- Symbol)] ;; (Table (Or DependentPair Any) <- Symbol) ;; TODO: have it always typed???
     block-ctx: [BlockCtx] ;; byte buffer?
     timer-start: [Block]
+    first-unprocessed-block: [Block]
+    first-unprocessed-event-in-block: [UInt8] ; Index of unprocessed event in a block.
+                                              ; NOTE: UInt8 was selected to be reasonably large.
     contract-balance: [UInt256]
     io-context: [IOContext]
     program: [Program]
@@ -131,6 +134,8 @@
                        environment: (make-hash-table)
                        block-ctx: #f
                        timer-start: #f
+                       first-unprocessed-block: #f ; Initialized with contract-config
+                       first-unprocessed-event-in-block: 0
                        contract-balance: 0
                        io-context
                        program
@@ -183,27 +188,31 @@
   (def current-code-block (get-current-code-block self))
   (equal? (.@ self role) (.@ current-code-block participant)))
 
-;; TODO: everything about this function, from the timer-start and/or wherever we left off
-;; to timeout or (indefinite future if no timeout???)
-;; : LogObject <- Runtime Address Block
-(def (watch self contract-address from-block)
-  ;; TODO: consult unprocessed log objects first, if none is available, then use getLogs
-  ;; TODO: be able to split getLogs into smaller requests if it a bigger request times out.
-  ;; TODO: (optional) push all the previously processed log objects to the processed list after processing
-  (let/cc return
-    (def callback (λ (log) (return log))) ;; TODO: handle multiple log entries!!!
-    (def to-block (+ from-block (.@ self agreement options timeoutInBlocks)))
-    (watch-contract callback contract-address from-block to-block)))
+;; Watches logs from the first unprocessed block to the timeout block.
+;; it return the earliest log,
+;; and updates the first-unprocessed-block, unprocessed-event-in-block in Runtime
+;; TODO: Return logs in batches, rather than singly. Store unprocessed logs to avoid calling getLogs.
+;; TODO: MUCH LATER: present results of speculative execution to user.
+;; TODO: (optional) push all the previously processed log objects to the processed list after processing
+;; : LogObject <- Runtime
+(def (watch self)
+  (def-slots (timer-start contract-config first-unprocessed-block first-unprocessed-event-in-block)
+    self)
+  (def-slots (contract-address) contract-config)
+  (let/cc return ; Fetch from logs if no unprocessed events
+    (def (callback watch-result)
+      (def-slots (next-block next-event log) watch-result)
+      (set! (.@ self first-unprocessed-block) next-block)
+      (set! (.@ self first-unprocessed-event-in-block) next-event)
+      (return log))
+    (def from-block first-unprocessed-block)
+    (def to-block (+ timer-start (.@ self agreement options timeoutInBlocks)))
+    (watch-contract callback contract-address from-block to-block first-unprocessed-event-in-block))
+  )
 
 (def (run-passive-code-block/contract self role contract-config)
   (displayln BOLD "\nWaiting for " (.@ (get-current-code-block self) participant) " to make a move ..." END)
-  ;; TODO: `from` should be calculated using the deadline and not necessarily the previous tx,
-  ;; since it may or not be setting the deadline
-  (def from
-    (if (.@ self timer-start)
-      (+ (.@ self timer-start) 1)
-      (.@ contract-config creation-block)))
-  (def new-log-object (watch self (.@ contract-config contract-address) from))
+  (def new-log-object (watch self))
   (if (eq? new-log-object #!void)
     (let
       ;; No log objects -- this indicates a timeout. The contract will send us
@@ -218,7 +227,9 @@
             (lambda (out)
               (publish-frame-data self out)))))
       #f)
-    (let ()
+    (let () ; TODO: for n > 2 interactions, we need to
+            ; publish unprocessed-blocks and next-event,
+            ; so other participants will not re-watch.
       (def log-data (.@ new-log-object data))
       (set! (.@ self timer-start) (.@ new-log-object blockNumber))
       ;; TODO: process the data in the same method?
@@ -251,6 +262,7 @@
             InteractionAgreement agreement)
        (error "agreements don't match" (.@ self agreement) agreement))
      (set! (.@ self timer-start) (.@ agreement options maxInitialBlock))
+     (set! (.@ self first-unprocessed-block) (.@ contract-config creation-block))
      (interpret-current-code-block self))
    (let (create-pretx (prepare-create-contract-transaction self))
      (verify-contract-config contract-config create-pretx)
@@ -303,7 +315,10 @@
              contract-address
              (.@ self block-ctx outbox)))
       (def new-tx-receipt (post-transaction message-pretx))
-      (set! (.@ self timer-start) (.@ new-tx-receipt blockNumber))))
+      (set! (.@ self timer-start) (.@ new-tx-receipt blockNumber))
+      (set! (.@ self first-unprocessed-block) (1+ (.@ new-tx-receipt blockNumber)))
+      (set! (.@ self first-unprocessed-event-in-block) 0)
+      ))
   #t)
 
 ;; Sexp <- State
@@ -342,7 +357,8 @@
   (def receipt (post-transaction pretx))
   (def contract-config (contract-config<-creation-receipt receipt))
   (verify-contract-config contract-config pretx)
-  (set! (.@ self contract-config) contract-config))
+  (set! (.@ self contract-config) contract-config)
+  (set! (.@ self first-unprocessed-block) (.@ contract-config creation-block)))
 
 (def (send-contract-handshake self handshake)
   (def io-context (.@ self io-context))

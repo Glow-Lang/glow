@@ -158,16 +158,16 @@
         (error "expected " key " but got " prompt)))
     params))
 
-(def (set-initial-block)
+(def (set-initial-block (offset 0))
   ;; Replies to the prompt "Max initial block [...]", using the current
-  ;; block number as the selection.
+  ;; block number + offset as the selection.
   (def prompt
     (find-first-line
       (lambda (line) (string-prefix? "Max initial block [" line))))
   (def prompt-expr
     (with-input-from-string (string-append "(" prompt ")") read))
-  (def num (car (filter number? (flatten prompt-expr))))
-  (displayln-now num))
+  (def current-block (car (filter number? (flatten prompt-expr))))
+  (displayln-now (+ current-block offset)))
 
 (def (read-peer-command)
   ;; Scans the input for the command to run on the other side.
