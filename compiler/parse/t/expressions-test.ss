@@ -16,13 +16,13 @@
 
       ;; Identifier
       (let* ((param (run Param (lexify "seller")))
-             (id (identifier-name (param-data-id param))))
+             (id (identifier-name (param-id param))))
         (assert-equal! id "seller"))
 
       ;; Identifier:Type
       (let* ((param (run Param (lexify "seller:Address")))
-             (id (identifier-name (param-data-id param)))
-             (type (type-name-id (param-data-typ param))))
+             (id (identifier-name (param-id param)))
+             (type (type-name-id (param-typ param))))
         (assert-equal! id "seller")
         (assert-equal! type "Address"))
       )

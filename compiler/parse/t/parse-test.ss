@@ -7,13 +7,13 @@
 
 (def parse-test
   (test-suite "test suite for glow/compiler/parse/parse"
-    (test-case "parseStr"
+    (test-case "parseStr no parameters"
       (assert-equal!
         (parseStr "let publishHello = () => {
                    };")
         '(@module (def publishHello (λ ())))
         ))
-    (test-case "parseStr"
+    (test-case "parseStr parameters one type"
       (assert-equal!
         (parseStr "let publishHello = (seller:Address,price) => {
                   };")
