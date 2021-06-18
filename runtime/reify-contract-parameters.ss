@@ -16,6 +16,8 @@
 
 (def (read-json-handshake port)
   (def handshake-json (json<-port port))
+  (when (eof-object? handshake-json)
+    (error "read-json-handshake: expected JSON, got EOF from port" port))
   (<-json AgreementHandshake handshake-json))
 
 (.def io-context:terminal
