@@ -52,7 +52,7 @@ Required Features:
 - Choice restricted to timeouts.
 - (Tail) Recursion
 
-### Auction
+### Simple Auction
 
 [auction.glow](auction.glow):
 Sell an asset (or a signature or procedure call ?)
@@ -82,6 +82,16 @@ Required Features:
 - Unrestricted open set of participants
 - Choice restricted to timeouts and open participation.
 - Shared state between multiple small interactions
+
+### Complex Auctions
+
+Dutch auctions with sealed bids, escrowed amount that must be larger than the bid
+(and equal to the bid if the sealed bid is not revealed), and other auctions
+that involve shared state, multiple UTXOs, etc.
+
+Required Features:
+- Shared state between multiple small interactions
+- Data structures across such shared state
 
 ### Fungible Tokens in native Glow style
 
