@@ -227,9 +227,7 @@
             (lambda (out)
               (publish-frame-data self out)))))
       #f)
-    (let () ; TODO: for n > 2 interactions, we need to
-            ; publish unprocessed-blocks and next-event,
-            ; so other participants will not re-watch.
+    (let ()
       (def log-data (.@ new-log-object data))
       (set! (.@ self timer-start) (.@ new-log-object blockNumber))
       ;; TODO: process the data in the same method?
