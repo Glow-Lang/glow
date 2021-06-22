@@ -89,7 +89,7 @@ We do not have a Glow mode for Emacs yet, but you can use `javascript-mode` for 
 
 ## Hacking the Glow compiler
 
-## Running tests
+### Running tests
 
 Commands to get you started.
 
@@ -128,3 +128,89 @@ Note that regular code outside of a `t/` directory must not depend
 on test code in `t/` directories.
 As an exception, and as a practical tool for debugging,
 `t/common` is included in the interactive image.
+
+## Managing dependencies
+
+Glow is being actively developed, alongside with its dependencies.
+The following sections provide instructions on updating our nixpkgs snapshot, cachix, Docker and CI. 
+
+### Setup
+
+Ensure you have `nix-prefetch-git` installed:
+```sh
+nix-env -iA nixpkgs.nix-prefetch-git
+```
+
+Checkout the `nixpkgs` package snapshot locally: https://github.com/MuKnIO/nixpkgs/commits/devel. 
+```sh
+git clone git@github.com:MuKnIO/nixpkgs.git
+git worktree add ../devel
+export nixpkgs=../devel
+```
+
+Note: `$nixpkgs` is a `git worktree` of a checkout,
+so that when included in the docker image it doesn't pull the entire git history with it.
+
+Add the following to your shell, updating `/path/to` with the actual path in your filesystem:
+```sh
+gerbsup () {
+  local gu=/path/to/gerbil-utils 
+  GERBIL_LOADPATH=$gu $gu/scripts/update-gerbil-nix-recipe.ss $@
+}
+
+nixglow () {
+  b=/path/to/gerbil-utils/build.ss 
+  time $b nixpkgs -f "$nixpkgs" && time $b publish -f "$nixpkgs" && time $b docker ${1:-all}
+}
+```
+
+For updating `cachix`, request access token, then do:
+```
+cachix authtoken $token
+```
+
+Use our nixpkgs cache:
+```
+cachix use mukn
+```
+
+### Before updating
+
+**Ensure that the current `master` branch of glow and dependencies are compatible.**
+
+Sometimes you may need to merge although CI fails,
+due to breaking changes etc... if that's the case,
+request help from project owners / maintainers.
+
+### Updating
+
+Update nixpkgs first. Ensure the updated nix expressions can be built locally.
+```sh
+gerbsup
+
+# You may have to pin various packages depending on their compatibility. See `gerbsup -h`.
+# For example, to pin gambit:
+# gerbsup -g feeley/gambit@c0753ff127baefebd00193a135f48f18c59c496a
+```
+
+Commit the changes above, one per package,
+following the [nixpkgs convention for commit messages](https://github.com/NixOS/nixpkgs/blob/master/.github/CONTRIBUTING.md),
+to the `devel` branch.
+If necessary, rebase before release so there's only one commit per package.
+Push your changes to the `devel` branch (force push if you're rebased).
+
+Update cachix and Docker:
+```sh
+nixglow
+```
+
+Update dependencies on CI:
+```sh
+# Just gerbil packages
+nix-thunk update dep/gerbil-* dep/nixpkgs
+```
+
+### After Updating
+
+- Ensure CI pipeline passes.
+- Ensure dependencies from `nixpkgs` can be installed.
