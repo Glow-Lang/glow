@@ -44,7 +44,7 @@
 ;;  - (switch-expression Expression (Listof Case))
 ;;  - (expression-with-attribute Attribute Expression)
 ;; interp. an expression can express a computation that may produce a value
-(defstruct expression ())
+(defstruct expression () transparent: #t)
 
 ;; An Arguments is an: (arguments (Listof Expression))
 ;; interp. a list of arguments in a function application
@@ -69,7 +69,7 @@
 ;;  - (function-definition Identifier (Listof Param) (OrFalse Type) Expression)
 ;;  - (statement-with-attribute Attribute Statement)
 ;; interp. a statement can express a computation that may produce/modify environment bindings
-(defstruct statement ())
+(defstruct statement () transparent: #t)
 
 ;; A Param is one of:
 ;;  - (param Identifier #f)
@@ -354,11 +354,11 @@
             (return (record-expression records)))))
 
 (def RecordExprEntries
-  (sepby1 (.let* ((id Identifier)
-                  (_(equal-token-value? #\:))
-                  (expr ConditionalExpression))
-            (return (cons id expr)) )
-          (equal-token-value? #\,)))
+  (sepby (.let* ((id Identifier)
+                 (_(equal-token-value? #\:))
+                 (expr ConditionalExpression))
+           (return (cons id expr)) )
+         (equal-token-value? #\,)))
 
 (defstruct pattern () transparent: #t)
 (defstruct (pattern-with-attribute pattern) (attr pat)  transparent: #t)

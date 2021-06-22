@@ -30,4 +30,21 @@
     (test-case "Parsing Params"
       ;; No Parameters
       (assert-equal! (run Params (lexify "()")) '())
-     )))
+      )
+
+    (test-case "Parsing expressions with {} curly-braces"
+      (assert-equal! (run Expression (lexify "{}")) (record-expression []))
+      (assert-equal! (run Expression (lexify "{ x }"))
+                     (body-expression [] (identifier "x")))
+      (assert-equal! (run Expression (lexify "{ x: 1 }"))
+                     (record-expression [(cons (identifier "x") (numeric-literal "1"))]))
+      (assert-equal! (run Expression (lexify "{ x; 1 }"))
+                     (body-expression [(expression-statement (identifier "x"))] (numeric-literal "1")))
+      ;; TODO: if/when we add record-field shorthand, it would work like this:
+      ;(assert-equal! (run Expression (lexify "{ x, y }"))
+      ;               (record-expression [(cons (identifier "x") (identifier "x"))
+      ;                                   (cons (identifier "y") (identifier "y"))]))
+      (assert-equal! (run Expression (lexify "{ x: 1, y: 2 }"))
+                     (record-expression [(cons (identifier "x") (numeric-literal "1"))
+                                         (cons (identifier "y") (numeric-literal "2"))]))
+      )))
