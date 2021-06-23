@@ -16,14 +16,12 @@
 ;; parseStr : String -> SExpr
 (def (parseStr str)
   (def lex (lexify str))
-  (def fsl (run FunctionStatementList lex))
-  (fsl->module fsl))
+  (def stmts (run StatementList lex))
+  (stmts->module stmts))
 
-;; fsl->module : FunctionStatementList -> SExpr
-(def (fsl->module fsl)
-  (cond
-    ((not fsl) '(@module))
-    (else `(@module ,@(map stat->sexpr fsl)))))
+;; stmts->module : StatementList -> SExpr
+(def (stmts->module fsl)
+  `(@module ,@(map stat->sexpr fsl)))
 
 ;; id->sexpr : Identifier -> SExpr
 (def (id->sexpr x)
@@ -60,7 +58,7 @@
 ;; type->sexpr : Type -> SExpr
 (def (type->sexpr t)
   (match t
-    ((annotated-type attr type) `(@ ,(attr->sexpr attr) ,(type->sexpr type)))
+    ((type-with-attribute attr type) `(@ ,(attr->sexpr attr) ,(type->sexpr type)))
     ((type-name id) (string->symbol id))
     ((type-var id) `',(string->symbol id))
     ((type-tuple args) `(@tuple ,@(map type->sexpr args)))
@@ -72,12 +70,12 @@
   (match x
     ((identifier _) (id->sexpr x))
     ((literal _) (lit->sexpr x))
-    ((operator lhs op rhs) `(,(op->sexpr op) ,(expr->sexpr lhs) ,(expr->sexpr rhs)))
+    ((binary-expression lhs op rhs) `(,(op->sexpr op) ,(expr->sexpr lhs) ,(expr->sexpr rhs)))
     ((unary-expression op expr) `(,(op->sexpr op) ,(expr->sexpr expr)))
     ; parens
-    ((bracket-expression exps) `(@tuple ,@(map expr->sexpr exps)))
+    ((tuple-expression exps) `(@tuple ,@(map expr->sexpr exps)))
     ; square brackets
-    ((compound-expression exprs) `(@list ,@(map expr->sexpr exprs)))
+    ((list-expression exprs) `(@list ,@(map expr->sexpr exprs)))
     ((call-expression fn (arguments args))
      (let ((f (expr->sexpr fn)))
        (if (and (symbol? f) (memq f keyword-syms))
@@ -87,24 +85,22 @@
     ((assert-expression exp) `(assert! ,(expr->sexpr exp)))
     ((deposit-expression id exp) `(deposit! ,(id->sexpr id) ,(expr->sexpr exp)))
     ((withdraw-expression id exp) `(withdraw! ,(id->sexpr id) ,(expr->sexpr exp)))
-    ((annotated-expression attr expr) `(@ ,(attr->sexpr attr) ,(expr->sexpr expr)))
+    ((expression-with-attribute attr expr) `(@ ,(attr->sexpr attr) ,(expr->sexpr expr)))
     ((dot-expression expr id) `(@dot ,(expr->sexpr expr) ,(id->sexpr id)))
-    ((type-expression expr typ) `(ann ,(expr->sexpr expr) ,(type->sexpr typ)))
-    ((record-expr entries)
+    ((type-annotation-expression expr typ) `(ann ,(expr->sexpr expr) ,(type->sexpr typ)))
+    ((record-expression entries)
      `(@record ,@(map (match <> ([k . v] [(id->sexpr k) (expr->sexpr v)])) entries)))
-    ((block-expression body) `(block ,@(body->sexprs body)))
-    ((body [] expr)          (expr->sexpr expr))
-    ((body _ _)              `(block ,@(body->sexprs x)))
+    ((body-expression [] expr) (expr->sexpr expr))
+    ((body-expression _ _) `(block ,@(body->sexprs x)))
     ((if-expression c t e) `(if ,(expr->sexpr c) ,(expr->sexpr t) ,(expr->sexpr e)))
-    ((switch expr cases) `(switch ,(expr->sexpr expr) ,@(map case->sexpr cases)))))
+    ((switch-expression expr cases) `(switch ,(expr->sexpr expr) ,@(map case->sexpr cases)))))
 
-;; body->sexprs : Body -> [Listof SExpr]
+;; body->sexprs : Expression -> [Listof SExpr]
 (def (body->sexprs b)
   (match b
-    ((body stmts #f)         (map stat->sexpr stmts))
-    ((body stmts expr)       (append (map stat->sexpr stmts) [(expr->sexpr expr)]))
-    ((block-expression body) (body->sexprs body))
-    (expr                    [(expr->sexpr expr)])))
+    ((body-expression stmts #f)   (map stat->sexpr stmts))
+    ((body-expression stmts expr) (append (map stat->sexpr stmts) [(expr->sexpr expr)]))
+    (expr                         [(expr->sexpr expr)])))
 
 ;; case->sexpr : Case -> SExpr
 (def (case->sexpr c)
@@ -116,30 +112,30 @@
   (match s
     ((publish-statement p-id x-ids) `(publish! ,(id->sexpr p-id) ,@(map id->sexpr x-ids)))
     ((verify-statement ids)       `(verify! ,@(map id->sexpr ids)))
-    ((type-declaration id typarams typ)
+    ((type-alias-declaration id typarams typ)
      (cond
        (typarams `(deftype (,(id->sexpr id) ,@(map id->sexpr typarams)) ,(type->sexpr typ)))
        (else     `(deftype ,(id->sexpr id) ,(type->sexpr typ)))))
-    ((dataAssignmentStatement id typarams variants)
+    ((data-type-declaration id typarams variants)
      (cond
        (typarams `(defdata (,(id->sexpr id) ,@(map id->sexpr typarams)) ,@(map variant->sexpr variants)))
        (else     `(defdata ,(id->sexpr id) ,@(map variant->sexpr variants)))))
     ((expression-statement expr) (expr->sexpr expr))
-    ((assignment-statement id type expr)
+    ((value-definition id type expr)
      (cond
        (type `(def ,(id->sexpr id) : ,(type->sexpr type) ,(expr->sexpr expr)))
        (else `(def ,(id->sexpr id) ,(expr->sexpr expr)))))
-    ((function-declaration id params type body)
+    ((function-definition id params type body)
      (cond
        (type `(def ,(id->sexpr id) (λ ,(map param->sexpr params) : ,(type->sexpr type) ,@(body->sexprs body))))
        (else `(def ,(id->sexpr id) (λ ,(map param->sexpr params) ,@(body->sexprs body))))))
-    ((annotationStatement attr stat) `(@ ,(attr->sexpr attr) ,(stat->sexpr stat)))))
+    ((statement-with-attribute attr stat) `(@ ,(attr->sexpr attr) ,(stat->sexpr stat)))))
 
 ;; param->sexpr : Param -> SExpr
 (def (param->sexpr p)
   (match p
-    ((param-data id #f) (id->sexpr id))
-    ((param-data id typ) `(,(id->sexpr id) : ,(type->sexpr typ)))))
+    ((param id #f) (id->sexpr id))
+    ((param id typ) `(,(id->sexpr id) : ,(type->sexpr typ)))))
 
 ;; variant->sexpr : Variant -> SExpr
 (def (variant->sexpr v)
@@ -156,8 +152,8 @@
 ;; pat->sexpr : Pat -> SExpr
 (def (pat->sexpr p)
   (match p
-    ((annotated-pattern attr pat) `(@ ,(attr->sexpr attr) ,(pat->sexpr pat)))
-    ((type-pattern pat typ) `(ann ,(pat->sexpr pat) ,(type->sexpr typ)))
+    ((pattern-with-attribute attr pat) `(@ ,(attr->sexpr attr) ,(pat->sexpr pat)))
+    ((type-annotation-pattern pat typ) `(ann ,(pat->sexpr pat) ,(type->sexpr typ)))
     ((pattern-id id) (id->sexpr id))
     ((pattern-blank) '_)
     ((pattern-lit lit) (lit->sexpr lit))
