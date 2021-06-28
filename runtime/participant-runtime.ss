@@ -184,7 +184,7 @@
   (set!
     (.@ self contract-balance)
     (+ (.@ self contract-balance)
-       (- (.@ self block-ctx deposits)
+       (- (assq-get (.@ self block-ctx deposits) (lookup-native-asset) 0)
           (.call BlockCtx .total-withdrawal (.@ self block-ctx))))))
 
 ;; Bool <- Runtime

@@ -8,13 +8,16 @@
   :mukn/ethereum/assets :mukn/ethereum/types
   ./program)
 
+(def MAX_ASSETS 3)
+(def MAX_PARTICIPANTS 2)
+
 (define-type ConsensusCodeGenerator
   (.+
     (Record
       program: [Program]
       name: [Symbol]
       static-block-ctx: [StaticBlockCtx]
-      variable-offsets: [(OrFalse (Map Nat <- Symbol))]
+      variable-offsets: [(OrFalse (Map (Map Nat <- Symbol) <- Symbol))]
       labels: [(OrFalse (Map Nat <- Symbol))]
       bytes: [(OrFalse Bytes)]
 
@@ -56,7 +59,7 @@
               (&begin
                 (&simple-contract-prelude)
                 &define-tail-call
-                (&define-commit-contract-call/simple (.@ self static-block-ctx))
+                (&define-commit-contract-call/simple self)
                 (&define-check-participant-or-timeout)
                 (&define-end-contract)
                 compiled-small-functions
@@ -97,9 +100,9 @@
              (def inter (hash-ref (.@ program interactions) name))
              (def asset-names (.@ inter asset-names))
              (def participant-names (.@ inter participant-names))
-             (unless (length<=n? asset-names 3)
+             (unless (length<=n? asset-names MAX_ASSETS)
                (error "too many assets"))
-             (unless (length<=n? participant-names 2)
+             (unless (length<=n? participant-names MAX_PARTICIPANTS)
                (error "too many participants"))
              (def asset-participant-names
                (cartesian-product asset-names participant-names))
@@ -127,13 +130,12 @@
 
 ;; Logging the data, simple version, optimal for messages less than 6000 bytes of data.
 ;; TESTING STATUS: Used by buy-sig.
-;; TODO: move into glow
-(def (&define-commit-contract-call/simple sbc)
-  ; TODO: actual tmp@, constant offset to a 100-byte scratch buffer
-  ; Pair with Ian / ISD
+(def (&define-commit-contract-call/simple self)
+  (def sbc (.@ self static-block-ctx))
   (def tmp@ tmp100@)
   (def assets (.call StaticBlockCtx .get-asset-names sbc))
   (def participants (.call StaticBlockCtx .get-participant-names sbc))
+  (def initial-label (.@ (hash-ref (.@ self program interactions) (.@ self name)) initial-code-block-label))
   (&begin
    [&jumpdest 'commit-contract-call] ;; -- return-address
    ;; TODO: for each asset, do something like this,
@@ -145,9 +147,10 @@
    ;; TODO: for each participant, commit the withdrawls
    (flatten1
     (for/collect (an assets)
-     (for/collect (p participants)
+     (for/collect (pn participants)
       (def a (.call StaticBlockCtx .get-asset sbc an))
-      (.call a .commit-withdraw! p (.call StaticBlockCtx .get-withdraw sbc an p) tmp@))))
+      (def p (load-immediate-variable self initial-label pn Address))
+      (.call a .commit-withdraw! p (.call StaticBlockCtx .get-withdraw sbc an pn) tmp@))))
    ...
    calldatanew DUP1 CALLDATASIZE SUB ;; -- logsz cdn ret
    SWAP1 ;; -- cdn logsz ret
