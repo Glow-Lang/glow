@@ -149,7 +149,7 @@
       [(load-immediate-variable self function-name variable-name Bool) &require!])
 
     (['expect-deposited amount]
-      [(load-immediate-variable self function-name amount Ether) &deposit!])
+      [(load-immediate-variable self function-name amount Ether) &add-deposit!])
 
     (['consensus:withdraw participant amount]
       [(load-immediate-variable self function-name amount Ether)
