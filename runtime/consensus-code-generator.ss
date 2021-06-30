@@ -154,9 +154,11 @@
 
     (['consensus:withdraw participant amount]
       (def native-asset (lookup-native-asset))
-      [(load-immediate-variable self function-name amount native-asset)
-       (load-immediate-variable self function-name participant Address)
-       &withdraw!])
+      (def tmp@ #f)
+      [(.call native-asset .commit-withdraw!
+         (load-immediate-variable self function-name participant Address)
+         (load-immediate-variable self function-name amount native-asset)
+         tmp@)])
 
    (['return ['@tuple]]
       [])
