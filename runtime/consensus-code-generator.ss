@@ -149,10 +149,12 @@
       [(load-immediate-variable self function-name variable-name Bool) &require!])
 
     (['expect-deposited amount]
-      [(load-immediate-variable self function-name amount Ether) &add-deposit!])
+      (def native-asset (lookup-native-asset))
+      [(load-immediate-variable self function-name amount native-asset) &add-deposit!])
 
     (['consensus:withdraw participant amount]
-      [(load-immediate-variable self function-name amount Ether)
+      (def native-asset (lookup-native-asset))
+      [(load-immediate-variable self function-name amount native-asset)
        (load-immediate-variable self function-name participant Address)
        &withdraw!])
 
