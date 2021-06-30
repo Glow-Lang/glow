@@ -56,10 +56,14 @@
 (def options/identities
   (make-options
     [(option 'identities "-I" "--identities" ;;default: #f
-             help: "file to load and store identities")] []))
+             help: "file to load and store identities")
+     (flag 'json "-J" "--json"
+           help: "write identities as JSON")]
+    []))
 
 (define-entry-point (add-identity
                      identities: (identities #f)
+                     json: (json #f)
                      nickname: (nickname #f)
                      secret-key: (secret-key #f))
   (help: "Add identity"
@@ -79,8 +83,20 @@
    (cut hash-put! <> (string-downcase nickname) new-keypair))
   (displayln "Added identity: " nickname " [ " (string<- Address (keypair-address new-keypair)) " ]"))
 
+(def (json<-identity identity)
+  (match identity
+    ([nickname . keypair]
+     (when (keypair-consistent? keypair)
+       (let ((address (string<- Address (keypair-address keypair)))
+             (pubkey (string<- PublicKey (keypair-public-key keypair))))
+         (hash (nickname nickname)
+               (address address)
+               (public_key pubkey)
+               (secret_key_path (format "glow:~a" nickname))))))))
+
 (define-entry-point (generate-identity
                      identities: (identities #f)
+                     json: (json #f)
                      nickname: (nickname #f)
                      prefix: (prefix #f))
   (help: "Generate identity"
@@ -97,10 +113,13 @@
   (call-with-identities
    from: identities
    (cut hash-put! <> (string-downcase nickname) keypair))
-  (displayln "Generated identity: " nickname " [ " (string<- Address (keypair-address keypair)) " ]"))
+  (if json
+      (display (string<-json (json<-identity (cons (string-downcase nickname) keypair))))
+      (displayln "Generated identity: " nickname " [ " (string<- Address (keypair-address keypair)) " ]")))
 
 (define-entry-point (remove-identity
                      identities: (identities #f)
+                     json: (json #f)
                      nickname: (nickname #f))
   (help: "Remove identity"
    getopt: (make-options
@@ -109,11 +128,13 @@
   (call-with-identities (cut hash-remove! <> (string-downcase nickname)) from: identities)
   (displayln "Removed identity " nickname))
 
-(define-entry-point (list-identities identities: (identities #f))
+(define-entry-point (list-identities identities: (identities #f) json: (json #f))
   (help: "List identities" getopt: options/identities)
-  (def identities (load-identities from: identities))
-  (for-each
-    (match <>
-      ([nickname . keypair]
-        (displayln nickname " [ " (string<- Address (keypair-address keypair)) " ]")))
-    (hash->list/sort identities string<?)))
+  (def identities (hash->list/sort (load-identities from: identities) string<?))
+  (if json
+      (display (string<-json (map json<-identity identities)))
+      (for-each
+       (match <>
+         ([nickname . keypair]
+          (displayln nickname " [ " (string<- Address (keypair-address keypair)) " ]")))
+       identities)))
