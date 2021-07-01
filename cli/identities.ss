@@ -128,7 +128,9 @@
             [(option 'nickname "-N" "--nickname")] [] [options/identities]))
   (unless nickname (error "missing nickname option"))
   (call-with-identities (cut hash-remove! <> (string-downcase nickname)) from: identities)
-  (displayln "Removed identity " nickname))
+  (if json
+      (display (string<-json (hash (removed nickname))))
+      (displayln "Removed identity " nickname)))
 
 (define-entry-point (list-identities identities: (identities #f) json: (json #f))
   (help: "List identities" getopt: options/identities)
