@@ -5,7 +5,7 @@
   :std/format :std/srfi/1 :std/test :std/sugar :std/iter :std/text/hex :std/text/json
   :std/misc/ports :std/misc/process
   :clan/base :clan/concurrency :clan/debug :clan/decimal :clan/exception
-  :clan/io :clan/json :clan/path-config :clan/ports
+  :clan/io :clan/json :clan/path-config :clan/ports :clan/ffi
   :clan/poo/object :clan/poo/io :clan/poo/debug
   :clan/crypto/keccak :clan/crypto/secp256k1
   :clan/persist/content-addressing :clan/persist/db
@@ -145,4 +145,6 @@
 
        (finally
         (ignore-errors (close-port proc-buyer))
-        (ignore-errors (close-port proc-seller)))))))
+        (ignore-errors (close-port proc-seller))
+        (ignore-errors (kill (process-pid proc-buyer)))
+        (ignore-errors (kill (process-pid proc-seller))))))))
