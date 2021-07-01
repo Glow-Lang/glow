@@ -81,7 +81,9 @@
   (call-with-identities
    from: identities
    (cut hash-put! <> (string-downcase nickname) new-keypair))
-  (displayln "Added identity: " nickname " [ " (string<- Address (keypair-address new-keypair)) " ]"))
+  (if json
+      (display (string<-json (json<-identity (cons nickname new-keypair))))
+      (displayln "Added identity: " nickname " [ " (string<- Address (keypair-address new-keypair)) " ]")))
 
 (def (json<-identity identity)
   (match identity
@@ -114,7 +116,7 @@
    from: identities
    (cut hash-put! <> (string-downcase nickname) keypair))
   (if json
-      (display (string<-json (json<-identity (cons (string-downcase nickname) keypair))))
+      (display (string<-json (json<-identity (cons nickname keypair))))
       (displayln "Generated identity: " nickname " [ " (string<- Address (keypair-address keypair)) " ]")))
 
 (define-entry-point (remove-identity
