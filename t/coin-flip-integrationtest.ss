@@ -4,7 +4,7 @@
   :gerbil/gambit/bits :gerbil/gambit/os :gerbil/gambit/ports :gerbil/gambit/threads
   :std/format :std/srfi/1 :std/test :std/sugar :std/iter :std/text/json :std/misc/ports :std/misc/hash
   :clan/base :clan/concurrency :clan/debug :clan/decimal :clan/exception
-  :clan/io :clan/json :clan/path-config :clan/ports
+  :clan/io :clan/json :clan/path-config :clan/ports :clan/ffi
   :clan/poo/object :clan/poo/io :clan/poo/debug
   :clan/crypto/keccak
   :clan/persist/content-addressing :clan/persist/db
@@ -125,4 +125,6 @@
 
        (finally
         (ignore-errors (close-port proc-a))
-        (ignore-errors (close-port proc-b)))))))
+        (ignore-errors (close-port proc-b))
+        (ignore-errors (kill (process-pid proc-a)))
+        (ignore-errors (kill (process-pid proc-b))))))))
