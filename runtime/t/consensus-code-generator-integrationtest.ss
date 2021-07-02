@@ -16,9 +16,9 @@
       (ensure-ethereum-connection "pet")
       (map
         (cut apply check-scratch-space-example <>)
-        [["buy_sig" 'payForSignature 340]
-         ["coin_flip" 'coinFlip 596]
-         ["rps_simple" 'rockPaperScissors 629]]))))
+        [["buy_sig" 'payForSignature 404]
+         ["coin_flip" 'coinFlip 660]
+         ["rps_simple" 'rockPaperScissors 693]]))))
 
 (def (check-scratch-space-example file-name interaction-name expected-value)
   (let*

@@ -1,12 +1,14 @@
 (export #t)
 
 (import
-  :std/sort :std/srfi/1 :std/misc/hash :std/misc/list :std/misc/number
+  :std/iter :std/sort :std/srfi/1 :std/misc/hash :std/misc/list :std/misc/number
   :clan/base :clan/number :clan/syntax
   :clan/poo/io :clan/poo/object :clan/poo/brace :clan/poo/debug
   :mukn/ethereum/ethereum :mukn/ethereum/assembly :mukn/ethereum/evm-runtime
   :mukn/ethereum/assets :mukn/ethereum/types
   ./program)
+
+(def MAX_PARTICIPANTS 2)
 
 (define-type ConsensusCodeGenerator
   (.+
@@ -63,6 +65,42 @@
           (.set! self bytes bytes-value)
           (.set! self labels labels-value)))
     }))
+
+(define-type StaticBlockCtx
+  { ;; .get-participant-names : [StaticBlockCtx -> [Listof Symbol]]
+    .get-participant-names: (lambda (sbc) (.@ sbc participant-names))
+    ;; .get-withdraw : [StaticBlockCtx Symbol -> EvmThunk]
+    .get-withdraw: (lambda (sbc participant)
+                     (hash-ref/default (.@ sbc withdraws) participant
+                       (lambda ()
+                         (error "StaticBlockCtx.get-withdraw: key not found"
+                                participant
+                                "in"
+                                (hash-keys (.@ sbc withdraws))))))
+    ;; .add-withdraw! : [StaticBlockCtx Symbol -> EvmThunk]
+    .add-withdraw!: (lambda (sbc participant)
+                      (hash-ref/default (.@ sbc add-withdraws) participant
+                        (lambda ()
+                         (error "StaticBlockCtx.add-withdraw!: key not found"
+                                participant
+                                "in"
+                                (hash-keys (.@ sbc withdraws))))))
+    .make: (lambda (program name)
+             (def inter (hash-ref (.@ program interactions) name))
+             (def participant-names (.@ inter participant-names))
+             (unless (length<=n? participant-names MAX_PARTICIPANTS)
+               (error "too many participants"))
+             (def withdraws
+               (list->hash-table
+                (for/collect ((p participant-names)
+                              (w [withdraw0 withdraw1]))
+                  (cons p w))))
+             (def add-withdraws
+               (list->hash-table
+                (for/collect ((p participant-names)
+                              (w [&add-withdraw0! &add-withdraw1!]))
+                  (cons p w))))
+             { participant-names withdraws add-withdraws }) })
 
 ;; Logging the data, simple version, optimal for messages less than 6000 bytes of data.
 ;; TESTING STATUS: Used by buy-sig.
