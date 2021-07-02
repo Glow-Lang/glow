@@ -54,7 +54,7 @@
               (&begin
                 (&simple-contract-prelude)
                 &define-tail-call
-                &define-simple-logging
+                (&define-commit-contract-call/simple self)
                 (&define-check-participant-or-timeout)
                 (&define-end-contract)
                 compiled-small-functions
@@ -63,6 +63,23 @@
           (.set! self bytes bytes-value)
           (.set! self labels labels-value)))
     }))
+
+;; Logging the data, simple version, optimal for messages less than 6000 bytes of data.
+;; TESTING STATUS: Used by buy-sig.
+(def (&define-commit-contract-call/simple self)
+  (def tmp@ #f)
+  (def native-asset (lookup-native-asset))
+  (&begin
+   [&jumpdest 'commit-contract-call] ;; -- return-address
+   ;; First, check deposit
+   (.call native-asset .commit-deposit! deposit tmp@)
+   calldatanew DUP1 CALLDATASIZE SUB ;; -- logsz cdn ret
+   SWAP1 ;; -- cdn logsz ret
+   DUP2 ;; logsz cdn logsz ret
+   0 SWAP2 ;; -- cdn logsz 0 logsz ret
+   DUP3 ;; -- 0 cdn logsz 0 logsz ret
+   CALLDATACOPY ;; -- 0 logsz ret
+   LOG0 JUMP))
 
 ;; Directives to generate bytecode for small functions, usually defined in the header.
 ;; Directive <- ConsensusCodeGenerator (Map SmallFunction <- Symbol)
