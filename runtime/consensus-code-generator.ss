@@ -15,7 +15,8 @@
     (Record
       program: [Program]
       name: [Symbol]
-      variable-offsets: [(OrFalse (Map Nat <- Symbol))]
+      static-block-ctx: [StaticBlockCtx]
+      variable-offsets: [(OrFalse (Map (Map Nat <- Symbol) <- Symbol))]
       labels: [(OrFalse (Map Nat <- Symbol))]
       bytes: [(OrFalse Bytes)]
 
@@ -26,6 +27,7 @@
       (lambda (some-program some-name some-timeout)
         {program: some-program
          name: some-name
+         static-block-ctx: (.call StaticBlockCtx .make some-program some-name)
          variable-offsets: #f
          labels: #f
          bytes: #f
@@ -105,12 +107,22 @@
 ;; Logging the data, simple version, optimal for messages less than 6000 bytes of data.
 ;; TESTING STATUS: Used by buy-sig.
 (def (&define-commit-contract-call/simple self)
+  (def sbc (.@ self static-block-ctx))
   (def tmp@ #f)
   (def native-asset (lookup-native-asset))
+  (def participants (.call StaticBlockCtx .get-participant-names sbc))
+  (def initial-label
+    (.@ (hash-ref (.@ self program interactions) (.@ self name))
+        initial-code-block-label))
   (&begin
    [&jumpdest 'commit-contract-call] ;; -- return-address
    ;; First, check deposit
    (.call native-asset .commit-deposit! deposit tmp@)
+   ;; For each participant, commit the withdrawls
+   (&begin*
+    (for/collect ((pn participants))
+      (def p (load-immediate-variable self initial-label pn Address))
+      (.call native-asset .commit-withdraw! p (.call StaticBlockCtx .get-withdraw sbc pn) tmp@)))
    calldatanew DUP1 CALLDATASIZE SUB ;; -- logsz cdn ret
    SWAP1 ;; -- cdn logsz ret
    DUP2 ;; logsz cdn logsz ret
@@ -209,11 +221,8 @@
 
     (['consensus:withdraw participant amount]
       (def native-asset (lookup-native-asset))
-      (def tmp@ #f)
-      [(.call native-asset .commit-withdraw!
-         (load-immediate-variable self function-name participant Address)
-         (load-immediate-variable self function-name amount native-asset)
-         tmp@)])
+      (def add-withdraw (.call StaticBlockCtx .add-withdraw! (.@ self static-block-ctx) participant))
+      [(load-immediate-variable self function-name amount native-asset) add-withdraw])
 
    (['return ['@tuple]]
       [])
