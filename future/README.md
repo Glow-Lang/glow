@@ -13,6 +13,14 @@ on a different chain, or even off-chain.
 Required Features:
 - Support for signing and verifying signatures.
 
+[multi_share_buy_sig.glow](./multi_share_buy_sig.glow): selling signatures with shared withdrawals and commission.
+
+Required Features:
+- Support for signing and verifying signatures.
+- Support for `ForAllParticipant` to loop through multiple participants.
+- Support for `quotient` method.
+
+
 ### Coin Flip
 
 [coinflip.glow](coinflip.glow): Simple gambling contract, even simpler than Rock, Paper, Scissors.

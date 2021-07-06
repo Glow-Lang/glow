@@ -10,37 +10,38 @@ let platformCommission amount = quotient(amount, 100);
 // For efficient refund on Ethereum, it could be an array / alist.
 @interaction
 let crowdfunding = (target: TokenAmount,
-                    expirationTime : Timestamp) => {
-   require! expirationTime > currentTime();
+		expirationTime : Timestamp) => {
+	require! expirationTime > currentTime();
 
-   let rec crowdfund = (ledger : Table(TokenAmount <- Participant),
-                        totalPledged: TokenAmount) => {
-     assert! totalPledged == totalAmount(ledger);
-     choice {
-       | ForAllParticipant (NewPledger) {
-           @NewPledger amount =
-             input(["Enter next pledge"], TokenAmount);
-           publish! NewPledger -> Pledge(amount);
-           deposit! NewPledger -> amount;
-           require! currentTime() < expirationTime;
-           crowdfund(Table.add(ledger, NewPledger, amount),
-                     totalPledged + amount);
+	let rec crowdfund = (ledger : Table(TokenAmount <- Participant),
+			totalPledged: TokenAmount) => {
+		assert! totalPledged == totalAmount(ledger);
+		choice {
+			| ForAllParticipant (NewPledger)
+				@NewPledger amount =
+				input(["Enter next pledge"], TokenAmount);
+			publish! NewPledger -> Pledge(amount);
+			deposit! NewPledger -> amount;
+			require! currentTime() < expirationTime;
+			crowdfund(Table.add(ledger, NewPledger, amount),
+					totalPledged + amount);
 
-       | publish! Organizer -> Success;
-           require! currentTime() >= expirationTime;
-           require! totalPledged >= target;
-           let commission = platformCommission(totalPledged);
-           withdraw! Platform <- commission;
-           withdraw! Organizer <- totalPledged - commission;
+			| publish! Organizer -> Success;
+			require! currentTime() >= expirationTime;
+			require! totalPledged >= target;
+			let commission = platformCommission(totalPledged);
+			withdraw! Platform <- commission;
+			withdraw! Organizer <- totalPledged - commission;
 
-       | ForAllParticipant(Pledger)
-           publish! Pledger -> Reclaim(amount);
-           require! currentTime() >= expirationTime;
-           require! totalPledged < target;
-           require! Table.get(ledger, Pledger) == amount;
-           withdraw! Pledger <- amount;
-           crowdfund(Table.remove(ledger, Pledger),
-                     totalPledged - amount);
-   }
-   crowdfund({}, 0);
+			| ForAllParticipant(Pledger)
+				publish! Pledger -> Reclaim(amount);
+			require! currentTime() >= expirationTime;
+			require! totalPledged < target;
+			require! Table.get(ledger, Pledger) == amount;
+			withdraw! Pledger <- amount;
+			crowdfund(Table.remove(ledger, Pledger),
+					totalPledged - amount);
+		}
+	}
+	crowdfund({}, 0);
 }
