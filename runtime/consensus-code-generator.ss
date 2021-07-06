@@ -108,7 +108,7 @@
 ;; TESTING STATUS: Used by buy-sig.
 (def (&define-commit-contract-call/simple self)
   (def sbc (.@ self static-block-ctx))
-  (def tmp@ #f)
+  (def tmp@ tmp100@)
   (def native-asset (lookup-native-asset))
   (def participants (.call StaticBlockCtx .get-participant-names sbc))
   (def initial-label
