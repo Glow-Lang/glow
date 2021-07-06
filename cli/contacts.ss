@@ -1,10 +1,11 @@
 (export #t)
 
 (import
-  :std/getopt :std/misc/hash :std/srfi/13
+  :std/format :std/getopt :std/misc/hash :std/misc/number :std/srfi/13 :std/sugar
   :clan/config :clan/files :clan/json :clan/multicall :clan/path :clan/syntax
   :clan/poo/brace :clan/poo/cli :clan/poo/io :clan/poo/mop :clan/poo/object :clan/poo/type
-  :mukn/ethereum/cli :mukn/ethereum/hex :mukn/ethereum/ethereum :mukn/ethereum/known-addresses)
+  :mukn/ethereum/cli :mukn/ethereum/hex :mukn/ethereum/ethereum :mukn/ethereum/known-addresses
+  (rename-in :mukn/glow-contacts/contacts (list-contacts list-contacts-db)))
 
 (define-type Contact
   (Record
@@ -16,10 +17,43 @@
 
 (def ContactList (Map String -> Contact))
 
-(def (load-contacts contacts-file)
+(def (load-json-contacts contacts-file)
   (unless (string? contacts-file) (set! contacts-file (default-contacts-file)))
   (def contacts-json (with-catch (lambda (_) (make-hash-table)) (cut read-file-json contacts-file)))
-  (def contacts (<-json ContactList contacts-json))
+  (<-json ContactList contacts-json))
+
+(def (load-contacts contacts-file)
+  (def contacts
+    (match contacts-file
+      ((? string?)
+       (load-json-contacts contacts-file))
+      (#f
+       ;; Load from the contacts database.
+       (def contacts-db (list-contacts-db))
+       (def contacts-hash (make-hash-table))
+       (for-each
+         (lambda (contact)
+           (let ((name (hash-ref contact 'name))
+                 (i 0))
+             (for-each
+               (lambda (identity)
+                 (increment! i)
+                 (let-hash identity
+                   (def nick (if (void? .nickname) (format "~a:~d" name i) .nickname))
+                   (def addr (address<-0x .address))
+                   (def chain (make-symbol .network))
+                   (hash-put! contacts-hash
+                              nick
+                              (.o (:: @ Contact)
+                                  (nickname nick)
+                                  (address addr)
+                                  (blockchain chain)
+                                  (type 'ethereum) ; TODO: don't hard-code
+                                  (tags []) ; TODO: don't hard-code
+                                  ))))
+               (hash-get contact 'identities))))
+         contacts-db)
+       contacts-hash)))
   (for-each
     (lambda (contact) (register-address (.@ contact nickname) (.@ contact address)))
     (hash-values contacts))
