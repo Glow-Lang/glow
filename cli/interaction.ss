@@ -230,11 +230,11 @@
          (timeout-in-blocks timeout-in-blocks)
          (role role)))
   (displayln)
-  (def identities (load-identities from: identities-file))
+  (def contacts (load-contacts contacts-file identities-file))
   (defvalues (agreement selected-role)
     (if agreement-json-string
       (start-interaction/with-agreement options (<-json InteractionAgreement (json<-string agreement-json-string)))
-      (start-interaction/generate-agreement options contacts: contacts-file)))
+      (start-interaction/generate-agreement options contacts)))
   (def environment
     (let ((role (symbolify selected-role)))
       (if handshake
@@ -268,9 +268,7 @@
          (selected-role (ask-role options role-names)))
   (values agreement selected-role)))
 
-(def (start-interaction/generate-agreement
-      options
-      contacts: contacts-file)
+(def (start-interaction/generate-agreement options contacts)
   (nest
     (let (application-name
             (get-or-ask options 'glow-app (λ () (ask-application)))))
@@ -286,7 +284,6 @@
     (let (selected-identity (ask-identity options)))
     (let (selected-role (ask-role options role-names)))
 
-    (let (contacts (load-contacts contacts-file)))
     (let (participants-table
            (get-or-ask-participants
              (hash-ref options 'participants)

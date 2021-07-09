@@ -6,7 +6,8 @@
   :clan/crypto/secp256k1
   :clan/poo/brace :clan/poo/cli :clan/poo/io :clan/poo/mop :clan/poo/object :clan/poo/type
   :mukn/ethereum/cli :mukn/ethereum/hex :mukn/ethereum/ethereum :mukn/ethereum/known-addresses :mukn/ethereum/network-config
-  :mukn/ethereum/json-rpc)
+  :mukn/ethereum/json-rpc
+  (rename-in :mukn/glow-contacts/contacts (add-identity add-identity-db)))
 
 ;; TODO:
 ;; - always populate contacts as well as identity and/or check consistency between nicknames of the two
@@ -15,43 +16,45 @@
 ;; - store some version schema identifier in the file or its name, and
 ;;   automatically (or at least manually) migrate from one version to the other.
 
-(def (secret-key-ring)
+(def (default-secret-key-ring)
   (xdg-config-home "glow" "secret-key-ring.json"))
 
+(define-type Identity
+  (.+
+   (Record
+    nickname: [String]
+    network: [Symbol]
+    address: [Address]
+    public-key: [String]
+    keypair: [Keypair])
+   {.make: (lambda (nickname (network 'ethereum) (address #f) (public-key #f) (keypair #f))
+             { nickname network address public-key keypair })
+    .json<-: (lambda (identity)
+               (with-slots (nickname network address public-key keypair) identity
+                 (hash (nickname nickname)
+                       (network network)
+                       (address (0x<-address address))
+                       (public_key public-key)
+                       (secret_key_path (if (and keypair
+                                                 (keypair-consistent? keypair)
+                                                 (string= (0x<-address address) (0x<-address (keypair-address keypair)))
+                                                 (string= public-key (string<- PublicKey (keypair-public-key keypair))))
+                                            (format "glow:~a" nickname)
+                                            (void))))))}))
+
 (def (load-identities from: (from #f))
-  (unless (string? from) (set! from (secret-key-ring)))
+  (unless (string? from) (set! from (default-secret-key-ring)))
   (with-catch
    (lambda (e)
      (displayln (error-message e))
      (error "Failed to read and parse the secret key ring file" from))
    (lambda ()
-     (if (file-exists? from)
-      (hash-key-value-map
+     (when (file-exists? from)
+       (hash-for-each
         (lambda (nickname keypair-json)
           (def keypair (import-keypair/json keypair-json))
-          (register-keypair nickname keypair)
-          (cons nickname keypair))
-        (read-file-json from))
-      (make-hash-table)))))
-
-(def (store-identities identities from: (from #f))
-  (unless (string? from) (set! from (secret-key-ring)))
-  (def identities-json
-    (hash-key-value-map
-      (lambda (nickname keypair)
-        (cons nickname (export-keypair/json keypair)))
-      identities))
-  (create-directory* (path-parent from))
-  (clobber-file from (string<-json identities-json) salt?: #t))
-
-(def (call-with-identities f from: (from #f))
-  (unless (string? from) (set! from (secret-key-ring)))
-  (def identities
-    (if (file-exists? from)
-      (load-identities from: from)
-      (make-hash-table)))
-  (f identities)
-  (store-identities identities from: from))
+          (register-keypair nickname keypair))
+        (read-file-json from))))))
 
 (def options/identities
   (make-options
@@ -78,23 +81,14 @@
   (unless secret-key (error "missing secret-key"))
   (unless nickname (error "missing nickname"))
   (def new-keypair (keypair<-secret-key (<-string Bytes32 secret-key)))
-  (call-with-identities
-   from: identities
-   (cut hash-put! <> (string-downcase nickname) new-keypair))
+  ;; (call-with-identities
+  ;;  from: identities
+  ;;  (cut hash-put! <> (string-downcase nickname) new-keypair))
   (if json
-      (display (string<-json (json<-identity (cons nickname new-keypair))))
-      (displayln "Added identity: " nickname " [ " (string<- Address (keypair-address new-keypair)) " ]")))
-
-(def (json<-identity identity)
-  (match identity
-    ([nickname . keypair]
-     (when (keypair-consistent? keypair)
-       (let ((address (string<- Address (keypair-address keypair)))
-             (pubkey (string<- PublicKey (keypair-public-key keypair))))
-         (hash (nickname nickname)
-               (address address)
-               (public_key pubkey)
-               (secret_key_path (format "glow:~a" nickname))))))))
+      (display (string<-json (.call Identity .json<- (.call Identity .make nickname new-keypair)))) ; WRONG
+      (printf "Added identity: ~a [~a]~%"
+              nickname
+              (string<- Address (keypair-address new-keypair)))))
 
 (define-entry-point (generate-identity
                      identities: (identities #f)
@@ -112,33 +106,23 @@
   (unless nickname (error "missing nickname option"))
   (def scoring (if prefix (scoring<-prefix prefix) trivial-scoring))
   (def keypair (generate-keypair scoring: scoring))
-  (call-with-identities
-   from: identities
-   (cut hash-put! <> (string-downcase nickname) keypair))
+  ;; (call-with-identities
+  ;;  from: identities
+  ;;  (cut hash-put! <> (string-downcase nickname) keypair))
   (if json
-      (display (string<-json (json<-identity (cons nickname keypair))))
-      (displayln "Generated identity: " nickname " [ " (string<- Address (keypair-address keypair)) " ]")))
+      (display (string<-json (.call Identity .json<- (.call Identity .make nickname keypair)))) ; WRONG
+      (printf "Generated identity: ~a [~a]~%"
+              nickname
+              (string<- Address (keypair-address keypair)))))
 
 (define-entry-point (remove-identity
-                     identities: (identities #f)
                      json: (json #f)
                      nickname: (nickname #f))
   (help: "Remove identity"
    getopt: (make-options
             [(option 'nickname "-N" "--nickname")] [] [options/identities]))
   (unless nickname (error "missing nickname option"))
-  (call-with-identities (cut hash-remove! <> (string-downcase nickname)) from: identities)
+  (delete-identity-by-nickname nickname)
   (if json
       (display (string<-json (hash (removed nickname))))
-      (displayln "Removed identity " nickname)))
-
-(define-entry-point (list-identities identities: (identities #f) json: (json #f))
-  (help: "List identities" getopt: options/identities)
-  (def identities (hash->list/sort (load-identities from: identities) string<?))
-  (if json
-      (display (string<-json (map json<-identity identities)))
-      (for-each
-       (match <>
-         ([nickname . keypair]
-          (displayln nickname " [ " (string<- Address (keypair-address keypair)) " ]")))
-       identities)))
+      (printf "Removed identity ~a~%" nickname)))

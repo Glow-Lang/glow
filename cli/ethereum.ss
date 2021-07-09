@@ -19,8 +19,7 @@
                               contacts: (contacts-file #f) identities: (identities-file #f))
   (help: "Send tokens from one account to the other"
    getopt: (make-options [] [(cut hash-restrict-keys! <> '(from to value))] options/send))
-  (load-identities from: identities-file)
-  (load-contacts contacts-file)
+  (def contacts (load-contacts contacts-file identities-file))
   (def currency (.@ (ethereum-config) nativeCurrency))
   (def token-symbol (.@ currency symbol))
   (def network (.@ (ethereum-config) network))
@@ -96,8 +95,7 @@
   (help: "Send ERC20 tokens from one account to the other"
    getopt: (make-options [] [(cut hash-restrict-keys! <> '(from erc20 to value))]
                          [options/send options/erc20]))
-  (load-identities from: identities-file)
-  (load-contacts contacts-file)
+  (load-contacts contacts-file identities-file)
   (def currency (.@ (ethereum-config) nativeCurrency))
   (def token-symbol (.@ currency symbol))
   (def network (.@ (ethereum-config) network))
