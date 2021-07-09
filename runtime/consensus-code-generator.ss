@@ -122,7 +122,7 @@
    (&begin*
     (for/collect ((pn participants))
       (def p (load-immediate-variable self initial-label pn Address))
-      (.call native-asset .commit-withdraw! p (.call StaticBlockCtx .get-withdraw sbc pn) tmp@)))
+      (.call native-asset .commit-withdraw! p (.call StaticBlockCtx .get-withdraw sbc pn) &sub-balance! tmp@)))
    calldatanew DUP1 CALLDATASIZE SUB ;; -- logsz cdn ret
    SWAP1 ;; -- cdn logsz ret
    DUP2 ;; logsz cdn logsz ret
