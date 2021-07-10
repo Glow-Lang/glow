@@ -100,7 +100,7 @@
             (for-each
               (lambda (identity)
                 (with-slots (nickname network address) identity
-                  (printf "↳ ~a ~a~a~%"
+                  (printf " ↳ ~a ~a~a~%"
                           network
                           (0x<-address address)
                           (if (string? nickname) (format " (~a)" nickname) ""))))

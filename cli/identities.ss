@@ -10,14 +10,10 @@
   (rename-in :mukn/glow-contacts/contacts (add-identity add-identity-db)))
 
 ;; TODO:
-;; - always populate contacts as well as identity and/or check consistency between nicknames of the two
 ;; - store only the secret-key, not address and public-key
 ;; - store they key type (ethereum, bitcoin, some HD wallet, etc.) -- BIP32 path?
 ;; - store some version schema identifier in the file or its name, and
 ;;   automatically (or at least manually) migrate from one version to the other.
-
-(def (default-secret-key-ring)
-  (xdg-config-home "glow" "secret-key-ring.json"))
 
 (define-type Identity
   (.+
@@ -28,6 +24,15 @@
     public-key: [String]
     keypair: [Keypair])
    {.make: (lambda (nickname (network 'ethereum) (address #f) (public-key #f) (keypair #f))
+             (when keypair
+               (unless (keypair-consistent? keypair)
+                 (error "Inconsistent keypair for" nickname))
+               (unless (string= (0x<-address address)
+                                (0x<-address (keypair-address keypair)))
+                 (error "Inconsistent address and keypair for" nickname))
+               (unless (string= public-key
+                                (string<- PublicKey (keypair-public-key keypair)))
+                 (error "Inconsistent public key and keypair for" nickname)))
              { nickname network address public-key keypair })
     .json<-: (lambda (identity)
                (with-slots (nickname network address public-key keypair) identity
@@ -35,12 +40,12 @@
                        (network network)
                        (address (0x<-address address))
                        (public_key public-key)
-                       (secret_key_path (if (and keypair
-                                                 (keypair-consistent? keypair)
-                                                 (string= (0x<-address address) (0x<-address (keypair-address keypair)))
-                                                 (string= public-key (string<- PublicKey (keypair-public-key keypair))))
+                       (secret_key_path (if keypair
                                             (format "glow:~a" nickname)
                                             (void))))))}))
+
+(def (default-secret-key-ring)
+  (xdg-config-home "glow" "secret-key-ring.json"))
 
 (def (load-identities from: (from #f))
   (unless (string? from) (set! from (default-secret-key-ring)))
@@ -58,7 +63,7 @@
 
 (def options/identities
   (make-options
-    [(option 'identities "-I" "--identities" ;;default: #f
+    [(option 'identities "-I" "--identities"
              help: "file to load and store identities")
      (flag 'json "-J" "--json"
            help: "write identities as JSON")]

@@ -40,13 +40,14 @@
           (0x<-address from) (decimal-string-ether<-wei (eth_getBalance from)) token-symbol
           (0x<-address to) (decimal-string-ether<-wei (eth_getBalance to)) token-symbol))
 
-(define-entry-point (faucet from: (from #f) to: (to #f) identities: (identities #f))
+(define-entry-point (faucet from: (from #f) to: (to #f)
+                     contacts: (contacts-file #f) identities: (identities-file #f))
   (help: "Fund some accounts from the network faucet"
    getopt: (make-options []
                          [(cut hash-restrict-keys! <> '(from to value))]
                          [options/identities options/to]))
   (def-slots (network faucets name nativeCurrency) (ethereum-config))
-  (load-identities from: identities) ;; Only needed for side-effect of registering keypairs.
+  (load-contacts contacts-file identities-file)
   (unless to (error "Missing recipient. Please use option --to"))
   (set! to (parse-address to))
   (cond
