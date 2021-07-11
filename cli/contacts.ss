@@ -1,15 +1,15 @@
 (export #t)
 
 (import
-  :std/format :std/getopt :std/iter :std/misc/hash :std/misc/number :std/srfi/13 :std/sugar
-  :clan/config :clan/files :clan/json :clan/multicall :clan/path :clan/syntax
+  :std/format :std/getopt :std/iter :std/misc/hash :std/misc/number :std/sort :std/srfi/13 :std/sugar
+  :clan/config :clan/crypto/secp256k1 :clan/files :clan/json :clan/multicall :clan/path :clan/syntax
   :clan/poo/brace :clan/poo/cli :clan/poo/io :clan/poo/mop :clan/poo/object :clan/poo/type
   (only-in :clan/poo/number Nat)
   :mukn/ethereum/cli :mukn/ethereum/hex :mukn/ethereum/ethereum :mukn/ethereum/known-addresses
-  (only-in ./identities Identity load-identities options/identities)
+  (only-in ./identities Identity load-keypairs)
   (rename-in :mukn/glow-contacts/contacts
-             (add-contact add-contact-db)
-             (list-contacts list-contacts-db)))
+             (add-contact add-contact.db)
+             (list-contacts list-contacts.db)))
 
 (define-type Contact
   (.+
@@ -35,7 +35,7 @@
   (<-json ContactList contacts-json))
 
 (def (load-contacts.db)
-  (for/collect (contact (list-contacts-db))
+  (for/collect (contact (list-contacts.db))
     (.o (:: @ Contact)
         (cid (hash-ref contact 'cid))
         (name (hash-ref contact 'name))
@@ -44,21 +44,22 @@
            (let* ((nickname (hash-ref identity 'nickname))
                   (network (make-symbol (hash-ref identity 'network)))
                   (address (address<-0x (hash-ref identity 'address)))
-                  (public-key (hash-get identity 'public_key))
+                  (public-key (let ((public_key (hash-get identity 'public_key)))
+                                (and (string? public_key)
+                                     (<-string PublicKey public_key))))
                   (keypair (hash-get keypair-by-address address)))
              (.call Identity .make nickname network address public-key keypair)))))))
 
-(def (load-contacts contacts-file identities-file)
-  (load-identities from: identities-file)
+(def (load-contacts contacts-file keypairs-file)
+  (load-keypairs from: keypairs-file)
   (match contacts-file
     ((? string?) (load-contacts.json contacts-file))
     (#f (load-contacts.db))))
 
 (def options/contacts
   (make-options
-   [(flag 'json "-J" "--json" help: "write contacts as JSON")]
-   []
-   [options/identities]))
+   [(flag 'json "-J" "--json" help: "write contacts as JSON")
+    (option 'keypairs "-K" "--keypairs" help: "file to load and store keypairs")]))
 
 (define-entry-point (add-contact name: (name #f) json: (json #f))
   (help: "Add contact"
@@ -67,7 +68,7 @@
             []
             [options/contacts]))
   (unless name (error "missing name"))
-  (def cid (add-contact-db name []))
+  (def cid (add-contact.db name []))
   (if json
       (displayln (string<-json (hash (cid cid) (name name))))
       (displayln "Added contact " name ", cid " cid)))
@@ -87,23 +88,27 @@
 
 (define-entry-point (list-contacts
                      contacts: (contacts-file #f)
-                     identities: (identities-file #f)
+                     keypairs: (keypairs-file #f)
                      json: (json #f))
   (help: "List contacts" getopt: options/contacts)
-  (def contacts (load-contacts contacts-file identities-file))
+  (def contacts (sort (load-contacts contacts-file keypairs-file)
+                      (lambda (c1 c2) (< (.@ c1 cid) (.@ c2 cid)))))
   (if json
       (displayln (string<-json (map (cut json<- Contact <>) contacts)))
       (for-each
         (lambda (contact)
           (with-slots (cid name identities) contact
-            (printf "~d. ~a~%" cid name)
+            (printf "~d. ~a~%" cid (match name
+                                     ((? string?) name)
+                                     ((? void?) "<anonymous>")))
             (for-each
               (lambda (identity)
-                (with-slots (nickname network address) identity
-                  (printf " ↳ ~a ~a~a~%"
+                (with-slots (nickname network address keypair) identity
+                  (printf " ↳ ~a ~a~a~a~%"
                           network
                           (0x<-address address)
-                          (if (string? nickname) (format " (~a)" nickname) ""))))
+                          (if (string? nickname) (format " (~a)" nickname) "")
+                          (if keypair " 🔑" ""))))
               identities)))
         contacts)))
 
