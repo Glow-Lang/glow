@@ -131,10 +131,10 @@
   (def new-public-key (keypair-public-key new-keypair))
   (def new-identity
     (.call Identity .make nickname network new-address new-public-key new-keypair))
-  (add-identity.db cid (json<- Identity new-identity))
   (call-with-keypairs
-   from: keypairs
-   (cut hash-put! <> (string-downcase nickname) new-keypair))
+   (cut hash-put! <> (string-downcase nickname) new-keypair)
+   from: keypairs)
+  (add-identity.db cid (json<- Identity new-identity))
   (if json
       (displayln (string<-json (json<- Identity new-identity)))
       (printf "Added identity: ~a [~a]~%" nickname (0x<-address new-address))))
@@ -163,14 +163,20 @@
 
 (define-entry-point (remove-identity
                      json: (json #f)
+                     keypairs: (keypairs #f)
                      nickname: (nickname #f))
   (help: "Remove identity"
    getopt: (make-options
             [(flag 'json "-J" "--json"
                    help: "write ouptut as JSON")
              (option 'nickname "-N" "--nickname"
-                     help: "nickname of identity to remove")]))
+                     help: "nickname of identity to remove")]
+            []
+            [options/keypairs]))
   (unless nickname (error "missing nickname"))
+  (call-with-keypairs
+   (cut hash-remove! <> (string-downcase nickname))
+   from: keypairs)
   (delete-identity-by-nickname nickname)
   (if json
       (displayln (string<-json (hash (removed nickname))))
