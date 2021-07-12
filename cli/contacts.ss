@@ -6,7 +6,7 @@
   :clan/poo/brace :clan/poo/cli :clan/poo/io :clan/poo/mop :clan/poo/object :clan/poo/type
   (only-in :clan/poo/number Nat)
   :mukn/ethereum/cli :mukn/ethereum/hex :mukn/ethereum/ethereum :mukn/ethereum/known-addresses
-  (only-in ./identities Identity load-keypairs)
+  (only-in ./identities Identity load-keypairs options/keypairs)
   (rename-in :mukn/glow-contacts/contacts
              (add-contact add-contact.db)
              (list-contacts list-contacts.db)))
@@ -58,8 +58,9 @@
 
 (def options/contacts
   (make-options
-   [(flag 'json "-J" "--json" help: "write contacts as JSON")
-    (option 'keypairs "-K" "--keypairs" help: "file to load and store keypairs")]))
+   [(flag 'json "-J" "--json" help: "write contacts as JSON")]
+   []
+   [options/keypairs]))
 
 (define-entry-point (add-contact name: (name #f) json: (json #f))
   (help: "Add contact"

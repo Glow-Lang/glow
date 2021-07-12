@@ -86,14 +86,18 @@
   (f keypairs)
   (store-keypairs keypairs to: (or to from)))
 
+(def options/keypairs
+  (make-options
+   [(option 'keypairs "-K" "--keypairs" help: "file to load and store keypairs")]))
+
 (def options/identities
   (make-options
     [(option 'cid "-C" "--cid" help: "contact ID of identity, #f for a new contact")
      (option 'network "-E" "--evm-network" help: "name of EVM network")
      (flag 'json "-J" "--json" help: "write identities as JSON")
-     (option 'keypairs "-K" "--keypairs" help: "file to load and store keypairs")
      (option 'nickname "-N" "--nickname" help: "nickname of identity")]
-    []))
+    []
+    [options/keypairs]))
 
 (define-entry-point (add-identity
                      cid: (cid #f)

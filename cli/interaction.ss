@@ -193,7 +193,7 @@
                      max-initial-block: (max-initial-block #f)
                      timeout-in-blocks: (timeout-in-blocks #f)
                      contacts: (contacts-file #f)
-                     identities: (identities-file #f)
+                     keypairs: (keypairs-file #f)
                      handshake: (handshake #f)
                      params: (params #f)
                      participants: (participants #f))
@@ -220,7 +220,7 @@
              (option 'handshake "-H" "--handshake" default: #f
                      help: "command to use to transfer handshakes")]
             [(lambda (opt) (hash-remove! opt 'test))]
-            [options/glow-path options/contacts options/identities
+            [options/glow-path options/contacts options/keypairs
              options/evm-network options/database options/test options/backtrace]))
   (def options
        (hash
@@ -230,7 +230,7 @@
          (timeout-in-blocks timeout-in-blocks)
          (role role)))
   (displayln)
-  (def contacts (load-contacts contacts-file identities-file))
+  (def contacts (load-contacts contacts-file keypairs-file))
   (defvalues (agreement selected-role)
     (if agreement-json-string
       (start-interaction/with-agreement options (<-json InteractionAgreement (json<-string agreement-json-string)))
