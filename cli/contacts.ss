@@ -41,14 +41,7 @@
         (name (hash-ref contact 'name))
         (identities
          (for/collect (identity (hash-ref contact 'identities []))
-           (let* ((nickname (hash-ref identity 'nickname))
-                  (network (make-symbol (hash-ref identity 'network)))
-                  (address (address<-0x (hash-ref identity 'address)))
-                  (public-key (let ((public_key (hash-get identity 'public_key)))
-                                (and (string? public_key)
-                                     (<-string PublicKey public_key))))
-                  (keypair (hash-get keypair-by-address address)))
-             (.call Identity .make nickname network address public-key keypair)))))))
+           (<-json Identity identity))))))
 
 (def (load-contacts contacts-file keypairs-file)
   (load-keypairs from: keypairs-file)
