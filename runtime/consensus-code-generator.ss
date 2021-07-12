@@ -116,13 +116,13 @@
         initial-code-block-label))
   (&begin
    [&jumpdest 'commit-contract-call] ;; -- return-address
-   ;; First, check deposit
-   (.call native-asset .commit-deposit! deposit tmp@)
+   ;; First, check deposit0
+   (.call native-asset .commit-deposit! deposit0 tmp@)
    ;; For each participant, commit the withdrawls
    (&begin*
     (for/collect ((pn participants))
       (def p (load-immediate-variable self initial-label pn Address))
-      (.call native-asset .commit-withdraw! p (.call StaticBlockCtx .get-withdraw sbc pn) &sub-balance! tmp@)))
+      (.call native-asset .commit-withdraw! p (.call StaticBlockCtx .get-withdraw sbc pn) &sub-balance0! tmp@)))
    calldatanew DUP1 CALLDATASIZE SUB ;; -- logsz cdn ret
    SWAP1 ;; -- cdn logsz ret
    DUP2 ;; logsz cdn logsz ret
@@ -217,7 +217,7 @@
 
     (['expect-deposited amount]
       (def native-asset (lookup-native-asset))
-      [(load-immediate-variable self function-name amount native-asset) &add-deposit!])
+      [(load-immediate-variable self function-name amount native-asset) &add-deposit0!])
 
     (['consensus:withdraw participant amount]
       (def native-asset (lookup-native-asset))

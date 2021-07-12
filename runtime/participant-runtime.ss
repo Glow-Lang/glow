@@ -651,7 +651,7 @@
   (append
    (frame-variables/consecutive-addresses frame@ params-start@
     ((pc UInt16 checkpoint-location)
-     (balance UInt256 balance)
+     (balance0 UInt256 balance)
      (timer-start Block timer-start)))
    ;; [UInt16 . active-participant-offset]
    ;; TODO: designate participant addresses as global variables that are stored outside of frames
