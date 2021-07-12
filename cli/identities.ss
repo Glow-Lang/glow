@@ -7,9 +7,7 @@
   :clan/poo/brace :clan/poo/cli :clan/poo/io :clan/poo/mop :clan/poo/object :clan/poo/type
   :mukn/ethereum/cli :mukn/ethereum/hex :mukn/ethereum/ethereum :mukn/ethereum/known-addresses :mukn/ethereum/network-config
   :mukn/ethereum/json-rpc
-  (rename-in :mukn/glow-contacts/contacts
-             (add-contact add-contact.db)
-             (add-identity add-identity.db)))
+  (rename-in ../contacts/db (add-contact add-contact.db) (add-identity add-identity.db)))
 
 ;; TODO:
 ;; - store only the secret-key, not address and public-key

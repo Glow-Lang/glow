@@ -7,9 +7,7 @@
   (only-in :clan/poo/number Nat)
   :mukn/ethereum/cli :mukn/ethereum/hex :mukn/ethereum/ethereum :mukn/ethereum/known-addresses
   (only-in ./identities Identity load-keypairs options/keypairs)
-  (rename-in :mukn/glow-contacts/contacts
-             (add-contact add-contact.db)
-             (list-contacts list-contacts.db)))
+  (rename-in ../contacts/db (add-contact add-contact.db) (list-contacts list-contacts.db)))
 
 (define-type Contact
   (.+
