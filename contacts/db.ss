@@ -8,13 +8,16 @@
 (import
  (only-in :clan/base vector->values)
  (only-in :clan/config xdg-config-home)
+ (only-in :clan/poo/object .@ with-slots)
+ (only-in :gerbil/gambit/os file-size)
  :std/db/dbi
  (only-in :std/db/sqlite sqlite-open)
  (only-in :std/iter for for/collect)
  (only-in :std/misc/hash hash-ref-set!)
  (only-in :std/srfi/1 append-map first)
  :std/sugar
- :std/text/json)
+ :std/text/json
+ (only-in :mukn/ethereum/network-config ethereum-networks))
 
 ;; The global contacts database connection handle.
 (def contact-db #f)
@@ -26,15 +29,83 @@
 ;; Open the global connection to the contacts database.
 (def (ensure-contact-db! path: (path #f) reopen: (reopen? #f))
   (unless (and contact-db (not reopen?))
-    (when contact-db (close-contact-db!))
-    (set! contact-db (sqlite-open (or path (default-contact-db-path))))
-    (sql-eval contact-db "PRAGMA foreign_keys=ON;")) ; SQLite-specific
+    (let* ((db-path (or path (default-contact-db-path)))
+           (db-exists (and (file-exists? db-path)
+                           (< 0 (file-size db-path)))))
+      (when contact-db (close-contact-db!))
+      (set! contact-db (sqlite-open db-path))
+      (sql-eval contact-db "PRAGMA foreign_keys=ON;") ; SQLite-specific
+      (unless db-exists (init-contact-db))))
   contact-db)
 
 ;; Close the global connection to the contacts database.
 (def (close-contact-db!)
   (when contact-db (sql-close contact-db))
   (set! contact-db #f))
+
+;; The contacts database schema.
+(def schema [
+ "CREATE TABLE contact (
+  cid INTEGER PRIMARY KEY,
+  name TEXT)"
+ "CREATE UNIQUE INDEX contact_name ON contact(name)"
+ "CREATE TABLE network (
+  name TEXT PRIMARY KEY NOT NULL,
+  description TEXT,
+  uri TEXT,
+  native_token TEXT NOT NULL)"
+ "CREATE TABLE identity (
+  cid INTEGER REFERENCES contact ON DELETE CASCADE,
+  network TEXT NOT NULL REFERENCES network,
+  address TEXT NOT NULL,
+  nickname TEXT,
+  public_key TEXT,
+  secret_key_path TEXT,
+  CHECK (length(address) = 42 AND substr(address, 1, 2) = '0x'),
+  UNIQUE (cid, network, address))"
+ "CREATE UNIQUE INDEX identity_nickname ON identity(nickname)"
+ "CREATE TABLE txnlog (
+  txid INTEGER PRIMARY KEY,
+  timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  command TEXT NOT NULL,
+  output TEXT NOT NULL DEFAULT '',
+  status INTEGER)"
+ "CREATE TABLE editlog (
+  edid INTEGER PRIMARY KEY,
+  timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  command TEXT NOT NULL,
+  arguments TEXT NOT NULL DEFAULT '[]')"])
+
+;; Initialize the contacts database.
+;; TODO: Schema migration.
+(def (init-contact-db)
+  (try
+    (sql-txn-begin contact-db)
+    (for ((stmt schema)) (sql-eval-query contact-db stmt))
+    (import-ethereum-networks)
+    (catch sql-error? => (lambda _ (sql-txn-abort contact-db)))
+    (finally (sql-txn-commit contact-db))))
+
+;; Import known Ethereum networks.
+(def (import-ethereum-networks)
+  (let ((stmt (sql-prepare
+               contact-db
+               "INSERT INTO network (name, description, uri, native_token) \
+                VALUES ($1, $2, $3, $4)")))
+    (hash-for-each
+     (lambda (key config)
+       (with-slots (shortName name rpc nativeCurrency) config
+         (when (string=? key shortName)
+           (let* ((description name)
+                  (name shortName)
+                  (uri (first rpc))
+                  (symbol (.@ nativeCurrency symbol))
+                  (token (match symbol
+                           ((? string?) symbol)
+                           ((? symbol?) (symbol->string symbol)))))
+             (sql-bind stmt name description uri token)
+             (sql-exec stmt)))))
+     ethereum-networks)))
 
 ;; Convert the result of an SQL query evaluation to a hash table
 ;; keyed on symbolicated column names.
@@ -99,9 +170,11 @@
 ;; List a/the known contact/s.
 (def (list-contacts (cid #f))
   (let ((contacts
-         (if cid
-             (hash<-sql-eval-query (ensure-contact-db!) "SELECT cid, name FROM contact WHERE cid=$1" cid)
-             (hash<-sql-eval-query (ensure-contact-db!) "SELECT cid, name FROM contact ORDER BY name"))))
+         (apply hash<-sql-eval-query
+                (ensure-contact-db!)
+                (if cid
+                    `("SELECT cid, name FROM contact WHERE cid=$1" ,cid)
+                    '("SELECT cid, name FROM contact ORDER BY name")))))
     (for/collect ((contact contacts))
       (let-hash contact
         (set! (hash-ref contact 'identities) (get-identities .cid)))
@@ -110,7 +183,11 @@
 ;; Insert a list of identities (hash tables) at once.
 ;; An internal helper function.
 (def (insert-identities cid identities)
-  (let ((stmt (sql-prepare (ensure-contact-db!) "INSERT INTO identity (cid, network, address, nickname, public_key, secret_key_path) VALUES ($1, $2, $3, $4, $5, $6)")))
+  (let ((stmt (sql-prepare
+               (ensure-contact-db!)
+               "INSERT INTO identity \
+                (cid, network, address, nickname, public_key, secret_key_path) \
+                VALUES ($1, $2, $3, $4, $5, $6)")))
     (for ((identity identities))
       (let-hash identity
         (sql-bind stmt cid .network .address .?nickname .?public_key .?secret_key_path))
@@ -126,7 +203,9 @@
     (try
       (sql-txn-begin db)
       ;; This INSERT currently depends on the SQLite-specific `rowid` pseudo-column.
-      (let ((cid (first (sql-eval-query db "INSERT INTO contact (name) VALUES ($1) RETURNING rowid" name))))
+      (let ((cid (first (sql-eval-query
+                         db
+                         "INSERT INTO contact (name) VALUES ($1) RETURNING rowid" name))))
         (when (and identities (> (length identities) 0))
           (insert-identities cid identities))
         cid)
@@ -166,4 +245,5 @@
 (def (get-identities cid)
   (hash<-sql-eval-query
    (ensure-contact-db!)
-   "SELECT network, address, nickname, public_key, secret_key_path FROM identity WHERE cid=$1" cid))
+   "SELECT network, address, nickname, public_key, secret_key_path \
+    FROM identity WHERE cid=$1" cid))
