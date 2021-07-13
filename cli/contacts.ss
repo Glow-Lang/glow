@@ -53,7 +53,9 @@
    []
    [options/keypairs]))
 
-(define-entry-point (add-contact name: (name #f) json: (json #f))
+(define-entry-point (add-contact name: (name #f)
+                                 json: (json #f)
+                                 keypairs: (keypairs-file #f))
   (help: "Add contact"
    getopt: (make-options
             [(option 'name "-N" "--name" help: "name of contact")]
@@ -65,7 +67,10 @@
       (displayln (string<-json (hash (cid cid) (name name))))
       (displayln "Added contact " name ", cid " cid)))
 
-(define-entry-point (remove-contact cid: (cid #f) name: (name #f) json: (json #f))
+(define-entry-point (remove-contact cid: (cid #f)
+                                    name: (name #f)
+                                    json: (json #f)
+                                    keypairs: (keypairs-file #f))
   (help: "Remove contact"
    getopt: (make-options [(option 'cid "-C" "--cid" help: "contact ID")
                           (option 'name "-N" "--name" help: "name of contact")]
