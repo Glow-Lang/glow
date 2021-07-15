@@ -652,6 +652,8 @@
    (frame-variables/consecutive-addresses frame@ params-start@
     ((pc UInt16 checkpoint-location)
      (balance0 UInt256 balance)
+     (balance1 UInt256 0)
+     (balance2 UInt256 0)
      (timer-start Block timer-start)))
    ;; [UInt16 . active-participant-offset]
    ;; TODO: designate participant addresses as global variables that are stored outside of frames
@@ -668,15 +670,6 @@
   (def result (<-json t (read-json (current-input-port))))
   (displayln)
   result)
-
-;; Block <- Frame
-(def (timer-start<-frame-variables frame-variables)
-  (cdadr frame-variables))
-
-;; TODO: use [t . v] everywhere instead of [v t] ? and unify with sexp<-state in participant-runtime
-;; Sexp <- Frame
-(def (sexp<-frame-variables frame-variables)
-  `(list ,@(map (match <> ([v t] `(list ,(sexp<- t v) ,(sexp<- Type t)))) frame-variables)))
 
 ;; json-object-ref : JsonObject StringOrSymbol -> Json
 (def (json-object-ref j k)
