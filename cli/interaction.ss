@@ -165,14 +165,26 @@
                       [nickname . dependent-pair])))
                 (hash->list/sort address-by-nickname string<?))))))
 
+(def (relative-to x y)
+  (cond ((number? y) y)
+        ((not (number? x)) (error "Expected a starting number"))
+        ((not (string? y)) (error "Expected a string offset"))
+        ((string-prefix? "+" y)
+         (+ x (.call Nat .<-string (substring/shared y 1 (string-length y)))))
+        ((string-prefix? "-" y)
+         (- x (.call Nat .<-string (substring/shared y 1 (string-length y)))))
+        (else (.call Nat .<-string y))))
+
 (def (ask-max-initial-block options current-block-number)
-  (get-or-ask options
-    'max-initial-block
-    (λ ()
-      (ask-number
-        (string-append
-          "Max initial block "
-          "[ Current block number is " (number->string current-block-number) " ]")))))
+  (relative-to
+   current-block-number
+   (get-or-ask options
+               'max-initial-block
+               (λ ()
+                 (ask-number
+                  (string-append
+                   "Max initial block "
+                   "[ Current block number is " (number->string current-block-number) " ]"))))))
 
 (def (compile-contract contract.glow)
   (def compiler-output (run-passes contract.glow pass: 'project show?: #f))
