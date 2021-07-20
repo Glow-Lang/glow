@@ -200,6 +200,8 @@
 ;; TODO: accept alternative ethereum networks, etc
 (define-entry-point (start-interaction
                      agreement: (agreement-json-string #f)
+                     glow-app: (glow-app #f)
+                     identity: (identity #f)
                      interaction: (interaction #f)
                      role: (role #f)
                      max-initial-block: (max-initial-block #f)
@@ -213,18 +215,22 @@
    getopt: (make-options
             [(option 'agreement "-A" "--agreement" default: #f
                      help: "interaction agreement as JSON")
-             (option 'params "-P" "--params" default: #f
-                     help: "contract parameters as JSON")
-             (option 'participants "-p" "--participants" default: #f
-                     help: "participant mapping as JSON")
+             (option 'glow-app "-G" "--glow-app" default: #f
+                     help: "the name of the Glow DApp")
              ;; TODO: add an option for supplying single parameters/participants with
              ;; more ergonomic syntax than JSON, like --param foo=bar. We want to be
              ;; able to specify this mutliple times, which will require upstream
              ;; changes in gerbil's getopt.
+             (option 'params "-P" "--params" default: #f
+                     help: "contract parameters as JSON")
+             (option 'participants "-p" "--participants" default: #f
+                     help: "participant mapping as JSON")
              (option 'interaction "-I" "--interaction" default: #f
                      help: "path and name of interaction")
+             (option 'identity "-M" "--my-identity" default: #f
+                     help: "my identity for the interaction")
              (option 'role "-R" "--role" default: #f
-                     help: "role you want to play in the interaction")
+                     help: "role to play in the interaction")
              (option 'max-initial-block "-B" default: #f
                      help: "maximum block number the contract can begin at")
              (option 'timeout-in-blocks "-T" "--timeout-in-blocks" default: #f
@@ -236,6 +242,8 @@
              options/evm-network options/database options/test options/backtrace]))
   (def options
        (hash
+         (glow-app glow-app)
+         (identity identity)
          (params (string->json-object (or params "{}")))
          (participants (string->json-participant-map (or participants "{}")))
          (max-initial-block max-initial-block)
