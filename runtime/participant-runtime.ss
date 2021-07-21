@@ -4,6 +4,7 @@
   :gerbil/gambit/bits :gerbil/gambit/bytes :gerbil/gambit/threads :gerbil/gambit/ports
   :std/pregexp
   :std/format :std/iter :std/misc/hash :std/sugar :std/misc/number :std/misc/list :std/sort :std/srfi/1 :std/text/json
+  (for-syntax :std/stxutil)
   :clan/base :clan/exception :clan/io :clan/json :clan/number
   :clan/path :clan/path-config :clan/ports :clan/syntax :clan/timestamp
   :clan/poo/object :clan/poo/brace :clan/poo/io :clan/poo/debug :clan/debug :clan/crypto/random
@@ -618,6 +619,25 @@
     (else
       (reduce-expression self expression))))
 
+(defsyntax frame-variables/consecutive-addresses
+  (lambda (stx)
+    (syntax-case stx ()
+      ((_ start end ((name type value) ...))
+       (with-syntax (((name@ ...) (stx-map (cut format-id #'start "~a@" <>) #'(name ...))))
+         #'(let ((types (list type ...)))
+               (check-consecutive-addresses start end '(name ...) types (list name@ ...))
+               (map cons types (list value ...))))))))
+
+;; check-consecutive-addresses : Int Int [Listof Sym] [Listof Type] [Listof Int] -> Void
+(def (check-consecutive-addresses start end names types addresses)
+  (def i
+    (for/fold (i start) ((n names) (t types) (a addresses))
+      (unless (= i a)
+        (error (format "check-consecutive-addresses: name = ~a, i = ~a, a = ~a" n i a)))
+      (+ i (.@ t .length-in-bytes))))
+  (unless (= i end)
+    (error (format "check-consecutive-addresses: i = ~a, end = ~a" i end))))
+
 ;; : Frame <- Runtime Block (Table Offset <- Symbol) Symbol
 (def (create-frame-variables self timer-start code-block-label code-block-participant)
   (def consensus-code-generator (.@ self consensus-code-generator))
@@ -628,9 +648,11 @@
   (def balance (.@ self contract-balance))
   (def live-variables (lookup-live-variables (.@ self program) (.@ self name) code-block-label))
   ;; TODO: ensure keys are sorted in both hash-values
-  [[UInt16 . checkpoint-location]
-   [UInt256 .  balance]
-   [Block . timer-start]
+  (append
+   (frame-variables/consecutive-addresses frame@ params-start@
+    ((pc UInt16 checkpoint-location)
+     (balance UInt256 balance)
+     (timer-start Block timer-start)))
    ;; [UInt16 . active-participant-offset]
    ;; TODO: designate participant addresses as global variables that are stored outside of frames
    (map
@@ -638,7 +660,7 @@
        (def variable-type (lookup-type (.@ self program) variable-name))
        (def variable-value (hash-get (.@ self environment) variable-name))
        [variable-type . variable-value])
-     (sort live-variables symbol<?))...])
+     (sort live-variables symbol<?))))
 
 (def (interaction-input t s)
   (printf (string-append CYAN "\n~a [~s]\n" END) (if (u8vector? s) (bytes->string s) s) (.@ t sexp))
