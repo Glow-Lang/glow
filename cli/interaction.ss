@@ -170,9 +170,15 @@
         ((not (number? x)) (error "Expected a starting number"))
         ((not (string? y)) (error "Expected a string offset"))
         ((string-prefix? "+" y)
+         ;; Positive offset from x.
          (+ x (.call Nat .<-string (substring/shared y 1 (string-length y)))))
         ((string-prefix? "-" y)
+         ;; Negative offset from x.
          (- x (.call Nat .<-string (substring/shared y 1 (string-length y)))))
+        ((string-prefix? "%" y)
+         ;; Round x up to the nearest multiple of y.
+         (let ((y (.call Nat .<-string (substring/shared y 1 (string-length y)))))
+           (* (ceiling (/ x y)) y)))
         (else (.call Nat .<-string y))))
 
 (def (ask-max-initial-block options current-block-number)
@@ -231,7 +237,7 @@
                      help: "my identity for the interaction")
              (option 'role "-R" "--role" default: #f
                      help: "role to play in the interaction")
-             (option 'max-initial-block "-B" default: #f
+             (option 'max-initial-block "-B" "--max-initial-block" default: #f
                      help: "maximum block number the contract can begin at")
              (option 'timeout-in-blocks "-T" "--timeout-in-blocks" default: #f
                      help: "number of blocks after which to time out")

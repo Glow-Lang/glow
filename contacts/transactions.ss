@@ -79,13 +79,13 @@
        (unless (string=? source-network dest-network)
          (error (format "Can't buy signature across networks ~a/~a" source-network dest-network)))
        `("glow" "start-interaction"
+         "--max-initial-block" "%10000"
+         "--timeout-in-blocks" "1000"
          "--glow-app" "buy_sig"
          "--role" ,role
          "--my-identity" ,nickname
          "--database" ,nickname
          "--evm-network" ,source-network
-         "-B" "3000000" ; FIXME
-         "-T" "1000" ; FIXME
          "--handshake" ,handshake
          "--participants" ,(json-object->string participants)
          "--params" ,(json-object->string parameters))))
