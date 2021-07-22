@@ -3,16 +3,17 @@
 (export check-txid! start-transaction transaction-output)
 
 (import
- :gerbil/gambit/ports ; process-status
- :gerbil/gambit/threads ; spawn
- :std/db/dbi ; SQL
- :std/format ; format
- :std/misc/hash ; hash-ref-set!
- :std/misc/ports ; read-all-as-lines
- :std/misc/process ; run-process
- :std/srfi/1 ; first
- :std/sugar ; let-hash
- :std/text/json ; JSON
+ :clan/ffi
+ :gerbil/gambit/ports
+ :gerbil/gambit/threads
+ :std/db/dbi
+ :std/format
+ :std/misc/hash
+ :std/misc/ports
+ :std/misc/process
+ (only-in :std/srfi/1 first)
+ :std/sugar
+ :std/text/json
  :mukn/glow/contacts/db)
 
 (def (check-txid! txid)
@@ -101,7 +102,9 @@
   (let poll ((count 0)
              (status #f))
     (if (>= count max-poll)
-        (finalize -1) ; timeout
+        (begin
+          (kill (process-pid process))
+          (finalize -1)) ; timeout
         (begin
           (update (read-all-as-string process))
           (set! status (process-status process 0 #f))
