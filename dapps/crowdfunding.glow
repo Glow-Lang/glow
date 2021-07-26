@@ -1,0 +1,53 @@
+/* Here is how we can express the benchmark “crowdfunding” application, wherein pledgers pool money into a common account, the contents of which will be disbursed to the organizer if and only if a total target amount is reached before deadline. The hosts of the crowdfunding platform earn a small commission on the assets raised, which limits how much the organizer can take from the pledgers if he doesn’t reach the target. */
+
+
+data Action = Pledge(TokenAmount) | Collect | Reclaim(TokenAmount);
+
+let platformCommission amount = quotient(amount, 100);
+
+let crowdfunding =
+  (Organizer: Participant, Platform: Participant,
+   target: TokenAmount, expirationTime : Timestamp) => {
+   require! expirationTime > currentTime();
+
+   let rec crowdfund = (ledger : Table(TokenAmount <- Participant),
+                        totalPledged: TokenAmount) => {
+     assert! totalPledged == totalAmount(ledger);
+     choice {
+       | ForAllParticipant (NewPledger) {
+           @NewPledger amount =
+             input(["Enter next pledge"], TokenAmount);
+           publish! NewPledger -> Pledge(amount);
+           deposit! NewPledger -> amount;
+           require! currentTime() < expirationTime;
+           crowdfund(Table.add(ledger, NewPledger, amount),
+                     totalPledged + amount);
+
+       | publish! Organizer -> Collect;
+           require! currentTime() >= expirationTime;
+           require! totalPledged >= target;
+           let commission = platformCommission(totalPledged);
+           withdraw! Platform <- commission;
+           withdraw! Organizer <- totalPledged - commission;
+
+       | ForAllParticipant(Pledger)
+           publish! Pledger -> Reclaim(amount);
+           require! currentTime() >= expirationTime;
+           require! totalPledged < target;
+           require! Table.get(ledger, Pledger) == amount;
+           withdraw! Pledger <- amount;
+           crowdfund(Table.remove(ledger, Pledger),
+                     totalPledged - amount);
+   }
+   crowdfund({}, 0);
+}
+
+
+/ * This application illustrates several principles not in the previous application:
+Defining an algebraic data type to encode a choice of actions taken in the DApp.
+A choice {} between several actions, by potentially different participants.
+Opening the contract to anyone with ForAllParticipant.
+Explicit timeout handling by comparing currentTime() to a deadline.
+Recursion with let rec.
+
+The total number of lines (about 40) is much less than the hundreds of lines required in Solidity, Scilla, or substrate. The result is portable, unlike with the previous languages. The compiler outputs include client code, as with substrate and unlike Solidity or Scilla. The security is improved, as actions are clearly attached to participants, and the system can prove that contract accounts are balanced at all times. Unlike the substrate tutorial example, our contract does ensure that the “collection” transaction only counts contributions in the total. It demonstrates use of such contract wide data by computing a commission to the crowdfunding platform (that also serves as deterrent to self-contribution by the organizer). */
