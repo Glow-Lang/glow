@@ -48,6 +48,4 @@ Defining an algebraic data type to encode a choice of actions taken in the DApp.
 A choice {} between several actions, by potentially different participants.
 Opening the contract to anyone with ForAllParticipant.
 Explicit timeout handling by comparing currentTime() to a deadline.
-Recursion with let rec.
-
-The total number of lines (about 40) is much less than the hundreds of lines required in Solidity, Scilla, or substrate. The result is portable, unlike with the previous languages. The compiler outputs include client code, as with substrate and unlike Solidity or Scilla. The security is improved, as actions are clearly attached to participants, and the system can prove that contract accounts are balanced at all times. Unlike the substrate tutorial example, our contract does ensure that the “collection” transaction only counts contributions in the total. It demonstrates use of such contract wide data by computing a commission to the crowdfunding platform (that also serves as deterrent to self-contribution by the organizer). */
+Recursion with let rec. */
