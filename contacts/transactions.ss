@@ -90,6 +90,40 @@
          "--handshake" ,handshake
          "--participants" ,(json-object->string participants)
          "--params" ,(json-object->string parameters))))
+    ((or "rps-A" "rps-B")
+     (let* ((amount (string->number (hash-ref args 'amount)))
+            (price (format "0x~a" (number->string amount 16))) ; ~x 0-pads
+            (hand (hash-ref args 'hand))
+            (role (match action
+                    ("rps-A" "A")
+                    ("rps-B" "B")))
+            (a (hash-ref args 'a))
+            (b (hash-ref args 'b))
+            (nickname (hash-ref (match action ("rps-A" a) ("rps-B" b)) 'nickname))
+            (a-network (hash-ref (hash-ref args 'a) 'network))
+            (b-network (hash-ref (hash-ref args 'b) 'network))
+            (a-addr (hash-ref (hash-ref args 'a) 'address))
+            (b-addr (hash-ref (hash-ref args 'b) 'address))
+            (participants (hash (A a-addr) (B b-addr)))
+            (parameters (hash (wagerAmount price)))
+            (handshake (match action ; FIXME
+                         ("rps-A" "nc -l -p 3141")
+                         ("rps-B" "nc localhost 3141"))))
+       (unless (string=? a-network b-network)
+         (error (format "Can't play across networks ~a/~a" a-network b-network)))
+       (when (string? hand)
+         (setenv "INPUT" hand))
+       `("glow" "start-interaction"
+         "--max-initial-block" "%10000"
+         "--timeout-in-blocks" "1000"
+         "--glow-app" "rps_simple"
+         "--role" ,role
+         "--my-identity" ,nickname
+         "--database" ,nickname
+         "--evm-network" ,a-network
+         "--handshake" ,handshake
+         "--participants" ,(json-object->string participants)
+         "--params" ,(json-object->string parameters))))
     (else
      (error (format "Unsupported action ~a" action)))))
 
