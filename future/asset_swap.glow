@@ -7,7 +7,7 @@ let swap = (A: Participant, basket1: Assets,
   deposit! B -> basket2;
   withdraw! B <- basket1;
   withdraw! A <- basket2;
-}
+};
 
 
 /* In the above example, a function swap is defined that exchanges two baskets of assets between two participants. It can be called with an expression: 
