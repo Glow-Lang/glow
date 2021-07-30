@@ -183,8 +183,8 @@ include:
 
 ### Rationale For High Level Design Decisions
 
-This section provides a brief rational for some of the high-level design
-decisions described above.
+This section provides a brief rationale for some of the high-level
+design decisions described above.
 
 #### Explicit Capture Lists
 
