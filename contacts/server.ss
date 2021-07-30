@@ -76,7 +76,7 @@
 
 ;; Can't get a generic contact.
 (def (contact/GET)
-  (respond/JSON-error code: 404 "Try /contact/CID"))
+  (respond/JSON-error code: 404 "Try /contacts/contact/CID"))
 
 ;; Add a new contact.
 (def (contact/POST)
@@ -132,7 +132,7 @@
 
 ;; Can't get a generic transaction.
 (def (run-transaction/GET)
-  (respond/JSON-error code: 404 "Try /transaction/TXID"))
+  (respond/JSON-error code: 404 "Try /contacts/transaction/TXID"))
 
 ;; Start a new transaction.
 (def (run-transaction/POST)

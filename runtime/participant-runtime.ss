@@ -641,11 +641,17 @@
      (sort live-variables symbol<?))...])
 
 (def (interaction-input t s)
-  (printf (string-append CYAN "\n~a [~s]\n" END) (if (u8vector? s) (bytes->string s) s) (.@ t sexp))
-  (display (string-append CYAN "> " END))
-  (def result (<-json t (read-json (current-input-port))))
-  (displayln)
-  result)
+  (def env-input (ignore-errors (getenv "INPUT")))
+  (match env-input
+    ((? string?)
+      ;; FIXME: This does not allow for multiple inputs.
+     (<-json t (string->json-object env-input)))
+    (#f
+     (printf (string-append CYAN "\n~a [~s]\n" END) (if (u8vector? s) (bytes->string s) s) (.@ t sexp))
+     (display (string-append CYAN "> " END))
+     (def result (<-json t (read-json (current-input-port))))
+     (displayln)
+     result)))
 
 ;; Block <- Frame
 (def (timer-start<-frame-variables frame-variables)
