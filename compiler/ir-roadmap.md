@@ -151,7 +151,9 @@ detail.
 
 # Proposal
 
-We define two additional IRs.
+We define two additional IRs, and suggest extensions to untyped Plutus
+Core for our use. We also explore alternative implementation options
+in the event that IOG does not want to implement proposed extensions.
 
 # Lambda Calculus
 
@@ -179,125 +181,191 @@ include:
 - The IR is not type checked. Down the line, we will likely introduce a
   typed variant, but we leave this for future work.
 
-TODO: organize the rest of this.
+### Rationale For High Level Design Decisions
 
-One of these is a generic purely-functional lambda-calculus, that we'll
-convert to plutus core or emit a lower-level IR separately. Rather than
-imperative side-effecting statements such as `set-participant`,
-`withdraw!` and so forth, we will have an explicit effect monad.
-Code in this IR will remain in ANF. For example:
+This section provides a brief rational for some of the high-level design
+decisions described above.
 
-    (let [f (lambda ...)]
-      (eff-bind
-        (set-participant A)
-        f))
+#### Explicit Capture Lists
+
+Lambdas in this IR have explicit capture lists. i.e. instead of:
+
+```scheme
+(lambda
+    (x) ; parameters
+
+    y ; body
+)
+```
+
+You would have
+
+```scheme
+(lambda
+    (y) ; list of varibles to capture; should include all
+        ; free variables in the body.
+
+    (x) ; parameters.
+
+    y ; body
+)
+```
+
+This is desirable for two reasons:
+
+- When emitting low-level IR, we will have to explicitly construct
+  closures in memory. This tells us what values to pack into the
+  allocated closure.
+- If we end up needing to do our own serialization for Plutus terms,
+  this will allow us to easily identify what needs to be included in
+  in a continuation.
+
+#### Effect Monad
+
+Side-effecting operations happen inside an explicit effect monad; we
+would have this as part of our IR's AST:
+
+```
+Effect ::=
+    ;; Standard monad things:
+    | (eff-pure x) ; Return x without doing anything.
+    | (eff-bind x f) ; Run x, then pass its result to f
+    ;; A Glow-effect specific operation:
+    | (eff-op EffOp)
+
+EffOp ::=
+    | (set-participant A) ; set the current participant to A
+    | (require! x) ; assert that x is true
+    | (deposit! x) ; current participant should deposit funds x
+    | (withdraw! A x) ; A should withdraw funds x
+    ;; ...
+```
+
+This approach has the following advantages:
+
+- The continuation-passing nature of monads means that any operation
+  that could commit the current transaction will not rely on the state
+  of the call stack, which is critical since the call stack cannot be
+  saved across transactions.
+- It allows greater optimization, since we can readily identify pure
+  terms.
+- It is clear how this could translate to Plutus, since Plutus is itself
+  a purely-functional lambda calculus. Likely on Plutus this will be
+  some combination of State + Reader monad, with support for serializing
+  its continuation should the transaction need to be committed.
+
+A possible refinement of this is to actually have two separate effect
+monads:
+
+- One which contains operations that can commit the current transaction
+  (e.g. set-participant)
+- One that only contains operations that do *not* commit the current
+  transaction (but may abort it).
+- An operator to lift the latter into the former.
+
+This would allow somewhat greater optimization; the call stack could
+still be used for the latter monad. A first iteration of the
+implementation should use the one-monad solution for simplicity though.
+
+#### High Level Primitives
+
+We keep things like ADTs, match, tuples etc. abstract at this stage,
+since their representations between Plutus and lower level IRs are
+likely to be unrelated. e.g. ADTs will be scott-encoded on Plutus,
+but will likely use a tag word on low level targets instead.
 
 
-    (let [g (lambda ...)]
-      (eff-bind
-        (deposit! ...)
-        g))
+#### Untyped
 
-When compiling this IR to Plutus, the effect monad will be a state
-monad that tracks expected deposit and withdrawal amounts, much as
-we currently do with global variables on EVM. For operations such
-as `set-participant` which end the current transaction, Code emitted
-for `eff-bind` will also be responsible for serializing the continuation
-passed as its second argument and comparing it to the output of the
-transaction.
+This IR is untyped for now, mainly for simplicity. In the future, we
+may replace this with or add a typed IR based on F-sub (System F with
+subtyping), which will make program transformations less error prone
+and open up some new possibilities like evidence translation.
 
-Ideally, we would like IOG to add built-in functions we can call to
-serialize & deserialize an arbitrary term, making this easy.
+### AST Sketch
+
+This section contains a rough sketch of the AST corresponding to this
+IR.
+
+```
+;; expressions
+Exp ::=
+    ;; Let bindings. Since this IR is in ANF, a typical program will
+    ;; contain *many* of these:
+    (let Var Exp Exp)
+
+    ;; standard lambda calculus stuff:
+    (lambda (Var ...) (Var ...) Exp) ; lambdas, with capture lists
+    Var ;; variables
+    (apply Var (Var ...)) ; function application.
+
+    ;; Monadic operations.
+    (eff-bind Var Var)
+    (eff-pure Var)
+    (eff-op EffOp)
+
+    Constant
+    Builtin
+
+Constant ::=
+    (bool Boolean)
+    (integer IntType Integer)
+    ; maybe others
+
+Builtin
+    add ; integer addition
+    sub ; subtraction
+    ...
+    or ; boolean or
+    and
+    ...
+
+IntType ::=
+    (int-type (signed? : Boolean) (num-bits : Integer))
+
+EffOp ::=
+    (get-participant)
+    (set-participant! Var)
+    (deposit! Var)
+    (withdraw! Var Var) ; participant, funds
+    (require! Var) ; Abort if Var is #f.
+    ... ; other glow operators.
+```
+
+# Plutus Target
+
+Cardano is a UTXO blockchain, where the on-chain script is a validator;
+the transaction includes the output state, and the script merely
+verifies that the output state is valid.
+
+The Glow compiler will have to derive a validation script from the
+source-level program, which computes the new state.
+
+The most straightforward way of doing this is to generate a program
+that computes the new state and then verifies that it matches what's
+in the transaction (though in the future we can also support state
+channels etc).
+
+There is however one major challenge to doing this: the output state
+must be in a form that can be compared. Plutus Core does not currently
+provide a way for the on-chain script to compare arbitrary terms, or
+to (de)serialize them.
+
+We propose extending Untyped Plutus Core with operations for serializing
+and deserializing arbitrary terms. This massively simplifies the job
+of the glow compiler, which can then, on transaction commit, simply
+serialize the continuation passed to `eff-bind`, and compare it to what
+is in the transaction's outputs.
 
 If we are unable to get such operations added, we could in the worst case
 write an interpreter for our IR that runs on plutus, allowing us to
 inspect the (interpreted) terms. This would introduce overheads, but
 that is likely the case with any scheme we use to serialize
-continuations. We may be able to optimize this such that some code
-can be compiled more directly to plutus core (and treated as a builtin
-by our interpreter), if it can be shown that doing so does not introduce
-persistent state that cannot be serialized.
-
-For now, this lambda calculus will be untyped, and we will target
-untyped plutus core. There are two reasons for this:
-
-- In the short term, propagating the types through the compiler is more
-  work, and currently we have already lost some of this information by
-  the time we get to `project`.
-- Typed plutus core is based on System F-Omega, which introduces an
-  impedance mismatch with Glow's type system, which is based on ML-sub.
-  The problem is that the latter supports subtyping, while the former
-  does not.
-
-Longer term, we may introduce our own typed IR based on F-sub (System F
-with  subtyping), and use evidence translation to compile away run-time
-uses of subtyping -- independent of plutus, this could be helpful when
-mapping things like records to lower-level memory representations in
-lower level systems -- but we leave this as future work.
-
-XXX
-
-Cardano is a UTXO blockchain, where the on-chain script is a validator.
-We will generate a script that computes the new state and then verifies
-that it matches what's in the transaction (though in the future we can
-also support state channels etc).
-
-We will have to choose various encodings for higher-level constructs.
-I suspect in the long term we will have our own IR based on F-sub. We
-can use evidence translation to compile away subtyping when compiling
-to the F-omega expected by Plutus core. But in the short term we can
-also just do type erasure and compile to untyped plutus core, which
-will work well at least until we end up needing to pick representations
-of things like records. (we can also debate the benefits of going
-through typed plutus core at all, but that's down the road).
-
-## Rough stab (untyped)
-
-exp ::=
-    (lam v exp)
-    (var v)
-    (app exp exp)
-    (eff-bind exp exp)
-    (eff-pure exp)
-    (eff-builtin eff-op exp...)
-    (builtin op exp...)
-
-eff-op ::=
-    get-participant
-    set-participant!
-    deposit!
-    withdraw!
-    ...
-
-op ::= ;; platform dependent; this can vary from one stage of compilation
-       ;; to the next; we might start with *glow* builtin ops and then
-       ;; translate them to the target platform.
-
-
-When running on-chain, the effect monad itself will be implemented as a
-combination reader + state monad, where reader part holds the data the
-validator can see, and the state part contains the current state of the
-contract, including balance, expected deposits, pending withdrawals.
-When the effect-monad hits an operation that ends the transaction (e.g.
-changing the participant) it verifies that the output state agrees with
-both the monad's state and the continuation passed to bind. It also
-verifies that withdrawals & deposits agree with the contents of the
-transaction.
-
-QUESTIONS:
-
-- How do we check equality of the continuation on plutus?
-  - This does not appear to be possible currently; we may actually just
-    have to write a plutus contract that interprets our own IR, since we
-    *need* to compare it. This introduces overhead, which may be a
-    problem.
-  - Alternatively, we could try to transform the necessary program state
-    into a first-order form, though this is not entirely without
-    overhead of its own. This is a possible route for optimization
-    later, but doesn't make sense to implement in a first version. If
-    we can convince IOG to add needed serialization primitives to
-    plutus core itself, we may be able to skip this, and just scrap
-    the interpreter entirely once those are ready.
+continuations, since we must not encode them as lambdas. We may be
+able to optimize this such that some code can be compiled more directly
+to plutus core (and treated as a builtin by our interpreter), if it
+can be shown that doing so does not introduce persistent state
+that cannot be serialized.
 
 # Low Level IR
 
