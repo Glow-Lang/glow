@@ -181,12 +181,12 @@ include:
 - The IR is not type checked. Down the line, we will likely introduce a
   typed variant, but we leave this for future work.
 
-### Rationale For High Level Design Decisions
+## Rationale For High Level Design Decisions
 
 This section provides a brief rationale for some of the high-level
 design decisions described above.
 
-#### Explicit Capture Lists
+### Explicit Capture Lists
 
 Lambdas in this IR have explicit capture lists. i.e. instead of:
 
@@ -220,7 +220,7 @@ This is desirable for two reasons:
   this will allow us to easily identify what needs to be included in
   in a continuation.
 
-#### Effect Monad
+### Effect Monad
 
 Side-effecting operations happen inside an explicit effect monad; we
 would have this as part of our IR's AST:
@@ -267,7 +267,7 @@ This would allow somewhat greater optimization; the call stack could
 still be used for the latter monad. A first iteration of the
 implementation should use the one-monad solution for simplicity though.
 
-#### High Level Primitives
+### High Level Primitives
 
 We keep things like ADTs, match, tuples etc. abstract at this stage,
 since their representations between Plutus and lower level IRs are
@@ -275,17 +275,17 @@ likely to be unrelated. e.g. ADTs will be scott-encoded on Plutus,
 but will likely use a tag word on low level targets instead.
 
 
-#### Untyped
+### Untyped
 
 This IR is untyped for now, mainly for simplicity. In the future, we
 may replace this with or add a typed IR based on F-sub (System F with
 subtyping), which will make program transformations less error prone
 and open up some new possibilities like evidence translation.
 
-### AST Sketch
+## AST Sketch
 
 This section contains a rough sketch of the AST corresponding to this
-IR.
+IR. A program is a single top-level expression.
 
 ```
 ;; expressions
@@ -373,81 +373,189 @@ This section describes the low level IR and memory model.
 
 ## Memory Model Overview
 
-The memory model has some commonalities with executable formats such as
-ELF. In particular, the format divides memory for statically allocated
-variables into *sections*, based on the properties of variables:
+### Addressable Memory
 
-- Does it persist across transactions?
+In the low level IR, addressable memory is divided into *sections*, with
+static variables assigned to sections based on their properties:
+
+- Does the variable persist across transactions?
 - Is it interaction local, or is it going to be global once interaction
   multiplexing is implemented? (See #157 and related issues).
 - Is the caller able to specify their own value for this, or is this
   protected by the consensus? Useful for passing in parameters.
 - Is it merklization-safe?
 
-Each section has an offset, and each variable has an offset within its
-section. We sort the sections into memory regions as follows:
+Grouping persistent, merklization-safe variables together allows us to
+implement the merklization optmization much the same way we do now.
+We group these sections last, with all non-merklizable sections at lower
+memory addresses.
 
-- Ephemeral (transaction-local) sections come first.
-- Then come persistent, merklization-safe interaction-global (i.e. not
-  interaction-local) variables.
-- Then come persistent, merklization-safe interaction-*local* variables.
-- Then come parameter sections.
+Immediately beyond the sections containing static variables is the heap;
+we maintain pointers to the start and end of the heap. The heap is
+merklizable.
 
-Operations are limited to a fixed set of low-level types. We may be
-able to get away with just integers of various fixed widths, but we
-may also want to include:
+### Stack
 
-- booleans
-- (data)addresses
-- function-labels
+The low level IR conceptually uses a call & operand stack, whose use
+compiles down to straightforward use of the EVM operand stack, or to
+the familiar C-like call stack abstraction provided by LLVM. The stack
+is not addressable -- you cannot have pointers into the stack. It is
+also not persistent, so operations which commit the transaction must
+fully unwind the stack, saving any state they need in addressable,
+persistent memory. Given earlier translation into an effect monad,
+this should be straightforward.
 
-Code is grouped into functions, which have parameters, return values,
-and a body:
+### Program Counter
 
-    function-def =
-        (function-name (params...) function-body)
+The low level IR does not have an explicit program counter like EVM.
+Instead, the runtime will need to find some other means of restoring
+the execution state. The effect monad translation earlier in the
+pipeline will help with this; we can just save a pointer to the
+continuation at a well-known location in addressable memory.
 
-    function-body =
-        ; one or more blocks:
-        (block...)
+This abstraction is necessary for portability; LLVM does not provide
+direct access to the program counter, nor does WASM.
 
-    block =
-        (block label
-            stmts...
-            branch)
+## Data Model
 
-    branch =
-        (return expr)
-        (jump label)
-        (tail-call function expr...)
-        (switch expr ((value label) (value label)...) default-label?)
+The following types of values exist at the level of this IR:
 
+- Integers (signed or unsigned, of various sizes)
+- Booleans
+- Function pointers
+- Array Pointers
 
-A statement is one of:
+Note that only values of fixed, known size may be accessed directly;
+other values must be accessed via pointer indirection.
 
-    (mstore variable expr)
-    (ignore expr) ; evaluate an expression for its side effect,
-                  ; ignoring any result.
-    ...
+## Program Structure
 
-We actually allow nested expressions at this level, again, relaxing the
-ANF transformation we did earlier in the compiler. The reason for this
-is that it makes it easy to generate code for the lower level layers:
-Just do post-order tree traversal. If the target is a stack machine
-(like EVM), we just push arguments, if it's SSA (like LLVM) we give each
-subtree a name and do an assignment. This allows us to avoid superfluous
-intermediate variables, which is important since at this stage we
-allocate memory space for all variables -- so we can't optimize them out
-later, it has to be now.
+An IR program is composed of a set of definitions and the name of a
+function that is the entry point to the program. Each definition does
+one of the following:
+
+- Reserves address space for a static variable (always zero initialized)
+- Defines a function.
+
+Functions are made up of blocks, each of which consists of a label,
+a parameter list. a series of non-branching statements, and a final,
+branching statement, like a return, or jump (conditional or otherwise).
+
+The parameter list is a noteworthy feature; blocks can be seen as
+functions which must always be called in tail position, and which
+are scoped to the surrounding (unrestricted) function. This contrasts
+with LLVM where data that is input to a block must be assigned to
+variables and (depending on control flow) stitched together with
+phi instructions. These are formally equivalent, but our purposes
+parameter lists will be a bit easier to work with.
+
+Another noteworthy feature is the fact that at this point we relax the
+ANF requirement; individual statements can contain complex expressions
+again. The reason for this is that it makes it easy to generate code for
+the lower level layers: Just do post-order tree traversal. If the target
+is a stack machine (like EVM), we just push arguments, if it's SSA (like
+LLVM) we give each subtree a name and do an assignment. This allows us
+to avoid superfluous intermediate variables, which is important since at
+this stage we allocate memory space for all variables -- so we can't
+optimize them out later, it has to be now.
 
 Memory *loads* can be expressions, but not memory *stores*, which are
 statements.
 
-Expressions are one of:
+Note also that subroutine calls are not expressions, since they affect
+control flow. This way we don't have to worry about saving intermediate
+variables in the midst of generating code for an expression.
 
-    (mload variable)
-    (call function expr...)
-    (builtin op expr...) ; misc built-in operators.
+## AST Sketch
+
+This section contains a rough sketch of the AST corresponding to this
+IR.
+
+```
+Program ::=
+    (program
+        Name ; Name of entry point function.
+        (Definition...))
+
+Definition ::=
+    FuncDef
+    VarDef
+
+VarDef ::=
+    (def-var Name (VarProperty...))
+
+VarProperty ::=
+    persistent
+    merkleizable
+    interaction-local
+    parameter
+
+FuncDef ::=
+    (def-func Name (ParamSpec ...) ResultSpec Body)
+
+ParamSpec ::=
+    (Name Type)
+
+ResultSpec ::=
+    (Name Type)
+
+Type ::=
+    (func-type (Type ...) Type)
+    (int-type IntType)
+    bool
+    (array Type)
+    (ptr Type)
+
+Body ::=
+    (body (Block ...))
+
+Block ::=
+    (block Label (ParamSpec ...) (Stmt ...) Branch)
+
+Stmt ::=
+    (let Name ValueStmt)
+    (ignore VoidStmt)
+
+;; Statements which have a result value
+ValueStmt ::=
+    CallStmt
+    (evaluate Exp)
+
+VoidStmt ::=
+    CallStmt
+    (store Type Exp Exp) ; Store value at address.
+
+CallStmt ::=
+    (call Name (Exp ...))
+    (call-ptr Exp (Exp ...)) -- call a function pointer
+
+Branch ::=
+    (return Exp)
+    (jump Label (Exp ...))
+    (switch Exp ((Value Label) ...) Label?)
+    ; maybe others
+
+Exp ::=
+    (var Name)
+    (const Constant)
+    (apply-op Op (Exp ...))
+
+Op ::=
+    ;; /N denotes airty. Must agree with number arguments to apply-op.
+    add/2
+    sub/2
+    mul/2
+    ...
+    or/2
+    and/2
+    ...
+    (load/2 Type) ; load value from addres
+    ...
+    digest/1
+    verify-signature/2
     ...
 
-TODO: heap, dynamic segments.
+Constant ::=
+    (integer Sign Integer Integer) ; sign, number of bits, value
+    (bool Boolean)
+    (func-ptr Name)
