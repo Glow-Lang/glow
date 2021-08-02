@@ -438,7 +438,7 @@ one of the following:
 - Defines a function.
 
 Functions are made up of blocks, each of which consists of a label,
-a parameter list. a series of non-branching statements, and a final,
+a parameter list, a series of non-branching statements, and a final,
 branching statement, like a return, or jump (conditional or otherwise).
 
 The parameter list is a noteworthy feature; blocks can be seen as
