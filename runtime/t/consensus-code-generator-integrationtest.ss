@@ -5,6 +5,7 @@
   :clan/assert
   :clan/poo/object
   :mukn/ethereum/json-rpc
+  :mukn/ethereum/test-contracts
   ../../compiler/multipass
   ../consensus-code-generator
   ../glow-path
@@ -29,7 +30,8 @@
               program
               interaction-name
               ;; arbitrary timeout:
-              100)))
+              100
+              (.o DefaultToken: PET ))))
     (.call ConsensusCodeGenerator .generate code-generator)
     (assert-equal! (.@ code-generator params-end)
                    expected-value)))

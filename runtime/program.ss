@@ -17,12 +17,14 @@
    (Record
     name: [Symbol]
     participant-names: [(List Symbol)]
+    asset-names: [(List Symbol)]
     parameter-names: [(List Symbol)]
     specific-interactions: [(Map Interaction <- (OrFalse Symbol))]
     initial-code-block-label: [Symbol])
-   {.make: (lambda (name participant-names parameter-names specific-interactions initial-code-block-label)
+   {.make: (lambda (name participant-names asset-names parameter-names specific-interactions initial-code-block-label)
              { name
                participant-names
+               asset-names
                parameter-names
                specific-interactions
                initial-code-block-label})
@@ -179,13 +181,14 @@
                   end-label: end-label-value
                   body: body-value)))
           (['def name ['@make-interaction [['@list participant-names ...]] parameter-names labels bodys ...]]
+            (def asset-names '(DefaultToken))
             (def interactions (.@ program interactions))
             (def initial-code-block-label (car labels))
             (def specific-table (make-hash-table))
             (for ((values p body) (list->hash-table bodys))
               (hash-put! specific-table p (process-program initial-code-block-label p body)))
             (hash-put! interactions name
-              (.call InteractionInfo .make name participant-names parameter-names specific-table initial-code-block-label)))
+              (.call InteractionInfo .make name participant-names asset-names parameter-names specific-table initial-code-block-label)))
           (['@label label]
             (void))
           (['@debug-label label]
