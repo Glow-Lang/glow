@@ -16,8 +16,8 @@
 ;; parseStr : String -> SExpr
 (def (parseStr str)
   (def lex (lexify str))
-  (def stmts (run StatementList lex))
-  (stmts->module stmts))
+  (def stmts (run TopLevelStatementList lex))
+  (and stmts (stmts->module stmts)))
 
 ;; stmts->module : StatementList -> SExpr
 (def (stmts->module fsl)
