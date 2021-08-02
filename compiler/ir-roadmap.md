@@ -442,12 +442,17 @@ a parameter list, a series of non-branching statements, and a final,
 branching statement, like a return, or jump (conditional or otherwise).
 
 The parameter list is a noteworthy feature; blocks can be seen as
-functions which must always be called in tail position, and which
-are scoped to the surrounding (unrestricted) function. This contrasts
-with LLVM where data that is input to a block must be assigned to
-variables and (depending on control flow) stitched together with
-phi instructions. These are formally equivalent, but our purposes
-parameter lists will be a bit easier to work with.
+functions with restricted usage, in that they:
+
+- must always be called in tail position; non-tail calls are not
+  allowed.
+- are scoped to the surrounding (unrestricted) function which contains
+  the block.
+
+This contrasts with LLVM where data that is input to a block must be
+assigned to variables and (depending on control flow) stitched together
+with phi instructions. These are formally equivalent, but for our
+purposes parameter lists will be a bit easier to work with.
 
 Another noteworthy feature is the fact that at this point we relax the
 ANF requirement; individual statements can contain complex expressions
