@@ -34,10 +34,12 @@
     (ensure-ethereum-connection "pet")
     (ensure-db-connection "testdb")
     (DBG "Ensure participants funded")
+    ;; TODO: prefund on the ERC20s too
     (ensure-addresses-prefunded)
     (DBG "DONE")
 
     (test-case "asset_swap executes"
+      ;; TODO: get balances on QASPET too
       (def a-balance-before (eth_getBalance a-address 'latest))
       (def b-balance-before (eth_getBalance b-address 'latest))
 
@@ -100,6 +102,7 @@
          (with-io-port proc-a read-environment))
        (assert! (equal? a-environment b-environment))
 
+       ;; TODO: get balances on QASPET too
        (def a-balance-after (eth_getBalance a-address 'latest))
        (def b-balance-after (eth_getBalance b-address 'latest))
 
