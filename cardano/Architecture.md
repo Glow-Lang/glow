@@ -15,7 +15,7 @@
 
 ---- Libraries
 ├── util.ss           # Various utility functions: request builders, conversion functions
-├── haskell/          # ...  . See Section <>
+├── haskell/          # Plutus Contract support for Glow DApps
 ├── haskell-types/    # Glow type definitions for Haskell counterparts
 ├── poo-extensions.ss # Provides gerbil-poo type synonyms for primitive haskell counterparts. 
                       # Used for gerbil-scheme codegen (haskell/),
@@ -56,7 +56,7 @@ Scripts for transactions, wallets, contracts and PAB initialization.
 ---- Library
 ├── lib
 │   ├── Client.hs         # Glow contract definition
-│   ├── CodeGen.hs        # Pretty Printer for Gerbil Types. Code Gen ??
+│   ├── CodeGen.hs        # Pretty Printer for Gerbil Types.
 │   ├── Contract.hs       # Plutus Runtime for Glow on-chain code. Contains evaluator, state transition logic.
 │   ├── Parser.hs         # Parser for Glow contract SExpr -> Haskell Types
 │   ├── Types.hs          # Haskell contract types corresponding to Glow DApp constructs
@@ -81,7 +81,6 @@ Scripts for transactions, wallets, contracts and PAB initialization.
 ### run-servers
 
 This calls `run-all-servers` which under the hood calls `plutus-scb all-servers` to run all (mock) servers.
-It also provisions `process-outbox` (NOTE: not too sure what this is for...).
 
 ## Interface
 
@@ -139,7 +138,7 @@ NOTE: Look at `Client.hs` for endpoint definitions.
     JSON body:
     ```json
     { variableMap: ... // required parameters for this interaction step
-    , entryPoint: ... // checkpoints e.g. cp, cp0 TODO: how is this wired up?
+    , entryPoint: ... // checkpoints used to determine which on-chain code sections to evaluate.
     }
     ```
 
@@ -234,12 +233,3 @@ Generate module of Scheme types from Haskell types.
 - [ ] Updating dependency plutus-scb -> plutus-pab
 - [ ] Update nix-dependencies for `glow-cardano` in `pkgs.nix`
 - [ ] Trying out the application
-- [ ] Restarting from Plutus-starter?
-
-## How does this use the PAB?
-
-TODO
-
-## How does this manage checkpoints?
-
-TODO: cp, cp0
