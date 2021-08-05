@@ -7,6 +7,7 @@
           "github.com/fare/gerbil-poo"
           "github.com/fare/gerbil-persist"
           "github.com/fare/gerbil-ethereum"
+          "gitlab.com/mukn/glow-contacts"
           #;"github.com/fare-patches/r7rs-swank"
           #;"github.com/drewc/js-syntax")
  ;; Base version this is relative to
