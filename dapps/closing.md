@@ -4,9 +4,9 @@ Ensure you have [`glow`](https://gitlab.com/mukn/glow/-/blob/master/INSTALL.md) 
 
 Glow comes prepackaged with several smart contracts.
 
-This tutorial will bring you through executing [`buy_sig`](https://gitlab.com/mukn/glow/-/blob/master/dapps/buy_sig.glow).
+This tutorial will bring you through executing [`closing`](https://gitlab.com/mukn/glow/-/blob/master/dapps/closing.glow).
 
-## Understanding the "buy_sig" contract
+## Understanding the "closing" contract
 
 ### Scenario
 
@@ -14,7 +14,7 @@ Suppose we have 2 parties, alice and bob.
 alice has a message digest which she wants bob to sign.
 For that, bob wants to be paid.
 
-Hence they participate in an interaction, via the [`buy_sig`](https://gitlab.com/mukn/glow/-/blob/master/dapps/buy_sig.glow) smart contract.
+Hence they participate in an interaction, via the [`closing`](https://gitlab.com/mukn/glow/-/blob/master/dapps/closing.glow) smart contract.
 
 First we declare the participants,
 a buyer who wants a digest signed,
@@ -49,7 +49,7 @@ Upon receiving this, the Seller publicly signs the digest and withdraws their fe
 };
 ```
 
-*The whole contract is available [`here`](https://gitlab.com/mukn/glow/-/blob/master/dapps/buy_sig.glow).*
+*The whole contract is available [`here`](https://gitlab.com/mukn/glow/-/blob/master/dapps/closing.glow).*
 
 We will proceed to actually running this interaction on the `Cardano EVM Testnet`.
 
@@ -113,12 +113,12 @@ We want to see the available applications:
 
 ``` sh
 > glow list-applications
-buy_sig     /path/to/glow/dapps/buy_sig.glow
+closing     /path/to/glow/dapps/closing.glow
 coin_flip   /path/to/glow/dapps/coin_flip.glow
 rps_simple  /path/to/glow/dapps/rps_simple.glow
 ```
 
-In this practice, we will do [`buy_sig`](https://gitlab.com/mukn/glow/-/blob/master/dapps/buy_sig.glow).
+In this practice, we will do [`closing`](https://gitlab.com/mukn/glow/-/blob/master/dapps/closing.glow).
 
 ## Deploying the contract
 
@@ -128,7 +128,7 @@ We deploy the contract first, via `glow start-interaction`.
 Connecting to the Cardano EVM Devnet at https://rpc-evm.portal.dev.cardano.org/ ...
 
 Choose application:
-1) buy_sig
+1) closing
 2) coin_flip
 3) rps_simple
 Enter number
@@ -158,7 +158,7 @@ Enter digest
 Max initial block [ Current block number is 107850 ]
 > 107900 # Just indicate a block after the current one.
 One line command for other participants to generate the same agreement:
-glow start-interaction --agreement '{"glow-version":"Glow v0.1.0-120-g43060af","interaction":"buy_sig#payForSignature","participants":{"Buyer":"0x4c371dA6E338F19B77BC78498DaFcFB05E8bd2Ac","Seller":"0x0C7A123580a2A6E40b053b2dE913fd0e2B8b91e9"},"parameters":{"digest":"0x16c5659f6e3c70f0c53ac5abf3977e658093f1f5880bd478de8d3a87c92d9607","price":"0x1"},"reference":{},"options":{"blockchain":"Cardano EVM Devnet","timeoutInBlocks":"0x3e8","maxInitialBlock":"0x1a572"},"code-digest":"0x16c5659f6e3c70f0c53ac5abf3977e658093f1f5880bd478de8d3a87c92d9607"}'
+glow start-interaction --agreement '{"glow-version":"Glow v0.1.0-120-g43060af","interaction":"closing#payForSignature","participants":{"Buyer":"0x4c371dA6E338F19B77BC78498DaFcFB05E8bd2Ac","Seller":"0x0C7A123580a2A6E40b053b2dE913fd0e2B8b91e9"},"parameters":{"digest":"0x16c5659f6e3c70f0c53ac5abf3977e658093f1f5880bd478de8d3a87c92d9607","price":"0x1"},"reference":{},"options":{"blockchain":"Cardano EVM Devnet","timeoutInBlocks":"0x3e8","maxInitialBlock":"0x1a572"},"code-digest":"0x16c5659f6e3c70f0c53ac5abf3977e658093f1f5880bd478de8d3a87c92d9607"}'
 
 Executing code block begin0 ...
 (add-to-deposit price)
@@ -175,7 +175,7 @@ This can be done with the above *one line command*, after we deployed the contra
 Remember to use separate databases, as shown by the `--database alice`.
 
 ``` sh
-> $ ./glow start-interaction --agreement '{"glow-version":"Glow v0.1.0-120-g43060af","interaction":"buy_sig#payForSign
+> $ ./glow start-interaction --agreement '{"glow-version":"Glow v0.1.0-120-g43060af","interaction":"closing#payForSign
 ature","participants":{"Buyer":"0x4c371dA6E338F19B77BC78498DaFcFB05E8bd2Ac","Seller":"0x0C7A123580a2A6E40b053b2dE913fd
 0e2B8b91e9"},"parameters":{"digest":"0x16c5659f6e3c70f0c53ac5abf3977e658093f1f5880bd478de8d3a87c92d9607","price":"0x1"
 },"reference":{},"options":{"blockchain":"Cardano EVM Devnet","timeoutInBlocks":"0x3e8","maxInitialBlock":"0x1a572"},"
@@ -199,7 +199,7 @@ Executing code block begin0 ...
 (@debug-label dlb1)
 
 Send the handshake below to the other participant:
-{"agreement":{"glow-version":"Glow v0.1.0-120-g43060af","interaction":"buy_sig#payForSignature","participants":{"Buyer":"0x4c371dA6E338F19B77BC78498DaFcFB05E8bd2Ac","Seller":"0x0C7A123580a2A6E40b053b2dE913fd0e2B8b91e9"},"parameters":{"digest":"0x16c5659f6e3c70f0c53ac5abf3977e658093f1f5880bd478de8d3a87c92d9607","price":"0x1"},"reference":{},"options":{"blockchain":"Cardano EVM Devnet","timeoutInBlocks":"0x3e8","maxInitialBlock":"0x1a572"},"code-digest":"0x16c5659f6e3c70f0c53ac5abf3977e658093f1f5880bd478de8d3a87c92d9607"},"contract-config":{"contract-address":"0x3798bbAa4e3a3Aec6a84f96750a5C51C2bA7436C","code-hash":"0x69cd922d5fbf72be7795910f76ff653ed6e41880d84fcbd7392a8650341b1ffe","creation-hash":"0xeed82abee1fb5a4b121f43790801b94ebb7e31440c8bf364178707f48ab27798","creation-block":"0x1a54e"},"published-data":"0x"}
+{"agreement":{"glow-version":"Glow v0.1.0-120-g43060af","interaction":"closing#payForSignature","participants":{"Buyer":"0x4c371dA6E338F19B77BC78498DaFcFB05E8bd2Ac","Seller":"0x0C7A123580a2A6E40b053b2dE913fd0e2B8b91e9"},"parameters":{"digest":"0x16c5659f6e3c70f0c53ac5abf3977e658093f1f5880bd478de8d3a87c92d9607","price":"0x1"},"reference":{},"options":{"blockchain":"Cardano EVM Devnet","timeoutInBlocks":"0x3e8","maxInitialBlock":"0x1a572"},"code-digest":"0x16c5659f6e3c70f0c53ac5abf3977e658093f1f5880bd478de8d3a87c92d9607"},"contract-config":{"contract-address":"0x3798bbAa4e3a3Aec6a84f96750a5C51C2bA7436C","code-hash":"0x69cd922d5fbf72be7795910f76ff653ed6e41880d84fcbd7392a8650341b1ffe","creation-hash":"0xeed82abee1fb5a4b121f43790801b94ebb7e31440c8bf364178707f48ab27798","creation-block":"0x1a54e"},"published-data":"0x"}
 ```
 
 We have now done our part to put our funds in escrow. It is now *bob's* turn to sign and receive the funds.
@@ -209,7 +209,7 @@ We have now done our part to put our funds in escrow. It is now *bob's* turn to 
 Remember to use separate databases, as shown by the `--database bob`.
 
 ``` sh
-> $ ./glow start-interaction --agreement '{"glow-version":"Glow v0.1.0-120-g43060af","interaction":"buy_sig#payForSignature","participants":{"Buyer":"0x4c371dA6E338F19B77BC78498DaFcFB05E8bd2Ac","Seller":"0x0C7A123580a2A6E40b053b2dE913fd0e2B8b91e9"},"parameters":{"digest":"0x16c5659f6e3c70f0c53ac5abf3977e658093f1f5880bd478de8d3a87c92d9607","price":"0x1"},"reference":{},"options":{"blockchain":"Cardano EVM Devnet","timeoutInBlocks":"0x3e8","maxInitialBlock":"0x1a572"},"code-digest":"0x16c5659f6e3c70f0c53ac5abf3977e658093f1f5880bd478de8d3a87c92d9607"}' --database bob 
+> $ ./glow start-interaction --agreement '{"glow-version":"Glow v0.1.0-120-g43060af","interaction":"closing#payForSignature","participants":{"Buyer":"0x4c371dA6E338F19B77BC78498DaFcFB05E8bd2Ac","Seller":"0x0C7A123580a2A6E40b053b2dE913fd0e2B8b91e9"},"parameters":{"digest":"0x16c5659f6e3c70f0c53ac5abf3977e658093f1f5880bd478de8d3a87c92d9607","price":"0x1"},"reference":{},"options":{"blockchain":"Cardano EVM Devnet","timeoutInBlocks":"0x3e8","maxInitialBlock":"0x1a572"},"code-digest":"0x16c5659f6e3c70f0c53ac5abf3977e658093f1f5880bd478de8d3a87c92d9607"}' --database bob 
 Connecting to the Cardano EVM Devnet at https://rpc-evm.portal.dev.cardano.org/ ...
 
 Choose your identity:
@@ -225,7 +225,7 @@ Enter number
 > 2
 
 Paste below the handshake sent by the other participant:
-{"agreement":{"glow-version":"Glow v0.1.0-120-g43060af","interaction":"buy_sig#payForSignature","participants":{"Buyer":"0x4c371dA6E338F19B77BC78498DaFcFB05E8bd2Ac","Seller":"0x0C7A123580a2A6E40b053b2dE913fd0e2B8b91e9"},"parameters":{"digest":"0x16c5659f6e3c70f0c53ac5abf3977e658093f1f5880bd478de8d3a87c92d9607","price":"0x1"},"reference":{},"options":{"blockchain":"Cardano EVM Devnet","timeoutInBlocks":"0x3e8","maxInitialBlock":"0x1a572"},"code-digest":"0x16c5659f6e3c70f0c53ac5abf3977e658093f1f5880bd478de8d3a87c92d9607"},"contract-config":{"contract-address":"0x3798bbAa4e3a3Aec6a84f96750a5C51C2bA7436C","code-hash":"0x69cd922d5fbf72be7795910f76ff653ed6e41880d84fcbd7392a8650341b1ffe","creation-hash":"0xeed82abee1fb5a4b121f43790801b94ebb7e31440c8bf364178707f48ab27798","creation-block":"0x1a54e"},"published-data":"0x"}
+{"agreement":{"glow-version":"Glow v0.1.0-120-g43060af","interaction":"closing#payForSignature","participants":{"Buyer":"0x4c371dA6E338F19B77BC78498DaFcFB05E8bd2Ac","Seller":"0x0C7A123580a2A6E40b053b2dE913fd0e2B8b91e9"},"parameters":{"digest":"0x16c5659f6e3c70f0c53ac5abf3977e658093f1f5880bd478de8d3a87c92d9607","price":"0x1"},"reference":{},"options":{"blockchain":"Cardano EVM Devnet","timeoutInBlocks":"0x3e8","maxInitialBlock":"0x1a572"},"code-digest":"0x16c5659f6e3c70f0c53ac5abf3977e658093f1f5880bd478de8d3a87c92d9607"},"contract-config":{"contract-address":"0x3798bbAa4e3a3Aec6a84f96750a5C51C2bA7436C","code-hash":"0x69cd922d5fbf72be7795910f76ff653ed6e41880d84fcbd7392a8650341b1ffe","creation-hash":"0xeed82abee1fb5a4b121f43790801b94ebb7e31440c8bf364178707f48ab27798","creation-block":"0x1a54e"},"published-data":"0x"}
 
 Executing code block begin0 ...
 (expect-deposited price)
@@ -242,7 +242,7 @@ Executing code block cp0 ...
 (return (@tuple))
 (@label end0)
 
-buy_sig#payForSignature interaction finished
+closing#payForSignature interaction finished
 Final environment:
 Buyer => (address<-0x "0x4c371dA6E338F19B77BC78498DaFcFB05E8bd2Ac")
 Seller => (address<-0x "0x0C7A123580a2A6E40b053b2dE913fd0e2B8b91e9")

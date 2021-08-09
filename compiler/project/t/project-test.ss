@@ -61,7 +61,7 @@
   (test-suite "test suite for glow/compiler/project/project"
     (test-case "testing example glow files"
       ;(try-project-all)
-      (try-project-files ["buy_sig"])
+      (try-project-files ["closing"])
       (void))))
 
 (def (main . args)

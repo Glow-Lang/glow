@@ -3,14 +3,14 @@
 This directory contains DApps written in *Glow* that commonly useful
 and/or illustrative of some features of the language:
 
-* [buy_sig](buy_sig.glow) is a standard closing contract,
+* [closing](closing.glow) is a standard closing contract,
   wherein a Buyer pays money in exchange for a Seller signing a transaction:
   digital title transfer, transaction that completes an atomic swap on another chain,
   certification, room rental agreement, pass to some online event, etc.
   If the Seller fails to sign on time, the Buyer automatically recovers his stake.
   
-  See [Tutorial: Buying a Signature](buy_sig.md) for a walkthrough on how to deploy
-  and run an interaction with the [buy_sig](buy_sig.glow) contract.
+  See [Tutorial: Buying a Signature](closing.md) for a walkthrough on how to deploy
+  and run an interaction with the [closing](closing.glow) contract.
 
 * [coin_flip](coin_flip.glow) illustrates how to agree on a mutually random number,
   one that both party agree is random, using a three-step commit-reveal protocol.

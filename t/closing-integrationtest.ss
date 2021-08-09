@@ -22,8 +22,8 @@
   ../runtime/reify-contract-parameters
   ./cli-integration)
 
-(def buy-sig-integrationtest
-  (test-suite "integration test for ethereum/buy-sig"
+(def closing-integrationtest
+  (test-suite "integration test for ethereum/closing"
     (test-case "buy sig runs successfully"
       (delete-agreement-handshake)
       (ensure-ethereum-connection "pet")
@@ -75,7 +75,7 @@
            (lambda ()
              (answer-questions
               [["Choose application:"
-                "buy_sig"]
+                "closing"]
                ["Choose your identity:"
                 (lambda (id)
                   (string-prefix? "t/alice " id))]

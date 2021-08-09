@@ -7,7 +7,7 @@ and other incomplete projects.
 
 ### Selling a signature
 
-[buy_sig.glow](../dapps/buy_sig.glow): selling signatures that can be used on the same chain,
+[closing.glow](../dapps/closing.glow): selling signatures that can be used on the same chain,
 on a different chain, or even off-chain.
 
 Required Features:
