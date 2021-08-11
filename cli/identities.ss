@@ -1,9 +1,10 @@
 (export #t)
 
 (import
-  :std/getopt :std/format :std/iter :std/misc/hash :std/srfi/13 :std/sugar
+  :gerbil/gambit/bytes :gerbil/gambit/os
+  :std/crypto :std/getopt :std/format :std/iter :std/misc/hash :std/srfi/13 :std/sugar :std/text/hex
   :clan/base :clan/config :clan/files :clan/hash :clan/json :clan/multicall :clan/path :clan/syntax
-  :clan/crypto/secp256k1
+  :clan/crypto/random :clan/crypto/secp256k1
   :clan/poo/brace :clan/poo/cli :clan/poo/io :clan/poo/mop :clan/poo/object :clan/poo/type
   :mukn/ethereum/cli :mukn/ethereum/hex :mukn/ethereum/ethereum :mukn/ethereum/known-addresses :mukn/ethereum/network-config
   :mukn/ethereum/json-rpc
@@ -14,6 +15,44 @@
 ;; - store they key type (ethereum, bitcoin, some HD wallet, etc.) -- BIP32 path?
 ;; - store some version schema identifier in the file or its name, and
 ;;   automatically (or at least manually) migrate from one version to the other.
+
+;; The key used to encrypt all secret keys.
+(def global-key #f)
+(def (global-key-path)
+  (xdg-config-home "glow" "global.key"))
+
+;; The cipher used to encrypt secret keys.
+;; TODO: cipher::aes-256-gcm would be a better choice since it supports
+;; authentication, but Gerbil's crypto drivers can't handle it yet.
+(def secret-key-cipher cipher::aes-256-ctr)
+
+;; Read or create a global key, stored as raw bytes on disk.
+;; TODO: Obtain key from an OS-level key management service.
+(def (ensure-global-key!)
+  (unless global-key
+    (let ((key-length (cipher-key-length secret-key-cipher))
+          (key-path (global-key-path)))
+      (cond ((file-exists? key-path)
+             (if (= key-length (file-size key-path))
+                 (set! global-key (call-with-input-file key-path
+                                    (cut read-bytes key-length <>)))
+                 (error "Global key length does not match secret key cipher"
+                        (cipher-name secret-key-cipher))))
+            (else
+             (set! global-key (random-bytes key-length))
+             (with-output-to-file [path: (global-key-path)
+                                   permissions: #o600]
+               (lambda ()
+                 (write-bytes global-key)))))))
+  global-key)
+
+;; Encrypt a secret key using the global key and a random IV (nonce).
+(def (encrypt-secret-key secret-key)
+  (let* ((cipher (and secret-key secret-key-cipher (make-cipher secret-key-cipher)))
+         (iv (and cipher (random-bytes (cipher-iv-length cipher)))))
+    (if (and cipher iv secret-key)
+        (values (encrypt cipher (ensure-global-key!) iv secret-key) iv)
+        (values #f #f))))
 
 (define-type Identity
   (.+
@@ -48,15 +87,24 @@
                  (.call Identity .make nickname network address public-key keypair)))
     .json<-: (lambda (identity)
                (with-slots (nickname network address public-key keypair) identity
-                 (hash (nickname nickname)
-                       (network network)
-                       (address (0x<-address address))
-                       (public_key (if public-key
-                                       (string<- PublicKey public-key)
-                                       (void)))
-                       (secret_key_path (if keypair
-                                            (format "glow:~a" nickname)
-                                            (void))))))}))
+                 (let-values (((encrypted-secret-key iv)
+                               (encrypt-secret-key (export-secret-key/bytes
+                                                    (keypair-secret-key keypair)))))
+                   (hash (nickname nickname)
+                         (network network)
+                         (address (0x<-address address))
+                         (public_key (if public-key
+                                         (string<- PublicKey public-key)
+                                         (void)))
+                         (secret_key (if encrypted-secret-key
+                                         (hex-encode encrypted-secret-key)
+                                         (void)))
+                         (secret_key_cipher (if encrypted-secret-key
+                                                (cipher-name secret-key-cipher)
+                                                (void)))
+                         (secret_key_iv (if iv
+                                            (hex-encode iv)
+                                            (void)))))))}))
 
 (def (default-secret-key-ring)
   (xdg-config-home "glow" "secret-key-ring.json"))
