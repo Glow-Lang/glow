@@ -26,6 +26,13 @@
 ;; authentication, but Gerbil's crypto drivers can't handle it yet.
 (def secret-key-cipher cipher::aes-256-ctr)
 
+;; Read some random bytes from the operating system.
+;; These bytes are used directly as secret keys and IVs,
+;; so they had better have high entropy.
+(def (read-random-bytes n-bytes)
+  (call-with-input-file "/dev/urandom"
+    (cut read-bytes n-bytes <>)))
+
 ;; Read or create a global key, stored as raw bytes on disk.
 ;; TODO: Obtain key from an OS-level key management service.
 (def (ensure-global-key!)
@@ -39,7 +46,7 @@
                  (error "Global key length does not match secret key cipher"
                         (cipher-name secret-key-cipher))))
             (else
-             (set! global-key (random-bytes key-length))
+             (set! global-key (read-random-bytes key-length))
              (with-output-to-file [path: (global-key-path)
                                    permissions: #o600]
                (lambda ()
@@ -51,7 +58,7 @@
   (let* ((cipher (and secret-key secret-key-cipher
                       (make-cipher secret-key-cipher)))
          (iv (and cipher
-                  (random-bytes (cipher-iv-length cipher)))))
+                  (read-random-bytes (cipher-iv-length cipher)))))
     (if (and cipher iv secret-key)
         (values (encrypt cipher (ensure-global-key!) iv secret-key) iv)
         (values #f #f))))
