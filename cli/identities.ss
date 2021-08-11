@@ -46,13 +46,24 @@
                  (write-bytes global-key)))))))
   global-key)
 
-;; Encrypt a secret key using the global key and a random IV (nonce).
+;; Encrypt a secret key with the global key and a random IV (nonce).
 (def (encrypt-secret-key secret-key)
-  (let* ((cipher (and secret-key secret-key-cipher (make-cipher secret-key-cipher)))
-         (iv (and cipher (random-bytes (cipher-iv-length cipher)))))
+  (let* ((cipher (and secret-key secret-key-cipher
+                      (make-cipher secret-key-cipher)))
+         (iv (and cipher
+                  (random-bytes (cipher-iv-length cipher)))))
     (if (and cipher iv secret-key)
         (values (encrypt cipher (ensure-global-key!) iv secret-key) iv)
         (values #f #f))))
+
+;; Decrypt a secret key with the global key.
+(def (decrypt-secret-key cipher iv secret-key)
+  (let ((cipher (and cipher iv secret-key
+                     (string=? (cipher-name secret-key-cipher) cipher)
+                     (make-cipher secret-key-cipher))))
+    (if cipher
+        (decrypt cipher (ensure-global-key!) iv secret-key)
+        #f)))
 
 (define-type Identity
   (.+
@@ -64,8 +75,9 @@
     keypair: [Keypair])
    {.make: (lambda (nickname (network 'eth) (address #f) (public-key #f) (keypair #f))
              (when keypair
-               (unless (keypair-consistent? keypair)
-                 (error "Inconsistent keypair for" nickname))
+               (if (keypair-consistent? keypair)
+                   (register-keypair nickname keypair)
+                   (error "Inconsistent keypair for" nickname))
                (if address
                    (unless (equal? address (keypair-address keypair))
                      (error "Inconsistent address and keypair for" nickname))
@@ -83,8 +95,18 @@
                       (public-key (let ((public_key (hash-get identity 'public_key)))
                                     (and (string? public_key)
                                          (<-string PublicKey public_key))))
-                      (keypair (hash-get keypair-by-address address)))
-                 (.call Identity .make nickname network address public-key keypair)))
+                      (secret-key (let ((secret_key (hash-get identity 'secret_key))
+                                        (secret_key_cipher (hash-get identity 'secret_key_cipher))
+                                        (secret_key_iv (hash-get identity 'secret_key_iv)))
+                                    (and (string? secret_key)
+                                         (string? secret_key_cipher)
+                                         (string? secret_key_iv)
+                                         (secp256k1-seckey
+                                          (decrypt-secret-key secret_key_cipher
+                                                              (hex-decode secret_key_iv)
+                                                              (hex-decode secret_key))))))
+                      (kp (keypair address public-key secret-key)))
+                 (.call Identity .make nickname network address public-key kp)))
     .json<-: (lambda (identity)
                (with-slots (nickname network address public-key keypair) identity
                  (let-values (((encrypted-secret-key iv)

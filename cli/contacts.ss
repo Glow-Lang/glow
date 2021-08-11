@@ -34,12 +34,13 @@
 
 (def (load-contacts.db)
   (for/collect (contact (list-contacts.db))
-    (.o (:: @ Contact)
-        (cid (hash-ref contact 'cid))
-        (name (hash-ref contact 'name))
-        (identities
-         (for/collect (identity (hash-ref contact 'identities []))
-           (<-json Identity identity))))))
+    (force-object ; for immediate key registration
+     (.o (:: @ Contact)
+         (cid (hash-ref contact 'cid))
+         (name (hash-ref contact 'name))
+         (identities
+          (for/collect (identity (hash-ref contact 'identities []))
+            (<-json Identity identity)))))))
 
 (def (load-contacts contacts-file keypairs-file)
   (load-keypairs from: keypairs-file)
