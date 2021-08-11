@@ -128,59 +128,17 @@
                                             (hex-encode iv)
                                             (void)))))))}))
 
-(def (default-secret-key-ring)
-  (xdg-config-home "glow" "secret-key-ring.json"))
-
-(def (load-keypairs from: (from #f))
-  (unless (string? from) (set! from (default-secret-key-ring)))
-  (with-catch
-   (lambda (e)
-     (displayln (error-message e))
-     (error "Failed to read and parse the secret key ring file" from))
-   (lambda ()
-     (if (file-exists? from)
-         (hash-key-value-map
-          (lambda (nickname keypair-json)
-            (def keypair (import-keypair/json keypair-json))
-            (register-keypair nickname keypair)
-            (cons nickname keypair))
-          (read-file-json from))
-         (make-hash-table)))))
-
-(def (store-keypairs keypairs to: (to #f))
-  (unless (string? to) (set! to (default-secret-key-ring)))
-  (def keypairs-json
-    (hash-key-value-map
-     (lambda (nickname keypair)
-       (cons nickname (export-keypair/json keypair)))
-     keypairs))
-  (create-directory* (path-parent to))
-  ;; TODO: Ensure the new file has mode 0600.
-  (clobber-file to (string<-json keypairs-json) salt?: #t))
-
-(def (call-with-keypairs f from: (from #f) to: (to #f))
-  (def keypairs (load-keypairs from: from))
-  (f keypairs)
-  (store-keypairs keypairs to: (or to from)))
-
-(def options/keypairs
-  (make-options
-   [(option 'keypairs "-K" "--keypairs" help: "file to load and store keypairs")]))
-
 (def options/identities
   (make-options
     [(option 'cid "-C" "--cid" help: "contact ID of identity, #f for a new contact")
      (option 'network "-E" "--evm-network" help: "name of EVM network")
      (flag 'json "-J" "--json" help: "write identities as JSON")
-     (option 'nickname "-N" "--nickname" help: "nickname of identity")]
-    []
-    [options/keypairs]))
+     (option 'nickname "-N" "--nickname" help: "nickname of identity")]))
 
 (define-entry-point (add-identity
                      cid: (cid #f)
                      json: (json #f)
                      keypair: (keypair #f)
-                     keypairs: (keypairs #f)
                      network: (network #f)
                      nickname: (nickname #f)
                      secret-key: (secret-key #f))
@@ -199,9 +157,7 @@
   (def new-public-key (keypair-public-key new-keypair))
   (def new-identity
     (.call Identity .make nickname network new-address new-public-key new-keypair))
-  (call-with-keypairs
-   (cut hash-put! <> (string-downcase nickname) new-keypair)
-   from: keypairs)
+  (register-keypair nickname new-keypair)
   (add-identity.db cid (json<- Identity new-identity))
   (if json
       (displayln (string<-json (json<- Identity new-identity)))
@@ -210,7 +166,6 @@
 (define-entry-point (generate-identity
                      cid: (cid #f)
                      json: (json #f)
-                     keypairs: (keypairs #f)
                      network: (network #f)
                      nickname: (nickname #f)
                      prefix: (prefix #f))
@@ -224,27 +179,21 @@
   (def keypair (generate-keypair scoring: scoring))
   (add-identity cid: cid
                 json: json
-                keypairs: keypairs
                 network: network
                 nickname: nickname
                 keypair: keypair))
 
 (define-entry-point (remove-identity
                      json: (json #f)
-                     keypairs: (keypairs #f)
                      nickname: (nickname #f))
   (help: "Remove identity"
    getopt: (make-options
             [(flag 'json "-J" "--json"
                    help: "write ouptut as JSON")
              (option 'nickname "-N" "--nickname"
-                     help: "nickname of identity to remove")]
-            []
-            [options/keypairs]))
+                     help: "nickname of identity to remove")]))
   (unless nickname (error "missing nickname"))
-  (call-with-keypairs
-   (cut hash-remove! <> (string-downcase nickname))
-   from: keypairs)
+  (unregister-keypair nickname)
   (delete-identity-by-nickname nickname)
   (if json
       (displayln (string<-json (hash (removed nickname))))
