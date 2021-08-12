@@ -1,76 +1,20 @@
 (export #t)
 
 (import
-  :gerbil/gambit/bytes :gerbil/gambit/os
   :std/crypto :std/getopt :std/format :std/iter :std/misc/hash :std/srfi/13 :std/sugar :std/text/hex
-  :clan/base :clan/config :clan/files :clan/hash :clan/json :clan/multicall :clan/path :clan/syntax
+  :clan/base :clan/files :clan/hash :clan/json :clan/multicall :clan/path :clan/syntax
   :clan/crypto/random :clan/crypto/secp256k1
   :clan/poo/brace :clan/poo/cli :clan/poo/io :clan/poo/mop :clan/poo/object :clan/poo/type
   :mukn/ethereum/cli :mukn/ethereum/hex :mukn/ethereum/ethereum :mukn/ethereum/known-addresses :mukn/ethereum/network-config
   :mukn/ethereum/json-rpc
-  (rename-in ../contacts/db (add-contact add-contact.db) (add-identity add-identity.db)))
+  (rename-in ../contacts/db (add-contact add-contact.db) (add-identity add-identity.db))
+  (only-in ../contacts/keys decrypt-secret-key encrypt-secret-key secret-key-cipher))
 
 ;; TODO:
 ;; - store only the secret-key, not address and public-key
 ;; - store they key type (ethereum, bitcoin, some HD wallet, etc.) -- BIP32 path?
 ;; - store some version schema identifier in the file or its name, and
 ;;   automatically (or at least manually) migrate from one version to the other.
-
-;; The key used to encrypt all secret keys.
-(def global-key #f)
-(def (global-key-path)
-  (xdg-config-home "glow" "global.key"))
-
-;; The cipher used to encrypt secret keys.
-;; TODO: cipher::aes-256-gcm would be a better choice since it supports
-;; authentication, but Gerbil's crypto drivers can't handle it yet.
-(def secret-key-cipher cipher::aes-256-ctr)
-
-;; Read some random bytes from the operating system.
-;; These bytes are used directly as secret keys and IVs,
-;; so they had better have high entropy.
-(def (read-random-bytes n-bytes)
-  (call-with-input-file "/dev/urandom"
-    (cut read-bytes n-bytes <>)))
-
-;; Read or create a global key, stored as raw bytes on disk.
-;; TODO: Obtain key from an OS-level key management service.
-(def (ensure-global-key!)
-  (unless global-key
-    (let ((key-length (cipher-key-length secret-key-cipher))
-          (key-path (global-key-path)))
-      (cond ((file-exists? key-path)
-             (if (= key-length (file-size key-path))
-                 (set! global-key (call-with-input-file key-path
-                                    (cut read-bytes key-length <>)))
-                 (error "Global key length does not match secret key cipher"
-                        (cipher-name secret-key-cipher))))
-            (else
-             (set! global-key (read-random-bytes key-length))
-             (with-output-to-file [path: (global-key-path)
-                                   permissions: #o600]
-               (lambda ()
-                 (write-bytes global-key)))))))
-  global-key)
-
-;; Encrypt a secret key with the global key and a random IV (nonce).
-(def (encrypt-secret-key secret-key)
-  (let* ((cipher (and secret-key secret-key-cipher
-                      (make-cipher secret-key-cipher)))
-         (iv (and cipher
-                  (read-random-bytes (cipher-iv-length cipher)))))
-    (if (and cipher iv secret-key)
-        (values (encrypt cipher (ensure-global-key!) iv secret-key) iv)
-        (values #f #f))))
-
-;; Decrypt a secret key with the global key.
-(def (decrypt-secret-key cipher iv secret-key)
-  (let ((cipher (and cipher iv secret-key
-                     (string=? (cipher-name secret-key-cipher) cipher)
-                     (make-cipher secret-key-cipher))))
-    (if cipher
-        (decrypt cipher (ensure-global-key!) iv secret-key)
-        #f)))
 
 (define-type Identity
   (.+

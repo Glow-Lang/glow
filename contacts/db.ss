@@ -18,7 +18,8 @@
  (only-in :std/srfi/1 append-map first)
  :std/sugar
  :std/text/json
- (only-in :mukn/ethereum/network-config ethereum-networks))
+ (only-in :mukn/ethereum/network-config ethereum-networks)
+ (only-in ./keys secret-key-ciphers))
 
 ;; The global contacts database connection handle.
 (def contact-db #f)
@@ -96,11 +97,10 @@
     (finally (sql-txn-commit contact-db))))
 
 ;; Import supported AES ciphers.
-;; TODO: XTS and GCM modes are not yet supported by Gerbil's std/crypto/cipher.
 (def (import-ciphers)
   (let ((stmt (sql-prepare contact-db "INSERT INTO cipher (name) VALUES ($1)")))
-    (for ((cipher (list cipher::aes-256-cbc cipher::aes-256-ctr)))
-      (sql-bind stmt (cipher-name cipher))
+    (for ((cipher-name (hash-keys secret-key-ciphers)))
+      (sql-bind stmt cipher-name)
       (sql-exec stmt))))
 
 ;; Import known Ethereum networks.
