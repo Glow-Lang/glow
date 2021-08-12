@@ -10,6 +10,7 @@
  (only-in :clan/config xdg-config-home)
  (only-in :clan/poo/object .@ with-slots)
  (only-in :gerbil/gambit/os file-size)
+ :std/crypto
  :std/db/dbi
  (only-in :std/db/sqlite sqlite-open)
  (only-in :std/iter for for/collect)
@@ -17,7 +18,8 @@
  (only-in :std/srfi/1 append-map first)
  :std/sugar
  :std/text/json
- (only-in :mukn/ethereum/network-config ethereum-networks))
+ (only-in :mukn/ethereum/network-config ethereum-networks)
+ (only-in ./keys secret-key-ciphers))
 
 ;; The global contacts database connection handle.
 (def contact-db #f)
@@ -54,15 +56,22 @@
   description TEXT,
   uri TEXT,
   native_token TEXT NOT NULL)"
+ "CREATE TABLE cipher (
+  name TEXT PRIMARY KEY NOT NULL)"
  "CREATE TABLE identity (
   cid INTEGER REFERENCES contact ON DELETE CASCADE,
   network TEXT NOT NULL REFERENCES network,
   address TEXT NOT NULL,
   nickname TEXT,
   public_key TEXT,
-  secret_key_path TEXT,
+  secret_key TEXT,
+  secret_key_cipher TEXT REFERENCES cipher,
+  secret_key_iv TEXT,
   CHECK (length(address) = 42 AND substr(address, 1, 2) = '0x'),
-  UNIQUE (cid, network, address))"
+  CHECK ((secret_key IS NULL AND secret_key_cipher IS NULL AND secret_key_iv IS NULL) OR \
+         (secret_key IS NOT NULL AND secret_key_cipher IS NOT NULL AND secret_key_iv IS NOT NULL)),
+  UNIQUE (cid, network, address),
+  UNIQUE (secret_key_cipher, secret_key_iv))"
  "CREATE UNIQUE INDEX identity_nickname ON identity(nickname)"
  "CREATE TABLE txnlog (
   txid INTEGER PRIMARY KEY,
@@ -82,9 +91,17 @@
   (try
     (sql-txn-begin contact-db)
     (for ((stmt schema)) (sql-eval-query contact-db stmt))
+    (import-ciphers)
     (import-ethereum-networks)
     (catch sql-error? => (lambda _ (sql-txn-abort contact-db)))
     (finally (sql-txn-commit contact-db))))
+
+;; Import supported AES ciphers.
+(def (import-ciphers)
+  (let ((stmt (sql-prepare contact-db "INSERT INTO cipher (name) VALUES ($1)")))
+    (for ((cipher-name (hash-keys secret-key-ciphers)))
+      (sql-bind stmt cipher-name)
+      (sql-exec stmt))))
 
 ;; Import known Ethereum networks.
 (def (import-ethereum-networks)
@@ -186,11 +203,13 @@
   (let ((stmt (sql-prepare
                (ensure-contact-db!)
                "INSERT INTO identity \
-                (cid, network, address, nickname, public_key, secret_key_path) \
-                VALUES ($1, $2, $3, $4, $5, $6)")))
+                (cid, network, address, nickname, public_key, \
+                 secret_key, secret_key_cipher, secret_key_iv) \
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)")))
     (for ((identity identities))
       (let-hash identity
-        (sql-bind stmt cid .network .address .?nickname .?public_key .?secret_key_path))
+                (sql-bind stmt cid .network .address .?nickname .?public_key
+                          .?secret_key .?secret_key_cipher .?secret_key_iv))
       (sql-exec stmt))))
 
 ;; Add one identity to an existing contact.
@@ -245,5 +264,4 @@
 (def (get-identities cid)
   (hash<-sql-eval-query
    (ensure-contact-db!)
-   "SELECT network, address, nickname, public_key, secret_key_path \
-    FROM identity WHERE cid=$1" cid))
+   "SELECT * FROM identity WHERE cid=$1" cid))

@@ -6,7 +6,7 @@
   :clan/poo/brace :clan/poo/cli :clan/poo/io :clan/poo/mop :clan/poo/object :clan/poo/type
   (only-in :clan/poo/number Nat)
   :mukn/ethereum/cli :mukn/ethereum/hex :mukn/ethereum/ethereum :mukn/ethereum/known-addresses
-  (only-in ./identities Identity load-keypairs options/keypairs)
+  (only-in ./identities Identity)
   (rename-in ../contacts/db (add-contact add-contact.db) (list-contacts list-contacts.db)))
 
 (define-type Contact
@@ -34,28 +34,26 @@
 
 (def (load-contacts.db)
   (for/collect (contact (list-contacts.db))
-    (.o (:: @ Contact)
-        (cid (hash-ref contact 'cid))
-        (name (hash-ref contact 'name))
-        (identities
-         (for/collect (identity (hash-ref contact 'identities []))
-           (<-json Identity identity))))))
+    (force-object ; for immediate key registration
+     (.o (:: @ Contact)
+         (cid (hash-ref contact 'cid))
+         (name (hash-ref contact 'name))
+         (identities
+          (for/collect (identity (hash-ref contact 'identities []))
+            (<-json Identity identity)))))))
 
-(def (load-contacts contacts-file keypairs-file)
-  (load-keypairs from: keypairs-file)
+(def (load-contacts contacts-file)
   (match contacts-file
     ((? string?) (load-contacts.json contacts-file))
     (#f (load-contacts.db))))
 
 (def options/contacts
   (make-options
-   [(flag 'json "-J" "--json" help: "write contacts as JSON")]
-   []
-   [options/keypairs]))
+   [(flag 'json "-J" "--json" help: "write contacts as JSON")]))
 
-(define-entry-point (add-contact name: (name #f)
-                                 json: (json #f)
-                                 keypairs: (keypairs-file #f))
+(define-entry-point (add-contact
+                     name: (name #f)
+                     json: (json #f))
   (help: "Add contact"
    getopt: (make-options
             [(option 'name "-N" "--name" help: "name of contact")]
@@ -67,10 +65,10 @@
       (displayln (string<-json (hash (cid cid) (name name))))
       (displayln "Added contact " name ", cid " cid)))
 
-(define-entry-point (remove-contact cid: (cid #f)
-                                    name: (name #f)
-                                    json: (json #f)
-                                    keypairs: (keypairs-file #f))
+(define-entry-point (remove-contact
+                     cid: (cid #f)
+                     name: (name #f)
+                     json: (json #f))
   (help: "Remove contact"
    getopt: (make-options [(option 'cid "-C" "--cid" help: "contact ID")
                           (option 'name "-N" "--name" help: "name of contact")]
@@ -85,10 +83,9 @@
 
 (define-entry-point (list-contacts
                      contacts: (contacts-file #f)
-                     keypairs: (keypairs-file #f)
                      json: (json #f))
   (help: "List contacts" getopt: options/contacts)
-  (def contacts (sort (load-contacts contacts-file keypairs-file)
+  (def contacts (sort (load-contacts contacts-file)
                       (lambda (c1 c2) (< (.@ c1 cid) (.@ c2 cid)))))
   (if json
       (displayln (string<-json (map (cut json<- Contact <>) contacts)))

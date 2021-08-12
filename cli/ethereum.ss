@@ -15,11 +15,14 @@
   :mukn/ethereum/testing :mukn/ethereum/erc20
   ./contacts ./identities)
 
-(define-entry-point (transfer from: (from #f) to: (to #f) value: (value #f)
-                              contacts: (contacts-file #f) keypairs: (keypairs-file #f))
+(define-entry-point (transfer
+                     from: (from #f)
+                     to: (to #f)
+                     value: (value #f)
+                     contacts: (contacts-file #f))
   (help: "Send tokens from one account to the other"
    getopt: (make-options [] [(cut hash-restrict-keys! <> '(from to value))] options/send))
-  (def contacts (load-contacts contacts-file keypairs-file))
+  (def contacts (load-contacts contacts-file))
   (def currency (.@ (ethereum-config) nativeCurrency))
   (def token-symbol (.@ currency symbol))
   (def network (.@ (ethereum-config) network))
@@ -40,14 +43,16 @@
           (0x<-address from) (decimal-string-ether<-wei (eth_getBalance from)) token-symbol
           (0x<-address to) (decimal-string-ether<-wei (eth_getBalance to)) token-symbol))
 
-(define-entry-point (faucet from: (from #f) to: (to #f)
-                     contacts: (contacts-file #f) keypairs: (keypairs-file #f))
+(define-entry-point (faucet
+                     from: (from #f)
+                     to: (to #f)
+                     contacts: (contacts-file #f))
   (help: "Fund some accounts from the network faucet"
    getopt: (make-options []
                          [(cut hash-restrict-keys! <> '(from to value))]
-                         [options/keypairs options/to]))
+                         [options/to]))
   (def-slots (network faucets name nativeCurrency) (ethereum-config))
-  (load-contacts contacts-file keypairs-file)
+  (load-contacts contacts-file)
   (unless to (error "Missing recipient. Please use option --to"))
   (set! to (parse-address to))
   (cond
@@ -91,12 +96,16 @@
   (make-options [(option 'erc20 "-e" "--erc20" help: "Address of ERC20 contract")]
                 [] options/evm-network))
 
-(define-entry-point ($erc20-transfer from: (from #f) erc20: (erc20 #f) to: (to #f) value: (value #f)
-                                     contacts: (contacts-file #f) keypairs: (keypairs-file #f))
+(define-entry-point ($erc20-transfer
+                     from: (from #f)
+                     erc20: (erc20 #f)
+                     to: (to #f)
+                     value: (value #f)
+                     contacts: (contacts-file #f))
   (help: "Send ERC20 tokens from one account to the other"
    getopt: (make-options [] [(cut hash-restrict-keys! <> '(from erc20 to value))]
                          [options/send options/erc20]))
-  (load-contacts contacts-file keypairs-file)
+  (load-contacts contacts-file)
   (def currency (.@ (ethereum-config) nativeCurrency))
   (def token-symbol (.@ currency symbol))
   (def network (.@ (ethereum-config) network))

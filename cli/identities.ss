@@ -1,13 +1,14 @@
 (export #t)
 
 (import
-  :std/getopt :std/format :std/iter :std/misc/hash :std/srfi/13 :std/sugar
-  :clan/base :clan/config :clan/files :clan/hash :clan/json :clan/multicall :clan/path :clan/syntax
-  :clan/crypto/secp256k1
+  :std/crypto :std/getopt :std/format :std/iter :std/misc/hash :std/srfi/13 :std/sugar :std/text/hex
+  :clan/base :clan/files :clan/hash :clan/json :clan/multicall :clan/path :clan/syntax
+  :clan/crypto/random :clan/crypto/secp256k1
   :clan/poo/brace :clan/poo/cli :clan/poo/io :clan/poo/mop :clan/poo/object :clan/poo/type
   :mukn/ethereum/cli :mukn/ethereum/hex :mukn/ethereum/ethereum :mukn/ethereum/known-addresses :mukn/ethereum/network-config
   :mukn/ethereum/json-rpc
-  (rename-in ../contacts/db (add-contact add-contact.db) (add-identity add-identity.db)))
+  (rename-in ../contacts/db (add-contact add-contact.db) (add-identity add-identity.db))
+  (only-in ../contacts/keys decrypt-secret-key encrypt-secret-key secret-key-cipher))
 
 ;; TODO:
 ;; - store only the secret-key, not address and public-key
@@ -25,8 +26,9 @@
     keypair: [Keypair])
    {.make: (lambda (nickname (network 'eth) (address #f) (public-key #f) (keypair #f))
              (when keypair
-               (unless (keypair-consistent? keypair)
-                 (error "Inconsistent keypair for" nickname))
+               (if (keypair-consistent? keypair)
+                   (register-keypair nickname keypair)
+                   (error "Inconsistent keypair for" nickname))
                (if address
                    (unless (equal? address (keypair-address keypair))
                      (error "Inconsistent address and keypair for" nickname))
@@ -44,73 +46,50 @@
                       (public-key (let ((public_key (hash-get identity 'public_key)))
                                     (and (string? public_key)
                                          (<-string PublicKey public_key))))
-                      (keypair (hash-get keypair-by-address address)))
-                 (.call Identity .make nickname network address public-key keypair)))
+                      (secret-key (let ((secret_key (hash-get identity 'secret_key))
+                                        (secret_key_cipher (hash-get identity 'secret_key_cipher))
+                                        (secret_key_iv (hash-get identity 'secret_key_iv)))
+                                    (and (string? secret_key)
+                                         (string? secret_key_cipher)
+                                         (string? secret_key_iv)
+                                         (secp256k1-seckey
+                                          (decrypt-secret-key secret_key_cipher
+                                                              (hex-decode secret_key_iv)
+                                                              (hex-decode secret_key))))))
+                      (kp (keypair address public-key secret-key)))
+                 (.call Identity .make nickname network address public-key kp)))
     .json<-: (lambda (identity)
                (with-slots (nickname network address public-key keypair) identity
-                 (hash (nickname nickname)
-                       (network network)
-                       (address (0x<-address address))
-                       (public_key (if public-key
-                                       (string<- PublicKey public-key)
-                                       (void)))
-                       (secret_key_path (if keypair
-                                            (format "glow:~a" nickname)
-                                            (void))))))}))
-
-(def (default-secret-key-ring)
-  (xdg-config-home "glow" "secret-key-ring.json"))
-
-(def (load-keypairs from: (from #f))
-  (unless (string? from) (set! from (default-secret-key-ring)))
-  (with-catch
-   (lambda (e)
-     (displayln (error-message e))
-     (error "Failed to read and parse the secret key ring file" from))
-   (lambda ()
-     (if (file-exists? from)
-         (hash-key-value-map
-          (lambda (nickname keypair-json)
-            (def keypair (import-keypair/json keypair-json))
-            (register-keypair nickname keypair)
-            (cons nickname keypair))
-          (read-file-json from))
-         (make-hash-table)))))
-
-(def (store-keypairs keypairs to: (to #f))
-  (unless (string? to) (set! to (default-secret-key-ring)))
-  (def keypairs-json
-    (hash-key-value-map
-     (lambda (nickname keypair)
-       (cons nickname (export-keypair/json keypair)))
-     keypairs))
-  (create-directory* (path-parent to))
-  ;; TODO: Ensure the new file has mode 0600.
-  (clobber-file to (string<-json keypairs-json) salt?: #t))
-
-(def (call-with-keypairs f from: (from #f) to: (to #f))
-  (def keypairs (load-keypairs from: from))
-  (f keypairs)
-  (store-keypairs keypairs to: (or to from)))
-
-(def options/keypairs
-  (make-options
-   [(option 'keypairs "-K" "--keypairs" help: "file to load and store keypairs")]))
+                 (let-values (((encrypted-secret-key iv)
+                               (encrypt-secret-key (export-secret-key/bytes
+                                                    (keypair-secret-key keypair)))))
+                   (hash (nickname nickname)
+                         (network network)
+                         (address (0x<-address address))
+                         (public_key (if public-key
+                                         (string<- PublicKey public-key)
+                                         (void)))
+                         (secret_key (if encrypted-secret-key
+                                         (hex-encode encrypted-secret-key)
+                                         (void)))
+                         (secret_key_cipher (if encrypted-secret-key
+                                                (cipher-name secret-key-cipher)
+                                                (void)))
+                         (secret_key_iv (if iv
+                                            (hex-encode iv)
+                                            (void)))))))}))
 
 (def options/identities
   (make-options
     [(option 'cid "-C" "--cid" help: "contact ID of identity, #f for a new contact")
      (option 'network "-E" "--evm-network" help: "name of EVM network")
      (flag 'json "-J" "--json" help: "write identities as JSON")
-     (option 'nickname "-N" "--nickname" help: "nickname of identity")]
-    []
-    [options/keypairs]))
+     (option 'nickname "-N" "--nickname" help: "nickname of identity")]))
 
 (define-entry-point (add-identity
                      cid: (cid #f)
                      json: (json #f)
                      keypair: (keypair #f)
-                     keypairs: (keypairs #f)
                      network: (network #f)
                      nickname: (nickname #f)
                      secret-key: (secret-key #f))
@@ -129,9 +108,7 @@
   (def new-public-key (keypair-public-key new-keypair))
   (def new-identity
     (.call Identity .make nickname network new-address new-public-key new-keypair))
-  (call-with-keypairs
-   (cut hash-put! <> (string-downcase nickname) new-keypair)
-   from: keypairs)
+  (register-keypair nickname new-keypair)
   (add-identity.db cid (json<- Identity new-identity))
   (if json
       (displayln (string<-json (json<- Identity new-identity)))
@@ -140,7 +117,6 @@
 (define-entry-point (generate-identity
                      cid: (cid #f)
                      json: (json #f)
-                     keypairs: (keypairs #f)
                      network: (network #f)
                      nickname: (nickname #f)
                      prefix: (prefix #f))
@@ -154,27 +130,21 @@
   (def keypair (generate-keypair scoring: scoring))
   (add-identity cid: cid
                 json: json
-                keypairs: keypairs
                 network: network
                 nickname: nickname
                 keypair: keypair))
 
 (define-entry-point (remove-identity
                      json: (json #f)
-                     keypairs: (keypairs #f)
                      nickname: (nickname #f))
   (help: "Remove identity"
    getopt: (make-options
             [(flag 'json "-J" "--json"
                    help: "write ouptut as JSON")
              (option 'nickname "-N" "--nickname"
-                     help: "nickname of identity to remove")]
-            []
-            [options/keypairs]))
+                     help: "nickname of identity to remove")]))
   (unless nickname (error "missing nickname"))
-  (call-with-keypairs
-   (cut hash-remove! <> (string-downcase nickname))
-   from: keypairs)
+  (unregister-keypair nickname)
   (delete-identity-by-nickname nickname)
   (if json
       (displayln (string<-json (hash (removed nickname))))
