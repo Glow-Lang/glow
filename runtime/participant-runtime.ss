@@ -12,6 +12,7 @@
   :mukn/ethereum/hex :mukn/ethereum/ethereum :mukn/ethereum/network-config :mukn/ethereum/json-rpc
   :mukn/ethereum/transaction :mukn/ethereum/tx-tracker :mukn/ethereum/watch :mukn/ethereum/assets
   :mukn/ethereum/evm-runtime :mukn/ethereum/contract-config :mukn/ethereum/assembly :mukn/ethereum/types
+  :mukn/ethereum/nonce-tracker
   (only-in ../compiler/alpha-convert/env symbol-refer)
   ./program ./block-ctx ./consensus-code-generator ./terminal-codes
   ../compiler/method-resolve/method-resolve
@@ -182,6 +183,7 @@
 ;;
 ;; <- Runtime
 (def (update-contract-balance self)
+  ;; TODO: track balances for non-native assets.
   (set!
     (.@ self contract-balance)
     (+ (.@ self contract-balance)
@@ -312,6 +314,7 @@
       ;; recorded in Message's asset-transfer table during interpretation. Probably
       ;; requires getting TransactionInfo using the TransactionReceipt.
       (def contract-address (.@ contract-config contract-address))
+      (approve-deposits self contract-address)
       (def message-pretx
            (prepare-call-function-transaction
              self
@@ -323,6 +326,18 @@
       (set! (.@ self first-unprocessed-event-in-block) 0)
       ))
   #t)
+
+;; Pre-approve any deposits that the current block will need to perform
+;; when we invoke the consensus.
+;;
+;; <- Runtime Address
+(def (approve-deposits self contract-address)
+  (for-each
+    (lambda (deposit)
+      (def asset (car deposit))
+      (def amount (cdr deposit))
+      (.call asset .approve-deposit! (get-active-participant self) contract-address amount))
+    (.@ self block-ctx deposits)))
 
 ;; Sexp <- State
 (def (sexp<-state state) (map (match <> ([t . v] (sexp<- t v))) state))
@@ -357,6 +372,16 @@
   (def timer-start (.@ self agreement options maxInitialBlock))
   (set! (.@ self timer-start) timer-start)
   (def pretx (prepare-create-contract-transaction self))
+
+  ;; Pick a nonce now, and pre-compute the contract address, so we
+  ;; can invoke approve-deposits before we create the contract. The
+  ;; same transaction that creates the contract could also deposit,
+  ;; so after creation it is too late.
+  (unless (.@ pretx nonce)
+    (set! (.@ pretx nonce) (next-nonce (.@ pretx from))))
+  (def contract-address (transaction-to pretx))
+  (approve-deposits self contract-address)
+
   (def receipt (post-transaction pretx))
   (def contract-config (contract-config<-creation-receipt receipt))
   (verify-contract-config contract-config pretx)
