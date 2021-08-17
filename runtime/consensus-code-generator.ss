@@ -8,9 +8,6 @@
   :mukn/ethereum/assets :mukn/ethereum/types
   ./program)
 
-(def MAX_ASSETS 3)
-(def MAX_PARTICIPANTS 2)
-
 (define-type ConsensusCodeGenerator
   (.+
     (Record
