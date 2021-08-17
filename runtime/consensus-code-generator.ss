@@ -70,7 +70,18 @@
     }))
 
 (define-type StaticBlockCtx
-  { ;; .get-asset-names : [StaticBlockCtx -> [Listof Symbol]]
+  {
+    ;; .deposit-var : [StaticBlockCtx Symbol -> Static variable]
+    .deposit-var:
+      (lambda (sbc sym)
+        (hash-ref (.@ sbc deposit-vars) sym))
+    ;; .withdraw-var : [StaticBlockCtx Symbol Symbol -> Static variable]
+    .withdraw-var:
+      (lambda (sbc asset-sym participant)
+        (hash-ref (.@ sbc withdraw-vars) [asset-sym participant]))
+    ;; TODO: .balance-var
+
+    ;; .get-asset-names : [StaticBlockCtx -> [Listof Symbol]]
     .get-asset-names: (lambda (sbc) (.@ sbc asset-names))
     ;; .get-participant-names : [StaticBlockCtx -> [Listof Symbol]]
     .get-participant-names: (lambda (sbc) (.@ sbc participant-names))
@@ -106,6 +117,16 @@
                (error "too many participants"))
              (def asset-participant-names
                (cartesian-product asset-names participant-names))
+             (def my-deposit-vars
+               (list->hash-table-eq
+                (for/collect ((n asset-names)
+                              (d deposit-vars))
+                  [n . d])))
+             (def my-withdraw-vars
+               (list->hash-table
+                (for/collect ((np asset-participant-names)
+                              (w withdraw-vars))
+                  (cons np w))))
              (def deposits
                (list->hash-table-eq
                 (for/collect ((n asset-names)
@@ -126,7 +147,10 @@
                 (for/collect ((np asset-participant-names)
                               (w (map &add-withdraw! (iota 6))))
                   (cons np w))))
-             { asset-names participant-names assets deposits add-deposits withdraws add-withdraws }) })
+             { asset-names participant-names assets
+               deposit-vars: my-deposit-vars
+               withdraw-vars: my-withdraw-vars
+               deposits add-deposits withdraws add-withdraws }) })
 
 ;; Logging the data, simple version, optimal for messages less than 6000 bytes of data.
 ;; TESTING STATUS: Used by buy-sig.
