@@ -69,6 +69,7 @@
           (.set! self labels labels-value)))
     }))
 
+;; TODO: rename this; it has nothing to do with blocks.
 (define-type StaticBlockCtx
   {
     ;; .deposit-var : [StaticBlockCtx Symbol -> Static variable]
