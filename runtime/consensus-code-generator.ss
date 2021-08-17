@@ -109,22 +109,22 @@
              (def deposits
                (list->hash-table-eq
                 (for/collect ((n asset-names)
-                              (d [deposit0 deposit1 deposit2]))
+                              (d (map deposit (iota 3))))
                   [n . d])))
              (def add-deposits
                (list->hash-table-eq
                 (for/collect ((n asset-names)
-                              (d [&add-deposit0! &add-deposit1! &add-deposit2!]))
+                              (d (map &add-deposit! (iota 3))))
                   [n . d])))
              (def withdraws
                (list->hash-table
                 (for/collect ((np asset-participant-names)
-                              (w [withdraw0 withdraw1 withdraw2 withdraw3 withdraw4 withdraw5]))
+                              (w (map withdraw (iota 6))))
                   (cons np w))))
              (def add-withdraws
                (list->hash-table
                 (for/collect ((np asset-participant-names)
-                              (w [&add-withdraw0! &add-withdraw1! &add-withdraw2! &add-withdraw3! &add-withdraw4! &add-withdraw5!]))
+                              (w (map &add-withdraw! (iota 6))))
                   (cons np w))))
              { asset-names participant-names assets deposits add-deposits withdraws add-withdraws }) })
 
@@ -152,7 +152,12 @@
       (for/collect ((pn participants))
         (def a (.call StaticBlockCtx .get-asset sbc an))
         (def p (load-immediate-variable self initial-label pn Address))
-        (.call a .commit-withdraw! p (.call StaticBlockCtx .get-withdraw sbc an pn) &sub-balance0! tmp@)))))
+        (.call a .commit-withdraw!
+               p
+               (.call StaticBlockCtx .get-withdraw sbc an pn)
+               (&sub-balance! 0) ;; TODO: this is obviously wrong; rather
+                                 ;; than hard-coding, choose the correct index.
+               tmp@)))))
    calldatanew DUP1 CALLDATASIZE SUB ;; -- logsz cdn ret
    SWAP1 ;; -- cdn logsz ret
    DUP2 ;; logsz cdn logsz ret
