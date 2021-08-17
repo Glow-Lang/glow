@@ -76,6 +76,9 @@
     .deposit-var:
       (lambda (sbc sym)
         (hash-ref (.@ sbc deposit-vars) sym))
+    .balance-var:
+      (lambda (sbc sym)
+        (hash-ref (.@ sbc balance-vars) sym))
     ;; .withdraw-var : [StaticBlockCtx Symbol Symbol -> Static variable]
     .withdraw-var:
       (lambda (sbc asset-sym participant)
@@ -115,6 +118,11 @@
                 (for/collect ((n asset-names)
                               (d deposit-vars))
                   [n . d])))
+             (def my-balance-vars
+               (list->hash-table-eq
+                (for/collect ((n asset-names)
+                              (b balance-vars))
+                  [n . b])))
              (def my-withdraw-vars
                (list->hash-table
                 (for/collect ((np asset-participant-names)
@@ -122,6 +130,7 @@
                   (cons np w))))
              { asset-names participant-names assets
                deposit-vars: my-deposit-vars
+               balance-vars: my-balance-vars
                withdraw-vars: my-withdraw-vars }) })
 
 ;; Logging the data, simple version, optimal for messages less than 6000 bytes of data.
@@ -151,10 +160,7 @@
         (.call a .commit-withdraw!
                p
                (.call StaticBlockCtx .get-withdraw sbc an pn)
-
-               ;; TODO: this is obviously wrong; rather
-               ;; than hard-coding, choose the correct index:
-               (&sub-var! (list-ref balance-vars 0))
+               (&sub-var! (.call StaticBlockCtx .balance-var sbc an))
                tmp@)))))
    calldatanew DUP1 CALLDATASIZE SUB ;; -- logsz cdn ret
    SWAP1 ;; -- cdn logsz ret
