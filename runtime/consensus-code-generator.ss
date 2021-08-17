@@ -91,14 +91,14 @@
     .get-deposit: (lambda (sbc sym) (.@ (.call StaticBlockCtx .deposit-var sbc sym) get))
     ;; .add-deposit! : [StaticBlockCtx Symbol -> EvmThunk]
     .add-deposit!: (lambda (sbc sym)
-                     (&add-deposit! (.call StaticBlockCtx .deposit-var sbc sym)))
+                     (&add-var! (.call StaticBlockCtx .deposit-var sbc sym)))
     ;; .get-withdraw : [StaticBlockCtx Symbol Symbol -> EvmThunk]
     .get-withdraw: (lambda (sbc asset-sym participant)
                      (.@ (.call StaticBlockCtx .withdraw-var sbc asset-sym participant)
                          get))
     ;; .add-withdraw! : [StaticBlockCtx Symbol Symbol -> EvmThunk]
     .add-withdraw!: (lambda (sbc asset-sym participant)
-                      (&add-withdraw! (.call StaticBlockCtx .withdraw-var sbc asset-sym participant)))
+                      (&add-var! (.call StaticBlockCtx .withdraw-var sbc asset-sym participant)))
     .make: (lambda (program name assets)
              (def inter (hash-ref (.@ program interactions) name))
              (def asset-names (.@ inter asset-names))
@@ -153,7 +153,7 @@
 
                ;; TODO: this is obviously wrong; rather
                ;; than hard-coding, choose the correct index:
-               (&sub-balance! (list-ref balance-vars 0))
+               (&sub-var! (list-ref balance-vars 0))
                tmp@)))))
    calldatanew DUP1 CALLDATASIZE SUB ;; -- logsz cdn ret
    SWAP1 ;; -- cdn logsz ret
