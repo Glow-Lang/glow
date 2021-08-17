@@ -88,25 +88,17 @@
     ;; .get-asset : [StaticBlockCtx Symbol -> Asset]
     .get-asset: (lambda (sbc sym) (.ref (.@ sbc assets) sym))
     ;; .get-deposit : [StaticBlockCtx Symbol -> EvmThunk]
-    .get-deposit: (lambda (sbc sym) (hash-ref (.@ sbc deposits) sym))
+    .get-deposit: (lambda (sbc sym) (.@ (.call StaticBlockCtx .deposit-var sbc sym) get))
     ;; .add-deposit! : [StaticBlockCtx Symbol -> EvmThunk]
-    .add-deposit!: (lambda (sbc sym) (hash-ref (.@ sbc add-deposits) sym))
+    .add-deposit!: (lambda (sbc sym)
+                     (&add-deposit! (.call StaticBlockCtx .deposit-var sbc sym)))
     ;; .get-withdraw : [StaticBlockCtx Symbol Symbol -> EvmThunk]
     .get-withdraw: (lambda (sbc asset-sym participant)
-                     (hash-ref/default (.@ sbc withdraws) [asset-sym participant]
-                       (lambda ()
-                         (error "StaticBlockCtx.get-withdraw: key not found"
-                                [asset-sym participant]
-                                "in"
-                                (hash-keys (.@ sbc withdraws))))))
+                     (.@ (.call StaticBlockCtx .withdraw-var sbc asset-sym participant)
+                         get))
     ;; .add-withdraw! : [StaticBlockCtx Symbol Symbol -> EvmThunk]
     .add-withdraw!: (lambda (sbc asset-sym participant)
-                      (hash-ref/default (.@ sbc add-withdraws) [asset-sym participant]
-                        (lambda ()
-                         (error "StaticBlockCtx.add-withdraw!: key not found"
-                                [asset-sym participant]
-                                "in"
-                                (hash-keys (.@ sbc withdraws))))))
+                      (&add-withdraw! (.call StaticBlockCtx .withdraw-var sbc asset-sym participant)))
     .make: (lambda (program name assets)
              (def inter (hash-ref (.@ program interactions) name))
              (def asset-names (.@ inter asset-names))
@@ -127,30 +119,9 @@
                 (for/collect ((np asset-participant-names)
                               (w withdraw-vars))
                   (cons np w))))
-             (def deposits
-               (list->hash-table-eq
-                (for/collect ((n asset-names)
-                              (d (map deposit (iota 3))))
-                  [n . d])))
-             (def add-deposits
-               (list->hash-table-eq
-                (for/collect ((n asset-names)
-                              (d (map &add-deposit! (iota 3))))
-                  [n . d])))
-             (def withdraws
-               (list->hash-table
-                (for/collect ((np asset-participant-names)
-                              (w (map withdraw (iota 6))))
-                  (cons np w))))
-             (def add-withdraws
-               (list->hash-table
-                (for/collect ((np asset-participant-names)
-                              (w (map &add-withdraw! (iota 6))))
-                  (cons np w))))
              { asset-names participant-names assets
                deposit-vars: my-deposit-vars
-               withdraw-vars: my-withdraw-vars
-               deposits add-deposits withdraws add-withdraws }) })
+               withdraw-vars: my-withdraw-vars }) })
 
 ;; Logging the data, simple version, optimal for messages less than 6000 bytes of data.
 ;; TESTING STATUS: Used by buy-sig.
@@ -179,8 +150,10 @@
         (.call a .commit-withdraw!
                p
                (.call StaticBlockCtx .get-withdraw sbc an pn)
-               (&sub-balance! 0) ;; TODO: this is obviously wrong; rather
-                                 ;; than hard-coding, choose the correct index.
+
+               ;; TODO: this is obviously wrong; rather
+               ;; than hard-coding, choose the correct index:
+               (&sub-balance! (list-ref balance-vars 0))
                tmp@)))))
    calldatanew DUP1 CALLDATASIZE SUB ;; -- logsz cdn ret
    SWAP1 ;; -- cdn logsz ret
