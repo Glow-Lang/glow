@@ -673,10 +673,17 @@
   (def i
     (for/fold (i start) ((n names) (t types) (a addresses))
       (unless (= i a)
-        (error (format "check-consecutive-addresses: name = ~a, i = ~a, a = ~a" n i a)))
+        (error (format
+                 (string-append
+                   "check-consecutive-addresses: variable ~a was found at offset ~a, "
+                   "but its expected address is ~a")
+                 n i a)))
       (+ i (.@ t .length-in-bytes))))
   (unless (= i end)
-    (error (format "check-consecutive-addresses: i = ~a, end = ~a" i end))))
+    (error (format
+             (string-append
+               "check-consecutive-addresses: ending offset was incorrect; "
+               "expected ~a but got ~a") end i))))
 
 ;; : Frame <- Runtime Block (Table Offset <- Symbol) Symbol
 (def (create-frame-variables self timer-start code-block-label code-block-participant)
