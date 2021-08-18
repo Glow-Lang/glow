@@ -655,14 +655,18 @@
     (else
       (reduce-expression self expression))))
 
-(defsyntax frame-variables/consecutive-addresses
-  (lambda (stx)
-    (syntax-case stx ()
-      ((_ start end ((name type value) ...))
-       (with-syntax (((name@ ...) (stx-map (cut format-id #'start "~a@" <>) #'(name ...))))
-         #'(let ((types (list type ...)))
-               (check-consecutive-addresses start end '(name ...) types (list name@ ...))
-               (map cons types (list value ...))))))))
+;; Convert a list of (variable value) items into a list of
+;; (type value) pairs, and check that the list corresponds to
+;; the variables defined by define-consecutive-addresses, between
+;; addresses start and end.
+(def (frame-variables/consecutive-addresses start end items)
+  (def vars (map car items))
+  (def vals (map cadr items))
+  (def names (map (lambda (v) (.@ v name)) vars))
+  (def types (map (lambda (v) (.@ v type)) vars))
+  (def addresses (map (lambda (v) (.@ v address)) vars))
+  (check-consecutive-addresses start end names types addresses)
+  (map cons types vals))
 
 ;; check-consecutive-addresses : Int Int [Listof Sym] [Listof Type] [Listof Int] -> Void
 (def (check-consecutive-addresses start end names types addresses)
@@ -686,11 +690,11 @@
   ;; TODO: ensure keys are sorted in both hash-values
   (append
    (frame-variables/consecutive-addresses frame@ params-start@
-    ((pc UInt16 checkpoint-location)
-     (balance0 UInt256 balance)
-     (balance1 UInt256 0)
-     (balance2 UInt256 0)
-     (timer-start Block timer-start)))
+    [[pc-var checkpoint-location]
+     [balance0-var balance]
+     [balance1-var 0]
+     [balance2-var 0]
+     [timer-start-var timer-start]])
    ;; [UInt16 . active-participant-offset]
    ;; TODO: designate participant addresses as global variables that are stored outside of frames
    (map
