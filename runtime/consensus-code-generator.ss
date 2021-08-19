@@ -88,17 +88,17 @@
     .get-participant-names: (lambda (sbc) (.@ sbc participant-names))
     ;; .get-asset : [StaticBlockCtx Symbol -> Asset]
     .get-asset: (lambda (sbc sym) (.ref (.@ sbc assets) sym))
-    ;; .get-deposit : [StaticBlockCtx Symbol -> EvmThunk]
-    .get-deposit: (lambda (sbc sym) (.@ (.call StaticBlockCtx .deposit-var sbc sym) get))
-    ;; .add-deposit! : [StaticBlockCtx Symbol -> EvmThunk]
-    .add-deposit!: (lambda (sbc sym)
+    ;; .&get-deposit : [StaticBlockCtx Symbol -> EvmThunk]
+    .&get-deposit: (lambda (sbc sym) (.@ (.call StaticBlockCtx .deposit-var sbc sym) get))
+    ;; .&add-deposit! : [StaticBlockCtx Symbol -> EvmThunk]
+    .&add-deposit!: (lambda (sbc sym)
                      (&add-var! (.call StaticBlockCtx .deposit-var sbc sym)))
-    ;; .get-withdraw : [StaticBlockCtx Symbol Symbol -> EvmThunk]
-    .get-withdraw: (lambda (sbc asset-sym participant)
+    ;; .&get-withdraw : [StaticBlockCtx Symbol Symbol -> EvmThunk]
+    .&get-withdraw: (lambda (sbc asset-sym participant)
                      (.@ (.call StaticBlockCtx .withdraw-var sbc asset-sym participant)
                          get))
-    ;; .add-withdraw! : [StaticBlockCtx Symbol Symbol -> EvmThunk]
-    .add-withdraw!: (lambda (sbc asset-sym participant)
+    ;; .&add-withdraw! : [StaticBlockCtx Symbol Symbol -> EvmThunk]
+    .&add-withdraw!: (lambda (sbc asset-sym participant)
                       (&add-var! (.call StaticBlockCtx .withdraw-var sbc asset-sym participant)))
     .make: (lambda (program name assets)
              (def inter (hash-ref (.@ program interactions) name))
@@ -153,7 +153,7 @@
    (&begin*
     (for/collect ((an assets))
      (def a (.call StaticBlockCtx .get-asset sbc an))
-     (def amount (.call StaticBlockCtx .get-deposit sbc an))
+     (def amount (.call StaticBlockCtx .&get-deposit sbc an))
      (&begin
        (.call a .commit-deposit! amount tmp@)
        (&add-var! (.call StaticBlockCtx .balance-var sbc an)))))
@@ -166,7 +166,7 @@
         (def p (load-immediate-variable self initial-label pn Address))
         (.call a .commit-withdraw!
                p
-               (.call StaticBlockCtx .get-withdraw sbc an pn)
+               (.call StaticBlockCtx .&get-withdraw sbc an pn)
                (&sub-var! (.call StaticBlockCtx .balance-var sbc an))
                tmp@)))))
    calldatanew DUP1 CALLDATASIZE SUB ;; -- logsz cdn ret
@@ -263,13 +263,14 @@
 
     (['expect-deposited ['@record [asset-symbol amount]]]
       (def asset (.call StaticBlockCtx .get-asset (.@ self static-block-ctx) asset-symbol))
-      (def add-deposit (.call StaticBlockCtx .add-deposit! (.@ self static-block-ctx) asset-symbol))
-      [(load-immediate-variable self function-name amount asset) add-deposit])
+      (def &add-deposit (.call StaticBlockCtx .&add-deposit! (.@ self static-block-ctx) asset-symbol))
+      [(load-immediate-variable self function-name amount asset)
+       (.call StaticBlockCtx .&add-deposit! (.@ self static-block-ctx) asset-symbol)])
 
     (['consensus:withdraw participant ['@record [asset-symbol amount]]]
       (def asset (.call StaticBlockCtx .get-asset (.@ self static-block-ctx) asset-symbol))
-      (def add-withdraw (.call StaticBlockCtx .add-withdraw! (.@ self static-block-ctx) asset-symbol participant))
-      [(load-immediate-variable self function-name amount asset) add-withdraw])
+      [(load-immediate-variable self function-name amount asset)
+       (.call StaticBlockCtx .&add-withdraw! (.@ self static-block-ctx) asset-symbol participant)])
 
    (['return ['@tuple]]
       [])
