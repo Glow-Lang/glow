@@ -9,27 +9,43 @@
 ;; The state for the "monad" of consensual computations, with two variants,
 ;; depending on whether the current participant is active or passive
 
-;; add-to-withdraw : <- Address Nat
 (define-type BlockCtx
-  {.add-to-withdraw: ;; <- @ Address Asset Nat
+  {
+   ;; Log a withdrawal. Takes the participant doing the withdrawal, the asset name,
+   ;; and the amount.
+   ;;
+   ;; <- @ Address Symbol Nat
+   .add-to-withdraw:
    ;; TODO: Shouldn't we be taking a Role rather than an Address as argument?
    ;; This would make both static verification and contract generation much simpler.
    ;; TODO: One the other hand, support multiple asset classes in a same transaction,
    ;; there again in a per-invocation static finite set.
-   (λ (self address asset amount)
+   (λ (self address asset-sym amount)
      ;; TODO: make sure we check that the amounts are balanced at the end of the transaction
      (modify! (.@ self withdrawals)
-              (cut assq-update <> asset
+              (cut assq-update <> asset-sym
                    (cut assq-update <> address (cut + <> amount) 0)
                    [])))
-   .add-to-deposit: ;; <- @ Address Asset Nat
-   (λ (self address asset amount)
-     (modify! (.@ self deposits)
-              (cut assq-update <> asset (cut + <> amount) 0)))
 
-   .total-withdrawal: ;; Nat <- @
+   .add-to-deposit: ;; <- @ Address Symbol Nat
+   (λ (self address asset-sym amount)
+     (modify! (.@ self deposits)
+              (cut assq-update <> asset-sym (cut + <> amount) 0)))
+
+   ;; Return an alist of the total withdrawals for each asset,
+   ;; across all participants. Assets may be missing of no withdrawals
+   ;; were made.
+   ;;
+   ;; Alist (Nat <- Symbol) <- @
+   .total-withdrawals:
    (λ (self)
-      (apply + (flatten (map (cut map cdr <>) (map cdr (.@ self withdrawals))))))
+      (map
+        (lambda (kv)
+          (def asset-sym (car kv))
+          (def addr-to-amount (cdr kv))
+          (def total (apply + (map cdr addr-to-amount)))
+          [asset-sym . total])
+        (.@ self withdrawals)))
    })
 
 (define-type PassiveBlockCtx

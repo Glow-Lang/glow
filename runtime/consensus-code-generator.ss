@@ -118,8 +118,15 @@
              (def my-balance-vars
                (list->hash-table-eq
                 (for/collect ((n asset-names)
-                              (b balance-vars))
-                  [n . b])))
+                              (b balance-vars)
+                              (i (iota (length balance-vars))))
+                  (let
+                    ((v (.mix b)))
+                      ;; Keep track of the balance variable's
+                      ;; index, so we get the memory layout right
+                      ;; elsewhere:
+                      (set! (.@ v index) i)
+                      [n . v]))))
              (def my-withdraw-vars
                (list->hash-table
                 (for/collect ((np asset-participant-names)
@@ -146,7 +153,10 @@
    (&begin*
     (for/collect ((an assets))
      (def a (.call StaticBlockCtx .get-asset sbc an))
-     (.call a .commit-deposit! (.call StaticBlockCtx .get-deposit sbc an) tmp@)))
+     (def amount (.call StaticBlockCtx .get-deposit sbc an))
+     (&begin
+       (.call a .commit-deposit! amount tmp@)
+       (&add-var! (.call StaticBlockCtx .balance-var sbc an)))))
    ;; For each participant, commit the withdrawls
    (&begin*
     (flatten1

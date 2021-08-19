@@ -110,7 +110,7 @@
     first-unprocessed-block: [Block]
     first-unprocessed-event-in-block: [UInt8] ; Index of unprocessed event in a block.
                                               ; NOTE: UInt8 was selected to be reasonably large.
-    contract-balance: [UInt256]
+    contract-balances: [(Vector UInt256)]
     io-context: [IOContext]
     program: [Program]
     name: [Symbol]
@@ -142,7 +142,7 @@
                        timer-start: #f
                        first-unprocessed-block: #f ; Initialized with contract-config
                        first-unprocessed-event-in-block: 0
-                       contract-balance: 0
+                       contract-balances: (make-vector (length balance-vars))
                        io-context
                        program
                        name
@@ -182,13 +182,16 @@
 ;; in the block context.
 ;;
 ;; <- Runtime
-(def (update-contract-balance self)
-  ;; TODO: track balances for non-native assets.
-  (set!
-    (.@ self contract-balance)
-    (+ (.@ self contract-balance)
-       (- (assq-get (.@ self block-ctx deposits) (lookup-native-asset) 0)
-          (.call BlockCtx .total-withdrawal (.@ self block-ctx))))))
+(def (update-contract-balances self)
+  (def sbc (.@ self consensus-code-generator static-block-ctx))
+  (def balances (.@ self contract-balances))
+  (for-each
+    (lambda (kv)
+      (def sym (car kv))
+      (def amount (cdr kv))
+      (def index (.@ (.call StaticBlockCtx .balance-var sbc sym) index))
+      (vector-set! balances index (+ amount (vector-ref balances index))))
+    (.call BlockCtx .total-withdrawals (.@ self block-ctx))))
 
 ;; Bool <- Runtime
 (def (is-active-participant self)
@@ -247,7 +250,7 @@
     (displayln BOLD "\nExecuting code block " (.@ self current-code-block-label) " ..." END)
     (for ((statement (.@ code-block statements)))
       (interpret-participant-statement self statement))
-    (update-contract-balance self)))
+    (update-contract-balances self)))
 
 (def (run-passive-code-block/handshake self role)
   (nest
@@ -332,12 +335,25 @@
 ;;
 ;; <- Runtime Address
 (def (approve-deposits self contract-address)
+  (def sbc (.@ self consensus-code-generator static-block-ctx))
   (for-each
     (lambda (deposit)
-      (def asset (car deposit))
+      (def asset-sym (car deposit))
+      (def asset (.call StaticBlockCtx .get-asset sbc asset-sym))
       (def amount (cdr deposit))
       (.call asset .approve-deposit! (get-active-participant self) contract-address amount))
     (.@ self block-ctx deposits)))
+
+;; Nat <- Runtime
+(def (native-asset-deposit self)
+  (def sbc (.@ self consensus-code-generator static-block-ctx))
+  (def deposits
+    (filter
+      (lambda (deposit)
+        (def asset-sym (car deposit))
+        (native-asset? (.call StaticBlockCtx .get-asset sbc asset-sym)))
+      (.@ self block-ctx deposits)))
+  (apply + (map cdr deposits)))
 
 ;; Sexp <- State
 (def (sexp<-state state) (map (match <> ([t . v] (sexp<- t v))) state))
@@ -364,7 +380,7 @@
   (def contract-bytes
     (stateful-contract-init initial-state-digest (.@ self consensus-code-generator bytes)))
   (create-contract sender-address contract-bytes
-    value: (assq-get (.@ self block-ctx deposits) (lookup-native-asset) 0)))
+    value: (native-asset-deposit self)))
 
 ;; PreTransaction <- Runtime Block
 (def (deploy-contract self)
@@ -416,8 +432,8 @@
   (call-function sender-address contract-address message-bytes
     ;; default gas value should be (void), i.e. ask for an automatic estimate,
     ;; unless we want to force the TX to happen, e.g. so we can see the failure in Remix
-    ;; gas: 1000000 ;; XXX ;;<=== DO NOT COMMIT THIS LINE UNCOMMENTED
-    value: (assq-get (.@ self block-ctx deposits) (lookup-native-asset) 0)))
+    gas: 1000000 ;; XXX ;;<=== DO NOT COMMIT THIS LINE UNCOMMENTED
+    value: (native-asset-deposit self)))
 
 ;; CodeBlock <- Runtime
 (def (get-current-code-block self)
@@ -500,22 +516,19 @@
     (['add-to-deposit ['@record [asset-symbol amount-variable]]]
      (let
        ((this-participant (get-active-participant self))
-        (asset (hash-ref (.@ self asset-environment) asset-symbol))
         (amount (reduce-expression self amount-variable)))
-       (.call BlockCtx .add-to-deposit (.@ self block-ctx) this-participant asset amount)))
+       (.call BlockCtx .add-to-deposit (.@ self block-ctx) this-participant asset-symbol amount)))
 
     (['expect-deposited ['@record [asset-symbol amount-variable]]]
      (let
        ((this-participant (get-active-participant self))
-        (asset (hash-ref (.@ self asset-environment) asset-symbol))
         (amount (reduce-expression self amount-variable)))
-       (.call BlockCtx .add-to-deposit (.@ self block-ctx) this-participant asset amount)))
+       (.call BlockCtx .add-to-deposit (.@ self block-ctx) this-participant asset-symbol amount)))
 
     (['participant:withdraw address-variable ['@record [asset-symbol price-variable]]]
      (let ((address (reduce-expression self address-variable))
-           (asset (hash-ref (.@ self asset-environment) asset-symbol))
            (price (reduce-expression self price-variable)))
-       (.call BlockCtx .add-to-withdraw (.@ self block-ctx) address asset price)))
+       (.call BlockCtx .add-to-withdraw (.@ self block-ctx) address asset-symbol price)))
 
     (['add-to-publish ['quote publish-name] variable-name]
      (let ((publish-value (reduce-expression self variable-name))
@@ -692,16 +705,15 @@
     (hash-get (.@ consensus-code-generator labels) (make-checkpoint-label (.@ self name) code-block-label)))
   (def active-participant-offset
     (lookup-variable-offset consensus-code-generator code-block-label code-block-participant))
-  (def balance (.@ self contract-balance))
+  (def balances (vector->list (.@ self contract-balances)))
   (def live-variables (lookup-live-variables (.@ self program) (.@ self name) code-block-label))
   ;; TODO: ensure keys are sorted in both hash-values
   (append
    (frame-variables/consecutive-addresses frame@ params-start@
-    [[pc-var checkpoint-location]
-     [balance0-var balance]
-     [balance1-var 0]
-     [balance2-var 0]
-     [timer-start-var timer-start]])
+    (append
+      [[pc-var checkpoint-location]]
+      (map list balance-vars balances)
+      [[timer-start-var timer-start]]))
    ;; [UInt16 . active-participant-offset]
    ;; TODO: designate participant addresses as global variables that are stored outside of frames
    (map
