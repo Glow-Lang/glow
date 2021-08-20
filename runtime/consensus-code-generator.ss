@@ -156,6 +156,7 @@
      (def amount (.call StaticBlockCtx .&get-deposit sbc an))
      (&begin
        (.call a .commit-deposit! amount tmp@)
+       amount
        (&add-var! (.call StaticBlockCtx .balance-var sbc an)))))
    ;; For each participant, commit the withdrawls
    (&begin*
