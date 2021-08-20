@@ -185,12 +185,16 @@
 (def (update-contract-balances self)
   (def sbc (.@ self consensus-code-generator static-block-ctx))
   (def balances (.@ self contract-balances))
+  (def (update-balance kv mergefn)
+    (def sym (car kv))
+    (def amount (cdr kv))
+    (def index (.@ (.call StaticBlockCtx .balance-var sbc sym) index))
+    (vector-set! balances index (mergefn (vector-ref balances index) amount)))
   (for-each
-    (lambda (kv)
-      (def sym (car kv))
-      (def amount (cdr kv))
-      (def index (.@ (.call StaticBlockCtx .balance-var sbc sym) index))
-      (vector-set! balances index (+ amount (vector-ref balances index))))
+    (cut update-balance <> +)
+    (.@ self block-ctx deposits))
+  (for-each
+    (cut update-balance <> -)
     (.call BlockCtx .total-withdrawals (.@ self block-ctx))))
 
 ;; Bool <- Runtime
