@@ -26,7 +26,7 @@
 (def b-address bob)
 (def gas-allowance (wei<-ether .01))
 (def t (wei<-ether .01))
-(def u (wei<-ether .01))
+(def u (wei<-ether .02))
 
 (def asset-swap-integrationtest
   (test-suite "integration test for ethereum/asset_swap"
