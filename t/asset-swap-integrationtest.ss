@@ -97,7 +97,8 @@
               [["Choose your identity:"
                 (lambda (id) (string-prefix? "t/bob " id))]
                ["Choose your role:"
-                "B"]]))))
+                "B"]])
+             (read-environment))))
 
        (def a-environment
          (with-io-port proc-a read-environment))
