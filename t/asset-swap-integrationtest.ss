@@ -35,7 +35,6 @@
     (ensure-ethereum-connection "pet")
     (ensure-db-connection "testdb")
     (DBG "Ensure participants funded")
-    ;; TODO: prefund on the ERC20s too
     (ensure-addresses-prefunded)
     (DBG "DONE")
 
