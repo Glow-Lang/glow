@@ -13,7 +13,7 @@
   :mukn/ethereum/types :mukn/ethereum/ethereum :mukn/ethereum/known-addresses :mukn/ethereum/json-rpc
   :mukn/ethereum/simple-apps :mukn/ethereum/network-config :mukn/ethereum/assets
   :mukn/ethereum/hex :mukn/ethereum/transaction :mukn/ethereum/types
-  :mukn/ethereum/testing
+  :mukn/ethereum/testing :mukn/ethereum/test-contracts
   ../compiler/passes
   ../compiler/multipass
   ../compiler/syntax-context
@@ -39,9 +39,10 @@
     (DBG "DONE")
 
     (test-case "asset_swap executes"
-      ;; TODO: get balances on QASPET too
-      (def a-balance-before (eth_getBalance a-address 'latest))
-      (def b-balance-before (eth_getBalance b-address 'latest))
+      (def a-pet-before (eth_getBalance a-address 'latest))
+      (def b-pet-before (eth_getBalance b-address 'latest))
+      (def a-qaspet-before (.call QASPET .get-balance a-address))
+      (def b-qaspet-before (.call QASPET .get-balance b-address))
 
       (def proc-a #f)
       (def proc-b #f)
@@ -103,21 +104,30 @@
          (with-io-port proc-a read-environment))
        (assert-equal! a-environment b-environment)
 
-       ;; TODO: get balances on QASPET too
-       (def a-balance-after (eth_getBalance a-address 'latest))
-       (def b-balance-after (eth_getBalance b-address 'latest))
+       (def a-pet-after (eth_getBalance a-address 'latest))
+       (def b-pet-after (eth_getBalance b-address 'latest))
+       (def a-qaspet-after (.call QASPET .get-balance a-address))
+       (def b-qaspet-after (.call QASPET .get-balance b-address))
 
        ;; TODO: balances in both assets PET and QASPET
        (DDT "DApp completed"
-            (.@ Ether .string<-) a-balance-before
-            (.@ Ether .string<-) b-balance-before
-            (.@ Ether .string<-) a-balance-after
-            (.@ Ether .string<-) b-balance-after)
+            (.@ Ether .string<-) a-pet-before
+            (.@ Ether .string<-) b-pet-before
+            (.@ Ether .string<-) a-pet-after
+            (.@ Ether .string<-) b-pet-after
+            (.@ QASPET .string<-) a-qaspet-before
+            (.@ QASPET .string<-) b-qaspet-before
+            (.@ QASPET .string<-) a-qaspet-after
+            (.@ QASPET .string<-) b-qaspet-after)
 
        ;; in PET, a loses t, b gains t
-       ;; TODO: in QASPET, b should lose u, a should gain u
-       (assert! (<= 0 (- (- a-balance-before t) a-balance-after) gas-allowance))
-       (assert! (<= 0 (- (+ b-balance-before t) b-balance-after) gas-allowance))
+       (assert! (<= 0 (- (- a-pet-before t) a-pet-after) gas-allowance))
+       (assert! (<= 0 (- (+ b-pet-before t) b-pet-after) gas-allowance))
+
+       ;; QASPET, b loses u, a gains u. No need to provide slack for
+       ;; gas, since this is a non-native token.
+       (assert-equal! (- b-qaspet-before u) b-qaspet-after)
+       (assert-equal! (+ a-qaspet-before u) a-qaspet-after)
 
        (finally
         (ignore-errors (close-port proc-a))
