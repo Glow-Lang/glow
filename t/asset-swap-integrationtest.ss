@@ -9,6 +9,7 @@
   :clan/crypto/keccak
   :clan/persist/content-addressing :clan/persist/db
   :clan/versioning
+  :clan/assert
   :mukn/ethereum/types :mukn/ethereum/ethereum :mukn/ethereum/known-addresses :mukn/ethereum/json-rpc
   :mukn/ethereum/simple-apps :mukn/ethereum/network-config :mukn/ethereum/assets
   :mukn/ethereum/hex :mukn/ethereum/transaction :mukn/ethereum/types
@@ -100,7 +101,7 @@
 
        (def a-environment
          (with-io-port proc-a read-environment))
-       (assert! (equal? a-environment b-environment))
+       (assert-equal! a-environment b-environment)
 
        ;; TODO: get balances on QASPET too
        (def a-balance-after (eth_getBalance a-address 'latest))
