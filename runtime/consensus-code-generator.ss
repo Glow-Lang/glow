@@ -141,7 +141,6 @@
 ;; TESTING STATUS: Used by buy-sig.
 (def (&define-commit-contract-call/simple self)
   (def sbc (.@ self static-block-ctx))
-  (def tmp@ tmp100@)
   (def assets (.call StaticBlockCtx .get-asset-names sbc))
   (def participants (.call StaticBlockCtx .get-participant-names sbc))
   (def initial-label
@@ -155,7 +154,7 @@
      (def a (.call StaticBlockCtx .get-asset sbc an))
      (def amount (.call StaticBlockCtx .&get-deposit sbc an))
      (&begin
-       (.call a .commit-deposit! amount tmp@)
+       (.call a .commit-deposit! amount)
        amount
        (&add-var! (.call StaticBlockCtx .balance-var sbc an)))))
    ;; For each participant, commit the withdrawls
@@ -168,8 +167,7 @@
         (.call a .commit-withdraw!
                p
                (.call StaticBlockCtx .&get-withdraw sbc an pn)
-               (&sub-var! (.call StaticBlockCtx .balance-var sbc an))
-               tmp@)))))
+               (&sub-var! (.call StaticBlockCtx .balance-var sbc an)))))))
    calldatanew DUP1 CALLDATASIZE SUB ;; -- logsz cdn ret
    SWAP1 ;; -- cdn logsz ret
    DUP2 ;; logsz cdn logsz ret
