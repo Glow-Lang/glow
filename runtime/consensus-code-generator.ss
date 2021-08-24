@@ -69,18 +69,17 @@
 ;; TODO: rename this; it has nothing to do with blocks.
 (define-type StaticBlockCtx
   {
-    ;; .deposit-var : [StaticBlockCtx Symbol -> Static variable]
+    ;; .deposit-var : [StaticBlockCtx Symbol -> StaticVar]
     .deposit-var:
       (lambda (sbc sym)
         (hash-ref (.@ sbc deposit-vars) sym))
     .balance-var:
       (lambda (sbc sym)
         (hash-ref (.@ sbc balance-vars) sym))
-    ;; .withdraw-var : [StaticBlockCtx Symbol Symbol -> Static variable]
+    ;; .withdraw-var : [StaticBlockCtx Symbol Symbol -> StaticVar]
     .withdraw-var:
       (lambda (sbc asset-sym participant)
         (hash-ref (.@ sbc withdraw-vars) [asset-sym participant]))
-    ;; TODO: .balance-var
 
     ;; .get-asset-names : [StaticBlockCtx -> [Listof Symbol]]
     .get-asset-names: (lambda (sbc) (.@ sbc asset-names))
