@@ -167,7 +167,7 @@
         (.call a .commit-withdraw!
                p
                (.call StaticBlockCtx .&get-withdraw sbc an pn)
-               (&sub-var! (.call StaticBlockCtx .balance-var sbc an)))))))
+               (.call StaticBlockCtx .balance-var sbc an))))))
    calldatanew DUP1 CALLDATASIZE SUB ;; -- logsz cdn ret
    SWAP1 ;; -- cdn logsz ret
    DUP2 ;; logsz cdn logsz ret
