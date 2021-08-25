@@ -436,7 +436,7 @@
   (call-function sender-address contract-address message-bytes
     ;; default gas value should be (void), i.e. ask for an automatic estimate,
     ;; unless we want to force the TX to happen, e.g. so we can see the failure in Remix
-    gas: 1000000 ;; XXX ;;<=== DO NOT COMMIT THIS LINE UNCOMMENTED
+    ;; gas: 1000000 ;; XXX ;;<=== DO NOT COMMIT THIS LINE UNCOMMENTED
     value: (native-asset-deposit self)))
 
 ;; CodeBlock <- Runtime
