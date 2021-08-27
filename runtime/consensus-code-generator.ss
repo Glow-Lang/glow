@@ -1,7 +1,7 @@
 (export #t)
 
 (import
-  :std/sort :std/srfi/1 :std/misc/hash :std/misc/list :std/misc/number
+  :std/iter :std/sort :std/srfi/1 :std/misc/hash :std/misc/list :std/misc/number
   :clan/base :clan/number :clan/syntax
   :clan/poo/io :clan/poo/object :clan/poo/brace :clan/poo/debug
   :mukn/ethereum/ethereum :mukn/ethereum/assembly :mukn/ethereum/evm-runtime
@@ -13,7 +13,8 @@
     (Record
       program: [Program]
       name: [Symbol]
-      variable-offsets: [(OrFalse (Map Nat <- Symbol))]
+      static-block-ctx: [StaticBlockCtx]
+      variable-offsets: [(OrFalse (Map (Map Nat <- Symbol) <- Symbol))]
       labels: [(OrFalse (Map Nat <- Symbol))]
       bytes: [(OrFalse Bytes)]
 
@@ -21,9 +22,10 @@
       ; space in the executable, incl. globals, so the name should reflect that.
       params-end: [(OrFalse Nat)])
     {.make:
-      (lambda (some-program some-name some-timeout)
+      (lambda (some-program some-name some-timeout assets)
         {program: some-program
          name: some-name
+         static-block-ctx: (.call StaticBlockCtx .make some-program some-name assets)
          variable-offsets: #f
          labels: #f
          bytes: #f
@@ -54,7 +56,7 @@
               (&begin
                 (&simple-contract-prelude)
                 &define-tail-call
-                &define-simple-logging
+                (&define-commit-contract-call/simple self)
                 (&define-check-participant-or-timeout)
                 (&define-end-contract)
                 compiled-small-functions
@@ -63,6 +65,115 @@
           (.set! self bytes bytes-value)
           (.set! self labels labels-value)))
     }))
+
+;; TODO: rename this; it has nothing to do with blocks.
+(define-type StaticBlockCtx
+  {
+    ;; .deposit-var : [StaticBlockCtx Symbol -> StaticVar]
+    .deposit-var:
+      (lambda (sbc sym)
+        (hash-ref (.@ sbc deposit-vars) sym))
+    .balance-var:
+      (lambda (sbc sym)
+        (hash-ref (.@ sbc balance-vars) sym))
+    ;; .withdraw-var : [StaticBlockCtx Symbol Symbol -> StaticVar]
+    .withdraw-var:
+      (lambda (sbc asset-sym participant)
+        (hash-ref (.@ sbc withdraw-vars) [asset-sym participant]))
+
+    ;; .get-asset-names : [StaticBlockCtx -> [Listof Symbol]]
+    .get-asset-names: (lambda (sbc) (.@ sbc asset-names))
+    ;; .get-participant-names : [StaticBlockCtx -> [Listof Symbol]]
+    .get-participant-names: (lambda (sbc) (.@ sbc participant-names))
+    ;; .get-asset : [StaticBlockCtx Symbol -> Asset]
+    .get-asset: (lambda (sbc sym) (.ref (.@ sbc assets) sym))
+    ;; .&get-deposit : [StaticBlockCtx Symbol -> EvmThunk]
+    .&get-deposit: (lambda (sbc sym) (.@ (.call StaticBlockCtx .deposit-var sbc sym) get))
+    ;; .&add-deposit! : [StaticBlockCtx Symbol -> EvmThunk]
+    .&add-deposit!: (lambda (sbc sym)
+                     (&add-var! (.call StaticBlockCtx .deposit-var sbc sym)))
+    ;; .&get-withdraw : [StaticBlockCtx Symbol Symbol -> EvmThunk]
+    .&get-withdraw: (lambda (sbc asset-sym participant)
+                     (.@ (.call StaticBlockCtx .withdraw-var sbc asset-sym participant)
+                         get))
+    ;; .&add-withdraw! : [StaticBlockCtx Symbol Symbol -> EvmThunk]
+    .&add-withdraw!: (lambda (sbc asset-sym participant)
+                      (&add-var! (.call StaticBlockCtx .withdraw-var sbc asset-sym participant)))
+    .make: (lambda (program name assets)
+             (def inter (hash-ref (.@ program interactions) name))
+             (def asset-names (.@ inter asset-names))
+             (def participant-names (.@ inter participant-names))
+             (unless (length<=n? asset-names MAX_ASSETS)
+               (error "too many assets"))
+             (unless (length<=n? participant-names MAX_PARTICIPANTS)
+               (error "too many participants"))
+             (def asset-participant-names
+               (cartesian-product asset-names participant-names))
+             (def my-deposit-vars
+               (list->hash-table-eq
+                (for/collect ((n asset-names)
+                              (d deposit-vars))
+                  [n . d])))
+             (def my-balance-vars
+               (list->hash-table-eq
+                (for/collect ((n asset-names)
+                              (b balance-vars)
+                              (i (iota (length balance-vars))))
+                  (let
+                    ((v (.mix b)))
+                      ;; Keep track of the balance variable's
+                      ;; index, so we get the memory layout right
+                      ;; elsewhere:
+                      (set! (.@ v index) i)
+                      [n . v]))))
+             (def my-withdraw-vars
+               (list->hash-table
+                (for/collect ((np asset-participant-names)
+                              (w withdraw-vars))
+                  (cons np w))))
+             { asset-names participant-names assets
+               deposit-vars: my-deposit-vars
+               balance-vars: my-balance-vars
+               withdraw-vars: my-withdraw-vars }) })
+
+;; Logging the data, simple version, optimal for messages less than 6000 bytes of data.
+;; TESTING STATUS: Used by buy-sig.
+(def (&define-commit-contract-call/simple self)
+  (def sbc (.@ self static-block-ctx))
+  (def assets (.call StaticBlockCtx .get-asset-names sbc))
+  (def participants (.call StaticBlockCtx .get-participant-names sbc))
+  (def initial-label
+    (.@ (hash-ref (.@ self program interactions) (.@ self name))
+        initial-code-block-label))
+  (&begin
+   [&jumpdest 'commit-contract-call] ;; -- return-address
+   ;; First, check deposits
+   (&begin*
+    (for/collect ((an assets))
+     (def a (.call StaticBlockCtx .get-asset sbc an))
+     (def amount (.call StaticBlockCtx .&get-deposit sbc an))
+     (&begin
+       (.call a .commit-deposit! amount)
+       amount
+       (&add-var! (.call StaticBlockCtx .balance-var sbc an)))))
+   ;; For each participant, commit the withdrawls
+   (&begin*
+    (flatten1
+     (for/collect ((an assets))
+      (for/collect ((pn participants))
+        (def a (.call StaticBlockCtx .get-asset sbc an))
+        (def p (load-immediate-variable self initial-label pn Address))
+        (.call a .commit-withdraw!
+               p
+               (.call StaticBlockCtx .&get-withdraw sbc an pn)
+               (.call StaticBlockCtx .balance-var sbc an))))))
+   calldatanew DUP1 CALLDATASIZE SUB ;; -- logsz cdn ret
+   SWAP1 ;; -- cdn logsz ret
+   DUP2 ;; logsz cdn logsz ret
+   0 SWAP2 ;; -- cdn logsz 0 logsz ret
+   DUP3 ;; -- 0 cdn logsz 0 logsz ret
+   CALLDATACOPY ;; -- 0 logsz ret
+   LOG0 JUMP))
 
 ;; Directives to generate bytecode for small functions, usually defined in the header.
 ;; Directive <- ConsensusCodeGenerator (Map SmallFunction <- Symbol)
@@ -148,13 +259,16 @@
     (['require! variable-name]
       [(load-immediate-variable self function-name variable-name Bool) &require!])
 
-    (['expect-deposited amount]
-      [(load-immediate-variable self function-name amount Ether) &deposit!])
+    (['expect-deposited ['@record [asset-symbol amount]]]
+      (def asset (.call StaticBlockCtx .get-asset (.@ self static-block-ctx) asset-symbol))
+      (def &add-deposit (.call StaticBlockCtx .&add-deposit! (.@ self static-block-ctx) asset-symbol))
+      [(load-immediate-variable self function-name amount asset)
+       (.call StaticBlockCtx .&add-deposit! (.@ self static-block-ctx) asset-symbol)])
 
-    (['consensus:withdraw participant amount]
-      [(load-immediate-variable self function-name amount Ether)
-       (load-immediate-variable self function-name participant Address)
-       &withdraw!])
+    (['consensus:withdraw participant ['@record [asset-symbol amount]]]
+      (def asset (.call StaticBlockCtx .get-asset (.@ self static-block-ctx) asset-symbol))
+      [(load-immediate-variable self function-name amount asset)
+       (.call StaticBlockCtx .&add-withdraw! (.@ self static-block-ctx) asset-symbol participant)])
 
    (['return ['@tuple]]
       [])
@@ -363,3 +477,18 @@
   (when (or (not (.@ self params-end)) (> frame-size (.@ self params-end)))
     (.set! self params-end frame-size))
   frame-size)
+
+;; cartesian-product : [Listof A] ... -> [Listof [List A ...]]
+(def (cartesian-product . lol) (cartesian-product* lol))
+
+;; cartesian-product* : [List [Listof A] ...] -> [Listof [List A ...]]
+(def (cartesian-product* lol)
+  (match lol
+    ([] [[]])
+    ([[] . _] [])
+    ([l . rst]
+     (let (rst* (cartesian-product* rst))
+       (flatten1
+        (for/collect (e l)
+          (for/collect (r rst*)
+            (cons e r))))))))

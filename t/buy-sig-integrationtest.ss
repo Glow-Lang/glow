@@ -56,7 +56,7 @@
                        "--glow-path" (source-path "dapps")
                        "--evm-network" "pet"
                        "--test"
-                       "--handshake" "nc -l 3232"
+                       "--handshake" "nc -l -p 3232"
                        ;; For the sake of testing both the cli flag and the
                        ;; console prompt, we supply one parameter here and the
                        ;; other below.
@@ -68,6 +68,7 @@
                        ;;
                        ;; N.B. this is bob's id.
                        "--participants" "{\"Seller\": \"0xb0bb1ed229f5Ed588495AC9739eD1555f5c3aabD\"}"
+                       "--assets" "{\"DefaultToken\": \"PET\"}"
                        ]]))
 
        (def peer-command

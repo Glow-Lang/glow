@@ -125,9 +125,9 @@
     ((require! e) (retail-stx stx [(ace #'e)]))
     ((assert! e) (retail-stx stx [(ace #'e)]))
     ((deposit! x e) (identifier? #'x)
-     (retail-stx stx [(identifier-refer env #'x) (ace #'e)]))
+     (alpha-convert-deposit-withdraw env stx))
     ((withdraw! x e) (identifier? #'x)
-     (retail-stx stx [(identifier-refer env #'x) (ace #'e)]))
+     (alpha-convert-deposit-withdraw env stx))
     ((@app-ctor f a ...) (alpha-convert-keyword/sub-exprs env stx))
     ((@app f a ...) (alpha-convert-keyword/sub-exprs env stx))
     ((f a ...)
@@ -162,6 +162,20 @@
 ;; alpha-convert-keyword/sub-exprs : Env StmtStx -> StmtStx
 (def (alpha-convert-keyword/sub-exprs env stx)
   (retail-stx stx (stx-map (cut alpha-convert-expr env <>) (stx-cdr stx))))
+
+;; alpha-convert-deposit-withdraw : Env ExprStx -> ExprStx
+(def (alpha-convert-deposit-withdraw env stx)
+  ;; ace : ExprStx -> ExprStx
+  (def (ace e) (alpha-convert-expr env e))
+  (syntax-case stx (@record @block)
+    ((_ p (@record (x e) ...))
+     (retail-stx stx
+       [(identifier-refer env #'p)
+        (cons '@record (stx-map list #'(x ...) (stx-map ace #'(e ...))))]))
+    ((_ p (@block x)) (identifier? #'x)
+     (retail-stx stx [(identifier-refer env #'p) ['@record [#'x (ace #'x)]]]))
+    ((_ p e)
+     (retail-stx stx [(identifier-refer env #'p) ['@record ['DefaultToken (ace #'e)]]]))))
 
 ;; alpha-convert-body : Env [Listof StmtStx] -> [Listof StmtStx]
 (def (alpha-convert-body env body)
@@ -256,14 +270,30 @@
 (def (ac-stmt-atinteraction env stx)
   ;; env/participants : Env [StxListof Identifier] [StxListof Identifier] -> Env
   (def (env/participants env ps ps2)
-    (for/fold (env env) ((p (syntax->datum ps)) (p2 (syntax->datum ps2)))
+    (for/fold (env env) ((p (syntax->datum ps))
+                         (p2 (syntax->datum ps2)))
       (symdict-put env p (entry-val p2))))
-  (syntax-case stx (@list)
+  (syntax-case stx (@record participants assets @list)
+    ((aint ((@record (participants (@list p ...)) (assets (@list a ...)))) s)
+     (stx-andmap identifier? #'(p ... a ...))
+     (let ((ps2 (stx-map identifier-fresh* #'(p ...)))
+           (as (syntax->list #'(a ...))))
+       (def env2 (env/participants env #'(p ...) ps2))
+       (defvalues (env3 stmt3) (alpha-convert-stmt env2 #'s))
+       (values env3
+               (restx stx
+                 [#'aint [['@record ['participants (cons '@list ps2)]
+                                    ['assets (cons '@list as)]]]
+                         stmt3]))))
     ((aint ((@list p ...)) s) (stx-andmap identifier? #'(p ...))
      (let ((ps2 (stx-map identifier-fresh* #'(p ...))))
        (def env2 (env/participants env #'(p ...) ps2))
        (defvalues (env3 stmt3) (alpha-convert-stmt env2 #'s))
-       (values env3 (restx stx [#'aint [(cons '@list ps2)] stmt3]))))))
+       (values env3
+               (restx stx
+                 [#'aint [['@record ['participants (cons '@list ps2)]
+                                    ['assets ['@list 'DefaultToken]]]]
+                         stmt3]))))))
 
 ;; ac-stmt-wrap-simple-keyword : Env StmtStx -> (values Env StmtStx)
 (def (ac-stmt-wrap-simple-keyword env stx)

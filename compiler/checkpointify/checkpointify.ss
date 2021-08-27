@@ -287,7 +287,7 @@
   ;; continue : (Args ... -> CpStmtStx SSI) Args ... -> [Listof CpStmtStx] TI
   (def (continue f . args) (apply checkpointify-single-stmt acc ti f stx args))
 
-  (syntax-case stx (@ @debug-label deftype defdata publish! def return ignore! switch require! assert! deposit! withdraw!)
+  (syntax-case stx (@ @debug-label @record deftype defdata publish! def return ignore! switch require! assert! deposit! withdraw!)
     ((@debug-label . _) (simple [] []))
     ((@ p s) (identifier? #'p)
      ;; NOTE: publish! deposit! withdraw! effects are *NOT* allowed within @p,
@@ -304,7 +304,7 @@
     ((defdata . _) (simple [] []))
     ((deftype . _) (simple [] []))
     ;; NB: after ANF, p e v below are guaranteed identifiers
-    ((withdraw! p e) (simple [stx] (used<-args #'(p e))))
+    ((withdraw! p (@record (_ e) ...)) (simple [stx] (used<-args #'(p e ...))))
     ((require! v) (simple [] (used<-arg #'v)))
     ((assert! v) (simple [] (used<-arg #'v)))))
 
@@ -314,9 +314,9 @@
      (values stx (make-ssi (stx-e #'p) [stx] (used<-arg #'v) (cons (syntax->datum #'(v . p)) (used<-arg #'p)))))))
 
 (def (checkpointify-deposit stx)
-  (syntax-case stx ()
-    ((_ p v)
-     (values stx (make-ssi (stx-e #'p) [stx] [] (used<-args #'(p v)))))))
+  (syntax-case stx (@record)
+    ((_ p (@record (_ v) ...))
+     (values stx (make-ssi (stx-e #'p) [stx] [] (used<-args #'(p v ...)))))))
 
 (def (checkpointify-body stx prefix body ti acc)
   (defvalues (stmts2 ti2) (checkpointify-stmts (syntax->list body) ti acc))
