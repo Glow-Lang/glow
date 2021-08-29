@@ -102,7 +102,7 @@
                           network
                           (0x<-address address)
                           (if (string? nickname) (format " (~a)" nickname) "")
-                          (if keypair " 🔑" ""))))
+                          (if (and keypair (keypair-secret-key keypair)) " 🔑" ""))))
               identities)))
         contacts)))
 
