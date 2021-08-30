@@ -1,0 +1,2 @@
+# Reclassifies `.sexp` files as Scheme instead of Lisp:
+*.sexp linguist-language=Scheme
