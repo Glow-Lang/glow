@@ -50,7 +50,7 @@
                        "--glow-path" (source-path "dapps")
                        "--evm-network" "pet"
                        "--test"
-                       "--handshake" "nc -l -p 3232"]]))
+                       "--handshake" "nc -l 3232"]]))
 
        (def peer-command
          (with-io-port proc-a
