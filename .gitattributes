@@ -1,2 +1,2 @@
-# Reclassifies `.sexp` files as Scheme instead of Lisp:
+# Reclassifies `.sexp` files as Scheme instead of Common Lisp:
 *.sexp linguist-language=Scheme
