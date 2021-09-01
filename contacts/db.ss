@@ -1,13 +1,14 @@
 ;;;; Glow contacts database routines.
 
 (export contact-db ensure-contact-db! close-contact-db!
-        list-networks list-contacts
+        list-assets list-networks list-contacts
         add-contact delete-contact delete-contact-by-name update-contact
         get-identities add-identity delete-identity-by-address delete-identity-by-nickname)
 
 (import
  (only-in :clan/base vector->values)
  (only-in :clan/config xdg-config-home)
+ (only-in :clan/list remove-duplicates)
  (only-in :clan/poo/object .@ with-slots)
  (only-in :gerbil/gambit/os file-size)
  :std/crypto
@@ -18,6 +19,7 @@
  (only-in :std/srfi/1 append-map first)
  :std/sugar
  :std/text/json
+ (only-in :mukn/ethereum/assets asset-table)
  (only-in :mukn/ethereum/network-config ethereum-networks)
  (only-in ./keys secret-key-ciphers))
 
@@ -179,6 +181,13 @@
       (set! arguments (string->json-object arguments))
       (def function (hash-ref edit-commands command))
       (apply function arguments))))
+
+;; List the known assets (tokens).
+(def (list-assets)
+  (remove-duplicates
+   (append (hash-keys asset-table) ; includes non-native assets
+           (sql-eval-query (ensure-contact-db!)
+                           "SELECT native_token FROM network"))))
 
 ;; List the known networks and their metadata.
 (def (list-networks)
