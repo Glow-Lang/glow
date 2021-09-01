@@ -96,6 +96,22 @@ that are not yet available:
   if you use a few hundreds of lines of Gambit Scheme to retarget Gerbil Cardano
   than if you use any JavaScript platform and start auditing millions of lines of JavaScript,
   or some similar situation with another "blub" language.
+  
+### Running the Demo interaction: Buy Signature
+
+1. Run the PAB backend
+
+  ```
+  git clone git@gitlab.com:mukn/glow-cardano-pab.git
+  nix-shell
+  cabal run glow-contract
+  ```
+  
+2. Run the Glow interaction
+
+  ``` sh
+  ./cardano/script/execute-contract.ss
+  ```
 
 ### Developing
 
