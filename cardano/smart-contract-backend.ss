@@ -19,10 +19,10 @@
       (json-object->string (.call RawCreateParams .json<- params)))))
 
 (def (glow-contract:move uuid variable-map entry-point)
-  (let (params {variableMap: (object->string variable-map)
-                entryPoint: entry-point})
+  (let (params {rawVariableMap: (object->string variable-map)
+                rawEntryPoint: entry-point})
     (update-contract uuid "move"
-      (json-object->string (.call MoveParams .json<- params)))))
+      (json-object->string (.call RawMoveParams .json<- params)))))
 
 (def (glow-contract:wait uuid)
   (update-contract uuid "wait" "[]"))

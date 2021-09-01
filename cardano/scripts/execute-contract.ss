@@ -1,7 +1,8 @@
 #!/usr/bin/env gxi
 
 (import
-  :mukn/glow/cardano/smart-contract-backend)
+ :mukn/glow/cardano/smart-contract-backend
+ :mukn/glow/cardano/wallet)
 
 (def (read-value name)
   (print (string-append name ": "))
@@ -75,26 +76,31 @@
       (Seller . (pub-key "3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c"))
       (digest0 . "digest")
       (price . 100))
+    ;; FIXME: This should be generated from the wallet...
     '((signature . (signature "b446cd2020dbd63ffdef045fbf1233f0218322815e8141c886b281902875d059218d32cda7014fc2d6b9c8fdfefa63afcdfb7dad7fb55d20830c691bec28ee0a")))
     '()))
 
+
 (def (execute-contract!)
-  (begin
-    (def buyer-contract-instance-id (read-value "Enter buyer contract instance id"))
-    (def seller-contract-instance-id (read-value "Enter seller contract instance id"))
+  (def buyer-contract-instance-id (init-wallet-contract-instance-1))
+  (def seller-contract-instance-id (init-wallet-contract-instance-2))
 
-    (println "\n\nSeller waits for buyer to deploy contract")
-    (glow-contract:wait seller-contract-instance-id)
+  (println "\n\nSeller waits for buyer to deploy contract")
+  (glow-contract:wait seller-contract-instance-id)
+  (thread-sleep! 5)
 
-    (println "\n\n- Buyer creates buy sig instance ...")
-    (glow-contract:create buyer-contract-instance-id contract-code initial-var-map)
+  (println "\n\n- Buyer creates buy sig instance ...")
+  (glow-contract:create buyer-contract-instance-id contract-code initial-var-map)
+  (thread-sleep! 5)
 
-    ;; (println "\n\nBuyer waits for seller to move")
-    ;; (glow-contract:wait contract-uuid)
+  (println "\n\nBuyer waits for seller to move")
+  (glow-contract:wait buyer-contract-instance-id)
+  (thread-sleep! 5)
 
-    ;; (read-value "\n\nSeller moves")
-    ;; (glow-contract:move contract-uuid seller-var-map "cp0")
-    ))
+  ;; (read-value "\n\nSeller moves") ;; TODO read params from cli / at the start and pass them in.
+  (glow-contract:move seller-contract-instance-id seller-var-map "cp0")
+  (thread-sleep! 5)
+  )
 
 (begin
   (println "EXECUTING CONTRACT\n")

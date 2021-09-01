@@ -3,8 +3,8 @@
 (import
   :std/text/json :std/net/request)
 
-(def (list->json-string list)
-  (json-object->string (list->hash-table list)))
+(def (list->json-string l)
+  (json-object->string (list->hash-table l)))
 
 (def (struct->hash-table a-struct) #f)
 
