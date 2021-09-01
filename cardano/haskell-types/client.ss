@@ -2,6 +2,7 @@
 
 (import
   :clan/poo/object :clan/poo/number :clan/poo/mop :clan/poo/type
+  (only-in :mukn/ethereum/types delay-type)
   ../poo-extensions)
 
 
@@ -33,9 +34,9 @@
   (Sum
     Label: ByteString
     Declare: ByteString
-    DefineInteraction: (Tuple (List ByteString) (List ByteString) (List (Tuple ByteString (List Statement))))
+    DefineInteraction: (Tuple (List ByteString) (List ByteString) (List (Tuple ByteString (List (delay-type Statement)))))
     Define: (Tuple ByteString Expression)
-    DefineFunction: (Tuple ByteString ByteString (List Statement))
+    DefineFunction: (Tuple ByteString ByteString (List (delay-type Statement)))
     DefineDatatype: (Tuple ByteString (List (Tuple ByteString Integer)))
     SetParticipant: GlowValueRef
     ExpectDeposited: GlowValueRef
@@ -54,7 +55,7 @@
 ; Glow.Types:GlowValue
 (define-type GlowValue
   (Sum
-    Constructor: (Tuple ByteString Integer (List GlowValue))
+    Constructor: (Tuple ByteString Integer (List (delay-type GlowValue)))
     PubKey: PubKey
     Signature: Signature
     ByteString: ByteString
