@@ -12,7 +12,7 @@
 
 ; TODO: Use object->string on sexpressions. Possibly sexp<- in POO objects?
 (def (glow-contract:create uuid contract-code variable-map)
-  (let (params {source: (object->string contract-code)
+  (let (params {source: contract-code
                 initialVariableMap: (object->string variable-map)
                 rawTimeoutLength: 100})
     (update-contract uuid "create"

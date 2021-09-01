@@ -8,7 +8,7 @@
   (read-line))
 
 (def contract-code
-     '(@module (begin end)
+     "(@module (begin end)
               (@label begin)
               (def payForSignature
                    (@make-interaction
@@ -67,7 +67,7 @@
                             (return (@tuple))
                             (@label end0))))
               (return (@tuple))
-              (@label end)))
+              (@label end))")
 
 (defvalues (initial-var-map seller-var-map empty-var-map)
   (values
