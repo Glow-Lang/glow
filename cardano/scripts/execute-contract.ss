@@ -71,7 +71,7 @@
 
 (defvalues (initial-var-map seller-var-map empty-var-map)
   (values
-    '((Buyer . (pub-key "3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c"))
+    '((Buyer . (pub-key "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a"))
       (Seller . (pub-key "3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c"))
       (digest0 . "digest")
       (price . 100))
@@ -80,13 +80,14 @@
 
 (def (execute-contract!)
   (begin
-    (def contract-uuid (read-value "Enter contract uuid"))
+    (def buyer-contract-instance-id (read-value "Enter buyer contract instance id"))
+    (def seller-contract-instance-id (read-value "Enter seller contract instance id"))
 
-    ;; (println "\n\nSeller waits for buyer to deploy contract")
-    ;; (glow-contract:wait contract-uuid)
+    (println "\n\nSeller waits for buyer to deploy contract")
+    (glow-contract:wait seller-contract-instance-id)
 
     (println "\n\n- Buyer creates buy sig instance ...")
-    (glow-contract:create contract-uuid contract-code initial-var-map)
+    (glow-contract:create buyer-contract-instance-id contract-code initial-var-map)
 
     ;; (println "\n\nBuyer waits for seller to move")
     ;; (glow-contract:wait contract-uuid)
