@@ -174,6 +174,12 @@
           "Max initial block "
           "[ Current block number is " (number->string current-block-number) " ]")))))
 
+(def (ask-timeout-in-blocks options)
+  (get-or-ask options
+    'max-initial-block
+    (λ ()
+      (ask-number "Timeout in blocks"))))
+
 (def (compile-contract contract.glow)
   (def compiler-output (run-passes contract.glow pass: 'project show?: #f))
   (parse-compiler-output compiler-output))
@@ -299,9 +305,9 @@
             (hash-ref options 'params)
             program
             (.@ interaction-info parameter-names))))
-    (let (timeout-in-blocks (hash-ref options 'timeout-in-blocks)))
+    (let (timeout-in-blocks (ask-timeout-in-blocks options))) ;; TODO Default this if not provided
     (let (current-block-number (eth_blockNumber)))
-    (let (max-initial-block (ask-max-initial-block options current-block-number)))
+    (let (max-initial-block (ask-max-initial-block options current-block-number))) ;; TODO Default this if not provided
 
     ;; TODO: Validate agreement, with nice user-friendly error message.
     (let (agreement
@@ -313,10 +319,7 @@
       reference: {}
       options: {blockchain: (.@ (ethereum-config) name)
                 escrowAmount: (void)
-                timeoutInBlocks:
-                  (if timeout-in-blocks
-                      (string->number timeout-in-blocks)
-                      (* 100 (ethereum-timeout-in-blocks)))
+                timeoutInBlocks: (or timeout-in-blocks (* 100 (ethereum-timeout-in-blocks))) ;; TODO default this in cli opts declarations
                 maxInitialBlock: max-initial-block}}))
     (begin
       (.call InteractionAgreement .validate agreement)
