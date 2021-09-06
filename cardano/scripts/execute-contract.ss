@@ -1,6 +1,7 @@
 #!/usr/bin/env gxi
 
 (import
+ ;; std/misc/ports ;; TODO: Use this once dbg lbls are stripped
  :mukn/glow/cardano/smart-contract-backend
  :mukn/glow/cardano/wallet)
 
@@ -8,6 +9,18 @@
   (print (string-append name ": "))
   (read-line))
 
+;; TODO: We should get the project output from our passdata,
+;; once we strip dbg lbls on glow-cardano backend:
+;; For compiled:
+;; (import (for-syntax :std/misc/ports :clan/syntax) :clan/syntax)
+;; (def contract-code
+;;   (syntax-call (lambda (stx) (read-file-string (stx-source-path stx "../../t/passdata/buy_sig.project-2.sexp")))))
+;;
+;; For interpreted:
+;; (initialize-glow-path! [(source-path "dapps") (source-path "t/passdata")])
+;; (read-file-string (find-dapp-path "buy_sig.project.sexp"))
+;; Or:
+;; (def contract-code (read-file-string "t/passdata/buy_sig.project.sexp"))
 (def contract-code
      "(@module (begin end)
               (@label begin)

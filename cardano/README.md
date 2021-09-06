@@ -109,6 +109,7 @@ that are not yet available:
   
 2. Run the Glow interaction
 
+  From **project root** run:
   ``` sh
   ./cardano/script/execute-contract.ss
   ```
