@@ -158,3 +158,17 @@
         (read process)
         (read-file-string output-file)))))
 
+;; TODO Parameterize wallet
+;; TODO Declare JSON as in-built type,
+;; use .json<- to serialize
+(def (init-wallet-contract-instance-1)
+    (def json-data "{\"caID\": \"GlowContract\", \"caWallet\":{\"getWallet\": 1}}")
+    (def resp-data (webserver-post "http://localhost:8080/api/new/contract/activate" json-data))
+    (def resp-tbl (string->json-object resp-data))
+    (hash-get resp-tbl 'unContractInstanceId))
+
+(def (init-wallet-contract-instance-2)
+    (def json-data "{\"caID\": \"GlowContract\", \"caWallet\":{\"getWallet\": 2}}")
+    (def resp-data (webserver-post "http://localhost:8080/api/new/contract/activate" json-data))
+    (def resp-tbl (string->json-object resp-data))
+    (hash-get resp-tbl 'unContractInstanceId))
