@@ -488,6 +488,8 @@
 
 ;; cartesian-product : [Listof A] ... -> [Listof [List A ...]]
 (def (cartesian-product . lol) (cartesian-product* lol))
+;; TODO : move cartesian-product into gerbil-utils or gerbil, or find a suitable
+;; replacement if one exists (e.g. in an SRFI).
 
 ;; cartesian-product* : [List [Listof A] ...] -> [Listof [List A ...]]
 (def (cartesian-product* lol)
