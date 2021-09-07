@@ -63,6 +63,7 @@ data StarterContracts
   = GlowContract
   deriving (Eq, Ord, Show, Generic)
 
+
 -- NOTE: Because 'StarterContracts' only has one constructor, corresponding to
 -- the demo 'Glow' contract, we kindly ask aeson to still encode it as if it had
 -- many; this way we get to see the label of the contract in the API output!
@@ -71,18 +72,12 @@ data StarterContracts
 --
 --    `... deriving anyclass (ToJSON, FromJSON)`
 instance ToJSON StarterContracts where
-  toJSON =
-    genericToJSON
-      defaultOptions
-        { tagSingleConstructors = True
-        }
+  toJSON = genericToJSON contractOpts
 
 instance FromJSON StarterContracts where
-  parseJSON =
-    genericParseJSON
-      defaultOptions
-        { tagSingleConstructors = True
-        }
+  parseJSON = genericParseJSON contractOpts
+
+contractOpts = defaultOptions { tagSingleConstructors = True }
 
 instance Pretty StarterContracts where
   pretty = viaShow

@@ -1,8 +1,8 @@
 -- | NOTE: Currently we use `GlowMain` instead
--- to run the contract, because it allows us
--- to simulate the on-chain part of things as well.
--- Eventually when we have a way to deploy the on-chain part
--- Ideally we can interact with it via this.
+-- to run the contract via the simulator.
+-- ContractMain (this app) will be have to be installed and run via the PAB-cli when we want to actually deploy on-chain.
+-- For installation instructions,
+-- See: https://github.com/input-output-hk/plutus/blob/master/plutus-pab/ARCHITECTURE.adoc
 module ContractMain where
 
 import Data.Bifunctor (first)

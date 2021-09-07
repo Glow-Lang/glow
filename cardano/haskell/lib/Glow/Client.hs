@@ -21,7 +21,6 @@ import Control.Monad (void)
 import Data.Aeson hiding (Value)
 import qualified Data.ByteString.Char8 as BSC
 import Data.Text (Text)
-import Debug.Trace
 import GHC.Generics
 import Glow.Client.Types
   ( CreateParams (..),
@@ -172,4 +171,4 @@ glowClient cfg =
 
 traceLog :: String -> Contract () s e ()
 traceLog msg =
-  void $ trace msg $ logInfo @String msg
+  void $ logInfo @String msg

@@ -3,7 +3,6 @@
 
 import Ledger.Tx
 import Options.Applicative
---import Plutus.SCB.Events.Contract
 import System.Directory
 
 import Glow.CodeGen

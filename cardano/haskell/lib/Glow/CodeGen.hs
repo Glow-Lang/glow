@@ -1,5 +1,12 @@
 {- ORMOLU_DISABLE -}
 {-# LANGUAGE OverloadedStrings #-}
+-- | FIXME: This section currently lies
+-- on the Contract Backend.
+-- It should be implemented within Glow,
+-- with Glow types as the source of truth.
+-- When we start getting Glow Cardano ready for production,
+-- This module will be overhauled.
+-- Hence we can treat this as a blackbox for now.
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
