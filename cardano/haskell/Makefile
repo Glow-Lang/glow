@@ -12,3 +12,6 @@ run:
 
 hoogle:
 	hoogle generate --local && hoogle server -p 8000 --local
+
+format:
+	ormolu --mode inplace $$(find ./lib ./test ./app -name '*.hs')
