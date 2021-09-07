@@ -71,21 +71,22 @@
            (@list (ti 'begin-switch3
                       'end-switch3
                       #f
-                      (@list (syntax (withdraw! B wagerAmount)) (syntax (withdraw! A wagerAmount)))
+                      (@list (syntax (withdraw! B (@record (DefaultToken wagerAmount))))
+                             (syntax (withdraw! A (@record (DefaultToken wagerAmount)))))
                       (@list)
                       (@list '(B . #f) '(wagerAmount . #f) '(A . #f) '(wagerAmount . #f) '(outcome . #f))
                       (@list))
                   (ti 'begin-switch3
                       'end-switch3
                       #f
-                      (@list (syntax (withdraw! B tmp20)))
+                      (@list (syntax (withdraw! B (@record (DefaultToken tmp20)))))
                       (@list '(tmp20 . #f))
                       (@list '(B . #f) '(tmp20 . #f) '(* . #f) '(wagerAmount . #f) '(outcome . #f))
                       (@list))
                   (ti 'begin-switch3
                       'end-switch3
                       #f
-                      (@list (syntax (withdraw! A tmp19)))
+                      (@list (syntax (withdraw! A (@record (DefaultToken tmp19)))))
                       (@list '(tmp19 . #f))
                       (@list '(A . #f) '(tmp19 . #f) '(* . #f) '(wagerAmount . #f) '(outcome . #f))
                       (@list)))))
@@ -127,7 +128,8 @@
               (@list (ti 'cp
                          'cp0
                          'A
-                         (@list (syntax (deposit! A wagerAmount)) (syntax (publish! A commitment)))
+                         (@list (syntax (deposit! A (@record (DefaultToken wagerAmount))))
+                                (syntax (publish! A commitment)))
                          (@list '(commitment . #f))
                          (@list '(A . #f) '(wagerAmount . #f) '(commitment . A) '(A . #f))
                          (@list)))))
@@ -136,14 +138,15 @@
                (@list (ti 'cp
                           'cp0
                           'A
-                          (@list (syntax (deposit! A wagerAmount)) (syntax (publish! A commitment)))
+                          (@list (syntax (deposit! A (@record (DefaultToken wagerAmount))))
+                                 (syntax (publish! A commitment)))
                           (@list '(commitment . #f))
                           (@list '(A . #f) '(wagerAmount . #f) '(commitment . A) '(A . #f))
                           (@list)))
                (@list (ti 'cp0
                           'cp1
                           'B
-                          (@list (syntax (deposit! B wagerAmount))
+                          (@list (syntax (deposit! B (@record (DefaultToken wagerAmount))))
                                  (syntax (publish! B handB0)))
                           (@list '(handB0 . #f))
                           (@list '(B . #f) '(wagerAmount . #f) '(handB0 . B) '(B . #f))
@@ -153,7 +156,7 @@
                (@list (ti 'cp0
                           'cp1
                           'B
-                          (@list (syntax (deposit! B wagerAmount))
+                          (@list (syntax (deposit! B (@record (DefaultToken wagerAmount))))
                                  (syntax (publish! B handB0)))
                           (@list '(handB0 . #f))
                           (@list '(B . #f) '(wagerAmount . #f) '(handB0 . B) '(B . #f))
@@ -206,21 +209,22 @@
            (@list (ti 'begin-switch3
                       'end-switch3
                       #f
-                      (@list (syntax (withdraw! B wagerAmount)) (syntax (withdraw! A wagerAmount)))
+                      (@list (syntax (withdraw! B (@record (DefaultToken wagerAmount))))
+                             (syntax (withdraw! A (@record (DefaultToken wagerAmount)))))
                       (@list)
                       (@list '(B . #f) '(wagerAmount . #f) '(A . #f) '(wagerAmount . #f) '(outcome . #f))
                       (@list))
                   (ti 'begin-switch3
                       'end-switch3
                       #f
-                      (@list (syntax (withdraw! B tmp20)))
+                      (@list (syntax (withdraw! B (@record (DefaultToken tmp20)))))
                       (@list '(tmp20 . #f))
                       (@list '(B . #f) '(tmp20 . #f) '(* . #f) '(wagerAmount . #f) '(outcome . #f))
                       (@list))
                   (ti 'begin-switch3
                       'end-switch3
                       #f
-                      (@list (syntax (withdraw! A tmp19)))
+                      (@list (syntax (withdraw! A (@record (DefaultToken tmp19)))))
                       (@list '(tmp19 . #f))
                       (@list '(A . #f) '(tmp19 . #f) '(* . #f) '(wagerAmount . #f) '(outcome . #f))
                       (@list)))

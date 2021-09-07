@@ -3,7 +3,7 @@
          (@debug-label dlb)
          (def payForSignature
               (@make-interaction
-               ((@list Buyer Seller))
+               ((@record (participants (@list Buyer Seller)) (assets (@list DefaultToken))))
                (digest0 price)
                (begin0 end0)
                (#f
@@ -11,7 +11,7 @@
                 (@debug-label dlb0)
                 (@label cp)
                 (consensus:set-participant Buyer)
-                (expect-deposited price)
+                (expect-deposited (@record (DefaultToken price)))
                 (@debug-label dlb1)
                 (@label cp0)
                 (consensus:set-participant Seller)
@@ -21,14 +21,14 @@
                      (@app isValidSignature Seller digest0 signature))
                 (require! tmp)
                 (@debug-label dlb2)
-                (consensus:withdraw Seller price)
+                (consensus:withdraw Seller (@record (DefaultToken price)))
                 (return (@tuple))
                 (@label end0))
                (Buyer (@label begin0) ;; safe point
                       (@debug-label dlb0)
                       (@label cp) ;; redundant safe point, seller waits but buyer doesn't
                       (participant:set-participant Buyer)
-                      (add-to-deposit price) ;; modifies buffer or fails
+                      (add-to-deposit (@record (DefaultToken price))) ;; modifies buffer or fails
                       (@debug-label dlb1)
                       (@label cp0) ;; safe point, buyers waits and seller starts
                       (participant:set-participant Seller)
@@ -42,14 +42,14 @@
                                  signature))
                       (require! tmp)
                       (@debug-label dlb2)
-                      (participant:withdraw Seller price)
+                      (participant:withdraw Seller (@record (DefaultToken price)))
                       (return (@tuple))
                       (@label end0))
                (Seller (@label begin0)
                        (@debug-label dlb0)
                        (@label cp)
                        (participant:set-participant Buyer)
-                       (expect-deposited price)
+                       (expect-deposited (@record (DefaultToken price)))
                        (@debug-label dlb1)
                        (@label cp0)
                        (participant:set-participant Seller)
@@ -63,7 +63,7 @@
                                   signature))
                        (require! tmp)
                        (@debug-label dlb2)
-                       (participant:withdraw Seller price)
+                       (participant:withdraw Seller (@record (DefaultToken price)))
                        (return (@tuple))
                        (@label end0))))
          (return (@tuple))

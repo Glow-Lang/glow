@@ -13,7 +13,7 @@
               (@list (ti 'cp
                          'cp0
                          'Buyer
-                         (@list (syntax (deposit! Buyer price)))
+                         (@list (syntax (deposit! Buyer (@record (DefaultToken price)))))
                          (@list)
                          (@list '(Buyer . #f) '(price . #f))
                          (@list '(Buyer . #f))))))
@@ -22,14 +22,14 @@
                (@list (ti 'cp
                           'cp0
                           'Buyer
-                          (@list (syntax (deposit! Buyer price)))
+                          (@list (syntax (deposit! Buyer (@record (DefaultToken price)))))
                           (@list)
                           (@list '(Buyer . #f) '(price . #f))
                           (@list '(Buyer . #f))))
                (@list (ti 'cp0
                           'end0
                           'Seller
-                          (@list (syntax (withdraw! Seller price))
+                          (@list (syntax (withdraw! Seller (@record (DefaultToken price))))
                                  (syntax (publish! Seller signature)))
                           (@list '(tmp . #f) '(signature . #f))
                           (@list '(Seller . #f)
@@ -51,7 +51,7 @@
                 (@list (ti 'cp0
                            'end0
                            'Seller
-                           (@list (syntax (withdraw! Seller price))
+                           (@list (syntax (withdraw! Seller (@record (DefaultToken price))))
                                   (syntax (publish! Seller signature)))
                            (@list '(tmp . #f) '(signature . #f))
                            (@list '(Seller . #f)
