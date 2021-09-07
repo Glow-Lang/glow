@@ -3,14 +3,14 @@
 (@debug-label dlb)
 (def payForSignature
      (@make-interaction
-      ((@list Buyer Seller))
+      ((@record (participants (@list Buyer Seller)) (assets (@list DefaultToken))))
       (digest0 price)
       (begin0 end0)
       ;; Entry point for the interaction -- from here on user must be Buyer
       (@label begin0)
       (@debug-label dlb0)
       (@label cp)
-      (deposit! Buyer price)
+      (deposit! Buyer (@record (DefaultToken price)))
 
       ;; Switching to Seller
       (@debug-label dlb1)
@@ -21,7 +21,7 @@
       (def tmp (@app isValidSignature Seller digest0 signature))
       (require! tmp)
       (@debug-label dlb2)
-      (withdraw! Seller price)
+      (withdraw! Seller (@record (DefaultToken price)))
       ;; In a standalone app, return kills the contract.
       ;; In a function called as part of a larger application,
       ;; it will actually set the state to the invoked continuation.

@@ -131,7 +131,8 @@
   (run-process/batch ["nix-shell" "--arg" "thunk" "false" "--arg" "precompile" "true" "--pure" "--command" "./unit-tests.ss integration"])
   #;(run-process/batch ["time" "./unit-tests.ss" "integration"])
   ;; NB: running the below outside a Nix shell so we can interact with the git repo
-  (run-process/batch ["./unit-tests.ss" "check-git-up-to-date"]))
+  ;; NB: actually disabling this test, that needlessly forces a rebase rather than a merge.
+  #;(run-process/batch ["./unit-tests.ss" "check-git-up-to-date"]))
 
 (define-entry-point (after-test)
   (help: "Cleanup tests in Gitlab CI" getopt: [])

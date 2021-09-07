@@ -6,7 +6,7 @@
 (@debug-label dlb3)
 (def inter
      (@make-interaction
-      ((@list A B))
+      ((@record (participants (@list A B)) (assets (@list DefaultToken))))
       (b x)
       (@debug-label dlb4)
       (def tmp (@app < 0 x))

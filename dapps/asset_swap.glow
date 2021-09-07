@@ -1,0 +1,22 @@
+#lang glow
+
+@interaction({participants: [A, B], assets: [T, U]})
+let swap = (t: Nat, u: Nat) => {
+  deposit! A -> { T: t };
+  deposit! B -> { U: u };
+  withdraw! B <- { T: t };
+  withdraw! A <- { U: u };
+};
+
+
+/* In the above example, a function swap is defined that exchanges two assets between two participants. It can be called with an expression:
+
+@interaction({participants: [alice, bob], assets: [ETH, DAI]}) swap(10, 2084)
+
+The execution model is that the first participant, Alice, will deposit her amount into the escrow for the current interaction. Then the second participant will deposit his amount. Finally they will each withdraw the other amount. When compiling, Glow will automatically divide this interaction into two transactions:
+The first transaction is the deposit by participant A. The transaction must end there, because the next action is done by the other participant.
+The second is the deposit by participant B followed by both withdrawals. The withdrawals are done by the consensus and therefore do not depend on a change of participant.
+To protect the first participant, in case the second one fails to deposit his amount, a timeout will automatically be added, that allows them to withdraw the amount they have deposited into the interaction. These automatically added timeouts ensure that the interaction is either completed or aborted, but not stuck forever waiting.
+
+So far, Glow only directly supports swaps between assets on a same blockchain, and wrappers have to be used to trade assets on other blockchains.
+*/

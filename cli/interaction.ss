@@ -10,6 +10,7 @@
   :clan/persist/db :clan/persist/content-addressing :clan/versioning :clan/pure/dict/symdict
   :mukn/ethereum/assets :mukn/ethereum/cli :mukn/ethereum/ethereum :mukn/ethereum/network-config
   :mukn/ethereum/types :mukn/ethereum/json-rpc :mukn/ethereum/known-addresses
+  :mukn/ethereum/test-contracts ; TODO: should this be more "dynamic", only imported when the network is known to be pet?
   :mukn/glow/runtime/participant-runtime :mukn/glow/runtime/reify-contract-parameters
   :mukn/glow/runtime/program :mukn/glow/runtime/terminal-codes :mukn/glow/runtime/glow-path
   (only-in :mukn/glow/compiler/alpha-convert/alpha-convert init-syms)
@@ -72,6 +73,14 @@
   (def chosen-nickname (ask-option name known-addresses))
   (hash-get address-by-nickname (string-downcase chosen-nickname)))
 
+(def (ask-asset name network)
+  (def known-assets
+    (for/collect ((p (hash->list/sort asset-table symbol<?))
+                  when (equal? (asset->network (cdr p)) network))
+      (cons* (symbol->string (car p)) Asset (cdr p))))
+  (def chosen-asset (ask-option name known-assets))
+  (hash-get asset-table (string->symbol chosen-asset)))
+
 (def (display-prompt name)
   (displayln CYAN name)
   (display (string-append "> " END))
@@ -102,6 +111,16 @@
         (lambda ()
           (ask-address (string-append "Select address for " (symbol->string role-name)))))))
   participants)
+
+;; get-or-ask-assets : (Hashof Symbol Asset) (Listof Symbol) Network -> (Hashof Symbol AssetType)
+(def (get-or-ask-assets assets asset-names network)
+  (displayln BOLD "Assign assets" END)
+  (for ((asset-name asset-names))
+    (get-or-ask assets
+      asset-name
+      (lambda ()
+        (ask-asset (string-append "Select asset for " (symbol->string asset-name)) network))))
+  assets)
 
 (def (console-input type name tag)
   (display-prompt
@@ -165,14 +184,32 @@
                       [nickname . dependent-pair])))
                 (hash->list/sort address-by-nickname string<?))))))
 
+(def (relative-to x y)
+  (cond ((number? y) y)
+        ((not (number? x)) (error "Expected a starting number"))
+        ((not (string? y)) (error "Expected a string offset"))
+        ((string-prefix? "+" y)
+         ;; Positive offset from x.
+         (+ x (.call Nat .<-string (substring/shared y 1 (string-length y)))))
+        ((string-prefix? "-" y)
+         ;; Negative offset from x.
+         (- x (.call Nat .<-string (substring/shared y 1 (string-length y)))))
+        ((string-prefix? "%" y)
+         ;; Round x up to the nearest multiple of y.
+         (let ((y (.call Nat .<-string (substring/shared y 1 (string-length y)))))
+           (* (ceiling (/ x y)) y)))
+        (else (.call Nat .<-string y))))
+
 (def (ask-max-initial-block options current-block-number)
-  (get-or-ask options
-    'max-initial-block
-    (λ ()
-      (ask-number
-        (string-append
-          "Max initial block "
-          "[ Current block number is " (number->string current-block-number) " ]")))))
+  (relative-to
+   current-block-number
+   (get-or-ask options
+               'max-initial-block
+               (λ ()
+                 (ask-number
+                  (string-append
+                   "Max initial block "
+                   "[ Current block number is " (number->string current-block-number) " ]"))))))
 
 (def (compile-contract contract.glow)
   (def compiler-output (run-passes contract.glow pass: 'project show?: #f))
@@ -188,53 +225,68 @@
 ;; TODO: accept alternative ethereum networks, etc
 (define-entry-point (start-interaction
                      agreement: (agreement-json-string #f)
+                     glow-app: (glow-app #f)
+                     identity: (identity #f)
                      interaction: (interaction #f)
                      role: (role #f)
                      max-initial-block: (max-initial-block #f)
                      timeout-in-blocks: (timeout-in-blocks #f)
                      contacts: (contacts-file #f)
-                     identities: (identities-file #f)
                      handshake: (handshake #f)
                      params: (params #f)
-                     participants: (participants #f))
+                     participants: (participants #f)
+                     assets: (assets #f))
   (help: "Start an interaction based on an agreement"
    getopt: (make-options
             [(option 'agreement "-A" "--agreement" default: #f
                      help: "interaction agreement as JSON")
+             (option 'glow-app "-G" "--glow-app" default: #f
+                     help: "the name of the Glow DApp")
              (option 'params "-P" "--params" default: #f
                      help: "contract parameters as JSON")
              (option 'participants "-p" "--participants" default: #f
                      help: "participant mapping as JSON")
+             (option 'assets "-a" "--assets" default: #f
+                     help: "asset mapping as JSON")
              ;; TODO: add an option for supplying single parameters/participants with
              ;; more ergonomic syntax than JSON, like --param foo=bar. We want to be
              ;; able to specify this mutliple times, which will require upstream
              ;; changes in gerbil's getopt.
+             (option 'params "-P" "--params" default: #f
+                     help: "contract parameters as JSON")
+             (option 'participants "-p" "--participants" default: #f
+                     help: "participant mapping as JSON")
              (option 'interaction "-I" "--interaction" default: #f
                      help: "path and name of interaction")
+             (option 'identity "-M" "--my-identity" default: #f
+                     help: "my identity for the interaction")
              (option 'role "-R" "--role" default: #f
-                     help: "role you want to play in the interaction")
-             (option 'max-initial-block "-B" default: #f
+                     help: "role to play in the interaction")
+             (option 'max-initial-block "-B" "--max-initial-block" default: #f
                      help: "maximum block number the contract can begin at")
              (option 'timeout-in-blocks "-T" "--timeout-in-blocks" default: #f
                      help: "number of blocks after which to time out")
              (option 'handshake "-H" "--handshake" default: #f
                      help: "command to use to transfer handshakes")]
             [(lambda (opt) (hash-remove! opt 'test))]
-            [options/glow-path options/contacts options/identities
+            [options/glow-path options/contacts
              options/evm-network options/database options/test options/backtrace]))
   (def options
        (hash
+         (glow-app glow-app)
+         (identity identity)
          (params (string->json-object (or params "{}")))
          (participants (string->json-participant-map (or participants "{}")))
+         (assets (string->json-asset-map (or assets "{}")))
          (max-initial-block max-initial-block)
          (timeout-in-blocks timeout-in-blocks)
          (role role)))
   (displayln)
-  (def identities (load-identities from: identities-file))
+  (def contacts (load-contacts contacts-file))
   (defvalues (agreement selected-role)
     (if agreement-json-string
       (start-interaction/with-agreement options (<-json InteractionAgreement (json<-string agreement-json-string)))
-      (start-interaction/generate-agreement options contacts: contacts-file)))
+      (start-interaction/generate-agreement options contacts)))
   (def environment
     (let ((role (symbolify selected-role)))
       (if handshake
@@ -256,6 +308,12 @@
     (hash-map
       (lambda (k v) (cons k (address<-0x v))) object)))
 
+(def (string->json-asset-map str)
+  (def object (string->json-object str))
+  (list->hash-table
+    (hash-map
+      (lambda (k v) (cons k (lookup-asset (string->symbol v)))) object)))
+
 ;; TODO: Validate that selected role matches selected identity in the agreement's participant table.
 (def (start-interaction/with-agreement options agreement)
   (let* ((selected-identity (ask-identity options))
@@ -268,9 +326,7 @@
          (selected-role (ask-role options role-names)))
   (values agreement selected-role)))
 
-(def (start-interaction/generate-agreement
-      options
-      contacts: contacts-file)
+(def (start-interaction/generate-agreement options contacts)
   (nest
     (let (application-name
             (get-or-ask options 'glow-app (λ () (ask-application)))))
@@ -286,7 +342,6 @@
     (let (selected-identity (ask-identity options)))
     (let (selected-role (ask-role options role-names)))
 
-    (let (contacts (load-contacts contacts-file)))
     (let (participants-table
            (get-or-ask-participants
              (hash-ref options 'participants)
@@ -294,6 +349,12 @@
              (symbolify selected-role)
              role-names
              contacts)))
+    (let (network (ethereum-config)))
+    (let (assets-table
+          (get-or-ask-assets
+            (hash-ref options 'assets)
+            (.@ interaction-info asset-names)
+            network)))
     (let (parameters
           (get-or-ask-parameters
             (hash-ref options 'params)
@@ -303,15 +364,21 @@
     (let (current-block-number (eth_blockNumber)))
     (let (max-initial-block (ask-max-initial-block options current-block-number)))
 
+    (let (blockchain-name (.@ network name))
+      (for (a (hash-values assets-table))
+        (unless (equal? network (asset->network a))
+          (error "assets must all be on the same network"))))
+
     ;; TODO: Validate agreement, with nice user-friendly error message.
     (let (agreement
       {interaction: (string-append application-name "#" (symbol->string (.@ interaction-info name)))
       participants: (object<-hash participants-table)
+      assets: (object<-hash assets-table)
       parameters
       glow-version: (software-identifier)
       code-digest: (digest<-file application.glow)
       reference: {}
-      options: {blockchain: (.@ (ethereum-config) name)
+      options: {blockchain: blockchain-name
                 escrowAmount: (void)
                 timeoutInBlocks:
                   (if timeout-in-blocks

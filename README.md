@@ -16,7 +16,7 @@ See [INSTALL.md](INSTALL.md) for installation instructions.
 
 ### Getting started with Glow
 
-After installing Glow, 
+After installing Glow,
 you can get started with a tutorial in our [`Standard Library`](./dapps/README.md).
 
 Alternatively, you can dive into the `glow-cli`:

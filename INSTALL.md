@@ -134,7 +134,7 @@ You can build your own using `scripts/make-docker-image.ss` from
 ## Installing *Glow* the Hard Way
 
 If you are going to be modifying the implementation of *Glow*,
-you may want to install things the hard way as below. 
+you may want to install things the hard way as below.
 This installs the same dependencies as those in [the easy way](INSTALL.md#easy-install),
 but also installs source code you can modify.
 
@@ -219,7 +219,9 @@ DEPS=(github.com/fare/gerbil-utils
       github.com/drewc/gerbil-swank
       github.com/drewc/drewc-r7rs-swank
       github.com/drewc/smug-gerbil
-      github.com/vyzo/gerbil-libp2p) ;
+      github.com/vyzo/gerbil-libp2p
+      gitlab.com/mukn/glow-contacts
+      ) ;
 for i in ${DEPS[@]} ; do
   gxpkg install $i &&
   gxpkg build $i
@@ -246,7 +248,9 @@ DEPS=(github.com/fare/gerbil-utils
       github.com/drewc/gerbil-swank
       github.com/drewc/drewc-r7rs-swank
       github.com/drewc/smug-gerbil
-      github.com/vyzo/gerbil-libp2p) ;
+      github.com/vyzo/gerbil-libp2p
+      gitlab.com/mukn/glow-contacts
+      ) ;
 SRCDIR=.. ;
 (cd ${SRCDIR} &&
 for i in ${DEPS[@]} ; do

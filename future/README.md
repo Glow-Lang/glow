@@ -392,6 +392,34 @@ Audit accounting based on blockchain.
 
 Off-chain, on top of supply chain on-chain.
 
+### Digital Asset Lending Platform
+
+A peer-to-peer lending platform for copies of digital assets, e.g. CDs or DVDs.
+Participants who hold physical copies or digital rights can escrow their copies in the system
+and generate "tokens" that they can then lend to other participants who will be using those copies remotely.
+
+In practice, the participants use convergent encryption to encrypt each file
+with a key derived from its blake3 tree hash, and
+participants may hold backup copies of the files of other participants,
+that they cannot decrypt.
+When a participant borrows the right to use a file, they receive
+a temporary token that contains the key for that file, encrypted against their private key;
+the token expires after some time, or may be returned before it expires,
+at which point the borrower forgets the key
+(or doesn't, but then it's the same as if he had made an unauthorized copy).
+Various oracles may vouch for the validity of the tokens issued;
+mostly, people with an identity (from another identity oracle) vouch for themselves;
+lenders and borrowers are each responsible for their individual behavior and its consequences.
+Borrowers may pay a small fee to the lenders and/or to the underlying system.
+A ledger of who borrows which copy when is generated;
+alternatively, it's all anonymous based on zkSNARKs.
+White-lists or reputedly legit lenders, and/or black-lists of bad lenders,
+may be generated and consulted by users before to borrow, to avoid legal liabilities.
+
+This application would involves at the same time some large scale "on chain" interaction
+to track the tokens, and some large scale "off chain" interaction to exchange those the encrypted
+files and the decryption tokens.
+
 ### DAO
 
 On top of existing Token:

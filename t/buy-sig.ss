@@ -59,6 +59,7 @@
   {;; To be filled "manually" from the user inputs
    interaction: "buy_sig#payForSignature"
    participants: (.o Buyer: buyer Seller: seller)
+   assets: (.o DefaultToken: PET)
    parameters: (hash
                 (digest (json<- Digest digest))
                 (price (json<- Ether price)))

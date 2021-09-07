@@ -9,10 +9,11 @@
   :clan/crypto/keccak
   :clan/persist/content-addressing :clan/persist/db
   :clan/versioning
+  :clan/assert
   :mukn/ethereum/types :mukn/ethereum/ethereum :mukn/ethereum/known-addresses :mukn/ethereum/json-rpc
   :mukn/ethereum/simple-apps :mukn/ethereum/network-config :mukn/ethereum/assets
   :mukn/ethereum/hex :mukn/ethereum/transaction :mukn/ethereum/types
-  :mukn/ethereum/testing
+  :mukn/ethereum/testing :mukn/ethereum/test-contracts
   ../compiler/passes
   ../compiler/multipass
   ../compiler/syntax-context
@@ -24,10 +25,12 @@
 (register-test-keys)
 (def a-address alice)
 (def b-address bob)
-(def wagerAmount (wei<-ether .01))
+(def gas-allowance (wei<-ether .01))
+(def t (wei<-ether .01))
+(def u (wei<-ether .02))
 
-(def rps-simple-integrationtest
-  (test-suite "integration test for ethereum/rps_simple"
+(def asset-swap-integrationtest
+  (test-suite "integration test for ethereum/asset_swap"
     (delete-agreement-handshake)
     (ensure-ethereum-connection "pet")
     (ensure-db-connection "testdb")
@@ -35,7 +38,12 @@
     (ensure-addresses-prefunded)
     (DBG "DONE")
 
-    (test-case "rps_simple executes"
+    (test-case "asset_swap executes"
+      (def a-pet-before (eth_getBalance a-address 'latest))
+      (def b-pet-before (eth_getBalance b-address 'latest))
+      (def a-qaspet-before (.call QASPET .get-balance a-address))
+      (def b-qaspet-before (.call QASPET .get-balance b-address))
+
       (def proc-a #f)
       (def proc-b #f)
       (try
@@ -53,17 +61,20 @@
            (lambda ()
              (answer-questions
               [["Choose application:"
-                "rps_simple"]
+                "asset_swap"]
                ["Choose your identity:"
                 (lambda (id) (string-prefix? "t/alice " id))]
                ["Choose your role:"
                 "A"]
                ["Select address for B:"
                 (lambda (id) (string-prefix? "t/bob " id))]
-               ["Select asset for DefaultToken:"
-                (lambda (id) (string-prefix? "PET " id))]])
+               ["Select asset for T:"
+                (lambda (id) (string-prefix? "PET " id))]
+               ["Select asset for U:"
+                (lambda (id) (string-prefix? "QASPET " id))]])
              (supply-parameters
-              [["wagerAmount" wagerAmount]])
+              [["t" t]
+               ["u" u]])
              (set-initial-block)
              (read-peer-command))))
 
@@ -79,35 +90,44 @@
                       " --test"
                       " --handshake 'nc localhost 3232'")]]))
 
-       (with-io-port proc-b
-         (lambda ()
-           (answer-questions
-            [["Choose your identity:"
-              (lambda (id) (string-prefix? "t/bob " id))]
-             ["Choose your role:"
-              "B"]])))
-
-       (with-io-port proc-a
-         (lambda ()
-           (displayln "2") ; Scissors
-           (force-output)))
-
        (def b-environment
          (with-io-port proc-b
            (lambda ()
-             (displayln "1") ; Paper
-             (force-output)
+             (answer-questions
+              [["Choose your identity:"
+                (lambda (id) (string-prefix? "t/bob " id))]
+               ["Choose your role:"
+                "B"]])
              (read-environment))))
 
        (def a-environment
          (with-io-port proc-a read-environment))
-       (assert! (equal? a-environment b-environment))
+       (assert-equal! a-environment b-environment)
 
-       ;; if A chose scissors, B chose paper, then outcome 2 (A_Wins)
-       (def outcome (hash-get a-environment 'outcome))
-       (display-object
-        ["outcome extracted from contract logs, 0 (B_Wins), 1 (Draw), 2 (A_Wins):" UInt256 outcome])
-       (check-equal? outcome 2)
+       (def a-pet-after (eth_getBalance a-address 'latest))
+       (def b-pet-after (eth_getBalance b-address 'latest))
+       (def a-qaspet-after (.call QASPET .get-balance a-address))
+       (def b-qaspet-after (.call QASPET .get-balance b-address))
+
+       ;; TODO: balances in both assets PET and QASPET
+       (DDT "DApp completed"
+            (.@ Ether .string<-) a-pet-before
+            (.@ Ether .string<-) b-pet-before
+            (.@ Ether .string<-) a-pet-after
+            (.@ Ether .string<-) b-pet-after
+            (.@ QASPET .string<-) a-qaspet-before
+            (.@ QASPET .string<-) b-qaspet-before
+            (.@ QASPET .string<-) a-qaspet-after
+            (.@ QASPET .string<-) b-qaspet-after)
+
+       ;; in PET, a loses t, b gains t
+       (assert! (<= 0 (- (- a-pet-before t) a-pet-after) gas-allowance))
+       (assert! (<= 0 (- (+ b-pet-before t) b-pet-after) gas-allowance))
+
+       ;; QASPET, b loses u, a gains u. No need to provide slack for
+       ;; gas, since this is a non-native token.
+       (assert-equal! (- b-qaspet-before u) b-qaspet-after)
+       (assert-equal! (+ a-qaspet-before u) a-qaspet-after)
 
        (finally
         (ignore-errors (close-port proc-a))
