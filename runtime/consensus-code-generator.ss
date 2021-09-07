@@ -51,14 +51,22 @@
           ;; update brk-start.
           ;; TODO: add space for global variables
           (set-box! (brk-start) (.@ self params-end))
+
+          (def sbc (.@ self static-block-ctx))
+          (def assets-and-vars
+             (map (lambda (kv)
+                    (cons (.call StaticBlockCtx .get-asset sbc (car kv))
+                          (cdr kv)))
+                  (hash->list/sort (.@ sbc balance-vars) symbol<?)))
+
           (defvalues (bytes-value labels-value)
             (assemble
               (&begin
                 (&simple-contract-prelude)
                 &define-tail-call
                 (&define-commit-contract-call/simple self)
-                (&define-check-participant-or-timeout)
-                (&define-end-contract)
+                (&define-check-participant-or-timeout assets-and-vars)
+                (&define-end-contract assets-and-vars)
                 compiled-small-functions
                 compiled-medium-functions
                 [&label 'brk-start@ (unbox (brk-start))])))
@@ -480,6 +488,8 @@
 
 ;; cartesian-product : [Listof A] ... -> [Listof [List A ...]]
 (def (cartesian-product . lol) (cartesian-product* lol))
+;; TODO : move cartesian-product into gerbil-utils or gerbil, or find a suitable
+;; replacement if one exists (e.g. in an SRFI).
 
 ;; cartesian-product* : [List [Listof A] ...] -> [Listof [List A ...]]
 (def (cartesian-product* lol)

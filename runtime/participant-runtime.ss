@@ -397,6 +397,26 @@
   ;; can invoke approve-deposits before we create the contract. The
   ;; same transaction that creates the contract could also deposit,
   ;; so after creation it is too late.
+  ;;
+  ;; WARNING: this means there is a race condition where, if the
+  ;; participant's address is being used concurrently by some other
+  ;; process, we could end up with the wrong contract address.
+  ;;
+  ;; The tokens will still be recoverable in this case; approve-deposits
+  ;; only *approves* transfers, but does not actually perform them,
+  ;; so as long as the other contract doesn't do something with them,
+  ;; we should be able to just change the approval after the fact.
+  ;;
+  ;; ...but glow will throw an error, and this transaction will fail.
+  ;;
+  ;; In the future, we should avoid this by adjusting the compiler to
+  ;; split creation and the first part of the interaction into separate
+  ;; transactions, so we don't need to know the contract's address before
+  ;; we create it -- we can create it and then approve the transfers
+  ;; afterwards. One complication is that right now we don't have to pay
+  ;; gas for all of the instructions that would be in the first transaction,
+  ;; since we just pre-compute the state at the end of that transaction
+  ;; and store it. We should try to maintain this property somehow.
   (unless (.@ pretx nonce)
     (set! (.@ pretx nonce) (next-nonce (.@ pretx from))))
   (def contract-address (transaction-to pretx))
