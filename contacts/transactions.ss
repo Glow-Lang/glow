@@ -75,7 +75,7 @@
             (participants (hash (Buyer buyer-addr) (Seller seller-addr)))
             (parameters (hash (digest digest) (price price)))
             (handshake (match action ; FIXME
-                         ("buy-sig" "nc -l -p 3141")
+                         ("buy-sig" "nc -l 3141")
                          ("sell-sig" "nc localhost 3141"))))
        (unless (string=? source-network dest-network)
          (error (format "Can't buy signature across networks ~a/~a" source-network dest-network)))
@@ -108,7 +108,7 @@
             (participants (hash (A a-addr) (B b-addr)))
             (parameters (hash (wagerAmount price)))
             (handshake (match action ; FIXME
-                         ("rps-A" "nc -l -p 3141")
+                         ("rps-A" "nc -l 3141")
                          ("rps-B" "nc localhost 3141"))))
        (unless (string=? a-network b-network)
          (error (format "Can't play across networks ~a/~a" a-network b-network)))
@@ -147,7 +147,7 @@
             (parameters (hash (t t-price) (u u-price)))
             (assets (hash (T t-token) (U u-token)))
             (handshake (match action ; FIXME
-                         ("swap-A" "nc -l -p 3141")
+                         ("swap-A" "nc -l 3141")
                          ("swap-B" "nc localhost 3141"))))
        (unless (string=? a-network b-network)
          (error (format "Can't swap across networks ~a/~a" a-network b-network)))
