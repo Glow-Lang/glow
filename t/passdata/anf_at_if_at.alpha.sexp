@@ -5,7 +5,7 @@
 (def g (λ (a2) (@debug-label dlb2) (@app * a2 2)))
 (@debug-label dlb3)
 (@interaction
-  ([A B])
+  ((@record (participants (@list A B)) (assets (@list DefaultToken))))
   (def inter
     (λ (b x)
       (@debug-label dlb4)

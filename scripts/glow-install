@@ -43,18 +43,23 @@ if ! command -v nix-env > /dev/null 2>&1 ; then
             sh "$nix_install" --darwin-use-unencrypted-nix-store-volume ;;
         *)
             ### For multiuser install, replace the below line with:
-            # sh "$nix_install" --daemon ;;
-    esac ||
-        panic "Failed to install Nix."
+            # sh "$nix_install" --daemon
+        ;;
+    esac || panic "Failed to install Nix."
 fi
 
 # 2. Make sure we're using the binaries from Nix.
 # If somehow the nix install doesn't do that for your shell,
 # you may have to add lines to your shell configuration files to achieve the same effect:
-if ! grep -c "/[.]nix-profile/" "$HOME/.zshenv" > /dev/null 2>&1 ; then
-    echo 'source $HOME/.nix-profile/etc/profile.d/nix.sh' >> "$HOME/.zshenv"
+conf='n () { n="$1/etc/profile.d/nix.sh" ; [ -f "$n" ] && source "$n" ; }; n $HOME/.nix-profile || n /nix/var/nix/profiles/default || n /run/current-system/sw || n ""'
+
+if ! grep -c "/[.]nix-profile" "$HOME/.zshenv" > /dev/null 2>&1 ; then
+    echo "$conf" >> "$HOME/.zshenv"
 fi
-. $HOME/.nix-profile/etc/profile.d/nix.sh
+if ! grep -c "/[.]nix-profile" "$HOME/.bashrc" > /dev/null 2>&1 ; then
+    echo "$conf" >> "$HOME/.bashrc"
+fi
+eval "$conf"
 
 # 3. Install and configure the cachix client, so you can download the Glow packages
 # instead of having your computer take an hour to rebuild them.
@@ -102,7 +107,7 @@ echo "Glow was installed through the Nix package manager."
 echo "Your bash and zsh shell configurations were updated to see Nix packages,"
 echo "but this only applies to new shells, in new terminal windows or tabs."
 echo "To enable Nix in your current shell, run the following command:"
-echo; echo '    . $HOME/.nix-profile/etc/profile.d/nix.sh'; echo
+echo; echo "    $conf"; echo
 echo "Then you will be able to run Glow with, e.g."
 echo; echo '    glow help'; echo
 } # End of wrapping

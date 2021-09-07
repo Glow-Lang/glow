@@ -68,6 +68,7 @@
                        ;;
                        ;; N.B. this is bob's id.
                        "--participants" "{\"Seller\": \"0xb0bb1ed229f5Ed588495AC9739eD1555f5c3aabD\"}"
+                       "--assets" "{\"DefaultToken\": \"PET\"}"
                        ]]))
 
        (def peer-command

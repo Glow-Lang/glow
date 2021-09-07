@@ -5,13 +5,14 @@
   :std/pregexp
   :std/format :std/iter :std/misc/hash :std/sugar :std/misc/number :std/misc/list :std/sort :std/srfi/1 :std/text/json
   (for-syntax :std/stxutil)
-  :clan/base :clan/exception :clan/io :clan/json :clan/number
+  :clan/base :clan/exception :clan/io :clan/json :clan/number :clan/pure/dict/assq
   :clan/path :clan/path-config :clan/ports :clan/syntax :clan/timestamp
   :clan/poo/object :clan/poo/brace :clan/poo/io :clan/poo/debug :clan/debug :clan/crypto/random
   :clan/persist/content-addressing
   :mukn/ethereum/hex :mukn/ethereum/ethereum :mukn/ethereum/network-config :mukn/ethereum/json-rpc
   :mukn/ethereum/transaction :mukn/ethereum/tx-tracker :mukn/ethereum/watch :mukn/ethereum/assets
   :mukn/ethereum/evm-runtime :mukn/ethereum/contract-config :mukn/ethereum/assembly :mukn/ethereum/types
+  :mukn/ethereum/nonce-tracker
   (only-in ../compiler/alpha-convert/env symbol-refer)
   ./program ./block-ctx ./consensus-code-generator ./terminal-codes
   ../compiler/method-resolve/method-resolve
@@ -33,6 +34,8 @@
    glow-version: [String] ;; e.g. "Glow v0.0-560-gda782c9 on Gerbil-ethereum v0.0-83-g6568bc6" ;; TODO: have a function to compute that from versioning.ss
    interaction: [String] ;; e.g. "buy_sig#payForSignature", fully qualified Gerbil symbol
    participants: [(MonomorphicObject Address)] ;; e.g. {Buyer: alice Seller: bob}
+   ;; TODO: rename assets to resources
+   assets: [(MonomorphicObject Asset)] ;; not just asset names such as "ETH", "CED", "QASCED", "PET", or "QASPET", objects from `lookup-asset`
    parameters: [Json] ;; This Json object to be decoded according to a type descriptor from the interaction (dependent types yay!)
    reference: [(MonomorphicObject Json)] ;; Arbitrary reference objects from each participant, with some conventional size limits on the Json string.
    options: [AgreementOptions] ;; See above
@@ -100,13 +103,14 @@
     current-code-block-label: [Symbol]
     current-label: [Symbol]
     current-debug-label: [(Or Symbol False)]
+    asset-environment: [(Map Asset <- Symbol)]
     environment: [(Map (Or Any Any) <- Symbol)] ;; (Table (Or DependentPair Any) <- Symbol) ;; TODO: have it always typed???
     block-ctx: [BlockCtx] ;; byte buffer?
     timer-start: [Block]
     first-unprocessed-block: [Block]
     first-unprocessed-event-in-block: [UInt8] ; Index of unprocessed event in a block.
                                               ; NOTE: UInt8 was selected to be reasonably large.
-    contract-balance: [UInt256]
+    contract-balances: [(Vector UInt256)]
     io-context: [IOContext]
     program: [Program]
     name: [Symbol]
@@ -132,19 +136,20 @@
                        current-code-block-label: (.@ interaction-info initial-code-block-label)  ;; TODO: extract initial code block label from contract compiler output
                        current-label: (.@ program initial-label)
                        current-debug-label: #f
+                       asset-environment: (make-hash-table)
                        environment: (make-hash-table)
                        block-ctx: #f
                        timer-start: #f
                        first-unprocessed-block: #f ; Initialized with contract-config
                        first-unprocessed-event-in-block: 0
-                       contract-balance: 0
+                       contract-balances: (make-vector (length balance-vars))
                        io-context
                        program
                        name
-                       consensus-code-generator: (.call ConsensusCodeGenerator .make program name (.@ agreement options timeoutInBlocks))
+                       consensus-code-generator: (.call ConsensusCodeGenerator .make program name (.@ agreement options timeoutInBlocks) (.@ agreement assets))
                        }))
                (set! (.@ self consensus-code-generator)
-                 (.call ConsensusCodeGenerator .make program name (.@ agreement options timeoutInBlocks)))
+                 (.call ConsensusCodeGenerator .make program name (.@ agreement options timeoutInBlocks) (.@ agreement assets)))
                (.call ConsensusCodeGenerator .generate (.@ self consensus-code-generator))
                (initialize-environment self)
                self))}))
@@ -177,12 +182,20 @@
 ;; in the block context.
 ;;
 ;; <- Runtime
-(def (update-contract-balance self)
-  (set!
-    (.@ self contract-balance)
-    (+ (.@ self contract-balance)
-       (- (.@ self block-ctx deposits)
-          (.call BlockCtx .total-withdrawal (.@ self block-ctx))))))
+(def (update-contract-balances self)
+  (def sbc (.@ self consensus-code-generator static-block-ctx))
+  (def balances (.@ self contract-balances))
+  (def (update-balance kv mergefn)
+    (def sym (car kv))
+    (def amount (cdr kv))
+    (def index (.@ (.call StaticBlockCtx .balance-var sbc sym) index))
+    (vector-set! balances index (mergefn (vector-ref balances index) amount)))
+  (for-each
+    (cut update-balance <> +)
+    (.@ self block-ctx deposits))
+  (for-each
+    (cut update-balance <> -)
+    (.call BlockCtx .total-withdrawals (.@ self block-ctx))))
 
 ;; Bool <- Runtime
 (def (is-active-participant self)
@@ -241,7 +254,7 @@
     (displayln BOLD "\nExecuting code block " (.@ self current-code-block-label) " ..." END)
     (for ((statement (.@ code-block statements)))
       (interpret-participant-statement self statement))
-    (update-contract-balance self)))
+    (update-contract-balances self)))
 
 (def (run-passive-code-block/handshake self role)
   (nest
@@ -308,6 +321,7 @@
       ;; recorded in Message's asset-transfer table during interpretation. Probably
       ;; requires getting TransactionInfo using the TransactionReceipt.
       (def contract-address (.@ contract-config contract-address))
+      (approve-deposits self contract-address)
       (def message-pretx
            (prepare-call-function-transaction
              self
@@ -319,6 +333,31 @@
       (set! (.@ self first-unprocessed-event-in-block) 0)
       ))
   #t)
+
+;; Pre-approve any deposits that the current block will need to perform
+;; when we invoke the consensus.
+;;
+;; <- Runtime Address
+(def (approve-deposits self contract-address)
+  (def sbc (.@ self consensus-code-generator static-block-ctx))
+  (for-each
+    (lambda (deposit)
+      (def asset-sym (car deposit))
+      (def asset (.call StaticBlockCtx .get-asset sbc asset-sym))
+      (def amount (cdr deposit))
+      (.call asset .approve-deposit! (get-active-participant self) contract-address amount))
+    (.@ self block-ctx deposits)))
+
+;; Nat <- Runtime
+(def (native-asset-deposit self)
+  (def sbc (.@ self consensus-code-generator static-block-ctx))
+  (def deposits
+    (filter
+      (lambda (deposit)
+        (def asset-sym (car deposit))
+        (native-asset? (.call StaticBlockCtx .get-asset sbc asset-sym)))
+      (.@ self block-ctx deposits)))
+  (apply + (map cdr deposits)))
 
 ;; Sexp <- State
 (def (sexp<-state state) (map (match <> ([t . v] (sexp<- t v))) state))
@@ -345,7 +384,7 @@
   (def contract-bytes
     (stateful-contract-init initial-state-digest (.@ self consensus-code-generator bytes)))
   (create-contract sender-address contract-bytes
-    value: (.@ self block-ctx deposits)))
+    value: (native-asset-deposit self)))
 
 ;; PreTransaction <- Runtime Block
 (def (deploy-contract self)
@@ -353,6 +392,36 @@
   (def timer-start (.@ self agreement options maxInitialBlock))
   (set! (.@ self timer-start) timer-start)
   (def pretx (prepare-create-contract-transaction self))
+
+  ;; Pick a nonce now, and pre-compute the contract address, so we
+  ;; can invoke approve-deposits before we create the contract. The
+  ;; same transaction that creates the contract could also deposit,
+  ;; so after creation it is too late.
+  ;;
+  ;; WARNING: this means there is a race condition where, if the
+  ;; participant's address is being used concurrently by some other
+  ;; process, we could end up with the wrong contract address.
+  ;;
+  ;; The tokens will still be recoverable in this case; approve-deposits
+  ;; only *approves* transfers, but does not actually perform them,
+  ;; so as long as the other contract doesn't do something with them,
+  ;; we should be able to just change the approval after the fact.
+  ;;
+  ;; ...but glow will throw an error, and this transaction will fail.
+  ;;
+  ;; In the future, we should avoid this by adjusting the compiler to
+  ;; split creation and the first part of the interaction into separate
+  ;; transactions, so we don't need to know the contract's address before
+  ;; we create it -- we can create it and then approve the transfers
+  ;; afterwards. One complication is that right now we don't have to pay
+  ;; gas for all of the instructions that would be in the first transaction,
+  ;; since we just pre-compute the state at the end of that transaction
+  ;; and store it. We should try to maintain this property somehow.
+  (unless (.@ pretx nonce)
+    (set! (.@ pretx nonce) (next-nonce (.@ pretx from))))
+  (def contract-address (transaction-to pretx))
+  (approve-deposits self contract-address)
+
   (def receipt (post-transaction pretx))
   (def contract-config (contract-config<-creation-receipt receipt))
   (verify-contract-config contract-config pretx)
@@ -388,7 +457,7 @@
     ;; default gas value should be (void), i.e. ask for an automatic estimate,
     ;; unless we want to force the TX to happen, e.g. so we can see the failure in Remix
     ;; gas: 1000000 ;; XXX ;;<=== DO NOT COMMIT THIS LINE UNCOMMENTED
-    value: (.@ self block-ctx deposits)))
+    value: (native-asset-deposit self)))
 
 ;; CodeBlock <- Runtime
 (def (get-current-code-block self)
@@ -407,6 +476,10 @@
   (for (participant-name (filter symbol? (hash-keys (.@ inter specific-interactions))))
     (def participant-surface-name (hash-ref alba participant-name))
     (add-to-environment self participant-name (.ref participants participant-surface-name)))
+  (def assets (.@ agreement assets))
+  (for (asset-name (.@ inter asset-names))
+    (def asset-value (.ref assets asset-name))
+    (hash-put! (.@ self asset-environment) asset-name asset-value))
   (def parameters (.@ agreement parameters))
   (for (parameter-name (.@ inter parameter-names))
     (def parameter-surface-name (hash-ref alba parameter-name))
@@ -464,22 +537,22 @@
       ;; is already known.
      (void))
 
-    (['add-to-deposit amount-variable]
+    (['add-to-deposit ['@record [asset-symbol amount-variable]]]
      (let
        ((this-participant (get-active-participant self))
         (amount (reduce-expression self amount-variable)))
-       (.call BlockCtx .add-to-deposit (.@ self block-ctx) this-participant amount)))
+       (.call BlockCtx .add-to-deposit (.@ self block-ctx) this-participant asset-symbol amount)))
 
-    (['expect-deposited amount-variable]
+    (['expect-deposited ['@record [asset-symbol amount-variable]]]
      (let
        ((this-participant (get-active-participant self))
         (amount (reduce-expression self amount-variable)))
-       (.call BlockCtx .add-to-deposit (.@ self block-ctx) this-participant amount)))
+       (.call BlockCtx .add-to-deposit (.@ self block-ctx) this-participant asset-symbol amount)))
 
-    (['participant:withdraw address-variable price-variable]
+    (['participant:withdraw address-variable ['@record [asset-symbol price-variable]]]
      (let ((address (reduce-expression self address-variable))
            (price (reduce-expression self price-variable)))
-       (.call BlockCtx .add-to-withdraw (.@ self block-ctx) address price)))
+       (.call BlockCtx .add-to-withdraw (.@ self block-ctx) address asset-symbol price)))
 
     (['add-to-publish ['quote publish-name] variable-name]
      (let ((publish-value (reduce-expression self variable-name))
@@ -619,24 +692,35 @@
     (else
       (reduce-expression self expression))))
 
-(defsyntax frame-variables/consecutive-addresses
-  (lambda (stx)
-    (syntax-case stx ()
-      ((_ start end ((name type value) ...))
-       (with-syntax (((name@ ...) (stx-map (cut format-id #'start "~a@" <>) #'(name ...))))
-         #'(let ((types (list type ...)))
-               (check-consecutive-addresses start end '(name ...) types (list name@ ...))
-               (map cons types (list value ...))))))))
+;; Convert a list of (variable value) items into a list of
+;; (type value) pairs, and check that the list corresponds to
+;; the variables defined by define-consecutive-addresses, between
+;; addresses start and end.
+(def (frame-variables/consecutive-addresses start end items)
+  (def vars (map car items))
+  (def vals (map cadr items))
+  (def names (map (lambda (v) (.@ v name)) vars))
+  (def types (map (lambda (v) (.@ v type)) vars))
+  (def addresses (map (lambda (v) (.@ v address)) vars))
+  (check-consecutive-addresses start end names types addresses)
+  (map cons types vals))
 
 ;; check-consecutive-addresses : Int Int [Listof Sym] [Listof Type] [Listof Int] -> Void
 (def (check-consecutive-addresses start end names types addresses)
   (def i
     (for/fold (i start) ((n names) (t types) (a addresses))
       (unless (= i a)
-        (error (format "check-consecutive-addresses: name = ~a, i = ~a, a = ~a" n i a)))
+        (error (format
+                 (string-append
+                   "check-consecutive-addresses: variable ~a was found at offset ~a, "
+                   "but its expected address is ~a")
+                 n i a)))
       (+ i (.@ t .length-in-bytes))))
   (unless (= i end)
-    (error (format "check-consecutive-addresses: i = ~a, end = ~a" i end))))
+    (error (format
+             (string-append
+               "check-consecutive-addresses: ending offset was incorrect; "
+               "expected ~a but got ~a") end i))))
 
 ;; : Frame <- Runtime Block (Table Offset <- Symbol) Symbol
 (def (create-frame-variables self timer-start code-block-label code-block-participant)
@@ -645,14 +729,15 @@
     (hash-get (.@ consensus-code-generator labels) (make-checkpoint-label (.@ self name) code-block-label)))
   (def active-participant-offset
     (lookup-variable-offset consensus-code-generator code-block-label code-block-participant))
-  (def balance (.@ self contract-balance))
+  (def balances (vector->list (.@ self contract-balances)))
   (def live-variables (lookup-live-variables (.@ self program) (.@ self name) code-block-label))
   ;; TODO: ensure keys are sorted in both hash-values
   (append
    (frame-variables/consecutive-addresses frame@ params-start@
-    ((pc UInt16 checkpoint-location)
-     (balance UInt256 balance)
-     (timer-start Block timer-start)))
+    (append
+      [[pc-var checkpoint-location]]
+      (map list balance-vars balances)
+      [[timer-start-var timer-start]]))
    ;; [UInt16 . active-participant-offset]
    ;; TODO: designate participant addresses as global variables that are stored outside of frames
    (map
@@ -663,20 +748,17 @@
      (sort live-variables symbol<?))))
 
 (def (interaction-input t s)
-  (printf (string-append CYAN "\n~a [~s]\n" END) (if (u8vector? s) (bytes->string s) s) (.@ t sexp))
-  (display (string-append CYAN "> " END))
-  (def result (<-json t (read-json (current-input-port))))
-  (displayln)
-  result)
-
-;; Block <- Frame
-(def (timer-start<-frame-variables frame-variables)
-  (cdadr frame-variables))
-
-;; TODO: use [t . v] everywhere instead of [v t] ? and unify with sexp<-state in participant-runtime
-;; Sexp <- Frame
-(def (sexp<-frame-variables frame-variables)
-  `(list ,@(map (match <> ([v t] `(list ,(sexp<- t v) ,(sexp<- Type t)))) frame-variables)))
+  (def env-input (ignore-errors (getenv "INPUT")))
+  (match env-input
+    ((? string?)
+      ;; FIXME: This does not allow for multiple inputs.
+     (<-json t (string->json-object env-input)))
+    (#f
+     (printf (string-append CYAN "\n~a [~s]\n" END) (if (u8vector? s) (bytes->string s) s) (.@ t sexp))
+     (display (string-append CYAN "> " END))
+     (def result (<-json t (read-json (current-input-port))))
+     (displayln)
+     result)))
 
 ;; json-object-ref : JsonObject StringOrSymbol -> Json
 (def (json-object-ref j k)

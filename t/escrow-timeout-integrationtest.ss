@@ -58,7 +58,9 @@
              ["Choose your role:"
               "A"]
              ["Select address for B:"
-              (lambda (id) (string-prefix? "t/bob " id))]])
+              (lambda (id) (string-prefix? "t/bob " id))]
+             ["Select asset for DefaultToken:"
+              (lambda (id) (string-prefix? "PET " id))]])
            (supply-parameters
             [["wagerAmount" wagerAmount]])
            (set-initial-block)
