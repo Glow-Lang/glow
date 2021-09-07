@@ -61,6 +61,11 @@
 ;;; Endpoints in FTW! are run in priority order.
 ;;; By default, the priority of all endpoints is ~42~.
 
+;; List all non-native assets.
+(define-endpoint list-assets "^/contacts/assets$")
+(def (list-assets/GET)
+  (respond/JSON (list-assets)))
+
 ;; List all networks and their metadata.
 (define-endpoint list-networks "^/contacts/networks$")
 (def (list-networks/GET)

@@ -41,9 +41,14 @@
                      [(param (identifier "seller") (type-name "Address"))
                       (param (identifier "seller2") #f)]))
 
-    (test-case "body"
+    (test-case "valid body"
       (assert-equal! (run Body (lexify "2;"))
-                     (body-expression [(expression-statement (numeric-literal "2"))] #f)))
+                     (body-expression [(expression-statement (numeric-literal "2"))] #f))
+      (assert-equal! (run Body (lexify "let a = 1;
+                                        let b = 2;"))
+                     (body-expression [(value-definition (identifier "a") #f (numeric-literal "1"))
+                                       (value-definition (identifier "b") #f (numeric-literal "2"))]
+                                      #f)))
 
     (test-case "Parsing expressions with {} curly-braces"
       (assert-equal! (run Expression (lexify "{}")) (record-expression []))
@@ -60,4 +65,11 @@
       (assert-equal! (run Expression (lexify "{ x: 1, y: 2 }"))
                      (record-expression [(cons (identifier "x") (numeric-literal "1"))
                                          (cons (identifier "y") (numeric-literal "2"))]))
-      )))
+      )
+    (test-case "valid statement"
+      (assert-equal! (run Statement (lexify "let a = 1;"))
+                     (value-definition (identifier "a") #f (numeric-literal "1"))))
+    (test-case "invalid statement"
+      (assert-equal! (run Statement (lexify "("))
+                     #f))
+    ))

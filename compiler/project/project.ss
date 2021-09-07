@@ -35,11 +35,18 @@
 ;; project-make-interaction : ExprStx CpiTable MPart -> ExprStx
 (def (project-make-interaction stx cpit this-p)
   (assert! (not this-p) "`@make-interaction` is only allowed in the consensus")
-  (syntax-case stx (@make-interaction @list)
-    ((@make-interaction ((@list p ...)) params (from to) . body)
+  (syntax-case stx (@make-interaction @record @list participants assets)
+    ((@make-interaction
+       ((@record (participants (@list p ...)) (assets (@list a ...))))
+       params
+       (from to)
+       . body)
      (let ((ps (syntax->datum #'(p ...))) (bs (syntax->list #'body)))
        (retail-stx stx
-         (cons* #'((@list p ...)) #'params #'(from to)
+         (cons*
+           #'((@record (participants (@list p ...)) (assets (@list a ...))))
+           #'params
+           #'(from to)
            (cons #f (project-body bs cpit #f))
            (for/collect ((p ps))
              (cons p (project-body bs cpit p)))))))))

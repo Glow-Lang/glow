@@ -563,6 +563,9 @@
 
 (def StatementSemicolon (.let* ((stat Statement) (_(equal-token-value? #\;))) stat))
 (def StatementList (many StatementSemicolon))
+(def TopLevelStatementList (.let* ((stmts StatementList)
+                                   (_ (:P #!eof)))
+                                  (return stmts)))
 
 (def Body
     (.let* ((statements StatementList)

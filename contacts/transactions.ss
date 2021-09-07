@@ -88,6 +88,7 @@
          "--database" ,nickname
          "--evm-network" ,source-network
          "--handshake" ,handshake
+         "--assets" "{\"DefaultToken\": \"PET\"}" ; FIXME
          "--participants" ,(json-object->string participants)
          "--params" ,(json-object->string parameters))))
     ((or "rps-A" "rps-B")
@@ -122,6 +123,44 @@
          "--database" ,nickname
          "--evm-network" ,a-network
          "--handshake" ,handshake
+         "--assets" "{\"DefaultToken\": \"PET\"}" ; FIXME
+         "--participants" ,(json-object->string participants)
+         "--params" ,(json-object->string parameters))))
+    ((or "swap-A" "swap-B")
+     (let* ((t-amount (string->number (hash-ref args 't_amount)))
+            (t-price (format "0x~a" (number->string t-amount 16)))
+            (t-token (hash-ref args 't_token))
+            (u-amount (string->number (hash-ref args 'u_amount)))
+            (u-price (format "0x~a" (number->string u-amount 16)))
+            (u-token (hash-ref args 'u_token))
+            (role (match action
+                    ("swap-A" "A")
+                    ("swap-B" "B")))
+            (a (hash-ref args 'a))
+            (b (hash-ref args 'b))
+            (nickname (hash-ref (match action ("swap-A" a) ("swap-B" b)) 'nickname))
+            (a-network (hash-ref (hash-ref args 'a) 'network))
+            (b-network (hash-ref (hash-ref args 'b) 'network))
+            (a-addr (hash-ref (hash-ref args 'a) 'address))
+            (b-addr (hash-ref (hash-ref args 'b) 'address))
+            (participants (hash (A a-addr) (B b-addr)))
+            (parameters (hash (t t-price) (u u-price)))
+            (assets (hash (T t-token) (U u-token)))
+            (handshake (match action ; FIXME
+                         ("swap-A" "nc -l -p 3141")
+                         ("swap-B" "nc localhost 3141"))))
+       (unless (string=? a-network b-network)
+         (error (format "Can't swap across networks ~a/~a" a-network b-network)))
+       `("glow" "start-interaction"
+         "--max-initial-block" "%10000"
+         "--timeout-in-blocks" "1000"
+         "--glow-app" "asset_swap"
+         "--role" ,role
+         "--my-identity" ,nickname
+         "--database" ,nickname
+         "--evm-network" ,a-network
+         "--handshake" ,handshake
+         "--assets" ,(json-object->string assets)
          "--participants" ,(json-object->string participants)
          "--params" ,(json-object->string parameters))))
     (else

@@ -25,7 +25,7 @@
     public-key: [String]
     keypair: [Keypair])
    {.make: (lambda (nickname (network 'eth) (address #f) (public-key #f) (keypair #f))
-             (when keypair
+             (when (and keypair (keypair-public-key keypair))
                (if (keypair-consistent? keypair)
                    (register-keypair nickname keypair)
                    (error "Inconsistent keypair for" nickname))

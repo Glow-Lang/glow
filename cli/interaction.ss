@@ -10,6 +10,7 @@
   :clan/persist/db :clan/persist/content-addressing :clan/versioning :clan/pure/dict/symdict
   :mukn/ethereum/assets :mukn/ethereum/cli :mukn/ethereum/ethereum :mukn/ethereum/network-config
   :mukn/ethereum/types :mukn/ethereum/json-rpc :mukn/ethereum/known-addresses
+  :mukn/ethereum/test-contracts ; TODO: should this be more "dynamic", only imported when the network is known to be pet?
   :mukn/glow/runtime/participant-runtime :mukn/glow/runtime/reify-contract-parameters
   :mukn/glow/runtime/program :mukn/glow/runtime/terminal-codes :mukn/glow/runtime/glow-path
   (only-in :mukn/glow/compiler/alpha-convert/alpha-convert init-syms)
@@ -72,6 +73,14 @@
   (def chosen-nickname (ask-option name known-addresses))
   (hash-get address-by-nickname (string-downcase chosen-nickname)))
 
+(def (ask-asset name network)
+  (def known-assets
+    (for/collect ((p (hash->list/sort asset-table symbol<?))
+                  when (equal? (asset->network (cdr p)) network))
+      (cons* (symbol->string (car p)) Asset (cdr p))))
+  (def chosen-asset (ask-option name known-assets))
+  (hash-get asset-table (string->symbol chosen-asset)))
+
 (def (display-prompt name)
   (displayln CYAN name)
   (display (string-append "> " END))
@@ -102,6 +111,16 @@
         (lambda ()
           (ask-address (string-append "Select address for " (symbol->string role-name)))))))
   participants)
+
+;; get-or-ask-assets : (Hashof Symbol Asset) (Listof Symbol) Network -> (Hashof Symbol AssetType)
+(def (get-or-ask-assets assets asset-names network)
+  (displayln BOLD "Assign assets" END)
+  (for ((asset-name asset-names))
+    (get-or-ask assets
+      asset-name
+      (lambda ()
+        (ask-asset (string-append "Select asset for " (symbol->string asset-name)) network))))
+  assets)
 
 (def (console-input type name tag)
   (display-prompt
@@ -215,13 +234,20 @@
                      contacts: (contacts-file #f)
                      handshake: (handshake #f)
                      params: (params #f)
-                     participants: (participants #f))
+                     participants: (participants #f)
+                     assets: (assets #f))
   (help: "Start an interaction based on an agreement"
    getopt: (make-options
             [(option 'agreement "-A" "--agreement" default: #f
                      help: "interaction agreement as JSON")
              (option 'glow-app "-G" "--glow-app" default: #f
                      help: "the name of the Glow DApp")
+             (option 'params "-P" "--params" default: #f
+                     help: "contract parameters as JSON")
+             (option 'participants "-p" "--participants" default: #f
+                     help: "participant mapping as JSON")
+             (option 'assets "-a" "--assets" default: #f
+                     help: "asset mapping as JSON")
              ;; TODO: add an option for supplying single parameters/participants with
              ;; more ergonomic syntax than JSON, like --param foo=bar. We want to be
              ;; able to specify this mutliple times, which will require upstream
@@ -251,6 +277,7 @@
          (identity identity)
          (params (string->json-object (or params "{}")))
          (participants (string->json-participant-map (or participants "{}")))
+         (assets (string->json-asset-map (or assets "{}")))
          (max-initial-block max-initial-block)
          (timeout-in-blocks timeout-in-blocks)
          (role role)))
@@ -280,6 +307,12 @@
   (list->hash-table
     (hash-map
       (lambda (k v) (cons k (address<-0x v))) object)))
+
+(def (string->json-asset-map str)
+  (def object (string->json-object str))
+  (list->hash-table
+    (hash-map
+      (lambda (k v) (cons k (lookup-asset (string->symbol v)))) object)))
 
 ;; TODO: Validate that selected role matches selected identity in the agreement's participant table.
 (def (start-interaction/with-agreement options agreement)
@@ -316,6 +349,12 @@
              (symbolify selected-role)
              role-names
              contacts)))
+    (let (network (ethereum-config)))
+    (let (assets-table
+          (get-or-ask-assets
+            (hash-ref options 'assets)
+            (.@ interaction-info asset-names)
+            network)))
     (let (parameters
           (get-or-ask-parameters
             (hash-ref options 'params)
@@ -325,15 +364,21 @@
     (let (current-block-number (eth_blockNumber)))
     (let (max-initial-block (ask-max-initial-block options current-block-number)))
 
+    (let (blockchain-name (.@ network name))
+      (for (a (hash-values assets-table))
+        (unless (equal? network (asset->network a))
+          (error "assets must all be on the same network"))))
+
     ;; TODO: Validate agreement, with nice user-friendly error message.
     (let (agreement
       {interaction: (string-append application-name "#" (symbol->string (.@ interaction-info name)))
       participants: (object<-hash participants-table)
+      assets: (object<-hash assets-table)
       parameters
       glow-version: (software-identifier)
       code-digest: (digest<-file application.glow)
       reference: {}
-      options: {blockchain: (.@ (ethereum-config) name)
+      options: {blockchain: blockchain-name
                 escrowAmount: (void)
                 timeoutInBlocks:
                   (if timeout-in-blocks

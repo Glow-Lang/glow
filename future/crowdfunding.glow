@@ -1,4 +1,9 @@
-data Action = Pledge(TokenAmount) | Close | Reclaim(TokenAmount);
+#lang glow
+
+/* Here is how we can express the benchmark “crowdfunding” application, wherein pledgers pool money into a common account, the contents of which will be disbursed to the organizer if and only if a total target amount is reached before deadline. The hosts of the crowdfunding platform earn a small commission on the assets raised, which limits how much the organizer can take from the pledgers if he doesn’t reach the target. */
+
+
+data Action = Pledge(TokenAmount) | Collect | Reclaim(TokenAmount);
 
 let platformCommission amount = quotient(amount, 100);
 
@@ -9,8 +14,9 @@ let platformCommission amount = quotient(amount, 100);
 // for the current participant to exhibit witnesses for the explored or summarized branches of the tree.
 // For efficient refund on Ethereum, it could be an array / alist.
 @interaction
-let crowdfunding = (target: TokenAmount,
-                    expirationTime : Timestamp) => {
+let crowdfunding =
+  (Organizer: Participant, Platform: Participant,
+   target: TokenAmount, expirationTime : Timestamp) => {
    require! expirationTime > currentTime();
 
    let rec crowdfund = (ledger : Table(TokenAmount <- Participant),
@@ -26,7 +32,7 @@ let crowdfunding = (target: TokenAmount,
            crowdfund(Table.add(ledger, NewPledger, amount),
                      totalPledged + amount);
 
-       | publish! Organizer -> Success;
+       | publish! Organizer -> Collect;
            require! currentTime() >= expirationTime;
            require! totalPledged >= target;
            let commission = platformCommission(totalPledged);
