@@ -9,9 +9,14 @@ by just using the following one-liner and restarting your shell when it's done;
 you may then skip reading the rest of this file (except the warnings and prerequisites):
 
     curl -L https://glow-lang.org/install/glow-install | sh
+    
+## Docker
 
-Alternatively, if you're rather use Docker than Nix,
-you can `docker pull mukn/glow:alpha` then `docker run -it mukn/glow:alpha`.
+Alternatively, if you'd rather use Docker than Nix,
+you can use the following commands.
+
+    docker pull mukn/glow:alpha 
+    docker run -it mukn/glow:alpha
 
 ## Warnings and Prerequisites
 

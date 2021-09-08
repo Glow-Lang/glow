@@ -12,7 +12,19 @@ Glow is distributed under the Apache License, version 2.0. See the file [LICENSE
 
 ### Installation instructions
 
-See [INSTALL.md](INSTALL.md) for installation instructions.
+To install the latest stable build, you can use our install script:
+
+    curl -L https://glow-lang.org/install/glow-install | sh
+
+Some caveats you should take note of:
+- The install script uses [`nix`](https://nixos.org/) (and installs it if it is missing).
+- We distribute precompiled binaries via cachix for `x86_64-linux` and `x86_64-darwin`.
+  This *should* also work on WSL on `x86_64`, but we haven't tried.
+- If you aren't using one of the above architectures,
+  run the installation in the background,
+  as it will take a while to compile Glow and its dependencies.
+  
+See [INSTALL.md](INSTALL.md) for greater detail on warnings and prerequisites, as well as alternative installation steps.
 
 ### Getting started with Glow
 
