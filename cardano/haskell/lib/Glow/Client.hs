@@ -121,9 +121,9 @@ createContract cfg params = do
 initContract ::
   GlowConfig -> CreateParams -> Contract () GlowSchema GlowError ()
 initContract cfg params = do
-  traceLog "create params: " -- <> show params
+  traceLog $ "create params: " <> show params
   let datum = createParamsToGlowDatum params
-  traceLog "initialized datum" -- show datum
+  traceLog $ "initialized datum" <> show datum
   void $ awaitSlot 0 -- TODO: grab the timeout from the contract
   let payValue = mkValue 0 -- This is the amount the contract starts with?
   traceLog "initializing contract"
@@ -149,7 +149,7 @@ initContractSM cfg datum payValue = SM.runInitialise (glowClient cfg) datum payV
 executeMove ::
   GlowConfig -> MoveParams -> Contract () GlowSchema GlowError GlowDatum
 executeMove cfg params = do
-  traceLog "move params" -- show params
+  traceLog $ "move params" <> show params
   transitionResult <- SM.runStep (glowClient cfg) (moveParamsToRedeemer params)
   case transitionResult of
     SM.TransitionFailure (SM.InvalidTransition s i) -> do
@@ -158,7 +158,7 @@ executeMove cfg params = do
       error "Invalid Transition" -- TODO: We should Unwind the transaction.
     SM.TransitionSuccess datum -> do
       traceLog "Transition success"
-      -- traceLog $ show datum
+      traceLog $ show datum
       return datum
 
 moveParamsToRedeemer :: MoveParams -> GlowRedeemer

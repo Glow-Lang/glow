@@ -50,7 +50,9 @@ data TransitionOutput = TransitionOutput
     toValue :: LV.Value
   }
 
--- NOTE: Trace calls are placeholders; TODO: Remove this comment once `trace` calls are implemented.
+-- TODO: Figure out what trace calls are for.
+-- Are they meant for on-chain event logging?
+-- Or for debugging?
 transition :: GlowConfig -> SM.State GlowDatum -> GlowRedeemer -> Maybe (TxConstraints SM.Void SM.Void, SM.State GlowDatum)
 transition
   cfg
@@ -272,6 +274,8 @@ machine cfg =
 mkValue :: Integer -> LV.Value
 mkValue = LV.singleton adaSymbol adaToken
 
+-- The inlineable pragma is required for us to compile the validator to plutus core.
+-- See: https://plutus-pioneer-program.readthedocs.io/en/latest/week2.html
 {-# INLINEABLE mkValidator #-}
 mkValidator :: GlowConfig -> Scripts.ValidatorType GlowStateMachine
 mkValidator = SM.mkValidator . machine

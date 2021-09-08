@@ -137,90 +137,20 @@ export INSTANCE_ID_2="6ede7bc2-44fd-45c3-bf29-1c912efd228a"
 curl -s http://localhost:8080/api/new/contract/instance/$INSTANCE_ID_2/status | jq
 ```
 
-This has a lot of information; and in particular we can see what endpoints are still available
-to call.
+3. Run the interraction
 
-=========== WIP ======================================
+TODO
 
-3. Start the game by locking some value inside
+For now you can look at the [execute-contract](../scripts/execute-contract.ss),
+which provides an end-to-end script for running the `buy_sig` contract on glow-cardano backend.
 
-Now, let's call the `lock` endpoint to start the game. In order to do so, we need to construct
-a JSON representation of the `LockParams` that the endpoint takes (look at `Game.hs`). The easiest
-way is to simply build the term in haskell and ask `aeson` to encode it.
+## Other notes
 
-From the terminal:
-```sh
-nix-shell
-cabal v2-repl
-```
-
-`cabal v2-repl:`
-```haskell
-import Client (CreateParams(..))
-import PlutusTx.AssocMap (Map)
-import qualified PlutusTx.AssocMap as Map
-import Types
-import Data.Text (Text)
-import Ledger.Ada
-args = CreateParams { datatypes = datatypeMap
-                    , participants = addressMap
-                    , arguments = variableMap
-                    , contract = glowContract
-                    , timeoutLength = defaultTimeoutLength
-                    }
-    where
-      datatypeMap :: DatatypeMap
-      datatypeMap = Map.empty
-      
-      glowContract :: GlowContract
-      glowContract = undefined
-      
-      variableMap :: VariableMap
-      variableMap = undefined
-      
-      addressMap :: Map Text Ledger.PubKey
-      addressMap = undefined
-
-import Data.Aeson
-import Data.ByteString.Lazy.Char8 as BSL
-BSL.putStrLn $ encode args
-{"amount":{"getValue":[[{"unCurrencySymbol":""},[[{"unTokenName":""},90]]]]},"secretWord":"eagle"}
-```
-
-Great! This is all we need to call the `lock` endpoint, so let's do that now with
-the instance from Wallet 1:
-
-4. Lock some value (Wallet 1)
-
-```
-export INSTANCE_ID=...
-curl -H "Content-Type: application/json" \
-  --request POST \
-  --data '{"amount":{"getValue":[[{"unCurrencySymbol":""},[[{"unTokenName":""},90]]]]},"secretWord":"eagle"}' \
-  http://localhost:8080/api/new/contract/instance/$INSTANCE_ID/endpoint/lock
-```
-
-We can do likewise to work out what the JSON for `GuessParams` is, and then make a guess from
-Wallet 2:
-
-5. Make a guess (Wallet 2)
-
-```
-export INSTANCE_ID=...
-curl -H "Content-Type: application/json" \
-  --request POST \
-  --data '{"guessWord": "duck"}' \
-  http://localhost:8080/api/new/contract/instance/$INSTANCE_ID/endpoint/guess
-```
-
-Note that this guess is wrong, so in the log of the server we will see that the transaction
-didn't validate.
-
-As an exercise, you can now spin up another instance for Wallet 2 and make a correct guess, and
-confirm that the transaction validates and the Ada is transferred into the right wallet.
-
-Note that you can verify the balances by looking at the log of `plutus-starter-pab`
+Note: You can verify the balances by looking at the log of `plutus-starter-pab`
 when exiting it by pressing return.
 
-Finally, also node that the PAB also exposes a websocket, which you can read about in
-the general [PAB Architecture documentation](https://github.com/input-output-hk/plutus/blob/master/plutus-pab/ARCHITECTURE.adoc).
+## Deploy this contract
+
+TODO
+
+Note: The PAB exposes a websocket, see [PAB Architecture documentation](https://github.com/input-output-hk/plutus/blob/master/plutus-pab/ARCHITECTURE.adoc).

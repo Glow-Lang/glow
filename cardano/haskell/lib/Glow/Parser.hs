@@ -188,14 +188,13 @@ parseStatement = \case
     Require $ Explicit (Boolean True)
   Builtin "add-to-deposit" [Atom amountName] ->
     AddToDeposit (var amountName)
-  -- FIXME is this correct API change??
-  -- Should we be mixing consensus with participant:withdraw??
   Builtin "consensus:withdraw" [Atom roleName, Atom amountName] ->
     AddToWithdraw (var roleName) (var amountName)
-  -- FIXME is this even correct??
-  -- Should we be mixing consensus with participant:withdraw??
+
+  -- FIXME Compiler to plutus IR should separate consensus from participant statements.
   Builtin "participant:withdraw" [Atom roleName, Atom amountName] ->
     AddToWithdraw (var roleName) (var amountName)
+
   -- NOTE: Does not seem to be used in the latest project.sexp output
   -- FIXME: Make sure this is not used and cleanup
   -- Builtin "add-to-withdraw" [Atom roleName, Atom amountName] ->
