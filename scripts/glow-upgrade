@@ -1,0 +1,51 @@
+#!/bin/sh -e
+## Easy Upgrade script for Glow implementers. See https://glow-lang.org
+{ # Prevent execution if this script was only partially downloaded
+
+## For most users, use the alpha branch of MuKn's fork of nixpkgs
+export nixpkgs=https://github.com/muknio/nixpkgs/archive/alpha.tar.gz
+
+## For the development branch, you could instead be using:
+#export nixpkgs=https://github.com/muknio/nixpkgs/archive/devel.tar.gz
+
+
+# 0. Small prelude
+
+panic() {
+    echo "$0:" "$@" >&2
+    exit 1
+}
+umask 0022
+
+require_util() {
+    command -v "$1" > /dev/null 2>&1 ||
+        panic "You do not have '$1' installed, which I need $2"
+}
+
+# 1. Make sure prerequisites installed.
+require_util curl "to download nix-env"
+require_util nix "to upgrade glow"
+
+# 4. Upgrade Glow, and matching versions of a few other things along with it,
+# from the very same version of nixpkgs used by MuKn.
+# This ensures that the build is deterministic:
+# if it builds for us, it will build identically for you.
+#
+# NB: We use go-ethereum (geth) only for testing and/or otherwise running your own ethereum node.
+# Racket's scribble is used by Glow implementers for our documentation only;
+# it is only necessary if you are going to modify or rebuild Glow yourself;
+# it shouldn't be necessary for regular users, unless you decide to use the same tool as we do.
+# To compile solidity code, you might also want to install solc, but that might fail on nix on mac.
+EXTRAPKGS=""
+case "$OSTYPE" in
+  darwin*) : ;;
+  linux*) EXTRAPKGS="racket solc";;
+esac
+echo "Using Nix to upgrade Glow, and with it gerbil, geth, etc."
+nix-env -f $nixpkgs -iA \
+        glow-lang gerbil-unstable gerbilPackages-unstable go-ethereum $EXTRAPKGS
+
+# Last, tell the user how to enable Nix in the current shell
+echo
+echo "Glow was upgraded through the Nix package manager."
+} # End of wrapping
