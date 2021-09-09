@@ -4,24 +4,34 @@ Instructions for installing, testing and running *Glow*.
 
 ## Easy Install
 
-Long story short, you can install the latest stable release of *Glow*
-by just using the following one-liner and restarting your shell when it's done;
-you may then skip reading the rest of this file (except the warnings and prerequisites):
+### One-Liner on Linux, macOS, WSL
+
+Long story short, you can install *Glow* with the following one-liner:
 
     curl -L https://glow-lang.org/install/glow-install | sh
 
-Alternatively, if you're rather use Docker than Nix,
-you can `docker pull mukn/glow:alpha` then `docker run -it mukn/glow:alpha`.
+This will make the command `glow` available to you,
+though you may have to restart your shell, or copy/paste a configuration command.
+
+### Alternative one-liner, using Docker
+
+Alternatively, if you're rather use Docker than Nix, you can
+
+    docker pull mukn/glow:alpha
+
+The command `glow` is available in that image,
+but see below on how to invoke it.
 
 ## Warnings and Prerequisites
 
-1. Currently, installing *Glow* requires about 4GB of RAM and 2GB of disk.
-   You will need at least 8GB of RAM and 8GB of swap if you need to recompile it or its dependencies.
+1. Currently, installing *Glow* requires about 4GB of RAM and a bit over 2GB of disk.
+   You will need at least 8GB of RAM and 8GB of swap
+   if you want to recompile *Glow* and its dependencies.
    This includes the case where you will modify *Glow* itself,
    but also the case where you run it on an architecture that doesn't have precompiled binaries.
 
 2. We use the [Nix](https://nixos.org/nix/) package manager
-   for its deterministically reproducible builds:
+   for its deterministic reproducible builds:
    if it builds and run for us, it should build and run identically for you.
    *Glow* should work on all supported architectures supported by Nix.
 
@@ -113,6 +123,17 @@ you need to read the [HACKING.md](HACKING.md) file for how to hack.
 
 You can look at the above-mentioned installation scripts, and reproduce their steps manually.
 
+To install our latest development version `devel`, instead of the `alpha` version,
+you can point the `nixpkgs` near the beginning of the file to this alternate location:
+
+    nixpkgs=https://github.com/muknio/nixpkgs/archive/devel.tar.gz
+
+Or, once Nix is installed, you can define this `nixpkgs` variable, then run
+
+    nix-env -f $nixpkgs -iA glow
+
+In the future, we will also have a `stable` version.
+
 ## Trying it out with Docker
 
 We have a Docker image [`mukn/glow`](https://hub.docker.com/repository/docker/mukn/glow)
@@ -121,15 +142,25 @@ with *Glow* and its associated libraries precompiled.
 For the the most recent stable release (currently alpha quality), use:
 
     docker pull mukn/glow:alpha
-    docker run -it mukn/glow:alpha bash
+    docker run -it --mount type=volume,src=glow-home,dst=/root mukn/glow:alpha bash
 
-For the latest development code (has most features but can be unstable), use:
+For the latest development code
+(which has most features and is better suited to work on *Glow* itself, but can be unstable), use:
 
     docker pull mukn/glow:latest
-    docker run -it mukn/glow:latest bash
+    docker run -it --mount type=volume,src=glow-home,dst=/root mukn/glow:latest bash
 
 You can build your own using `scripts/make-docker-image.ss` from
 [gerbil-utils](https://github.com/fare/gerbil-utils).
+
+Note that the `--mount` option is there to help you persist your working state
+between sessions of running *Glow* inside docker.
+Without such a mount, you'd lose your keys, etc., between sessions.
+Alternatively, you could use a `bind` mount to put those files directly in your filesystem
+(consult the Docker documentation for details),
+but beware what it would do to file permissions considering that
+the processes under `docker` run as `root` by default.
+You can layer your own modifications on top of the docker image to suit your needs.
 
 ## Installing *Glow* the Hard Way
 
