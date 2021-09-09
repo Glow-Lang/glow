@@ -1,16 +1,20 @@
 let
-  pkgs = import ../../pkgs.nix;
-  glow-cardano = pkgs.skipDocs (pkgs.gerbilCardanoHaskellPackages.callCabal2nix "glow-cardano" ./. {});
-  plutus = import (pkgs.thunkSource ../../dep/plutus) {};
-  plutus-scb = plutus.haskell.packages.plutus-scb.components.exes.plutus-scb;
+  packages = import ./.;
+  inherit (packages) pkgs plutus-starter;
+  inherit (plutus-starter) haskell;
+
 in
-  pkgs.mkShell {
-    inputsFrom = [
-      glow-cardano.env
-    ];
-    buildInputs = [
-      plutus-scb
-      pkgs.thunkExe
-      pkgs.haskellPackages.hoogle
+  haskell.project.shellFor {
+    withHoogle = false;
+
+    nativeBuildInputs = with plutus-starter; [
+      hlint
+      cabal-install
+      haskell-language-server
+      stylish-haskell
+      pkgs.niv
+      cardano-repo-tool
+      pkgs.pretty-simple # pretty print haskell datatypes
+      pkgs.ormolu # formatting
     ];
   }

@@ -1,0 +1,6 @@
+*~
+.ghc.environment.*
+dist/
+dist-newstyle/
+cabal.project.local
+ghcid-output.txt

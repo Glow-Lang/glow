@@ -102,7 +102,7 @@ that are not yet available:
 1. Run the PAB backend
 
   ```
-  git clone git@gitlab.com:mukn/glow-cardano-pab.git
+  cd haskell
   nix-shell
   cabal run glow-contract
   ```
