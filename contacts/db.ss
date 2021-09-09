@@ -9,6 +9,7 @@
  (only-in :clan/base vector->values)
  (only-in :clan/config xdg-config-home)
  (only-in :clan/list remove-duplicates)
+ (only-in :clan/path path-parent)
  (only-in :clan/poo/object .@ with-slots)
  (only-in :gerbil/gambit/os file-size)
  :std/crypto
@@ -37,6 +38,7 @@
            (db-exists (and (file-exists? db-path)
                            (< 0 (file-size db-path)))))
       (when contact-db (close-contact-db!))
+      (unless db-exists (create-directory* (path-parent db-path)))
       (set! contact-db (sqlite-open db-path))
       (sql-eval contact-db "PRAGMA foreign_keys=ON;") ; SQLite-specific
       (unless db-exists (init-contact-db))))
