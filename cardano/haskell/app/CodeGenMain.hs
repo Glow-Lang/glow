@@ -1,17 +1,18 @@
+{- ORMOLU_DISABLE -}
 {-# LANGUAGE TemplateHaskell #-}
 
 import Ledger.Tx
 import Options.Applicative
---import Plutus.SCB.Events.Contract
 import System.Directory
 
-import CodeGen
-import Client
-import Types
+import Glow.CodeGen
+import Glow.Client
+import Glow.Client.Types
+import Glow.Types
 
 $(writeSchemeDefinitions "transaction" [''Tx])
 $(writeSchemeDefinitions "data" [''GlowDatum, ''GlowRedeemer])
-$(writeSchemeDefinitions "client" [''CreateParams, ''MoveParams])
+$(writeSchemeDefinitions "client" [''CreateParams, ''MoveParams, ''RawCreateParams, ''RawMoveParams])
 
 main :: IO ()
 main = do

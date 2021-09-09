@@ -1,10 +1,17 @@
+{- ORMOLU_DISABLE -}
+-- | FIXME:
+-- This currently relies on haskell types to generate corresponding Glow types.
+-- It should be implemented with Glow types as the source of truth instead.
+-- When we start getting Glow Cardano ready for production,
+-- this module will be overhauled.
+-- Hence we can treat this as a blackbox for now.
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ViewPatterns #-}
 
-module CodeGen where
+module Glow.CodeGen where
 
 import Data.Char
 import Control.Lens hiding (List)
@@ -19,7 +26,7 @@ import Data.Text.Prettyprint.Doc
 import qualified Data.Text as T
 import Language.Haskell.TH
 import Language.Haskell.TH.Datatype
-import qualified Language.PlutusTx.AssocMap as P
+import qualified PlutusTx.AssocMap as P
 import Ledger (Script)
 
 data Gerbil
@@ -59,7 +66,7 @@ instance Pretty Definition where
     , ""
     ]
 
-
+-- | FIXME: Recursive types need `delay-type` wrapper around references to themselves.
 writeSchemeDefinitions :: FilePath -> [Name] -> DecsQ
 writeSchemeDefinitions moduleName names = do
   (definitions, _) <- execStateT makePrototypeDefinitions ([], names)
