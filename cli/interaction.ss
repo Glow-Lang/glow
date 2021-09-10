@@ -56,11 +56,12 @@
   (displayln)
   result)
 
-(def (ask-number name)
-  (display-prompt name)
-  (def result (.call Nat .<-string (read-line)))
+(def (ask-number default-number: (default-number #f) prompt)
+  (display-prompt prompt)
+  (def input (read-line))
   (displayln)
-  result)
+  (if (equal? input "") default-number
+      (.call Nat .<-string input)))
 
 ;; TODO: Catch parsing errors and show example inputs.
 (def (ask-address name)
@@ -206,10 +207,11 @@
    (get-or-ask options
                'max-initial-block
                (λ ()
-                 (ask-number
+                 (def default-initial-block (number->string current-block-number))
+                 (ask-number default-number: default-initial-block
                   (string-append
                    "Max initial block "
-                   "[ Current block number is " (number->string current-block-number) " ]"))))))
+                   "[ Defaults to current block number: " default-initial-block " ]"))))))
 
 (def (compile-contract contract.glow)
   (def compiler-output (run-passes contract.glow pass: 'project show?: #f))
