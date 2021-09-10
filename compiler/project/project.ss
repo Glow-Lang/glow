@@ -1,6 +1,7 @@
 (export #t)
 
 (import :std/format :std/iter :std/stxutil
+        :gerbil/gambit/exact
         :std/misc/list :std/sort :std/srfi/1
         (only-in :std/misc/rbtree symbol-cmp)
         <expander-runtime>
@@ -12,6 +13,8 @@
         :clan/base)
 
 (def pure-stmt list)
+(def (natural? v) (and (exact-integer? v) (not (negative? v))))
+(def (stx-natural? v) (natural? (stx-e v)))
 
 ;; project : ModuleStx UnusedTable CheckpointInfoTable -> ModuleStx
 ;; Expect:
@@ -57,7 +60,7 @@
 
 ;; project-stmt : StmtStx CpiTable MPart -> [Listof StmtStx]
 (def (project-stmt stx cpit this-p)
-  (syntax-case stx (@ @label @debug-label deftype defdata publish! def return ignore! switch require! assert! deposit! withdraw!)
+  (syntax-case stx (@ @label @debug-label deftype defdata publish! def return ignore! switch try require! assert! deposit! withdraw!)
     ((@label x) (pure-stmt stx))
     ((@debug-label x) (pure-stmt stx))
     ((@ p s) (identifier? #'p)
@@ -70,6 +73,7 @@
     ((require! v) (project-require stx cpit this-p))
     ((assert! v) (project-assert stx cpit this-p))
     ((switch c cases ...) (project-switch stx cpit this-p))
+    ((try . _) (project-try stx cpit this-p))
     ((def v e) (retail-stx stx [#'v (project-expr #'e cpit this-p)]))
     ((ignore! e) (pure-stmt stx))
     ((return e) (pure-stmt stx))
@@ -139,3 +143,20 @@
      (restx stx
             (cons #'pat
                   (project-body #'(body ...) cpit this-p))))))
+
+;; project-try : TryStx CpiTable MPart -> [Listof StmtStx]
+;; Turn try into try/positive, try/negative, and try/neutral
+;; For (try A (a-body) (after t B b-body)),
+;; A will get try/positive,
+;; B will get try/negative,
+;; and consensus and any other participant will get try/neutral.
+(def (project-try stx cpit this-p)
+  (syntax-case stx (after)
+    ((_ (A . a-body) (after t B . b-body))
+     (stx-natural? #'t)
+     (with-syntax ((ab* (project-body #'a-body cpit this-p))
+                   (bb* (project-body #'b-body cpit this-p)))
+       (cond
+         ((eq? (stx-e #'A) this-p) [#'(try/positive (A . ab*) (after t B . bb*))])
+         ((eq? (stx-e #'B) this-p) [#'(try/negative (A . ab*) (after t B . bb*))])
+         (else                     [#'(try/neutral (A . ab*) (after t B . bb*))]))))))
