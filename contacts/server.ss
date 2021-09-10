@@ -171,7 +171,7 @@
         (catch _ (respond/JSON-error code: 404 "No such transaction"
                                      `((txid ,txid)))))))
 
-(define-entry-point (start-contacts-server address: (address #f) port: (port #f))
+(define-entry-point (start-server address: (address #f) port: (port #f))
   (help: "Start the contacts API server"
    getopt: [(option 'address "-A" "--address" help: "IP address to listen on")
             (option 'port "-P" "--port" help: "Port to listen on")])
