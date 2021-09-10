@@ -11,16 +11,17 @@ Long story short, you can install *Glow* with the following one-liner:
     curl -L https://glow-lang.org/install/glow-install | sh
 
 This will make the command `glow` available to you,
-though you may have to restart your shell, or copy/paste a configuration command.
+though you may have to restart your shell, or
+copy/paste a configuration command that will be suggested to you.
 
 ### Alternative one-liner, using Docker
 
-Alternatively, if you're rather use Docker than Nix, you can
+Alternatively, if you'd rather use Docker than Nix, you can
 
     docker pull mukn/glow:alpha
 
 The command `glow` is available in that image,
-but see below on how to invoke it.
+but see [below](#Trying-it-out-with-Docker) on how to invoke it.
 
 ## Warnings and Prerequisites
 
@@ -134,6 +135,7 @@ Or, once Nix is installed, you can define this `nixpkgs` variable, then run
 
 In the future, we will also have a `stable` version.
 
+<a name="Trying-it-out-with-Docker" />
 ## Trying it out with Docker
 
 We have a Docker image [`mukn/glow`](https://hub.docker.com/repository/docker/mukn/glow)
