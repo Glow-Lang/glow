@@ -44,6 +44,7 @@ if ! command -v nix-env > /dev/null 2>&1 ; then
         *)
             ### For multiuser install, replace the below line with:
             # sh "$nix_install" --daemon
+            sh "$nix_install"
         ;;
     esac || panic "Failed to install Nix."
 fi
@@ -51,7 +52,7 @@ fi
 # 2. Make sure we're using the binaries from Nix.
 # If somehow the nix install doesn't do that for your shell,
 # you may have to add lines to your shell configuration files to achieve the same effect:
-conf='n () { n="$1/etc/profile.d/nix.sh" ; [ -f "$n" ] && source "$n" ; }; n $HOME/.nix-profile || n /nix/var/nix/profiles/default || n /run/current-system/sw || n ""'
+conf='n () { n="$1/etc/profile.d/nix.sh" ; [ -f "$n" ] && . "$n" ; }; n $HOME/.nix-profile || n /nix/var/nix/profiles/default || n /run/current-system/sw || n ""'
 
 if ! grep -c "/[.]nix-profile" "$HOME/.zshenv" > /dev/null 2>&1 ; then
     echo "$conf" >> "$HOME/.zshenv"
@@ -85,15 +86,15 @@ echo "Using Nix to install Glow, and with it gerbil, geth, etc."
 nix-env -f $nixpkgs -iA \
         glow-lang gerbil-unstable gerbilPackages-unstable go-ethereum $EXTRAPKGS
 
-# 5. Install nix-thunk (optional, only for developers).
+# 5. (Commented out, only for developers) Install nix-thunk
 # See https://github.com/obsidiansystems/nix-thunk
 # NB: We use nix-thunk as implementers of Glow to manage our dependencies in a reproducible way;
 # it is only necessary if you are going to modify or rebuild Glow yourself;
 # it shouldn't be necessary for regular users, unless you decide to use the same tool as we do.
-##echo "Using Nix to install nix-thunk"
-##nix-env -f https://github.com/obsidiansystems/nix-thunk/archive/v0.3.0.0.tar.gz -iA command
+: echo "Using Nix to install nix-thunk"
+: nix-env -f https://github.com/obsidiansystems/nix-thunk/archive/v0.3.0.0.tar.gz -iA command
 
-# 6. (Commented out---do it yourself manually) Download source code so you can modify it.
+# 6. (Commented out, only for developers) Download source code so you can modify it.
 # These commands, if uncommented, checkout the glow repository under the current directory.
 # You can move it to any place you desire.
 # If you need local modifications to its dependencies, use nix-thunk (above)
