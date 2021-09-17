@@ -7,16 +7,13 @@
 
 ;; parse : InputPort -> SExpr
 (def (parse in)
-  (def lang-line (read-line in))
-  (unless (string=? lang-line "#lang glow")
-    (error 'parse "expected `#lang glow` on first line"))
   (def str (read-line in #f))
   (parseStr str))
 
 ;; parseStr : String -> SExpr
 (def (parseStr str)
   (def lex (lexify str))
-  (def stmts (run TopLevelStatementList lex))
+  (def stmts (run Program lex))
   (and stmts (stmts->module stmts)))
 
 ;; stmts->module : StatementList -> SExpr
