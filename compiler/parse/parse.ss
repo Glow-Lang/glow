@@ -1,17 +1,24 @@
 (export parse
         parseStr) ;; for testing
 (import :drewc/smug
+        :std/srfi/13
         :mukn/glow/compiler/parse/lexical
         :mukn/glow/compiler/parse/expressions
         (only-in :mukn/glow/compiler/alpha-convert/alpha-convert keyword-syms))
 
+;; TODO: don't convert to string -- inefficient and loses line information
 ;; parse : InputPort -> SExpr
 (def (parse in)
-  (def lang-line (read-line in))
-  (unless (string=? lang-line "#lang glow")
-    (error 'parse "expected `#lang glow` on first line"))
-  (def str (read-line in #f))
-  (parseStr str))
+  (def first-line (read-line in))
+  (def rest-lines (read-line in #f))
+  ;; #lang is optional, but if present, it must be #lang glow
+  (cond
+   ((string-prefix? "#lang " first-line)
+    (unless (string=? first-line "#lang glow")
+      (error 'parse "expected `#lang glow` on first line"))
+    (parseStr rest-lines))
+   (else
+    (parseStr (string-append first-line "\n" rest-lines)))))
 
 ;; parseStr : String -> SExpr
 (def (parseStr str)

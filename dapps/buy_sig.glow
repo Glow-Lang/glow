@@ -1,4 +1,3 @@
-#lang glow
 // Decentralized Applications:
 // - "swaps" where you sign a message for another blockchain
 // - rental where you sign a key access message that some door's / some car's reader will accept
