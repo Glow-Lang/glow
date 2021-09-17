@@ -15,7 +15,8 @@
   :mukn/glow/runtime/program :mukn/glow/runtime/terminal-codes :mukn/glow/runtime/glow-path
   (only-in :mukn/glow/compiler/alpha-convert/alpha-convert init-syms)
   :mukn/glow/compiler/passes :mukn/glow/compiler/multipass :mukn/glow/compiler/syntax-context
-  :mukn/glow/cli/contacts :mukn/glow/cli/identities)
+  :mukn/glow/cli/contacts :mukn/glow/cli/identities
+  ./utils)
 
 (def (ask-option name options)
   (def options-count (length options))
@@ -49,12 +50,6 @@
       (begin
         (displayln FAIL "Invalid selection\n" END)
         (ask-option name options)))))
-
-(def (ask-string name)
-  (display-prompt name)
-  (def result (read-line))
-  (displayln)
-  result)
 
 (def (ask-number default-number: (default-number #f) prompt)
   (display-prompt prompt)
@@ -162,13 +157,6 @@
   (displayln)
   (force-output))
 
-(def (get-or-ask options option ask-function)
-  (if-let (option-value (hash-get options option))
-    option-value
-    (let (input (apply ask-function []))
-      (hash-put! options option input)
-      input)))
-
 (def (ask-role options role-names)
   (get-or-ask options
     'role
@@ -254,10 +242,6 @@
              ;; more ergonomic syntax than JSON, like --param foo=bar. We want to be
              ;; able to specify this mutliple times, which will require upstream
              ;; changes in gerbil's getopt.
-             (option 'params "-P" "--params" default: #f
-                     help: "contract parameters as JSON")
-             (option 'participants "-p" "--participants" default: #f
-                     help: "participant mapping as JSON")
              (option 'interaction "-I" "--interaction" default: #f
                      help: "path and name of interaction")
              (option 'identity "-M" "--my-identity" default: #f

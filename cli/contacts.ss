@@ -6,6 +6,7 @@
   :clan/poo/brace :clan/poo/cli :clan/poo/io :clan/poo/mop :clan/poo/object :clan/poo/type
   (only-in :clan/poo/number Nat)
   :mukn/ethereum/cli :mukn/ethereum/hex :mukn/ethereum/ethereum :mukn/ethereum/known-addresses
+  :mukn/glow/cli/utils
   (only-in ./identities Identity)
   (rename-in ../contacts/db (add-contact add-contact.db) (list-contacts list-contacts.db)))
 
@@ -58,12 +59,20 @@
    getopt: (make-options
             [(option 'name "-N" "--name" help: "name of contact")]
             []
-            [options/contacts]))
-  (unless name (error "missing name"))
-  (def cid (add-contact.db name []))
-  (if json
-      (displayln (string<-json (hash (cid cid) (name name))))
-      (displayln "Added contact " name ", cid " cid)))
+            [options/contacts options/help]))
+  ;; TODO: Provide some way for entrypoint to introspect
+  ;; options, maybe via gerbil-poo?
+  ;; e.g. (.@ self options)
+  (def options
+       (hash
+        (name name)
+        (json json)))
+  ;; NOTE: Added scope to avoid `name` being bound to #!void during macro expansion.
+  (let ((name (get-or-ask options 'name (lambda () (ask-string "Enter contact name: "))))
+        (cid (add-contact.db name [])))
+    (if json
+        (displayln (string<-json (hash (cid cid) (name name))))
+        (displayln "Added contact " name ", cid " cid))))
 
 (define-entry-point (remove-contact
                      cid: (cid #f)
