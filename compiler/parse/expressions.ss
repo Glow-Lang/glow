@@ -567,6 +567,13 @@
                                    (_ (:P #!eof)))
                                   (return stmts)))
 
+(def Program
+  (.or (.let* ((_ (match-token-type? 'HashLang)) (l Identifier))
+         (unless (string=? (identifier-name l) "glow")
+           (error 'parse "expected `#lang glow` on first line"))
+         TopLevelStatementList)
+       TopLevelStatementList))
+
 (def Body
     (.let* ((statements StatementList)
             (expression? (.or Expression #f)))

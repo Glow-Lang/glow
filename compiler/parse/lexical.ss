@@ -39,6 +39,8 @@
 (def LineTerminator (.begin (.or <LF> <CR> <LS> <PS>) (return 'LineTerminator)))
 
 
+(def HashLang (.let* (hl "#lang") `(HashLang ,hl)))
+
 (def RightBracePunctuator (.list (return 'RightBracePunctuator) #\}))
 (def LeftBracePunctuator (.list (return 'LeftBracePunctuator) #\{))
 (def LeftPrenPunctuator (.list (return 'LeftPrenPunctuator) #\())
@@ -166,6 +168,7 @@
         WhiteSpace
         LineTerminator
         Comment
+        HashLang
         CommonToken
         RightBracePunctuator
         LeftBracePunctuator
