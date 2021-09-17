@@ -148,6 +148,15 @@
   parameters)
 
 (def (print-command agreement)
+  ;; TODO:
+  ;; 1. abstract this according to various options:
+  ;;    a. (default) send via libp2p
+  ;;    b. output the handshake which can be sent over to other participants
+  ;; We also need to implement a counterpart entrypoint / option flag -
+  ;; `start-interaction/wait-for-agreement` or something. This should:
+  ;; 1. listen, broadcast its multiaddr
+  ;; 2. once it receives the agreement via the multiaddr,
+  ;;    run with this agreement.
   (displayln MAGENTA "One line command for other participants to generate the same agreement:" END)
   (display "glow start-interaction --agreement ")
   (def agreement-string (string<-json (json<- InteractionAgreement agreement)))
