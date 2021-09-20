@@ -21,6 +21,9 @@
 (def (ask-option name options)
   (def options-count (length options))
   ;; TODO: Move this somewhere else, probably gerbil-utils?
+  ;; TODO: Long term goal is for the options spec to be declarative enough,
+  ;; such that we can generate the gui or cli frontends.
+  ;; This approach requires less code and provides consistent behaviours for the user.
   (def (range a b)
     (def ∆ (- b a))
     (if (<= 0 ∆) (iota ∆ a) (iota (- ∆) a -1)))
@@ -37,9 +40,10 @@
       (option
         (displayln option))))
   (display-prompt "Enter number")
-  (let* ((input (read-line))
-         (response (string->number input)))
-    (if (<= 1 response options-count)
+  (let* ((input (read-line)))
+    (when (equal? input #!eof) (error "EOF"))
+    (def response (string->number input))
+    (if (and response (<= 1 response options-count))
       (begin
         (displayln)
         (match (list-ref options (- response 1))
