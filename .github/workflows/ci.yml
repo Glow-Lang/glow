@@ -1,0 +1,34 @@
+name: default
+
+on: push
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build_job:
+    runs-on: ubuntu-latest
+    container: mukn/glow:latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - run: ./scripts/ci.ss before-build
+      - run: ./scripts/ci.ss build
+      - env:
+          CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
+        run: ./scripts/ci.ss after-build
+
+  test_job:
+    runs-on: ubuntu-latest
+    container: mukn/glow:latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - run: ./scripts/ci.ss before-test
+      - run: ./scripts/ci.ss test
+      - run: ./scripts/ci.ss after-test
