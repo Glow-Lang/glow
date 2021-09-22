@@ -86,8 +86,10 @@
      )
 
 
-(define (hexStr-to-decimalStr n)
+(def (hexStr-to-decimalStr n)
     (number->string(string->number(string-append "#x" n))))
+
+
 
 (def HexadecimalIntegerLiteral 
 				(.let* (n (.or HexadecimalDigitIntegerLiteral))
@@ -155,13 +157,30 @@
   (and (char-ascii? c) (not (memv c '(#\\ #\')))))
 (def SingleStringNonescCharacter (sat single-string-nonesc-char?))
 
+(def HexEscapedChar
+	   (.begin (.or #\x #\X)
+		   (.let* ((d0 HexadecimalDigitWithZero) (d1 HexadecimalDigitWithZero))
+		      (return (hex-ascii-to-char d0 d1)))))
+
 (def DoubleStringEscapeSequence
   (.begin #\\
-    (.or #\\ #\" (.begin #\n (return #\newline)))))
+	  (.or #\\
+	       #\"
+	       (.begin #\n (return #\newline))
+	       HexEscapedChar
+	       )))
+
+(def (hex-ascii-to-char d0 d1)
+    (integer->char(string->number(string-append "#x" (list->string [d0 d1]) ))))
 
 (def SingleStringEscapeSequence
   (.begin #\\
-    (.or #\\ #\' (.begin #\n (return #\newline)))))
+	  (.or
+	   #\\
+	   #\'
+	   (.begin #\n (return #\newline))
+	   HexEscapedChar
+	   )))
 
 (def DoubleStringCharacter
     (.or DoubleStringNonescCharacter DoubleStringEscapeSequence))
