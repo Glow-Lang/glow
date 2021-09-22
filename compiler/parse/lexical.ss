@@ -55,19 +55,49 @@
          (ps (many (.or  (.let* (c (sat char-alphabetic?)) c)  (.let* (n (sat char-numeric?)) n) #\_ #\$  #\!))))
   `(IdentifierName ,(list->string (cons s ps)))))
 
-(def NonZeroDigit (sat (cut string-any <> "123456789"))) ;;
-(def DigitWithZero (sat (cut string-any <> "0123456789")))
-(def DigitsWithZero (many1 DigitWithZero))
+(def DecimalNonZeroDigit (sat (cut string-any <> "123456789"))) ;;
+(def DecimalDigitWithZero (sat (cut string-any <> "0123456789")))
+(def DecimalDigitsWithZero (many1 DecimalDigitWithZero))
 
-(def DigitIntegerLiteral
+(def DecimalDigitIntegerLiteral
     (.or
         (.list #\0)
-        (.let* ((d NonZeroDigit)
-                (ds (.or DigitsWithZero (return []))))
+        (.let* ((d DecimalNonZeroDigit)
+                (ds (.or DecimalDigitsWithZero (return []))))
             [d . ds])))
 
-(def IntegerLiteral (.let* (n (.or DigitIntegerLiteral))
+(def DecimalIntegerLiteral (.let* (n (.or DecimalDigitIntegerLiteral))
                         (return `(IntegerLiteral, (list->string n)))))
+
+
+(def HexadecimalNonZeroDigit (sat (cut string-any <> "123456789ABCDEFabcdef"))) ;;
+(def HexadecimalDigitWithZero (sat (cut string-any <> "0123456789ABCDEFabcdef")))
+(def HexadecimalDigitsWithZero (many1 HexadecimalDigitWithZero))
+
+(def HexadecimalDigitIntegerLiteral
+        (.begin "0x"
+	(.or
+	   (.list #\0)
+	   (.let* ((d HexadecimalNonZeroDigit)
+		   (ds (.or HexadecimalDigitsWithZero (return []))))
+		  [d . ds])))
+	
+        
+     )
+
+
+(define (hexStr-to-decimalStr n)
+    (number->string(string->number(string-append "#x" n))))
+
+(def HexadecimalIntegerLiteral 
+				(.let* (n (.or HexadecimalDigitIntegerLiteral))
+				      (return `(IntegerLiteral, (hexStr-to-decimalStr (list->string n)))))
+     )
+
+
+(def IntegerLiteral
+     (.or HexadecimalIntegerLiteral
+	  DecimalIntegerLiteral))
 
 (def OperatorToken
     (.let* (op (.or "<<" ">>"
