@@ -67,7 +67,7 @@
             [d . ds])))
 
 (def DecimalIntegerLiteral (.let* (n (.or DecimalDigitIntegerLiteral))
-                        (return `(IntegerLiteral, (list->string n)))))
+       (return `(IntegerLiteral, (list->string n)))))
 
 
 (def HexadecimalNonZeroDigit (sat (cut string-any <> "123456789ABCDEFabcdef"))) ;;
@@ -80,10 +80,7 @@
 	   (.list #\0)
 	   (.let* ((d HexadecimalNonZeroDigit)
 		   (ds (.or HexadecimalDigitsWithZero (return []))))
-		  [d . ds])))
-	
-        
-     )
+		  [d . ds]))))
 
 
 (def (hexStr-to-decimalStr n)
@@ -92,9 +89,8 @@
 
 
 (def HexadecimalIntegerLiteral 
-				(.let* (n (.or HexadecimalDigitIntegerLiteral))
-				      (return `(IntegerLiteral, (hexStr-to-decimalStr (list->string n)))))
-     )
+    (.let* (n (.or HexadecimalDigitIntegerLiteral))
+	  (return `(IntegerLiteral, (hexStr-to-decimalStr (list->string n))))))
 
 
 (def IntegerLiteral
