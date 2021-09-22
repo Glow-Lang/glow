@@ -44,6 +44,12 @@
     (test-case "valid body"
       (assert-equal! (run Body (lexify "2;"))
                      (body-expression [(expression-statement (numeric-literal "2"))] #f))
+      (assert-equal! (run Body (lexify "\"abc\";"))
+                     (body-expression [(expression-statement (string-literal "abc"))] #f))
+      (assert-equal! (run Body (lexify "0xABC123;"))
+                     (body-expression [(expression-statement (numeric-literal "11256099"))] #f))
+      (assert-equal! (run Body (lexify "\"\\x63\\x4A\";"))
+                     (body-expression [(expression-statement (string-literal "cJ"))] #f))      
       (assert-equal! (run Body (lexify "let a = 1;
                                         let b = 2;"))
                      (body-expression [(value-definition (identifier "a") #f (numeric-literal "1"))
