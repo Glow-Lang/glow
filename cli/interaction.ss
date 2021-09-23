@@ -229,7 +229,8 @@
                      handshake: (handshake #f)
                      params: (params #f)
                      participants: (participants #f)
-                     assets: (assets #f))
+                     assets: (assets #f)
+                     off-chain-channel: (off-chain-channel #f))
   (help: "Start an interaction based on an agreement"
    getopt: (make-options
             [(option 'agreement "-A" "--agreement" default: #f
@@ -257,7 +258,11 @@
              (option 'timeout-in-blocks "-T" "--timeout-in-blocks" default: #f
                      help: "number of blocks after which to time out")
              (option 'handshake "-H" "--handshake" default: #f
-                     help: "command to use to transfer handshakes")]
+                     help: "command to use to transfer handshakes")
+             ;; TODO: Abstract into Enum - See gerbil-poo
+             ;; enum off-chain-channel = 'stdout | 'libp2p
+             (option 'off-chain-channel "-C" "--off-chain-channel" default: 'stdout
+                     help: "command to specify off-chain-channel")]
             [(lambda (opt) (hash-remove! opt 'test))]
             [options/glow-path options/contacts
              options/evm-network options/database options/test options/backtrace]))
@@ -270,7 +275,8 @@
          (assets (string->json-asset-map (or assets "{}")))
          (max-initial-block max-initial-block)
          (timeout-in-blocks timeout-in-blocks)
-         (role role)))
+         (role role)
+         (off-chain-channel (symbolify off-chain-channel))))
   (displayln)
   (def contacts (load-contacts contacts-file))
   (defvalues (agreement selected-role)
