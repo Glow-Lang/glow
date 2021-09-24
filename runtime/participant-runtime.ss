@@ -115,11 +115,13 @@
     program: [Program]
     name: [Symbol]
     consensus-code-generator: [ConsensusCodeGenerator]
+    off-chain-channel: [Symbol]
    )
    {.make: (lambda (role: role
                     agreement: agreement
                     io-context: (io-context io-context:special-file)
-                    program: program)
+                    program: program
+                    local-runtime-options: local-runtime-options)
              (let* (((values modpath surface-name)
                      (split-interaction-path-name (.@ agreement interaction)))
                     (name
@@ -147,6 +149,7 @@
                        program
                        name
                        consensus-code-generator: (.call ConsensusCodeGenerator .make program name (.@ agreement options timeoutInBlocks) (.@ agreement assets))
+                       local-runtime-options: local-runtime-options
                        }))
                (set! (.@ self consensus-code-generator)
                  (.call ConsensusCodeGenerator .make program name (.@ agreement options timeoutInBlocks) (.@ agreement assets)))
@@ -428,7 +431,7 @@
   (set! (.@ self contract-config) contract-config)
   (set! (.@ self first-unprocessed-block) (.@ contract-config creation-block)))
 
-(def (send-contract-handshake self handshake)
+(def (send-contract-handshake self handshake channel) ;; TODO: channel is 'stdout | 'libp2p
   (def io-context (.@ self io-context))
   (.call io-context send-handshake handshake))
 

@@ -84,13 +84,13 @@
        ((cons k v)
         (cons k (cons (lookup-type prg k) v)))))))
 
-(def (run:terminal role a)
-  (run io-context:terminal role a))
+(def (run:terminal role a local-runtime-options)
+  (run io-context:terminal role a local-runtime-options))
 
-(def (run:command cmd role a)
+(def (run:command cmd role a local-runtime-options)
   (def ctx (io-context:command cmd))
   (with-unwind-protect
-    (lambda () (run ctx role a))
+    (lambda () (run ctx role a local-runtime-options))
     (lambda () (.call ctx teardown))))
 
 (def (run:special-file role a)
@@ -98,13 +98,14 @@
 
 ;; run : Symbol InteractionAgreement -> [Hashof Symbol TypeValuePair]
 ;; Produces an environment mapping surface names to type-value-pairs
-(def (run ctx role a)
+(def (run ctx role a local-runtime-options)
   (def program (interaction-agreement->program a))
   (def runtime
     (.call Runtime .make role: role
                   agreement: a
                   program: program
-                  io-context: ctx))
+                  io-context: ctx
+                  local-runtime-options: local-runtime-options))
   (execute runtime)
   (printf "~a~a interaction finished~a\n" BOLD (.@ a interaction) END)
   (surface-name-environment
