@@ -151,16 +151,6 @@
   (displayln)
   parameters)
 
-(def (print-command agreement)
-  (displayln MAGENTA "One line command for other participants to generate the same agreement:" END)
-  (display "glow start-interaction --agreement ")
-  (def agreement-string (string<-json (json<- InteractionAgreement agreement)))
-  (if (string-contains agreement-string "'")
-    (pr agreement-string)
-    (display (string-append "'" agreement-string "'")))
-  (displayln)
-  (force-output))
-
 (def (ask-role options role-names)
   (get-or-ask options
     'role
@@ -276,14 +266,16 @@
          (max-initial-block max-initial-block)
          (timeout-in-blocks timeout-in-blocks)
          (role role)))
+  ;; TODO: abstract into Poo object, especially if we have more local-runtime-options
+  ;; TODO: error out if this is an invalid channel
+  (def local-runtime-options (hash (off-chain-channel (symbolify off-chain-channel))))
   (displayln)
   (def contacts (load-contacts contacts-file))
   (defvalues (agreement selected-role)
     (if agreement-json-string
-      (start-interaction/with-agreement options (<-json InteractionAgreement (json<-string agreement-json-string)))
-      (start-interaction/generate-agreement options contacts)))
-  ;; TODO: abstract into Poo object, especially if we have more local-runtime-options
-  (def local-runtime-options (hash (off-chain-channel (symbolify off-chain-channel))))
+      (let (agreement (<-json InteractionAgreement (json<-string agreement-json-string)))
+        (start-interaction/with-agreement options agreement))
+      (start-interaction/generate-agreement options contacts local-runtime-options)))
   (def environment
     (let ((role (symbolify selected-role)))
       (if handshake
@@ -384,7 +376,7 @@
                 maxInitialBlock: max-initial-block}}))
     (begin
       (.call InteractionAgreement .validate agreement)
-      (print-command agreement) ;; TODO: Abstract this into a general send-agreement call.
+      (send-contract-agreement agreement (hash-get local-runtime-options 'off-chain-channel))
       (values agreement selected-role))))
 
 ;; UTILS

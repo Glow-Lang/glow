@@ -2,7 +2,7 @@
 
 (import
   :gerbil/gambit/bits :gerbil/gambit/bytes :gerbil/gambit/threads :gerbil/gambit/ports
-  :std/pregexp
+  :std/pregexp :std/srfi/13
   :std/format :std/iter :std/misc/hash :std/sugar :std/misc/number :std/misc/list :std/sort :std/srfi/1 :std/text/json
   (for-syntax :std/stxutil)
   :clan/base :clan/exception :clan/io :clan/json :clan/number :clan/pure/dict/assq
@@ -149,7 +149,7 @@
                        program
                        name
                        consensus-code-generator: (.call ConsensusCodeGenerator .make program name (.@ agreement options timeoutInBlocks) (.@ agreement assets))
-                       local-runtime-options: local-runtime-options
+                       local-runtime-options
                        }))
                (set! (.@ self consensus-code-generator)
                  (.call ConsensusCodeGenerator .make program name (.@ agreement options timeoutInBlocks) (.@ agreement assets)))
@@ -318,7 +318,8 @@
       (def agreement (.@ self agreement))
       (def published-data (get-output-u8vector (.@ self block-ctx outbox)))
       (def handshake (.new AgreementHandshake agreement contract-config published-data))
-      (send-contract-handshake self handshake))
+      (def off-chain-channel (hash-get (.@ self local-runtime-options) 'off-chain-channel))
+      (send-contract-handshake self handshake off-chain-channel))
     (let ()
       ;; TODO: Verify asset transfers using previous transaction and balances
       ;; recorded in Message's asset-transfer table during interpretation. Probably
@@ -430,10 +431,6 @@
   (verify-contract-config contract-config pretx)
   (set! (.@ self contract-config) contract-config)
   (set! (.@ self first-unprocessed-block) (.@ contract-config creation-block)))
-
-(def (send-contract-handshake self handshake channel) ;; TODO: channel is 'stdout | 'libp2p
-  (def io-context (.@ self io-context))
-  (.call io-context send-handshake handshake))
 
 ;; <- Runtime BytesOutputPort
 ;;
@@ -770,3 +767,52 @@
       (hash-ref j
         (cond ((symbol? k) (symbol->string k))
               (else        (string->symbol k)))))))
+
+
+;; ------------- Off-chain communication
+
+;; Send agreement
+(def (send-contract-agreement agreement off-chain-channel)
+  (match off-chain-channel
+    ('stdout (send-contract-agreement/stdout agreement))
+    ('libp2p (send-contract-agreement/libp2p agreement)) ; TODO: Serialize this
+    (else (error "Invalid channel")))) ; TODO: This is an internal error,
+                                       ; ensure this is handled at cli options level.
+
+(def (send-contract-agreement/stdout agreement)
+  (displayln MAGENTA "One line command for other participants to generate the same agreement:" END)
+  (display "glow start-interaction --agreement ")
+  (def agreement-string (string<-json (json<- InteractionAgreement agreement)))
+  (if (string-contains agreement-string "'")
+    (pr agreement-string)
+    (display (string-append "'" agreement-string "'")))
+  (displayln)
+  (force-output))
+
+;; TODO: Replace with actual libp2p functionality
+(def (send-contract-agreement/libp2p agreement)
+  (displayln MAGENTA "One line command for other participants to generate the same agreement:" END)
+  (display "glow start-interaction --agreement ")
+  (def agreement-string (string<-json (json<- InteractionAgreement agreement)))
+  (if (string-contains agreement-string "'")
+    (pr agreement-string)
+    (display (string-append "'" agreement-string "'")))
+  (displayln)
+  (force-output))
+
+
+;; Send handshake
+(def (send-contract-handshake self handshake channel) ;; TODO: channel is 'stdout | 'libp2p
+  (match channel
+    ('stdout (send-contract-handshake/stdout self handshake))
+    ('libp2p (send-contract-handshake/libp2p self handshake)) ; TODO serialize the handshake
+    (else (error "Invalid channel")))) ; TODO: This is an internal error,
+                                       ; ensure this is handled at cli options level.
+
+(def (send-contract-handshake/stdout self handshake)
+  (def io-context (.@ self io-context))
+  (.call io-context send-handshake handshake))
+
+(def (send-contract-handshake/libp2p self handshake)
+  (def io-context (.@ self io-context))
+  (.call io-context send-handshake handshake))

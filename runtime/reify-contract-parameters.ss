@@ -93,8 +93,8 @@
     (lambda () (run ctx role a local-runtime-options))
     (lambda () (.call ctx teardown))))
 
-(def (run:special-file role a)
-  (run io-context:special-file role a))
+(def (run:special-file role a local-runtime-options)
+  (run io-context:special-file role a local-runtime-options))
 
 ;; run : Symbol InteractionAgreement -> [Hashof Symbol TypeValuePair]
 ;; Produces an environment mapping surface names to type-value-pairs
