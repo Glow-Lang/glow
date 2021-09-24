@@ -275,19 +275,20 @@
          (assets (string->json-asset-map (or assets "{}")))
          (max-initial-block max-initial-block)
          (timeout-in-blocks timeout-in-blocks)
-         (role role)
-         (off-chain-channel (symbolify off-chain-channel))))
+         (role role)))
   (displayln)
   (def contacts (load-contacts contacts-file))
   (defvalues (agreement selected-role)
     (if agreement-json-string
       (start-interaction/with-agreement options (<-json InteractionAgreement (json<-string agreement-json-string)))
       (start-interaction/generate-agreement options contacts)))
+  ;; TODO: abstract into Poo object, especially if we have more local-runtime-options
+  (def local-runtime-options (hash (off-chain-channel (symbolify off-chain-channel))))
   (def environment
     (let ((role (symbolify selected-role)))
       (if handshake
-        (run:command ["/bin/sh" "-c" handshake] role agreement)
-        (run:terminal role agreement))))
+        (run:command ["/bin/sh" "-c" handshake] role agreement local-runtime-options)
+        (run:terminal role agreement local-runtime-options))))
   (displayln "Final environment:")
   ;; TODO: get run to include type t and pre-alpha-converted labels,
   ;; and output the entire thing as JSON omitting shadowed variables (rather than having conflicts)
@@ -322,7 +323,7 @@
          (selected-role (ask-role options role-names)))
   (values agreement selected-role)))
 
-(def (start-interaction/generate-agreement options contacts)
+(def (start-interaction/generate-agreement options contacts local-runtime-options)
   (nest
     (let (application-name
             (get-or-ask options 'glow-app (λ () (ask-application)))))
@@ -383,7 +384,7 @@
                 maxInitialBlock: max-initial-block}}))
     (begin
       (.call InteractionAgreement .validate agreement)
-      (print-command agreement)
+      (print-command agreement) ;; TODO: Abstract this into a general send-agreement call.
       (values agreement selected-role))))
 
 ;; UTILS
