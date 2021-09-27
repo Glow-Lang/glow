@@ -6,101 +6,84 @@ Instructions for installing, testing and running *Glow*.
 
 ### One-Liner on Linux, macOS, WSL
 
-Long story short, you can install *Glow* with the following one-liner:
+You can install *Glow* with this one-liner:
 
     curl -L https://glow-lang.org/install/glow-install | sh
 
-This will make the command `glow` available to you,
-though you may have to restart your shell, or
-copy/paste a configuration command that will be suggested to you.
+This will make the command `glow` available to you, though you may have
+to restart your shell, or copy/paste a configuration command that will
+be suggested. The installation script requires `curl`, `sudo`, and `xz`.
 
-### Alternative one-liner, using Docker
+### Alternative one-liner using Docker
 
-Alternatively, if you'd rather use Docker than Nix, you can
+If you'd rather use Docker than Nix, you can run:
 
-    docker pull mukn/glow:alpha
+    docker pull mukn/glow:latest
 
 The command `glow` is available in that image,
 but see [below](#Trying-it-out-with-Docker) on how to invoke it.
 
 ## Warnings and Prerequisites
 
-1. Currently, installing *Glow* requires about 4GB of RAM and a bit over 2GB of disk.
-   You will need at least 8GB of RAM and 8GB of swap
-   if you want to recompile *Glow* and its dependencies.
-   This includes the case where you will modify *Glow* itself,
-   but also the case where you run it on an architecture that doesn't have precompiled binaries.
+1. Installing *Glow* currently requires about 4GB of RAM and about
+   2GB of free disk space.
 
-2. We use the [Nix](https://nixos.org/nix/) package manager
-   for its deterministic reproducible builds:
-   if it builds and run for us, it should build and run identically for you.
-   *Glow* should work on all supported architectures supported by Nix.
+2. We use the [Nix](https://nixos.org/nix/) package manager for its
+   deterministic, reproducible builds. If it builds and runs for us,
+   it should build and run identically for you.
 
-3. The first step of our script above makes sure that Nix is installed.
-   If that wasn't the case yet, any shell started before that step was complete
-   (including the one running the installation, and any previous one)
-   will have the wrong `$PATH` variable.
-   To use nix and our software, you will need to either re-start new shells
-   or have them re-read their configuration, so they have the new `PATH`
-   that includes `~/.nix-profile/bin`.
-   For instance, you may close and re-open your terminal windows,
-   or type the command `exec $SHELL`, or `. ~/.profile`, or
-   `PATH="$HOME/.nix-profile/bin:$PATH"`, etc.
+3. Nix installs its packages uner `/nix`. If you are on a machine with
+   a small root partition, *Glow* and its dependencies may be too big.
+   You can get around this on Linux by using a bind-mount, e.g.:
 
-3. Our developers so far have are testing *Glow* on Linux and macOS on `x86_64`.
-   Hopefully it should all work on the Window Subsystem for Linux (WSL),
-   and on other architectures (such as `arm64`). But we haven't been testing it yet
-   (try [this recipe](https://nathan.gs/2019/04/12/nix-on-windows/)
-   if you have trouble with Nix on WSL).
+        sudo mount --bind /big/partition/nix /nix
 
-4. We are using [cachix](https://cachix.org/) to distribute pre-compiled binaries
-   for all our packages. But this only works if you are using one of the architectures
-   our developers use, which are `x86_64-linux` and `x86_64-darwin`.
-   This *should* also work on WSL on `x86_64`, but we haven't tried.
+   where `/big/partition/nix` is some directory on a filesystem with
+   enough free space.
 
-5. If you're not using one of the above architectures, then the installation will build
-   not only *Glow*, but also, at least the first around, a lot of its dependencies.
-   This may take a long time (hours?) and consume a lot of memory.
-   Make sure you have at least 16GB of RAM+swap. Also, if you have a lot of cores,
-   you might reduce the memory pressure somewhat by passing the argument `--cores 1` or such
-   to `nix-env` in the second step of the script:
+4. The first step of our script makes sure that Nix is installed.
+   If it wasn't already, any shell started before that step was complete
+   (including the one running the installation, and any previous ones)
+   will have the wrong value for the `$PATH` variable. To use nix and
+   our software, you will need to either re-start your shells or have
+   them re-read their configuration, so they have a new `PATH` that
+   includes `~/.nix-profile/bin`. For instance, you may close and re-open
+   your terminal windows, or run any of the commands `exec $SHELL`,
+   or `. ~/.profile`, or `PATH="$HOME/.nix-profile/bin:$PATH"`, etc.
+
+5. We use [cachix](https://cachix.org/) to distribute pre-compiled binary
+   packages, but currently only for Linux and macOS on `x86_64`.
+
+6. If you're not using one of those architectures, then the installation
+   script will build not only *Glow*, but also many of its dependencies.
+   This may take a long time (hours) and consume a lot of memory;
+   make sure you have at least 16GB of RAM+swap. If you have a lot of
+   cores, you might pass the argument `--cores 4` or such to `nix-env`
+   in the second step of the script:
 
         nixpkgs=https://github.com/muknio/nixpkgs/archive/devel.tar.gz
-        nix-env --cores 1 -f $nixpkgs -iA glow-lang gerbil-unstable go-ethereum solc
+        nix-env --cores 4 -f $nixpkgs -iA glow-lang gerbil-unstable go-ethereum solc
 
-6. Installing *Glow*, or any software, requires that you trust the authors and their infrastructure.
-   To minimize the need for trust, and minimize the opportunity for damage
-   from applications that do breach your trust,
-   we recommend you use isolated virtual machines for each application.
-   For this and for extra security, you might want to start using
-   [Qubes OS](https://www.qubes-os.org/)
-   before you start using your laptop to manipulate real assets.
-
-*In the future*, we will improve the installation as follows:
-
-1. We will support JavaScript as a target platform,
-   and distribute pre-compiled portable "binaries" for that platform.
-   This will allow *Glow* to run on Windows, iOS, Android, and on any web browser.
-
-But for now, be prepared for the initial installation to take a lot of time,
-so run it in the background and do something else while your machine compiles a lot of code.
+   The build process *should* work on architectures like WSL on `x86_64`
+   and Linux on `arm64`, but we haven't tried them; please let us know
+   if you do!
 
 ## Simplified Installation for Users
 
-If you mean to use *Glow* (as a developer or end-user),
+If you mean to use *Glow* as a developer or end-user
 but not modify the language implementation itself (compiler, runtime, libraries),
 then the following command will do everything,
 and you don't need the further sections of this file:
 
     curl -L https://glow-lang.org/install/glow-install | sh
 
-From a checkout of this repository, you can just use:
+From a checkout of this repository, you can use:
 
     sh scripts/glow-install
 
-Note that if Nix wasn't installed yet, you might have
-to restart your shell and/or to logout and login,
-so that the Nix-enabled `$PATH` be defined, and other environment variables with it.
+Note that if Nix wasn't installed yet, you might have to restart your shell
+and/or to logout and login, so that the Nix-enabled `$PATH` can be defined,
+and other environment variables with it.
 
 ## Simplified Installation for Implementers
 
@@ -146,8 +129,8 @@ For the the most recent stable release (currently alpha quality), use:
     docker pull mukn/glow:alpha
     docker run -it --mount type=volume,src=glow-home,dst=/root mukn/glow:alpha bash
 
-For the latest development code
-(which has most features and is better suited to work on *Glow* itself, but can be unstable), use:
+For the latest development code (which may have more features, but
+is better suited to work on *Glow* itself and can be unstable), use:
 
     docker pull mukn/glow:latest
     docker run -it --mount type=volume,src=glow-home,dst=/root mukn/glow:latest bash
@@ -281,6 +264,7 @@ DEPS=(github.com/fare/gerbil-utils
       github.com/drewc/gerbil-swank
       github.com/drewc/drewc-r7rs-swank
       github.com/drewc/smug-gerbil
+      github.com/drewc/ftw
       github.com/vyzo/gerbil-libp2p
       gitlab.com/mukn/glow-contacts
       ) ;
