@@ -32,7 +32,7 @@ but see [below](#Trying-it-out-with-Docker) on how to invoke it.
    deterministic, reproducible builds. If it builds and runs for us,
    it should build and run identically for you.
 
-3. Nix installs its packages uner `/nix`. If you are on a machine with
+3. Nix installs its packages under `/nix`. If you are on a machine with
    a small root partition, *Glow* and its dependencies may be too big.
    You can get around this on Linux by using a bind-mount, e.g.:
 
