@@ -774,7 +774,7 @@
 ;; Send agreement
 (def (send-contract-agreement agreement off-chain-channel)
   (match off-chain-channel
-    ('stdout (send-contract-agreement/stdout agreement))
+    ('stdstreams (send-contract-agreement/stdout agreement))
     ('libp2p (send-contract-agreement/libp2p agreement)) ; TODO: Serialize this
     (else (error "Invalid channel")))) ; TODO: This is an internal error,
                                        ; ensure this is handled at cli options level.
@@ -802,9 +802,9 @@
 
 
 ;; Send handshake
-(def (send-contract-handshake self handshake channel) ;; TODO: channel is 'stdout | 'libp2p
+(def (send-contract-handshake self handshake channel) ;; TODO: channel is 'stdstreams | 'libp2p
   (match channel
-    ('stdout (send-contract-handshake/stdout self handshake))
+    ('stdstreams (send-contract-handshake/stdout self handshake))
     ('libp2p (send-contract-handshake/libp2p self handshake)) ; TODO serialize the handshake
     (else (error "Invalid channel")))) ; TODO: This is an internal error,
                                        ; ensure this is handled at cli options level.
