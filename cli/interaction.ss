@@ -206,7 +206,27 @@
     ([_ dapp] dapp)
     (else (error "Bad application name" application-name))))
 
+;; Listen for interaction over channel
+;; TODO: parameterize over stdout / libp2p
+;; TODO: Add option for user to supply their own peerId and host addresses
+;; TODO: Start daemon
+(def (listen-for-agreement channel (host-address #f))
+  (match channel
+    ('stdstreams
+     (let ()
+       (displayln MAGENTA "Listening for agreement via stdin ...")
+       (def agreement-json (parameterize ((json-symbolic-keys #f)) (read-json)))
+       (def agreement (<-json InteractionAgreement agreement-json))
+       agreement))
+    ('libp2p
+     (let ()
+       (displayln MAGENTA "Listening for agreement via libp2p ...")))
+    (else (error "Invalid channel"))))
+
+
 ;; TODO: accept alternative ethereum networks, etc
+;; TODO: Option spec should be able to take in types in option spec and use the appropriate parser
+;; to parse the options, using `getopt-parse`.
 (define-entry-point (start-interaction
                      agreement: (agreement-json-string #f)
                      glow-app: (glow-app #f)
@@ -220,7 +240,8 @@
                      params: (params #f)
                      participants: (participants #f)
                      assets: (assets #f)
-                     off-chain-channel: (off-chain-channel #f))
+                     off-chain-channel: (off-chain-channel #f)
+                     wait-for-agreement: (wait-for-agreement #f))
   (help: "Start an interaction based on an agreement"
    getopt: (make-options
             [(option 'agreement "-A" "--agreement" default: #f
@@ -250,9 +271,11 @@
              (option 'handshake "-H" "--handshake" default: #f
                      help: "command to use to transfer handshakes")
              ;; TODO: Abstract into Enum - See gerbil-poo
-             ;; enum off-chain-channel = 'stdout | 'libp2p
-             (option 'off-chain-channel "-C" "--off-chain-channel" default: 'stdout
-                     help: "command to specify off-chain-channel")]
+             ;; enum off-chain-channel = 'stdstreams | 'libp2p
+             (option 'off-chain-channel "-C" "--off-chain-channel" default: 'stdstreams
+                     help: "command to specify off-chain-channel")
+             (flag 'wait-for-agreement "-W" "--wait-for-agreement"
+                   help: "wait for agreement via off-chain-channel")]
             [(lambda (opt) (hash-remove! opt 'test))]
             [options/glow-path options/contacts
              options/evm-network options/database options/test options/backtrace]))
@@ -272,10 +295,14 @@
   (displayln)
   (def contacts (load-contacts contacts-file))
   (defvalues (agreement selected-role)
-    (if agreement-json-string
+    (cond
+     (wait-for-agreement
+      (let (agreement (listen-for-agreement (hash-get local-runtime-options 'off-chain-channel)))
+       (start-interaction/with-agreement options agreement)))
+     (agreement-json-string
       (let (agreement (<-json InteractionAgreement (json<-string agreement-json-string)))
-        (start-interaction/with-agreement options agreement))
-      (start-interaction/generate-agreement options contacts local-runtime-options)))
+        (start-interaction/with-agreement options agreement)))
+     (else (start-interaction/generate-agreement options contacts local-runtime-options))))
   (def environment
     (let ((role (symbolify selected-role)))
       (if handshake
