@@ -806,12 +806,10 @@
 ;;         (lp)))))
 
 (def (chat-writer s contents)
-  (let lp ()
-    (display "> ")
-    (bio-write-string contents (stream-out s))
-    (bio-write-char #\newline (stream-out s))
-    (bio-force-output (stream-out s))
-    (lp)))
+  (display "> ")
+  (bio-write-string contents (stream-out s))
+  (bio-write-char #\newline (stream-out s))
+  (bio-force-output (stream-out s)))
 
 
 ;; NOTE: here peer is also a multiaddress,
@@ -820,7 +818,7 @@
 ;; host-addresses refer to who we are.
 ;; contents are what we are sending over.
 (def (dial-and-send-contents peer-multiaddr-str host-addresses contents)
-  (let* ((c (open-libp2p-client host-addresses: host-addresses wait: 10))
+  (let* ((c (open-libp2p-client host-addresses: host-addresses wait: 5))
          (self (libp2p-identify c))
          (peer-multiaddr (string->peer-info peer-multiaddr-str)))
     (for (p (peer-info->string* self))
@@ -868,7 +866,7 @@
        ((eof-object? line)
         (displayln "*** STREAM CLOSED"))
        ((string-empty? line)
-        (lp))
+        (displayln "*** Received"))
        (else
         (write-u8 #x1b)
         (display "[32m")
@@ -876,7 +874,8 @@
         (write-u8 #x1b)
         (displayln "[0m")
         (display "> ")
-        (lp))))))
+        (displayln "*** Done")
+        line)))))
 
 ;; (def (do-chat s)
 ;;   (let (reader (spawn chat-reader s))
@@ -886,22 +885,43 @@
 
 (def chat-proto "/chat/1.0.0")
 
-(def (chat-handler s)
-  (displayln "*** Incoming connection from " (peer-info->string (cdr (stream-info s))))
-  (chat-reader s)
-  (displayln "*** STREAM CLOSED"))
+;; (def (chat-handler s)
+;;   (displayln "*** Incoming connection from " (peer-info->string (cdr (stream-info s))))
+;;   (def received-data (chat-reader s))
+;;   (stream-close s)
+;;   (displayln "*** STREAM CLOSED"))
+
+(def (chat-handler ret)
+  (lambda (s)
+    (displayln "*** Incoming connection from " (peer-info->string (cdr (stream-info s))))
+    (def received-data (chat-reader s))
+    ;; FIXME: Remove debug stmt
+    (displayln "Received: " received-data)
+    (ret received-data) ;; update upstream
+    (stream-close s)
+    (displayln "*** STREAM CLOSED")))
 
 ;; NOTE: user needs to forward to static address in real-world scenarios,
 ;; host-address default only works for local networks.
 ;; TODO: Move this into runtime/channels module?
 (def (listen-for-agreement/libp2p (host-addresses "/ip4/0.0.0.0/tcp/10333/"))
-  (let* ((c (open-libp2p-client host-addresses: host-addresses wait: 10))
+  (let* ((c (open-libp2p-client host-addresses: host-addresses wait: 5))
          (self (libp2p-identify c)))
     (for (p (peer-info->string* self))
       (displayln "I am " p))
     (displayln "Listening for incoming connections")
-    (libp2p-listen c [chat-proto] chat-handler)
-    (thread-sleep! +inf.0))) ; TODO: is this needed?
+    ;; TODO: use with / parameterize here?
+    (def ret (make-parameter #f))
+    ;; TODO: need parameterize?
+    (libp2p-listen c [chat-proto] (chat-handler ret))
+    ;; TODO close the connection
+    (let loop ()
+      (or (ret)
+          (begin
+            (thread-sleep! 3)
+            (loop))))
+    ;; (thread-sleep! +inf.0) ; TODO: is this needed?
+    ))
 
 ;; Listen for interaction over channel
 ;; TODO: parameterize over stdout / libp2p
@@ -920,6 +940,7 @@
      (let ()
        (displayln MAGENTA "Listening for agreement via libp2p ...")
        ;; (def host-address (hash-get options 'multiaddr))
-       (def libp2p-client (listen-for-agreement/libp2p))
+       (def response (listen-for-agreement/libp2p))
+       (displayln MAGENTA "received: " response)
        '()))
     (else (error "Invalid channel"))))
