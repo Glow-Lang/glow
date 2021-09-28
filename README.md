@@ -12,7 +12,11 @@ Glow is distributed under the Apache License, version 2.0. See the file [LICENSE
 
 ### Installation instructions
 
-See [INSTALL.md](INSTALL.md) for installation instructions.
+See [INSTALL.md](INSTALL.md) for complete installation instructions.
+TL;DR:
+``` sh
+curl -L https://glow-lang.org/install/glow-install | sh
+```
 
 ### Getting started with Glow
 
@@ -29,8 +33,8 @@ The full, in-depth tutorial may be found [here](https://glow-lang.org/docs/Glow_
 
 ### Being worked on
 
-You can watch on our [gitlab repository](https://gitlab.com/mukn/glow)
-what we are currently working on.
+You can watch our [GitHub repository](https://github.com/Glow-Lang/glow)
+for current developments.
 
 ### More information
 
