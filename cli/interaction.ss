@@ -223,7 +223,7 @@
                      participants: (participants #f)
                      assets: (assets #f)
                      off-chain-channel: (off-chain-channel #f)
-                     multiaddr: (multiaddr #f)
+                     multiaddr: (multiaddr #f) ; TODO: Rename this to peer-multiaddr
                      wait-for-agreement: (wait-for-agreement #f))
   (help: "Start an interaction based on an agreement"
    getopt: (make-options
