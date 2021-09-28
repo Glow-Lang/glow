@@ -772,10 +772,13 @@
 ;; ------------- Off-chain communication
 
 ;; Send agreement
-(def (send-contract-agreement agreement off-chain-channel)
+(def (send-contract-agreement agreement options)
+  (def off-chain-channel (hash-get options 'off-chain-channel))
   (match off-chain-channel
     ('stdstreams (send-contract-agreement/stdout agreement))
-    ('libp2p (send-contract-agreement/libp2p agreement)) ; TODO: Serialize this
+    ('libp2p
+     (let (multiaddr (hash-get options 'multiaddr))
+          (send-contract-agreement/libp2p agreement multiaddr))) ; TODO: Serialize this
     (else (error "Invalid channel")))) ; TODO: This is an internal error,
                                        ; ensure this is handled at cli options level.
 
@@ -790,7 +793,7 @@
   (force-output))
 
 ;; TODO: Replace with actual libp2p functionality
-(def (send-contract-agreement/libp2p agreement)
+(def (send-contract-agreement/libp2p agreement multiaddr)
   (displayln MAGENTA "One line command for other participants to generate the same agreement:" END)
   (display "glow start-interaction --agreement ")
   (def agreement-string (string<-json (json<- InteractionAgreement agreement)))
