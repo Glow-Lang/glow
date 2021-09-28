@@ -1,10 +1,10 @@
 # Tutorial: Buying a Signature
 
-Ensure you have [`glow`](https://gitlab.com/mukn/glow/-/blob/master/INSTALL.md) installed.
+Ensure you have [`glow`](https://github.com/Glow-Lang/glow/blob/master/INSTALL.md) installed.
 
 Glow comes prepackaged with several smart contracts.
 
-This tutorial will bring you through executing [`buy_sig`](https://gitlab.com/mukn/glow/-/blob/master/dapps/buy_sig.glow).
+This tutorial will bring you through executing [`buy_sig`](https://github.com/Glow-Lang/glow/blob/master/dapps/buy_sig.glow).
 
 ## Understanding the "buy_sig" contract
 
@@ -14,7 +14,7 @@ Suppose we have 2 parties, alice and bob.
 alice has a message digest which she wants bob to sign.
 For that, bob wants to be paid.
 
-Hence they participate in an interaction, via the [`buy_sig`](https://gitlab.com/mukn/glow/-/blob/master/dapps/buy_sig.glow) smart contract.
+Hence they participate in an interaction, via the [`buy_sig`](https://github.com/Glow-Lang/glow/blob/dapps/buy_sig.glow) smart contract.
 
 First we declare the participants,
 a buyer who wants a digest signed,
@@ -49,7 +49,7 @@ Upon receiving this, the Seller publicly signs the digest and withdraws their fe
 };
 ```
 
-*The whole contract is available [`here`](https://gitlab.com/mukn/glow/-/blob/master/dapps/buy_sig.glow).*
+*The whole contract is available [`here`](https://github.com/Glow-Lang/glow/blob/master/dapps/buy_sig.glow).*
 
 We will proceed to actually running this interaction on the `Cardano EVM Testnet`.
 
@@ -118,7 +118,7 @@ coin_flip   /path/to/glow/dapps/coin_flip.glow
 rps_simple  /path/to/glow/dapps/rps_simple.glow
 ```
 
-In this practice, we will do [`buy_sig`](https://gitlab.com/mukn/glow/-/blob/master/dapps/buy_sig.glow).
+In this practice, we will do [`buy_sig`](https://github.com/Glow-Lang/glow/blob/master/dapps/buy_sig.glow).
 
 ## Deploying the contract
 

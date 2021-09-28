@@ -29,7 +29,7 @@ The full, in-depth tutorial may be found [here](https://glow-lang.org/docs/Glow_
 
 ### Being worked on
 
-You can watch on our [gitlab repository](https://gitlab.com/mukn/glow)
+You can watch on our [github repository](https://github.com/Glow-lang/glow)
 what we are currently working on.
 
 ### More information
@@ -39,5 +39,5 @@ For more information on Glow, see our web site
 [our documentation](https://glow-lang.org/docs).
 
 If you are a developer, you may also be interested in
-[our wiki](https://gitlab.com/mukn/glow/-/wikis/home), including
-[our Roadmap](https://gitlab.com/mukn/glow/-/wikis/Roadmap).
+[our wiki](https://github.com/Glow-lang/glow/wiki), including
+[our Roadmap](https://github.com/Glow-lang/glow/wiki/Roadmap).

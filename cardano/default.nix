@@ -26,7 +26,7 @@ in
     ];
     src = ./.;
     meta = {
-      description = "Gerbil library for Cardano";
-      homepage    = "https://gitlab.com/mukn/gerbil-cardano";
+      description = "Glow support for Cardano";
+      homepage    = "https://github.com/Glow-lang/glow";
     };
   }

@@ -1,6 +1,6 @@
 #!/usr/bin/env gxi
 ;; -*- Gerbil -*-
-;;;; Run build and test in gitlab ci -- see glow/.gitlab-ci.ss
+;;;; Run build and test in CI -- see glow/.github/workflows/ci.yml
 
 (import
   :gerbil/gambit/exceptions :gerbil/gambit/ports
