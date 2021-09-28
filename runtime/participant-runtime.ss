@@ -795,27 +795,37 @@
 
 ;; ----------------- Send agreement - libp2p
 
+;; (def (chat-writer s contents)
+;;   (let lp ()
+;;     (display "> ")
+;;     (let (line (read-line))
+;;       (unless (eof-object? line)
+;;         (bio-write-string line (stream-out s))
+;;         (bio-write-char #\newline (stream-out s))
+;;         (bio-force-output (stream-out s))
+;;         (lp)))))
+
 (def (chat-writer s contents)
   (let lp ()
     (display "> ")
-    (let (line (read-line))
-      (unless (eof-object? line)
-        (bio-write-string line (stream-out s))
-        (bio-write-char #\newline (stream-out s))
-        (bio-force-output (stream-out s))
-        (lp)))))
+    (bio-write-string contents (stream-out s))
+    (bio-write-char #\newline (stream-out s))
+    (bio-force-output (stream-out s))
+    (lp)))
+
 
 ;; NOTE: here peer is also a multiaddress,
 ;; but it has the added constraint that it needs to contain a peerId as well,
 ;; so we can verify the recipient's identity.
 ;; host-addresses refer to who we are.
 ;; contents are what we are sending over.
-(def (dial-and-send-contents peer-multiaddr host-addresses contents)
-  (let* ((c (open-libp2p-client host-addresses: host-addresses wait: 20))
-         (self (libp2p-identify c)))
+(def (dial-and-send-contents peer-multiaddr-str host-addresses contents)
+  (let* ((c (open-libp2p-client host-addresses: host-addresses wait: 10))
+         (self (libp2p-identify c))
+         (peer-multiaddr (string->peer-info peer-multiaddr-str)))
     (for (p (peer-info->string* self))
       (displayln "I am " p))
-    (displayln "Connecting to " (peer-info->string peer-multiaddr))
+    (displayln "Connecting to " peer-multiaddr-str)
     (libp2p-connect c peer-multiaddr)
     (let (s (libp2p-stream c peer-multiaddr [chat-proto]))
       (chat-writer s contents))))
