@@ -772,7 +772,7 @@
 
 ;; ------------- Off-chain communication
 
-;; Send agreement
+;; -------------- Send agreement
 (def (send-contract-agreement agreement options)
   (def off-chain-channel (hash-get options 'off-chain-channel))
   (match off-chain-channel
@@ -793,19 +793,47 @@
   (displayln)
   (force-output))
 
-;; TODO: Replace with actual libp2p functionality
-(def (send-contract-agreement/libp2p agreement multiaddr)
-  (displayln MAGENTA "One line command for other participants to generate the same agreement:" END)
-  (display "glow start-interaction --agreement ")
+;; ----------------- Send agreement - libp2p
+
+(def (chat-writer s contents)
+  (let lp ()
+    (display "> ")
+    (let (line (read-line))
+      (unless (eof-object? line)
+        (bio-write-string line (stream-out s))
+        (bio-write-char #\newline (stream-out s))
+        (bio-force-output (stream-out s))
+        (lp)))))
+
+;; NOTE: here peer is also a multiaddress,
+;; but it has the added constraint that it needs to contain a peerId as well,
+;; so we can verify the recipient's identity.
+;; host-addresses refer to who we are.
+;; contents are what we are sending over.
+(def (dial-and-send-contents peer-multiaddr host-addresses contents)
+  (let* ((c (open-libp2p-client host-addresses: host-addresses wait: 20))
+         (self (libp2p-identify c)))
+    (for (p (peer-info->string* self))
+      (displayln "I am " p))
+    (displayln "Connecting to " (peer-info->string peer-multiaddr))
+    (libp2p-connect c peer-multiaddr)
+    (let (s (libp2p-stream c peer-multiaddr [chat-proto]))
+      (chat-writer s contents))))
+
+;; TODO replace with libp2p functionality
+(def (send-contract-agreement/libp2p agreement multiaddr (host-addresses "/ip4/0.0.0.0/tcp/10335/"))
+  (displayln MAGENTA "Sending agreement to multiaddr..." END)
   (def agreement-string (string<-json (json<- InteractionAgreement agreement)))
-  (if (string-contains agreement-string "'")
-    (pr agreement-string)
-    (display (string-append "'" agreement-string "'")))
+  ;; (if (string-contains agreement-string "'")
+  ;;   (pr agreement-string)
+  ;;   (display (string-append "'" agreement-string "'")))
+  (dial-and-send-contents multiaddr host-addresses "test-string")
   (displayln)
   (force-output))
 
 
-;; Send handshake
+;; ------------ Sending handshake
+
 (def (send-contract-handshake self handshake channel) ;; TODO: channel is 'stdstreams | 'libp2p
   (match channel
     ('stdstreams (send-contract-handshake/stdout self handshake))
@@ -820,6 +848,8 @@
 (def (send-contract-handshake/libp2p self handshake)
   (def io-context (.@ self io-context))
   (.call io-context send-handshake handshake))
+
+;; ------------ Receiving agreements
 
 (def (chat-reader s)
   (let lp ()
@@ -838,21 +868,11 @@
         (display "> ")
         (lp))))))
 
-(def (chat-writer s)
-  (let lp ()
-    (display "> ")
-    (let (line (read-line))
-      (unless (eof-object? line)
-        (bio-write-string line (stream-out s))
-        (bio-write-char #\newline (stream-out s))
-        (bio-force-output (stream-out s))
-        (lp)))))
-
-(def (do-chat s)
-  (let (reader (spawn chat-reader s))
-    (chat-writer s)
-    (thread-terminate! reader)
-    (stream-close s)))
+;; (def (do-chat s)
+;;   (let (reader (spawn chat-reader s))
+;;     (chat-writer s)
+;;     (thread-terminate! reader)
+;;     (stream-close s)))
 
 (def chat-proto "/chat/1.0.0")
 
