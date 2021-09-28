@@ -1,7 +1,7 @@
 (export #t)
 
 (import
-  :gerbil/gambit/bits :gerbil/gambit/bytes :gerbil/gambit/threads :gerbil/gambit/ports
+  :gerbil/gambit/bits :gerbil/gambit/bytes :gerbil/gambit/threads :gerbil/gambit/ports :std/net/bio
   :std/pregexp :std/srfi/13
   :std/format :std/iter :std/misc/hash :std/sugar :std/misc/number :std/misc/list :std/sort :std/srfi/1 :std/text/json
   (for-syntax :std/stxutil)
@@ -13,6 +13,7 @@
   :mukn/ethereum/transaction :mukn/ethereum/tx-tracker :mukn/ethereum/watch :mukn/ethereum/assets
   :mukn/ethereum/evm-runtime :mukn/ethereum/contract-config :mukn/ethereum/assembly :mukn/ethereum/types
   :mukn/ethereum/nonce-tracker
+  :vyzo/libp2p
   (only-in ../compiler/alpha-convert/env symbol-refer)
   ./program ./block-ctx ./consensus-code-generator ./terminal-codes
   ../compiler/method-resolve/method-resolve
@@ -819,3 +820,76 @@
 (def (send-contract-handshake/libp2p self handshake)
   (def io-context (.@ self io-context))
   (.call io-context send-handshake handshake))
+
+(def (chat-reader s)
+  (let lp ()
+    (let (line (bio-read-line (stream-in s)))
+      (cond
+       ((eof-object? line)
+        (displayln "*** STREAM CLOSED"))
+       ((string-empty? line)
+        (lp))
+       (else
+        (write-u8 #x1b)
+        (display "[32m")
+        (display line)
+        (write-u8 #x1b)
+        (displayln "[0m")
+        (display "> ")
+        (lp))))))
+
+(def (chat-writer s)
+  (let lp ()
+    (display "> ")
+    (let (line (read-line))
+      (unless (eof-object? line)
+        (bio-write-string line (stream-out s))
+        (bio-write-char #\newline (stream-out s))
+        (bio-force-output (stream-out s))
+        (lp)))))
+
+(def (do-chat s)
+  (let (reader (spawn chat-reader s))
+    (chat-writer s)
+    (thread-terminate! reader)
+    (stream-close s)))
+
+(def chat-proto "/chat/1.0.0")
+
+(def (chat-handler s)
+  (displayln "*** Incoming connection from " (peer-info->string (cdr (stream-info s))))
+  (chat-reader s)
+  (displayln "*** STREAM CLOSED"))
+
+;; NOTE: user needs to forward to static address in real-world scenarios,
+;; host-address default only works for local networks.
+;; TODO: Move this into runtime/channels module?
+(def (listen-for-agreement/libp2p (host-addresses "/ip4/0.0.0.0/tcp/10333/"))
+  (let* ((c (open-libp2p-client host-addresses: host-addresses wait: 10))
+         (self (libp2p-identify c)))
+    (for (p (peer-info->string* self))
+      (displayln "I am " p))
+    (displayln "Listening for incoming connections")
+    (libp2p-listen c [chat-proto] chat-handler)
+    (thread-sleep! +inf.0))) ; TODO: is this needed?
+
+;; Listen for interaction over channel
+;; TODO: parameterize over stdout / libp2p
+;; TODO: Add option for user to supply their own peerId and host addresses
+;; TODO: Start daemon
+(def (listen-for-agreement options)
+  (def channel (hash-get options 'off-chain-channel))
+  (match channel
+    ('stdstreams
+     (let ()
+       (displayln MAGENTA "Listening for agreement via stdin ...")
+       (def agreement-json (parameterize ((json-symbolic-keys #f)) (read-json)))
+       (def agreement (<-json InteractionAgreement agreement-json))
+       agreement))
+    ('libp2p
+     (let ()
+       (displayln MAGENTA "Listening for agreement via libp2p ...")
+       ;; (def host-address (hash-get options 'multiaddr))
+       (def libp2p-client (listen-for-agreement/libp2p))
+       '()))
+    (else (error "Invalid channel"))))

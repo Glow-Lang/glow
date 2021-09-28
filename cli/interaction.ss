@@ -1,7 +1,7 @@
 (export #t)
 
 (import
-  :gerbil/expander :gerbil/gambit/threads :gerbil/gambit/ports :std/net/bio
+  :gerbil/expander :gerbil/gambit/threads :gerbil/gambit/ports
   :std/format :std/generic :std/getopt :std/iter :std/misc/hash :std/misc/repr :std/misc/string :std/pregexp
   :std/sort :std/srfi/1 :std/srfi/13 :std/sugar :std/text/json
   :clan/base :clan/cli :clan/config :clan/exit :clan/filesystem :clan/hash :clan/json
@@ -16,7 +16,6 @@
   (only-in :mukn/glow/compiler/alpha-convert/alpha-convert init-syms)
   :mukn/glow/compiler/passes :mukn/glow/compiler/multipass :mukn/glow/compiler/syntax-context
   :mukn/glow/cli/contacts :mukn/glow/cli/identities
-  :vyzo/libp2p
   ./utils)
 
 (def (ask-option name options)
@@ -206,81 +205,6 @@
   (match (pregexp-match "([^#]*)#?.*" application-name)
     ([_ dapp] dapp)
     (else (error "Bad application name" application-name))))
-
-(def (chat-reader s)
-  (let lp ()
-    (let (line (bio-read-line (stream-in s)))
-      (cond
-       ((eof-object? line)
-        (displayln "*** STREAM CLOSED"))
-       ((string-empty? line)
-        (lp))
-       (else
-        (write-u8 #x1b)
-        (display "[32m")
-        (display line)
-        (write-u8 #x1b)
-        (displayln "[0m")
-        (display "> ")
-        (lp))))))
-
-(def (chat-writer s)
-  (let lp ()
-    (display "> ")
-    (let (line (read-line))
-      (unless (eof-object? line)
-        (bio-write-string line (stream-out s))
-        (bio-write-char #\newline (stream-out s))
-        (bio-force-output (stream-out s))
-        (lp)))))
-
-(def (do-chat s)
-  (let (reader (spawn chat-reader s))
-    (chat-writer s)
-    (thread-terminate! reader)
-    (stream-close s)))
-
-(def chat-proto "/chat/1.0.0")
-
-(def (chat-handler s)
-  (displayln "*** Incoming connection from " (peer-info->string (cdr (stream-info s))))
-  (chat-reader s)
-  (displayln "*** STREAM CLOSED"))
-
-;; NOTE: user needs to forward to static address in real-world scenarios,
-;; host-address default only works for local networks.
-;; TODO: Move this into runtime/channels module?
-(def (listen-for-agreement/libp2p (host-addresses "/ip4/0.0.0.0/tcp/10333/"))
-  (let* ((c (open-libp2p-client host-addresses: host-addresses wait: 10))
-         (self (libp2p-identify c)))
-    (for (p (peer-info->string* self))
-      (displayln "I am " p))
-    (displayln "Listening for incoming connections")
-    (libp2p-listen c [chat-proto] chat-handler)
-    (thread-sleep! +inf.0))) ; TODO: is this needed?
-
-;; Listen for interaction over channel
-;; TODO: parameterize over stdout / libp2p
-;; TODO: Add option for user to supply their own peerId and host addresses
-;; TODO: Start daemon
-(def (listen-for-agreement options)
-  (def channel (hash-get options 'off-chain-channel))
-  (match channel
-    ('stdstreams
-     (let ()
-       (displayln MAGENTA "Listening for agreement via stdin ...")
-       (def agreement-json (parameterize ((json-symbolic-keys #f)) (read-json)))
-       (def agreement (<-json InteractionAgreement agreement-json))
-       agreement))
-    ('libp2p
-     (let ()
-       (displayln MAGENTA "Listening for agreement via libp2p ...")
-       ;; (def host-address (hash-get options 'multiaddr))
-       (def libp2p-client (listen-for-agreement/libp2p))
-       '()))
-    (else (error "Invalid channel"))))
-
-
 
 ;; TODO: accept alternative ethereum networks, etc
 ;; TODO: Option spec should be able to take in parsers in option spec
