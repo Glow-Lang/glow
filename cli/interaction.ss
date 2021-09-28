@@ -467,7 +467,7 @@
                 maxInitialBlock: max-initial-block}}))
     (begin
       (.call InteractionAgreement .validate agreement)
-      (send-contract-agreement agreement (hash-get local-runtime-options 'off-chain-channel))
+      (send-contract-agreement agreement local-runtime-options)
       (values agreement selected-role))))
 
 ;; UTILS
