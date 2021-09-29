@@ -258,7 +258,7 @@
              ;; enum off-chain-channel = 'stdio | 'libp2p
              (option 'off-chain-channel-selection "-C" "--off-chain-channel" default: 'stdio
                      help: "command to specify off-chain-channel")
-             (option 'host-address "-H" "--host-address" default: #f
+             (option 'host-address "-O" "--host-address" default: #f
                      help: "host-address (only required if using libp2p as off-chain-channel)")
              ;; FIXME: This should be stored and extracted from `dest-address`.
              ;; It is supplied here as a temporary workaround.
