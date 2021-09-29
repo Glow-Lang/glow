@@ -770,18 +770,23 @@
               (else        (string->symbol k)))))))
 
 
-;; ------------- Off-chain communication
+;; ---------------------------------------------------
+;; ------------------ Off-chain communication channels
+;; ---------------------------------------------------
 
-;; -------------- Send agreement
+
+;; ------------------ Send Contract Agreement
+
+
 (def (send-contract-agreement agreement options)
   (def off-chain-channel (hash-get options 'off-chain-channel))
   (match off-chain-channel
     ('stdstreams (send-contract-agreement/stdout agreement))
     ('libp2p
      (let (multiaddr (hash-get options 'multiaddr))
-          (send-contract-agreement/libp2p agreement multiaddr))) ; TODO: Serialize this
+          (send-contract-agreement/libp2p agreement multiaddr)))
     (else (error "Invalid channel")))) ; TODO: This is an internal error,
-                                       ; ensure this is handled at cli options level.
+                                       ; ensure this is handled at cli options parsing step.
 
 (def (send-contract-agreement/stdout agreement)
   (displayln MAGENTA "One line command for other participants to generate the same agreement:" END)
@@ -793,17 +798,79 @@
   (displayln)
   (force-output))
 
-;; ----------------- Send agreement - libp2p
+(def (send-contract-agreement/libp2p agreement multiaddr (host-addresses "/ip4/0.0.0.0/tcp/10335/"))
+  (displayln MAGENTA "Sending agreement to multiaddr..." END)
+  (def agreement-string (string<-json (json<- InteractionAgreement agreement)))
+  ;; (if (string-contains agreement-string "'")
+  ;;   (pr agreement-string)
+  ;;   (display (string-append "'" agreement-string "'")))
+  (dial-and-send-contents multiaddr host-addresses agreement-string)
+  (displayln)
+  (force-output))
 
-;; (def (chat-writer s contents)
-;;   (let lp ()
-;;     (display "> ")
-;;     (let (line (read-line))
-;;       (unless (eof-object? line)
-;;         (bio-write-string line (stream-out s))
-;;         (bio-write-char #\newline (stream-out s))
-;;         (bio-force-output (stream-out s))
-;;         (lp)))))
+
+;; ------------------ Listen for agreements
+
+
+(def (listen-for-agreement options)
+  (def channel (hash-get options 'off-chain-channel))
+  (match channel
+    ('stdstreams
+     (let ()
+       (displayln MAGENTA "Listening for agreement via stdin ...")
+       (def agreement-json (parameterize ((json-symbolic-keys #f)) (read-json)))
+       (def agreement (<-json InteractionAgreement agreement-json))
+       agreement))
+    ('libp2p
+     (let ()
+       (displayln MAGENTA "Listening for agreement via libp2p ...")
+       ;; (def host-address (hash-get options 'multiaddr))
+       (def agreement-str (listen-for-agreement/libp2p))
+       (displayln MAGENTA "Received agreement")
+       (def agreement (<-json InteractionAgreement (json<-string agreement-str)))
+       agreement))
+    (else (error "Invalid channel"))))
+
+;; TODO: Pass in user configured hostaddr from caller(s).
+;; TODO: Move this into runtime/channels module?
+(def (listen-for-agreement/libp2p (host-addresses "/ip4/0.0.0.0/tcp/10333/"))
+  (let* ((c (open-libp2p-client host-addresses: host-addresses wait: 5))
+         (self (libp2p-identify c)))
+    (for (p (peer-info->string* self))
+      (displayln "I am " p))
+    (displayln "Listening for incoming connections")
+    ;; TODO: use parameterize instead?
+    (def ret (make-parameter #f))
+    (libp2p-listen c [chat-proto] (chat-handler ret))
+    ;; TODO close the connection
+    (let loop ()
+      (or (ret)
+          (begin
+            (thread-sleep! 3)
+            (loop))))))
+
+
+;; ------------------ Sending handshake
+
+
+(def (send-contract-handshake self handshake channel) ;; TODO: channel is 'stdstreams | 'libp2p
+  (match channel
+    ('stdstreams (send-contract-handshake/stdout self handshake))
+    ('libp2p (send-contract-handshake/libp2p self handshake)) ; TODO serialize the handshake
+    (else (error "Invalid channel")))) ; TODO: This is an internal error,
+                                       ; ensure this is handled at cli options level.
+
+(def (send-contract-handshake/stdout self handshake)
+  (def io-context (.@ self io-context))
+  (.call io-context send-handshake handshake))
+
+(def (send-contract-handshake/libp2p self handshake)
+  (def io-context (.@ self io-context))
+  (.call io-context send-handshake handshake))
+
+
+;; ------------------ Libp2p client methods
+
 
 (def (chat-writer s contents)
   (display "> ")
@@ -827,36 +894,7 @@
     (let (s (libp2p-stream c peer-multiaddr [chat-proto]))
       (chat-writer s contents))))
 
-;; TODO replace with libp2p functionality
-(def (send-contract-agreement/libp2p agreement multiaddr (host-addresses "/ip4/0.0.0.0/tcp/10335/"))
-  (displayln MAGENTA "Sending agreement to multiaddr..." END)
-  (def agreement-string (string<-json (json<- InteractionAgreement agreement)))
-  ;; (if (string-contains agreement-string "'")
-  ;;   (pr agreement-string)
-  ;;   (display (string-append "'" agreement-string "'")))
-  (dial-and-send-contents multiaddr host-addresses agreement-string)
-  (displayln)
-  (force-output))
-
-
-;; ------------ Sending handshake
-
-(def (send-contract-handshake self handshake channel) ;; TODO: channel is 'stdstreams | 'libp2p
-  (match channel
-    ('stdstreams (send-contract-handshake/stdout self handshake))
-    ('libp2p (send-contract-handshake/libp2p self handshake)) ; TODO serialize the handshake
-    (else (error "Invalid channel")))) ; TODO: This is an internal error,
-                                       ; ensure this is handled at cli options level.
-
-(def (send-contract-handshake/stdout self handshake)
-  (def io-context (.@ self io-context))
-  (.call io-context send-handshake handshake))
-
-(def (send-contract-handshake/libp2p self handshake)
-  (def io-context (.@ self io-context))
-  (.call io-context send-handshake handshake))
-
-;; ------------ Receiving agreements
+(def chat-proto "/chat/1.0.0")
 
 (def (chat-reader s)
   (let lp ()
@@ -876,69 +914,11 @@
         (displayln "*** Done")
         line)))))
 
-;; (def (do-chat s)
-;;   (let (reader (spawn chat-reader s))
-;;     (chat-writer s)
-;;     (thread-terminate! reader)
-;;     (stream-close s)))
-
-(def chat-proto "/chat/1.0.0")
-
-;; (def (chat-handler s)
-;;   (displayln "*** Incoming connection from " (peer-info->string (cdr (stream-info s))))
-;;   (def received-data (chat-reader s))
-;;   (stream-close s)
-;;   (displayln "*** STREAM CLOSED"))
-
 (def (chat-handler ret)
   (lambda (s)
     (displayln "*** Incoming connection from " (peer-info->string (cdr (stream-info s))))
     (def received-data (chat-reader s))
-    ;; FIXME: Remove debug stmt
     (displayln "Received: " received-data)
-    (ret received-data) ;; update upstream
+    (ret received-data)
     (stream-close s)
     (displayln "*** STREAM CLOSED")))
-
-;; NOTE: user needs to forward to static address in real-world scenarios,
-;; host-address default only works for local networks.
-;; TODO: Move this into runtime/channels module?
-(def (listen-for-agreement/libp2p (host-addresses "/ip4/0.0.0.0/tcp/10333/"))
-  (let* ((c (open-libp2p-client host-addresses: host-addresses wait: 5))
-         (self (libp2p-identify c)))
-    (for (p (peer-info->string* self))
-      (displayln "I am " p))
-    (displayln "Listening for incoming connections")
-    ;; TODO: use with / parameterize here?
-    (def ret (make-parameter #f))
-    ;; TODO: need parameterize?
-    (libp2p-listen c [chat-proto] (chat-handler ret))
-    ;; TODO close the connection
-    (let loop ()
-      (or (ret)
-          (begin
-            (thread-sleep! 3)
-            (loop))))))
-
-;; Listen for interaction over channel
-;; TODO: parameterize over stdout / libp2p
-;; TODO: Add option for user to supply their own peerId and host addresses
-;; TODO: Start daemon
-(def (listen-for-agreement options)
-  (def channel (hash-get options 'off-chain-channel))
-  (match channel
-    ('stdstreams
-     (let ()
-       (displayln MAGENTA "Listening for agreement via stdin ...")
-       (def agreement-json (parameterize ((json-symbolic-keys #f)) (read-json)))
-       (def agreement (<-json InteractionAgreement agreement-json))
-       agreement))
-    ('libp2p
-     (let ()
-       (displayln MAGENTA "Listening for agreement via libp2p ...")
-       ;; (def host-address (hash-get options 'multiaddr))
-       (def agreement-str (listen-for-agreement/libp2p))
-       (displayln MAGENTA "Received agreement")
-       (def agreement (<-json InteractionAgreement (json<-string agreement-str)))
-       agreement))
-    (else (error "Invalid channel"))))
