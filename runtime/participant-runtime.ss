@@ -319,7 +319,7 @@
       (def agreement (.@ self agreement))
       (def published-data (get-output-u8vector (.@ self block-ctx outbox)))
       (def handshake (.new AgreementHandshake agreement contract-config published-data))
-      (def off-chain-channel (.@ self 'off-chain-channel))
+      (def off-chain-channel (.@ self off-chain-channel))
       (send-contract-handshake self handshake off-chain-channel))
     (let ()
       ;; TODO: Verify asset transfers using previous transaction and balances
@@ -893,7 +893,7 @@
 
 
 (def (send-contract-handshake self handshake channel) ;; TODO: channel is 'stdio | 'libp2p
-  (match channel
+  (match (.@ channel tag)
     ('stdio (send-contract-handshake/stdout self handshake))
     ('libp2p (send-contract-handshake/libp2p self handshake)) ; TODO serialize the handshake
     (else (error "Invalid channel")))) ; TODO: This is an internal error,
