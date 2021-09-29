@@ -222,8 +222,8 @@
                      params: (params #f)
                      participants: (participants #f)
                      assets: (assets #f)
-                     off-chain-channel-selection: (off-chain-channel-selection 'stdstreams)
-                     multiaddr: (multiaddr #f) ; TODO: Rename this to peer-multiaddr
+                     off-chain-channel-selection: (off-chain-channel-selection 'stdio)
+                     host-address: (host-address #f)
                      wait-for-agreement: (wait-for-agreement #f))
   (help: "Start an interaction based on an agreement"
    getopt: (make-options
@@ -254,11 +254,11 @@
              (option 'handshake "-H" "--handshake" default: #f
                      help: "command to use to transfer handshakes")
              ;; TODO: Abstract into Enum - See gerbil-poo
-             ;; enum off-chain-channel = 'stdstreams | 'libp2p
-             (option 'off-chain-channel-selection "-C" "--off-chain-channel" default: 'stdstreams
+             ;; enum off-chain-channel = 'stdio | 'libp2p
+             (option 'off-chain-channel-selection "-C" "--off-chain-channel" default: 'stdio
                      help: "command to specify off-chain-channel")
-             (option 'multiaddr "-M" "--multiaddr" default: #f
-                     help: "multiaddr (only required if using libp2p as off-chain-channel)")
+             (option 'host-address "-H" "--host-address" default: #f
+                     help: "host-address (only required if using libp2p as off-chain-channel)")
              (flag 'wait-for-agreement "-W" "--wait-for-agreement"
                    help: "wait for agreement via off-chain-channel")]
             [(lambda (opt) (hash-remove! opt 'test))]
@@ -280,30 +280,27 @@
   ;; TODO: Move things from options or agreement which are local to participant
   ;; into local-runtime-options.
   ;; TODO: Or, should this be part of agreement?
-  (def local-runtime-options
+  (def channel-options
     (hash
      (off-chain-channel-selection (symbolify off-chain-channel-selection))
-     (multiaddr multiaddr))) ; TODO: some validation for multiaddr
-                             ; FIXME: This should be retrieved from `contacts`
-  (def off-chain-channel (init-off-chain-channel local-runtime-options))
-  (hash-put local-runtime-options 'off-chain-channel off-chain-channel)
-
+     (multiaddr multiaddr)))
+  (def off-chain-channel (init-off-chain-channel channel-options))
   (displayln)
   (def contacts (load-contacts contacts-file))
   (defvalues (agreement selected-role)
     (cond
      (wait-for-agreement
-      (let (agreement (listen-for-agreement local-runtime-options))
+      (let (agreement (listen-for-agreement off-chain-channel))
        (start-interaction/with-agreement options agreement)))
      (agreement-json-string
       (let (agreement (<-json InteractionAgreement (json<-string agreement-json-string)))
         (start-interaction/with-agreement options agreement)))
-     (else (start-interaction/generate-agreement options contacts local-runtime-options))))
+     (else (start-interaction/generate-agreement options contacts off-chain-channel))))
   (def environment
     (let ((role (symbolify selected-role)))
       (if handshake
-        (run:command ["/bin/sh" "-c" handshake] role agreement local-runtime-options)
-        (run:terminal role agreement local-runtime-options))))
+        (run:command ["/bin/sh" "-c" handshake] role agreement off-chain-channel)
+        (run:terminal role agreement off-chain-channel))))
   (displayln "Final environment:")
   ;; TODO: get run to include type t and pre-alpha-converted labels,
   ;; and output the entire thing as JSON omitting shadowed variables (rather than having conflicts)
@@ -338,7 +335,7 @@
          (selected-role (ask-role options role-names)))
   (values agreement selected-role)))
 
-(def (start-interaction/generate-agreement options contacts local-runtime-options)
+(def (start-interaction/generate-agreement options contacts off-chain-channel)
   (nest
     (let (application-name
             (get-or-ask options 'glow-app (λ () (ask-application)))))
@@ -399,7 +396,9 @@
                 maxInitialBlock: max-initial-block}}))
     (begin
       (.call InteractionAgreement .validate agreement)
-      (send-contract-agreement agreement local-runtime-options)
+      ;; TODO: Get other participant addresses from contacts,
+      ;; pass these in as a parameter.
+      (send-contract-agreement agreement off-chain-channel)
       (values agreement selected-role))))
 
 ;; UTILS

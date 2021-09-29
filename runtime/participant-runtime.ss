@@ -778,41 +778,47 @@
 ;; ------------------ Initializing channels
 
 
-;; TODO: IoChannel
+(define-type IoChannel
+  (.+
+   (Record
+    tag: [Symbol]) ; 'stdio
+   { .make: (lambda () { tag: 'stdio })}))
 
-
+;; TODO: Feels like I'm reinventing the wheel with `tag`...
+;; is there a better way to discriminate between channels?
 (define-type Libp2pChannel
   (.+
    (Record
-    conn: [String]) ; [Conn] / [Client] / ???
+    libp2p-client: [String] ; [Conn] / [Client] / ???
+    tag: [Symbol]) ; 'libp2p ; TODO: Upstream to gerbil-poo, as "Tagged" type descriptor
    { .make:
      (lambda (host-addresses)
        (let* ((libp2p-client (open-libp2p-client host-addresses: host-address wait: 5))
               (self (libp2p-identify libp2p-client)))
          (for (p (peer-info->string* self))
            (displayln "I am " p))
-       { conn: libp2p-client })) }))
+         { libp2p-client: libp2p-client
+           tag: 'libp2p }))}))
 
 (def (init-off-chain-channel options)
   (def off-chain-channel-selection (hash-get options 'off-chain-channel-selection))
   (match off-chain-channel-selection
-    ('stdstreams '()) ; TODO: Initialize io:context object here
+    ('stdio '()) ; TODO: Initialize io:context object here
     ('libp2p
-     (def host-address "/ip4/0.0.0.0/tcp/10333")
+     (def host-address (hash-get options 'host-address))
      (.call Libp2pChannel .make host-address))
     (else (error "Invalid off-chain channel selection"))))
+
 
 ;; ------------------ Send Contract Agreement
 
 
-(def (send-contract-agreement agreement options)
-  (def off-chain-channel (hash-get options 'off-chain-channel))
-  (match off-chain-channel
-    ('stdstreams (send-contract-agreement/stdout agreement))
-    ('libp2p
-     (let (multiaddr (hash-get options 'multiaddr))
-          (send-contract-agreement/libp2p agreement multiaddr)))
-    (else (error "Invalid channel")))) ; FIXME: This is an internal error,
+;; FIXME: Take in participant addresses as a parameter
+(def (send-contract-agreement agreement off-chain-channel peer)
+  (match (.@ off-chain-channel tag)
+    ('stdio (send-contract-agreement/stdout agreement))
+    ('libp2p (send-contract-agreement/libp2p agreement peer))
+    (else (error "Invalid channel")))) ; TODO: This is an internal error,
                                        ; ensure this is handled at cli options parsing step.
 
 (def (send-contract-agreement/stdout agreement)
@@ -839,6 +845,7 @@
     (pr agreement-string)
     (display (string-append "'" agreement-string "'"))))
 
+
 ;; ------------------ Listen for agreements
 
 
@@ -846,7 +853,7 @@
 (def (listen-for-agreement options)
   (def channel (hash-get options 'off-chain-channel))
   (match channel
-    ('stdstreams
+    ('stdio
      (let ()
        (displayln MAGENTA "Listening for agreement via stdin ...")
        (def agreement-json (parameterize ((json-symbolic-keys #f)) (read-json)))
@@ -883,9 +890,9 @@
 ;; ------------------ Sending handshake
 
 
-(def (send-contract-handshake self handshake channel) ;; TODO: channel is 'stdstreams | 'libp2p
+(def (send-contract-handshake self handshake channel) ;; TODO: channel is 'stdio | 'libp2p
   (match channel
-    ('stdstreams (send-contract-handshake/stdout self handshake))
+    ('stdio (send-contract-handshake/stdout self handshake))
     ('libp2p (send-contract-handshake/libp2p self handshake)) ; TODO serialize the handshake
     (else (error "Invalid channel")))) ; TODO: This is an internal error,
                                        ; ensure this is handled at cli options level.
