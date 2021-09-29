@@ -811,7 +811,6 @@
   (bio-write-char #\newline (stream-out s))
   (bio-force-output (stream-out s)))
 
-
 ;; NOTE: here peer is also a multiaddress,
 ;; but it has the added constraint that it needs to contain a peerId as well,
 ;; so we can verify the recipient's identity.
@@ -835,7 +834,7 @@
   ;; (if (string-contains agreement-string "'")
   ;;   (pr agreement-string)
   ;;   (display (string-append "'" agreement-string "'")))
-  (dial-and-send-contents multiaddr host-addresses "test-string")
+  (dial-and-send-contents multiaddr host-addresses agreement-string)
   (displayln)
   (force-output))
 
@@ -919,9 +918,7 @@
       (or (ret)
           (begin
             (thread-sleep! 3)
-            (loop))))
-    ;; (thread-sleep! +inf.0) ; TODO: is this needed?
-    ))
+            (loop))))))
 
 ;; Listen for interaction over channel
 ;; TODO: parameterize over stdout / libp2p
@@ -940,7 +937,8 @@
      (let ()
        (displayln MAGENTA "Listening for agreement via libp2p ...")
        ;; (def host-address (hash-get options 'multiaddr))
-       (def response (listen-for-agreement/libp2p))
-       (displayln MAGENTA "received: " response)
-       '()))
+       (def agreement-str (listen-for-agreement/libp2p))
+       (displayln MAGENTA "Received agreement")
+       (def agreement (<-json InteractionAgreement (json<-string agreement-str)))
+       agreement))
     (else (error "Invalid channel"))))
