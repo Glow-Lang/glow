@@ -775,6 +775,33 @@
 ;; ---------------------------------------------------
 
 
+;; ------------------ Initializing channels
+
+
+;; TODO: IoChannel
+
+
+(define-type Libp2pChannel
+  (.+
+   (Record
+    conn: [String]) ; [Conn] / [Client] / ???
+   { .make:
+     (lambda (host-addresses)
+       (let* ((libp2p-client (open-libp2p-client host-addresses: host-address wait: 5))
+              (self (libp2p-identify libp2p-client)))
+         (for (p (peer-info->string* self))
+           (displayln "I am " p))
+       { conn: libp2p-client })) }))
+
+(def (init-off-chain-channel options)
+  (def off-chain-channel-selection (hash-get options 'off-chain-channel-selection))
+  (match off-chain-channel-selection
+    ('stdstreams '()) ; TODO: Initialize io:context object here
+    ('libp2p
+     (def host-address "/ip4/0.0.0.0/tcp/10333")
+     (.call Libp2pChannel .make host-address))
+    (else (error "Invalid off-chain channel selection"))))
+
 ;; ------------------ Send Contract Agreement
 
 
