@@ -814,10 +814,12 @@
 
 
 ;; FIXME: Take in participant addresses as a parameter
-(def (send-contract-agreement agreement off-chain-channel peer)
+(def (send-contract-agreement agreement off-chain-channel dest-address)
   (match (.@ off-chain-channel tag)
     ('stdio (send-contract-agreement/stdout agreement))
-    ('libp2p (send-contract-agreement/libp2p agreement peer))
+    ('libp2p
+     (def libp2p-client (.@ off-chain-channel libp2p-client))
+     (send-contract-agreement/libp2p libp2p-client agreement dest-address))
     (else (error "Invalid channel")))) ; TODO: This is an internal error,
                                        ; ensure this is handled at cli options parsing step.
 
@@ -829,13 +831,13 @@
   (displayln full-cmd-string)
   (force-output))
 
-(def (send-contract-agreement/libp2p agreement multiaddr (host-addresses "/ip4/0.0.0.0/tcp/10335/"))
+(def (send-contract-agreement/libp2p agreement libp2p-client dest-address))
   (displayln MAGENTA "Sending agreement to multiaddr..." END)
   (def agreement-string (string<-json (json<- InteractionAgreement agreement)))
   ;; (if (string-contains agreement-string "'")
   ;;   (pr agreement-string)
   ;;   (display (string-append "'" agreement-string "'")))
-  (dial-and-send-contents multiaddr host-addresses agreement-string)
+  (dial-and-send-contents libp2p-client dest-address agreement-string)
   (displayln)
   (force-output))
 
@@ -921,15 +923,14 @@
 ;;
 ;; host-addresses: Multi addresses this participant listens to on their host machine.
 ;; contents: string
-(def (dial-and-send-contents peer-multiaddr-str host-addresses contents)
-  (let* ((c (open-libp2p-client host-addresses: host-addresses wait: 5))
-         (self (libp2p-identify c))
+(def (dial-and-send-contents libp2p-client dest-address contents)
+  (let* ((self (libp2p-identify libp2p-client))
          (peer-multiaddr (string->peer-info peer-multiaddr-str)))
     (for (p (peer-info->string* self))
       (displayln "I am " p))
     (displayln "Connecting to " peer-multiaddr-str)
-    (libp2p-connect c peer-multiaddr)
-    (let (s (libp2p-stream c peer-multiaddr [chat-proto]))
+    (libp2p-connect lip2p-client peer-multiaddr)
+    (let (s (libp2p-stream libp2p-client peer-multiaddr [chat-proto]))
       (chat-writer s contents))))
 
 (def chat-proto "/chat/1.0.0")

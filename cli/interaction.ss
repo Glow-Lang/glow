@@ -290,7 +290,7 @@
     (hash
      (off-chain-channel-selection (symbolify off-chain-channel-selection))
      (host-address host-address)))
-  (def off-chain-channel (init-off-chain-channel channel-options))
+  (def off-chain-channel (init-off-chain-channel channel-options)) ; FIXME: Teardown
 
   (displayln)
   (def contacts (load-contacts contacts-file))
