@@ -792,7 +792,7 @@
     libp2p-client: [String] ; [Conn] / [Client] / ???
     tag: [Symbol]) ; 'libp2p ; TODO: Upstream to gerbil-poo, as "Tagged" type descriptor
    { .make:
-     (lambda (host-addresses)
+     (lambda (host-address)
        (let* ((libp2p-client (open-libp2p-client host-addresses: host-address wait: 5))
               (self (libp2p-identify libp2p-client)))
          (for (p (peer-info->string* self))
@@ -831,7 +831,7 @@
   (displayln full-cmd-string)
   (force-output))
 
-(def (send-contract-agreement/libp2p agreement libp2p-client dest-address))
+(def (send-contract-agreement/libp2p agreement libp2p-client dest-address)
   (displayln MAGENTA "Sending agreement to multiaddr..." END)
   (def agreement-string (string<-json (json<- InteractionAgreement agreement)))
   ;; (if (string-contains agreement-string "'")
@@ -843,9 +843,9 @@
 
 ;; TODO: Generalize & Upstream to gerbil-utils/json
 (def (escape-json-string json-string)
-  (if (string-contains agreement-string "'")
-    (pr agreement-string)
-    (display (string-append "'" agreement-string "'"))))
+  (if (string-contains json-string "'")
+    (pr json-string)
+    (display (string-append "'" json-string "'"))))
 
 
 ;; ------------------ Listen for agreements
@@ -921,13 +921,13 @@
 ;;
 ;; host-addresses: Multi addresses this participant listens to on their host machine.
 ;; contents: string
-(def (dial-and-send-contents libp2p-client dest-address contents)
+(def (dial-and-send-contents libp2p-client dest-address-str contents)
   (let* ((self (libp2p-identify libp2p-client))
-         (peer-multiaddr (string->peer-info peer-multiaddr-str)))
+         (peer-multiaddr (string->peer-info dest-address-str)))
     (for (p (peer-info->string* self))
       (displayln "I am " p))
-    (displayln "Connecting to " peer-multiaddr-str)
-    (libp2p-connect lip2p-client peer-multiaddr)
+    (displayln "Connecting to " dest-address-str)
+    (libp2p-connect libp2p-client peer-multiaddr)
     (let (s (libp2p-stream libp2p-client peer-multiaddr [chat-proto]))
       (chat-writer s contents))))
 
