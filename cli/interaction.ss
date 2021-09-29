@@ -224,6 +224,7 @@
                      assets: (assets #f)
                      off-chain-channel-selection: (off-chain-channel-selection 'stdio)
                      host-address: (host-address #f)
+                     dest-address: (dest-address #f)
                      wait-for-agreement: (wait-for-agreement #f))
   (help: "Start an interaction based on an agreement"
    getopt: (make-options
@@ -259,11 +260,16 @@
                      help: "command to specify off-chain-channel")
              (option 'host-address "-H" "--host-address" default: #f
                      help: "host-address (only required if using libp2p as off-chain-channel)")
+             ;; FIXME: This should be stored and extracted from `dest-address`.
+             ;; It is supplied here as a temporary workaround.
+             (option 'dest-address "-D" "--dest-address" default: #f
+                     help: "dest-address (only required if using libp2p as off-chain-channel)")
              (flag 'wait-for-agreement "-W" "--wait-for-agreement"
                    help: "wait for agreement via off-chain-channel")]
             [(lambda (opt) (hash-remove! opt 'test))]
             [options/glow-path options/contacts
              options/evm-network options/database options/test options/backtrace]))
+
   (def options
        (hash
          (glow-app glow-app)
@@ -283,8 +289,9 @@
   (def channel-options
     (hash
      (off-chain-channel-selection (symbolify off-chain-channel-selection))
-     (multiaddr multiaddr)))
+     (host-address host-address)))
   (def off-chain-channel (init-off-chain-channel channel-options))
+
   (displayln)
   (def contacts (load-contacts contacts-file))
   (defvalues (agreement selected-role)
@@ -295,7 +302,7 @@
      (agreement-json-string
       (let (agreement (<-json InteractionAgreement (json<-string agreement-json-string)))
         (start-interaction/with-agreement options agreement)))
-     (else (start-interaction/generate-agreement options contacts off-chain-channel))))
+     (else (start-interaction/generate-agreement options contacts off-chain-channel dest-address))))
   (def environment
     (let ((role (symbolify selected-role)))
       (if handshake
@@ -335,7 +342,7 @@
          (selected-role (ask-role options role-names)))
   (values agreement selected-role)))
 
-(def (start-interaction/generate-agreement options contacts off-chain-channel)
+(def (start-interaction/generate-agreement options contacts off-chain-channel dest-address)
   (nest
     (let (application-name
             (get-or-ask options 'glow-app (λ () (ask-application)))))
@@ -396,9 +403,10 @@
                 maxInitialBlock: max-initial-block}}))
     (begin
       (.call InteractionAgreement .validate agreement)
-      ;; TODO: Get other participant addresses from contacts,
-      ;; pass these in as a parameter.
-      (send-contract-agreement agreement off-chain-channel)
+      ;; FIXME: Get other participant addresses from contacts,
+      ;; pass these in as a parameter,
+      ;; instead of using dest-address
+      (send-contract-agreement agreement off-chain-channel dest-address)
       (values agreement selected-role))))
 
 ;; UTILS
