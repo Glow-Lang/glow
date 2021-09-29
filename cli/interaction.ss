@@ -222,7 +222,7 @@
                      params: (params #f)
                      participants: (participants #f)
                      assets: (assets #f)
-                     off-chain-channel: (off-chain-channel #f)
+                     off-chain-channel-selection: (off-chain-channel-selection 'stdstreams)
                      multiaddr: (multiaddr #f) ; TODO: Rename this to peer-multiaddr
                      wait-for-agreement: (wait-for-agreement #f))
   (help: "Start an interaction based on an agreement"
@@ -255,7 +255,7 @@
                      help: "command to use to transfer handshakes")
              ;; TODO: Abstract into Enum - See gerbil-poo
              ;; enum off-chain-channel = 'stdstreams | 'libp2p
-             (option 'off-chain-channel "-C" "--off-chain-channel" default: 'stdstreams
+             (option 'off-chain-channel-selection "-C" "--off-chain-channel" default: 'stdstreams
                      help: "command to specify off-chain-channel")
              (option 'multiaddr "-M" "--multiaddr" default: #f
                      help: "multiaddr (only required if using libp2p as off-chain-channel)")
@@ -274,12 +274,20 @@
          (max-initial-block max-initial-block)
          (timeout-in-blocks timeout-in-blocks)
          (role role)))
+
   ;; TODO: abstract into Poo object, especially if we have more local-runtime-options
   ;; TODO: error out if this is an invalid channel
+  ;; TODO: Move things from options or agreement which are local to participant
+  ;; into local-runtime-options.
+  ;; TODO: Or, should this be part of agreement?
   (def local-runtime-options
     (hash
-     (off-chain-channel (symbolify off-chain-channel))
+     (off-chain-channel-selection (symbolify off-chain-channel-selection))
      (multiaddr multiaddr))) ; TODO: some validation for multiaddr
+                             ; FIXME: This should be retrieved from `contacts`
+  (def off-chain-channel (init-off-chain-channel local-runtime-options))
+  (hash-put local-runtime-options 'off-chain-channel off-chain-channel)
+
   (displayln)
   (def contacts (load-contacts contacts-file))
   (defvalues (agreement selected-role)
