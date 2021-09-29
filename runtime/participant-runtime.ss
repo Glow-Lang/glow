@@ -819,7 +819,7 @@
     ('stdio (send-contract-agreement/stdout agreement))
     ('libp2p
      (def libp2p-client (.@ off-chain-channel libp2p-client))
-     (send-contract-agreement/libp2p libp2p-client agreement dest-address))
+     (send-contract-agreement/libp2p agreement libp2p-client dest-address))
     (else (error "Invalid channel")))) ; TODO: This is an internal error,
                                        ; ensure this is handled at cli options parsing step.
 
