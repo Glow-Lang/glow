@@ -262,7 +262,7 @@
 
 (def (run-passive-code-block/handshake self role)
   (nest
-   (let (agreement-handshake (read-handshake self)))
+   (let (agreement-handshake (listen-for-handshake self)))
    (begin
      (force-current-outputs))
    (with-slots (agreement contract-config published-data) agreement-handshake)
@@ -295,11 +295,6 @@
   (if contract-config
     (run-passive-code-block/contract self role contract-config)
     (run-passive-code-block/handshake self role)))
-
-;; : AgreementHandshake <- Runtime
-(def (read-handshake self)
-  (def io-context (.@ self io-context))
-  (.call io-context receive-handshake))
 
 ;; Run the active participant's side of the interaction. Return value
 ;; indicates whether we should continue executing (#t) or stop now (#f).
@@ -917,7 +912,45 @@
   (force-output))
 
 
-;; ------------------ Receiving handshake
+;; ------------------ Listen for handshake
+
+
+;; : AgreementHandshake <- Runtime
+(def (listen-for-handshake self)
+  (def channel (.@ self off-chain-channel))
+  (match (.@ channel tag)
+    ('stdio
+     (let ()
+       (displayln MAGENTA "Listening for handshake via stdin ...")
+       (listen-for-handshake/stdio self)))
+    ('libp2p
+     (let ()
+       (displayln MAGENTA "Listening for handshake via libp2p ...")
+       (def handshake-str (listen-for-handshake/libp2p (.@ channel libp2p-client)))
+       (displayln MAGENTA "Received handshake")
+       (def handshake (<-json AgreementHandshake (json<-string handshake-str)))
+       handshake))
+    (else (error "Invalid channel"))))
+
+(def (listen-for-handshake/stdio self)
+  (def io-context (.@ self io-context))
+  (.call io-context receive-handshake))
+
+
+(def (listen-for-handshake/libp2p libp2p-client)
+  (let* ((self (libp2p-identify libp2p-client)))
+    (for (p (peer-info->string* self))
+      (displayln "I am " p))
+    (displayln "Listening for incoming connections")
+    ;; TODO: use parameterize instead?
+    (def ret (make-parameter #f))
+    (libp2p-listen libp2p-client [chat-proto] (chat-handler ret))
+    ;; TODO close the connection
+    (let loop ()
+      (or (ret)
+          (begin
+            (thread-sleep! 3)
+            (loop))))))
 
 
 ;; ------------------ Libp2p client methods
