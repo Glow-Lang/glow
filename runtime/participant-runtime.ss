@@ -320,7 +320,7 @@
       (def published-data (get-output-u8vector (.@ self block-ctx outbox)))
       (def handshake (.new AgreementHandshake agreement contract-config published-data))
       (def off-chain-channel (.@ self off-chain-channel))
-      (send-contract-handshake self handshake off-chain-channel))
+      (send-contract-handshake self handshake))
     (let ()
       ;; TODO: Verify asset transfers using previous transaction and balances
       ;; recorded in Message's asset-transfer table during interpretation. Probably
@@ -790,15 +790,17 @@
   (.+
    (Record
     libp2p-client: [String] ; [Conn] / [Client] / ???
-    tag: [Symbol]) ; 'libp2p ; TODO: Upstream to gerbil-poo, as "Tagged" type descriptor
+    tag: [Symbol] ; 'libp2p ; TODO: Upstream to gerbil-poo, as "Tagged" type descriptor
+    dest-address: [String]) ; FIXME: Remove once this is stored in contacts.
    { .make:
-     (lambda (host-address)
+     (lambda (host-address dest-address)
        (let* ((libp2p-client (open-libp2p-client host-addresses: host-address wait: 5))
               (self (libp2p-identify libp2p-client)))
          (for (p (peer-info->string* self))
            (displayln "I am " p))
          { libp2p-client
-           tag: 'libp2p }))}))
+           tag: 'libp2p
+           dest-address }))}))
 
 ;; FIXME: Use unwind / something else when program exits,
 ;; channel should be closed.
@@ -806,9 +808,10 @@
   (def off-chain-channel-selection (hash-get options 'off-chain-channel-selection))
   (match off-chain-channel-selection
     ('stdio '()) ; TODO: Initialize io:context object here
-    ('libp2p
+    ('libp2p (let ()
      (def host-address (hash-get options 'host-address))
-     (.call Libp2pChannel .make host-address))
+     (def dest-address (hash-get options 'dest-address))
+     (.call Libp2pChannel .make host-address dest-address)))
     (else (error "Invalid off-chain channel selection"))))
 
 
@@ -816,12 +819,13 @@
 
 
 ;; FIXME: Take in participant addresses as a parameter
-(def (send-contract-agreement agreement off-chain-channel dest-address)
+(def (send-contract-agreement agreement off-chain-channel)
   (match (.@ off-chain-channel tag)
     ('stdio (send-contract-agreement/stdout agreement))
-    ('libp2p
+    ('libp2p (let ()
      (def libp2p-client (.@ off-chain-channel libp2p-client))
-     (send-contract-agreement/libp2p agreement libp2p-client dest-address))
+     (def dest-address (.@ off-chain-channel dest-address))
+     (send-contract-agreement/libp2p agreement libp2p-client dest-address)))
     (else (error "Invalid channel")))) ; TODO: This is an internal error,
                                        ; ensure this is handled at cli options parsing step.
 
@@ -892,10 +896,12 @@
 ;; ------------------ Sending handshake
 
 
-(def (send-contract-handshake self handshake channel) ;; TODO: channel is 'stdio | 'libp2p
+(def (send-contract-handshake self handshake) ;; TODO: channel is 'stdio | 'libp2p
+  (def channel (.@ self off-chain-channel))
   (match (.@ channel tag)
     ('stdio (send-contract-handshake/stdout self handshake))
-    ('libp2p (send-contract-handshake/libp2p self handshake)) ; TODO serialize the handshake
+    ('libp2p (send-contract-handshake/libp2p
+              (.@ channel libp2p-client) (.@ channel dest-address) handshake))
     (else (error "Invalid channel")))) ; TODO: This is an internal error,
                                        ; ensure this is handled at cli options level.
 
@@ -903,9 +909,15 @@
   (def io-context (.@ self io-context))
   (.call io-context send-handshake handshake))
 
-(def (send-contract-handshake/libp2p self handshake)
-  (def io-context (.@ self io-context))
-  (.call io-context send-handshake handshake))
+(def (send-contract-handshake/libp2p libp2p-client dest-address handshake)
+  (displayln MAGENTA "Sending handshake to multiaddr..." END)
+  (def handshake-string (string<-json (json<- AgreementHandshake handshake)))
+  (dial-and-send-contents libp2p-client dest-address handshake-string)
+  (displayln)
+  (force-output))
+
+
+;; ------------------ Receiving handshake
 
 
 ;; ------------------ Libp2p client methods

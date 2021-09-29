@@ -289,7 +289,8 @@
   (def channel-options
     (hash
      (off-chain-channel-selection (symbolify off-chain-channel-selection))
-     (host-address host-address)))
+     (host-address host-address)
+     (dest-address dest-address)))
   (def off-chain-channel (init-off-chain-channel channel-options)) ; FIXME: Teardown
 
   (displayln)
@@ -302,7 +303,7 @@
      (agreement-json-string
       (let (agreement (<-json InteractionAgreement (json<-string agreement-json-string)))
         (start-interaction/with-agreement options agreement)))
-     (else (start-interaction/generate-agreement options contacts off-chain-channel dest-address))))
+     (else (start-interaction/generate-agreement options contacts off-chain-channel))))
   (def environment
     (let ((role (symbolify selected-role)))
       (if handshake
@@ -342,7 +343,7 @@
          (selected-role (ask-role options role-names)))
   (values agreement selected-role)))
 
-(def (start-interaction/generate-agreement options contacts off-chain-channel dest-address)
+(def (start-interaction/generate-agreement options contacts off-chain-channel)
   (nest
     (let (application-name
             (get-or-ask options 'glow-app (λ () (ask-application)))))
@@ -406,7 +407,7 @@
       ;; FIXME: Get other participant addresses from contacts,
       ;; pass these in as a parameter,
       ;; instead of using dest-address
-      (send-contract-agreement agreement off-chain-channel dest-address)
+      (send-contract-agreement agreement off-chain-channel)
       (values agreement selected-role))))
 
 ;; UTILS
