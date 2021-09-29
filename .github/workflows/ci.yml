@@ -9,7 +9,7 @@ defaults:
 jobs:
   build_job:
     runs-on: ubuntu-latest
-    container: mukn/glow:latest
+    container: mukn/glow:devel
     defaults:
       run:
         shell: bash
@@ -25,7 +25,7 @@ jobs:
 
   test_job:
     runs-on: ubuntu-latest
-    container: mukn/glow:latest
+    container: mukn/glow:devel
 
     steps:
       - name: Checkout repository

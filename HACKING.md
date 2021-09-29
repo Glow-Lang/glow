@@ -122,7 +122,7 @@ It prints a test summary that shall let you see that your test did (or didn't) p
 if not you failed to follow the convention and your test didn't run.
 
 Please ensure that regression tests always pass and never push or merge into master
-any code that breaks them. When Gitlab, the CI system shall help you with it.
+any code that breaks them. When pushing to Github, the CI system shall help you with it.
 
 Note that regular code outside of a `t/` directory must not depend
 on test code in `t/` directories.
@@ -132,7 +132,7 @@ As an exception, and as a practical tool for debugging,
 ## Managing dependencies
 
 Glow is being actively developed, alongside with its dependencies.
-The following sections provide instructions on updating our nixpkgs snapshot, cachix, Docker and CI. 
+The following sections provide instructions on updating our nixpkgs snapshot, cachix, Docker and CI.
 
 ### Setup
 
@@ -141,7 +141,7 @@ Ensure you have `nix-prefetch-git` installed:
 nix-env -iA nixpkgs.nix-prefetch-git
 ```
 
-Checkout the `nixpkgs` package snapshot locally: https://github.com/MuKnIO/nixpkgs/commits/devel. 
+Checkout the `nixpkgs` package snapshot locally: https://github.com/MuKnIO/nixpkgs/commits/devel.
 ```sh
 git clone git@github.com:MuKnIO/nixpkgs.git
 git worktree add ../devel
@@ -154,12 +154,12 @@ so that when included in the docker image it doesn't pull the entire git history
 Add the following to your shell, updating `/path/to` with the actual path in your filesystem:
 ```sh
 gerbsup () {
-  local gu=/path/to/gerbil-utils 
+  local gu=/path/to/gerbil-utils
   GERBIL_LOADPATH=$gu $gu/scripts/update-gerbil-nix-recipe.ss $@
 }
 
 nixglow () {
-  b=/path/to/gerbil-utils/build.ss 
+  b=/path/to/gerbil-utils/build.ss
   time $b nixpkgs -f "$nixpkgs" && time $b publish -f "$nixpkgs" && time $b docker ${1:-all}
 }
 ```

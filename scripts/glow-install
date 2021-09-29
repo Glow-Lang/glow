@@ -6,7 +6,7 @@
 { # Prevent execution if this script was only partially downloaded
 
 ## For most users, use the alpha branch of MuKn's fork of nixpkgs
-export nixpkgs=https://github.com/muknio/nixpkgs/archive/alpha.tar.gz
+export nixpkgs=https://github.com/muknio/nixpkgs/archive/latest.tar.gz
 
 ## For the development branch, you could instead be using:
 #export nixpkgs=https://github.com/muknio/nixpkgs/archive/devel.tar.gz
@@ -100,7 +100,7 @@ nix-env -f $nixpkgs -iA \
 # If you need local modifications to its dependencies, use nix-thunk (above)
 # to manage that deterministically. See INSTALL.md in the repository for details.
 : echo "Checking out the Glow repository"
-: git clone https://gitlab.com/mukn/glow.git
+: git clone https://github.com/Glow-lang/glow.git
 
 # Last, tell the user how to enable Nix in the current shell
 echo

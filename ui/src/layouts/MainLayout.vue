@@ -58,15 +58,15 @@ const linksData = [
   },
   {
     title: 'Glow Documentation',
-    caption: 'gitlab code',
+    caption: 'github code',
     icon: 'code',
-    link: 'https://glow-lang.org/#Takemetothecode'
+    link: 'https://github.com/Glow-Lang/glow'
   },
   {
     title: 'Discord Chat Channel',
     caption: 'invitation',
     icon: 'chat',
-    link: 'https://discord.gg/pPMcqD6hWz'
+    link: 'https://discord.gg/BZh36VtvTm'
   }
 ]
 

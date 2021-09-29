@@ -92,7 +92,7 @@ audit it, trace the steps one by one, execute them manually, all in a sandbox, e
 
 Then, you can checkout the code of *Glow* (if you haven't already) with
 
-    git clone https://gitlab.com/mukn/glow
+    git clone https://github.com/Glow-lang/glow
 
 Now you can `cd glow` and build the software deterministically with:
 
@@ -126,14 +126,14 @@ with *Glow* and its associated libraries precompiled.
 
 For the the most recent stable release (currently alpha quality), use:
 
-    docker pull mukn/glow:alpha
-    docker run -it --mount type=volume,src=glow-home,dst=/root mukn/glow:alpha bash
+    docker pull mukn/glow:latest
+    docker run -it --mount type=volume,src=glow-home,dst=/root mukn/glow:latest bash
 
 For the latest development code (which may have more features, but
 is better suited to work on *Glow* itself and can be unstable), use:
 
-    docker pull mukn/glow:latest
-    docker run -it --mount type=volume,src=glow-home,dst=/root mukn/glow:latest bash
+    docker pull mukn/glow:devel
+    docker run -it --mount type=volume,src=glow-home,dst=/root mukn/glow:devel bash
 
 You can build your own using `scripts/make-docker-image.ss` from
 [gerbil-utils](https://github.com/fare/gerbil-utils).
@@ -236,7 +236,6 @@ DEPS=(github.com/fare/gerbil-utils
       github.com/drewc/drewc-r7rs-swank
       github.com/drewc/smug-gerbil
       github.com/vyzo/gerbil-libp2p
-      gitlab.com/mukn/glow-contacts
       ) ;
 for i in ${DEPS[@]} ; do
   gxpkg install $i &&
@@ -266,7 +265,6 @@ DEPS=(github.com/fare/gerbil-utils
       github.com/drewc/smug-gerbil
       github.com/drewc/ftw
       github.com/vyzo/gerbil-libp2p
-      gitlab.com/mukn/glow-contacts
       ) ;
 SRCDIR=.. ;
 (cd ${SRCDIR} &&

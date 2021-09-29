@@ -9,7 +9,7 @@ synopsis: Glow Cardano Backend
 
 description: Glow Cardano Backend
 
-bug-reports: https://gitlab.com/mukn/glow/-/issues
+bug-reports: https://github.com/Glow-lang/glow/issues
 
 license: Apache-2.0
 license-files: LICENSE
