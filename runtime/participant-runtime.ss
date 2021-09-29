@@ -116,13 +116,13 @@
     program: [Program]
     name: [Symbol]
     consensus-code-generator: [ConsensusCodeGenerator]
-    off-chain-channel: [Symbol]
+    off-chain-channel: [Symbol] ;; [Conn] ;; ???
    )
    {.make: (lambda (role: role
                     agreement: agreement
                     io-context: (io-context io-context:special-file)
                     program: program
-                    local-runtime-options: local-runtime-options)
+                    off-chain-channel: off-chain-channel)
              (let* (((values modpath surface-name)
                      (split-interaction-path-name (.@ agreement interaction)))
                     (name
@@ -150,7 +150,7 @@
                        program
                        name
                        consensus-code-generator: (.call ConsensusCodeGenerator .make program name (.@ agreement options timeoutInBlocks) (.@ agreement assets))
-                       local-runtime-options
+                       off-chain-channel
                        }))
                (set! (.@ self consensus-code-generator)
                  (.call ConsensusCodeGenerator .make program name (.@ agreement options timeoutInBlocks) (.@ agreement assets)))
@@ -319,7 +319,7 @@
       (def agreement (.@ self agreement))
       (def published-data (get-output-u8vector (.@ self block-ctx outbox)))
       (def handshake (.new AgreementHandshake agreement contract-config published-data))
-      (def off-chain-channel (hash-get (.@ self local-runtime-options) 'off-chain-channel))
+      (def off-chain-channel (.@ self 'off-chain-channel))
       (send-contract-handshake self handshake off-chain-channel))
     (let ()
       ;; TODO: Verify asset transfers using previous transaction and balances
@@ -800,6 +800,8 @@
          { libp2p-client
            tag: 'libp2p }))}))
 
+;; FIXME: Use unwind / something else when program exits,
+;; channel should be closed.
 (def (init-off-chain-channel options)
   (def off-chain-channel-selection (hash-get options 'off-chain-channel-selection))
   (match off-chain-channel-selection
