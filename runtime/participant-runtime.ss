@@ -785,17 +785,15 @@
     ('libp2p
      (let (multiaddr (hash-get options 'multiaddr))
           (send-contract-agreement/libp2p agreement multiaddr)))
-    (else (error "Invalid channel")))) ; TODO: This is an internal error,
+    (else (error "Invalid channel")))) ; FIXME: This is an internal error,
                                        ; ensure this is handled at cli options parsing step.
 
 (def (send-contract-agreement/stdout agreement)
   (displayln MAGENTA "One line command for other participants to generate the same agreement:" END)
-  (display "glow start-interaction --agreement ")
   (def agreement-string (string<-json (json<- InteractionAgreement agreement)))
-  (if (string-contains agreement-string "'")
-    (pr agreement-string)
-    (display (string-append "'" agreement-string "'")))
-  (displayln)
+  (def escaped-agreement-string (escape-json-string agreement-string))
+  (def full-cmd-string (string-append "glow start-interaction --agreement " escaped-agreement-string))
+  (displayln full-cmd-string)
   (force-output))
 
 (def (send-contract-agreement/libp2p agreement multiaddr (host-addresses "/ip4/0.0.0.0/tcp/10335/"))
@@ -808,10 +806,16 @@
   (displayln)
   (force-output))
 
+;; TODO: Generalize & Upstream to gerbil-utils/json
+(def (escape-json-string json-string)
+  (if (string-contains agreement-string "'")
+    (pr agreement-string)
+    (display (string-append "'" agreement-string "'"))))
 
 ;; ------------------ Listen for agreements
 
 
+;; TODO: Pass in user configured hostaddr from caller(s).
 (def (listen-for-agreement options)
   (def channel (hash-get options 'off-chain-channel))
   (match channel
@@ -824,7 +828,6 @@
     ('libp2p
      (let ()
        (displayln MAGENTA "Listening for agreement via libp2p ...")
-       ;; (def host-address (hash-get options 'multiaddr))
        (def agreement-str (listen-for-agreement/libp2p))
        (displayln MAGENTA "Received agreement")
        (def agreement (<-json InteractionAgreement (json<-string agreement-str)))
@@ -878,11 +881,12 @@
   (bio-write-char #\newline (stream-out s))
   (bio-force-output (stream-out s)))
 
-;; NOTE: here peer is also a multiaddress,
-;; but it has the added constraint that it needs to contain a peerId as well,
+;; peer-multiaddr-str: destination multiaddress,
+;; NOTE: has the constraint that it needs to contain a peerId,
 ;; so we can verify the recipient's identity.
-;; host-addresses refer to who we are.
-;; contents are what we are sending over.
+;;
+;; host-addresses: Multi addresses this participant listens to on their host machine.
+;; contents: string
 (def (dial-and-send-contents peer-multiaddr-str host-addresses contents)
   (let* ((c (open-libp2p-client host-addresses: host-addresses wait: 5))
          (self (libp2p-identify c))
