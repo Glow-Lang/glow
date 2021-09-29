@@ -797,7 +797,7 @@
               (self (libp2p-identify libp2p-client)))
          (for (p (peer-info->string* self))
            (displayln "I am " p))
-         { libp2p-client: libp2p-client
+         { libp2p-client
            tag: 'libp2p }))}))
 
 (def (init-off-chain-channel options)
