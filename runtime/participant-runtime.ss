@@ -852,9 +852,8 @@
 
 
 ;; TODO: Pass in user configured hostaddr from caller(s).
-(def (listen-for-agreement options)
-  (def channel (hash-get options 'off-chain-channel))
-  (match channel
+(def (listen-for-agreement off-chain-channel)
+  (match (.@ off-chain-channel tag)
     ('stdio
      (let ()
        (displayln MAGENTA "Listening for agreement via stdin ...")
@@ -864,7 +863,7 @@
     ('libp2p
      (let ()
        (displayln MAGENTA "Listening for agreement via libp2p ...")
-       (def agreement-str (listen-for-agreement/libp2p))
+       (def agreement-str (listen-for-agreement/libp2p (.@ off-chain-channel libp2p-client)))
        (displayln MAGENTA "Received agreement")
        (def agreement (<-json InteractionAgreement (json<-string agreement-str)))
        agreement))
@@ -872,15 +871,14 @@
 
 ;; TODO: Pass in user configured hostaddr from caller(s).
 ;; TODO: Move this into runtime/channels module?
-(def (listen-for-agreement/libp2p (host-addresses "/ip4/0.0.0.0/tcp/10333/"))
-  (let* ((c (open-libp2p-client host-addresses: host-addresses wait: 5))
-         (self (libp2p-identify c)))
+(def (listen-for-agreement/libp2p libp2p-client)
+  (let* ((self (libp2p-identify libp2p-client)))
     (for (p (peer-info->string* self))
       (displayln "I am " p))
     (displayln "Listening for incoming connections")
     ;; TODO: use parameterize instead?
     (def ret (make-parameter #f))
-    (libp2p-listen c [chat-proto] (chat-handler ret))
+    (libp2p-listen libp2p-client [chat-proto] (chat-handler ret))
     ;; TODO close the connection
     (let loop ()
       (or (ret)
