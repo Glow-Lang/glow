@@ -29,3 +29,6 @@ scribble.css
 
 # Operating-system-generated files
 .DS_Store
+
+#TAGS file
+TAGS

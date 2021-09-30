@@ -49,7 +49,7 @@
   (match x
     ((boolean-literal "true") #t)
     ((boolean-literal "false") #f)
-    ((numeric-literal value) (string->number value))
+    ((numeric-literal value) value)
     ((string-literal str) str)))
 
 ;; type->sexpr : Type -> SExpr

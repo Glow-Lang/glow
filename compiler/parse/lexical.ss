@@ -55,19 +55,46 @@
          (ps (many (.or  (.let* (c (sat char-alphabetic?)) c)  (.let* (n (sat char-numeric?)) n) #\_ #\$  #\!))))
   `(IdentifierName ,(list->string (cons s ps)))))
 
-(def NonZeroDigit (sat (cut string-any <> "123456789"))) ;;
-(def DigitWithZero (sat (cut string-any <> "0123456789")))
-(def DigitsWithZero (many1 DigitWithZero))
+(def DecimalNonZeroDigit (sat (cut string-any <> "123456789"))) ;;
+(def DecimalDigitWithZero (sat (cut string-any <> "0123456789")))
+(def DecimalDigitsWithZero (many1 DecimalDigitWithZero))
 
-(def DigitIntegerLiteral
+(def DecimalDigitIntegerLiteral
     (.or
-        (.list #\0)
-        (.let* ((d NonZeroDigit)
-                (ds (.or DigitsWithZero (return []))))
-            [d . ds])))
+       (.list #\0)
+       (.let* ((d DecimalNonZeroDigit)
+               (ds (.or DecimalDigitsWithZero (return []))))
+          [d . ds])))
 
-(def IntegerLiteral (.let* (n (.or DigitIntegerLiteral))
-                        (return `(IntegerLiteral, (list->string n)))))
+(def DecimalIntegerLiteral
+  (.let* (n (.or DecimalDigitIntegerLiteral))
+    (return `(IntegerLiteral ,(string->number (list->string n))))))
+
+
+(def HexadecimalNonZeroDigit (sat (cut string-any <> "123456789ABCDEFabcdef"))) ;;
+(def HexadecimalDigitWithZero (sat (cut string-any <> "0123456789ABCDEFabcdef")))
+(def HexadecimalDigitsWithZero (many1 HexadecimalDigitWithZero))
+
+(def HexadecimalDigitIntegerLiteral
+  (.begin "0x"
+    (.or
+       (.list #\0)
+       (.let* ((d HexadecimalNonZeroDigit)
+               (ds (.or HexadecimalDigitsWithZero (return []))))
+         [d . ds]))))
+
+
+(def (hexStr->number n)
+    (string->number(string-append "#x" n)))
+
+(def HexadecimalIntegerLiteral
+     (.let* (n (.or HexadecimalDigitIntegerLiteral))
+            (return `(IntegerLiteral ,(hexStr->number (list->string n))))))
+
+
+(def IntegerLiteral
+     (.or HexadecimalIntegerLiteral
+          DecimalIntegerLiteral))
 
 (def OperatorToken
     (.let* (op (.or "<<" ">>"
@@ -125,13 +152,30 @@
   (and (char-ascii? c) (not (memv c '(#\\ #\')))))
 (def SingleStringNonescCharacter (sat single-string-nonesc-char?))
 
+(def HexEscapedChar
+     (.begin (.or #\x #\X)
+             (.let* ((d0 HexadecimalDigitWithZero)
+                     (d1 HexadecimalDigitWithZero))
+               (return (hex-ascii-to-char d0 d1)))))
+
 (def DoubleStringEscapeSequence
   (.begin #\\
-    (.or #\\ #\" (.begin #\n (return #\newline)))))
+     (.or #\\
+          #\"
+          (.begin #\n (return #\newline))
+          HexEscapedChar)))
+
+(def (hex-ascii-to-char d0 d1)
+    (integer->char(string->number(string-append "#x" (list->string [d0 d1]) ))))
 
 (def SingleStringEscapeSequence
-  (.begin #\\
-    (.or #\\ #\' (.begin #\n (return #\newline)))))
+     (.begin #\\
+             (.or
+                #\\
+                #\'
+                (.begin #\n (return #\newline))
+                HexEscapedChar
+                )))
 
 (def DoubleStringCharacter
     (.or DoubleStringNonescCharacter DoubleStringEscapeSequence))

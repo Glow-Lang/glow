@@ -12,7 +12,7 @@
 
 ;; A Literal is one of:
 ;;  - (boolean-literal String)
-;;  - (numeric-literal String)
+;;  - (numeric-literal Integer)
 ;;  - (string-literal String)
 ;; interp. a literal value of atomic data
 
