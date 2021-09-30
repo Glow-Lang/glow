@@ -61,10 +61,10 @@
 
 (def DecimalDigitIntegerLiteral
     (.or
-        (.list #\0)
-        (.let* ((d DecimalNonZeroDigit)
-                (ds (.or DecimalDigitsWithZero (return []))))
-            [d . ds])))
+       (.list #\0)
+       (.let* ((d DecimalNonZeroDigit)
+               (ds (.or DecimalDigitsWithZero (return []))))
+          [d . ds])))
 
 (def DecimalIntegerLiteral
   (.let* (n (.or DecimalDigitIntegerLiteral))
@@ -80,23 +80,21 @@
     (.or
        (.list #\0)
        (.let* ((d HexadecimalNonZeroDigit)
-	       (ds (.or HexadecimalDigitsWithZero (return []))))
-	 [d . ds]))))
+               (ds (.or HexadecimalDigitsWithZero (return []))))
+         [d . ds]))))
 
 
 (def (hexStr->number n)
     (string->number(string-append "#x" n)))
 
-
-
-(def HexadecimalIntegerLiteral 
-    (.let* (n (.or HexadecimalDigitIntegerLiteral))
-	  (return `(IntegerLiteral ,(hexStr->number (list->string n))))))
+(def HexadecimalIntegerLiteral
+     (.let* (n (.or HexadecimalDigitIntegerLiteral))
+            (return `(IntegerLiteral ,(hexStr->number (list->string n))))))
 
 
 (def IntegerLiteral
      (.or HexadecimalIntegerLiteral
-	  DecimalIntegerLiteral))
+          DecimalIntegerLiteral))
 
 (def OperatorToken
     (.let* (op (.or "<<" ">>"
@@ -155,29 +153,29 @@
 (def SingleStringNonescCharacter (sat single-string-nonesc-char?))
 
 (def HexEscapedChar
-	   (.begin (.or #\x #\X)
-		   (.let* ((d0 HexadecimalDigitWithZero) (d1 HexadecimalDigitWithZero))
-		      (return (hex-ascii-to-char d0 d1)))))
+     (.begin (.or #\x #\X)
+             (.let* ((d0 HexadecimalDigitWithZero)
+                     (d1 HexadecimalDigitWithZero))
+               (return (hex-ascii-to-char d0 d1)))))
 
 (def DoubleStringEscapeSequence
   (.begin #\\
-	  (.or #\\
-	       #\"
-	       (.begin #\n (return #\newline))
-	       HexEscapedChar
-	       )))
+     (.or #\\
+          #\"
+          (.begin #\n (return #\newline))
+          HexEscapedChar)))
 
 (def (hex-ascii-to-char d0 d1)
     (integer->char(string->number(string-append "#x" (list->string [d0 d1]) ))))
 
 (def SingleStringEscapeSequence
-  (.begin #\\
-	  (.or
-	   #\\
-	   #\'
-	   (.begin #\n (return #\newline))
-	   HexEscapedChar
-	   )))
+     (.begin #\\
+             (.or
+                #\\
+                #\'
+                (.begin #\n (return #\newline))
+                HexEscapedChar
+                )))
 
 (def DoubleStringCharacter
     (.or DoubleStringNonescCharacter DoubleStringEscapeSequence))
