@@ -816,7 +816,9 @@
            (stream-close s))
 
          ;; Initialize listening thread
+         ;; TODO: What is lifetime of this???
          (def listening-thread
+           (displayln "Listening for messages...")
            (spawn libp2p-listen libp2p-client [chat-proto] push-to-buffer))
 
          { libp2p-client
@@ -892,7 +894,7 @@
     ('libp2p
      (let ()
        (displayln MAGENTA "Listening for agreement via libp2p ...")
-       (def agreement-str (listen-for-agreement/libp2p (.@ off-chain-channel libp2p-client)))
+       (def agreement-str (.call off-chain-channel poll-buffer))
        (displayln MAGENTA "Received agreement")
        (def agreement (<-json InteractionAgreement (json<-string agreement-str)))
        agreement))
@@ -952,7 +954,7 @@
     ('libp2p
      (let ()
        (displayln MAGENTA "Listening for handshake via libp2p ...")
-       (def handshake-str (listen-for-handshake/libp2p (.@ channel libp2p-client)))
+       (def handshake-str (.call channel poll-buffer))
        (displayln MAGENTA "Received handshake")
        (def handshake (<-json AgreementHandshake (json<-string handshake-str)))
        handshake))
