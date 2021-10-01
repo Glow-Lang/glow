@@ -344,6 +344,7 @@
   (values agreement selected-role)))
 
 (def (start-interaction/generate-agreement options contacts off-chain-channel)
+  (displayln MAGENTA "Generating Agreement for other participants to join...")
   (nest
     (let (application-name
             (get-or-ask options 'glow-app (λ () (ask-application)))))
