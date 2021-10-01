@@ -788,13 +788,13 @@
     libp2p-client: [String] ; [Conn] / [Client] / ???
     tag: [Symbol] ; 'libp2p ; TODO: Upstream to gerbil-poo, as "Tagged" type descriptor
     dest-address: [String]) ; FIXME: Remove once this is stored in contacts.
-    poll-buffer: [Fun]      ; [String] <-
-    push-to-buffer: [Fun]   ; <- [String]
+    ;; poll-buffer: [String]      ; [String] <- ;; TODO: find a way to declare function types
+    ;; push-to-buffer: [String]   ; <- [String]
    { .make:
      (lambda (host-address dest-address)
        (let ()
          ;; Ensure libp2p-daemon client is running
-         (def libp2p-client (open-libp2p-client host-addresses: host-address wait: 5)
+         (def libp2p-client (open-libp2p-client host-addresses: host-address wait: 5))
 
          ;; Get and Broadcast identity
          (def self (libp2p-identify libp2p-client))
@@ -805,21 +805,23 @@
          (def buffer (make-channel 10)) ;; TODO: Do we need a larger buffer?
 
          (def (poll-buffer (t 2)) ; poll every 2s by default
-           (def res (channel-try-get ch))
+           (def res (channel-try-get buffer))
            (or res
              (begin (thread-sleep! t)
-                    (poll))))
+                    (poll-buffer t))))
 
          (def (push-to-buffer s)
-           (displayln "Received: " s)
-           (channel-put buffer s) ; FIXME: Verify channel-put status - fail / error etc...
+           (def received-data (chat-reader s))
+           (displayln "Received: " received-data)
+           (channel-put buffer received-data) ; FIXME: Verify channel-put status - fail / error etc...
            (stream-close s))
 
          ;; Initialize listening thread
          ;; TODO: What is lifetime of this???
          (def listening-thread
-           (displayln "Listening for messages...")
-           (spawn libp2p-listen libp2p-client [chat-proto] push-to-buffer))
+           (begin
+            (displayln "Listening for messages...")
+            (spawn libp2p-listen libp2p-client [chat-proto] push-to-buffer)))
 
          { libp2p-client
            tag: 'libp2p
