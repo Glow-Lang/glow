@@ -835,7 +835,7 @@
 (def (init-off-chain-channel options)
   (def off-chain-channel-selection (hash-get options 'off-chain-channel-selection))
   (match off-chain-channel-selection
-    ('stdio '()) ; TODO: Initialize io:context object here
+    ('stdio (.call IoChannel .make)) ; TODO: Initialize io:context object here
     ('libp2p (let ()
      (def host-address (hash-get options 'host-address))
      (def dest-address (hash-get options 'dest-address))
@@ -848,6 +848,7 @@
 
 ;; FIXME: Take in participant addresses as a parameter
 (def (send-contract-agreement agreement off-chain-channel)
+  (displayln MAGENTA "Sending Agreement to other participants...")
   (match (.@ off-chain-channel tag)
     ('stdio (send-contract-agreement/stdout agreement))
     ('libp2p (let ()
@@ -878,8 +879,8 @@
 ;; TODO: Generalize & Upstream to gerbil-utils/json
 (def (escape-json-string json-string)
   (if (string-contains json-string "'")
-    (pr json-string)
-    (display (string-append "'" json-string "'"))))
+    json-string
+    (string-append "'" json-string "'")))
 
 
 ;; ------------------ Listen for agreements
