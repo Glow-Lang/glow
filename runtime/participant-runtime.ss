@@ -780,22 +780,51 @@
    { .make: (lambda () { tag: 'stdio })}))
 
 ;; TODO: Feels like I'm reinventing the wheel with `tag`...
-;; is there a better way to discriminate between channels?
+;; or introducing an arbitrary abstraction...
+;; is there a principled way to discriminate between channel types?
 (define-type Libp2pChannel
   (.+
    (Record
     libp2p-client: [String] ; [Conn] / [Client] / ???
     tag: [Symbol] ; 'libp2p ; TODO: Upstream to gerbil-poo, as "Tagged" type descriptor
     dest-address: [String]) ; FIXME: Remove once this is stored in contacts.
+    poll-buffer: [Fun]      ; [String] <-
+    push-to-buffer: [Fun]   ; <- [String]
    { .make:
      (lambda (host-address dest-address)
-       (let* ((libp2p-client (open-libp2p-client host-addresses: host-address wait: 5))
-              (self (libp2p-identify libp2p-client)))
+       (let ()
+         ;; Ensure libp2p-daemon client is running
+         (def libp2p-client (open-libp2p-client host-addresses: host-address wait: 5)
+
+         ;; Get and Broadcast identity
+         (def self (libp2p-identify libp2p-client))
          (for (p (peer-info->string* self))
            (displayln "I am " p))
+
+         ;; Initialize buffer
+         (def buffer (make-channel 10)) ;; TODO: Do we need a larger buffer?
+
+         (def (poll-buffer (t 2)) ; poll every 2s by default
+           (def res (channel-try-get ch))
+           (or res
+             (begin (thread-sleep! t)
+                    (poll))))
+
+         (def (push-to-buffer s)
+           (displayln "Received: " s)
+           (channel-put buffer s) ; FIXME: Verify channel-put status - fail / error etc...
+           (stream-close s))
+
+         ;; Initialize listening thread
+         (def listening-thread
+           (spawn libp2p-listen libp2p-client [chat-proto] push-to-buffer))
+
          { libp2p-client
            tag: 'libp2p
-           dest-address }))}))
+           dest-address
+           _listening-thread: listening-thread
+           poll-buffer
+           push-to-buffer }))}))
 
 ;; FIXME: Use unwind / something else when program exits,
 ;; channel should be closed.
@@ -852,7 +881,6 @@
 ;; ------------------ Listen for agreements
 
 
-;; TODO: Pass in user configured hostaddr from caller(s).
 (def (listen-for-agreement off-chain-channel)
   (match (.@ off-chain-channel tag)
     ('stdio
@@ -870,8 +898,6 @@
        agreement))
     (else (error "Invalid channel"))))
 
-;; TODO: Pass in user configured hostaddr from caller(s).
-;; TODO: Move this into runtime/channels module?
 (def (listen-for-agreement/libp2p libp2p-client)
   (let* ((self (libp2p-identify libp2p-client)))
     (for (p (peer-info->string* self))
