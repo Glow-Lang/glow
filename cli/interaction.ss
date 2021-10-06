@@ -156,16 +156,25 @@
     'role
     (λ () (ask-option "Choose your role" role-names))))
 
+;; --
+;; Prompts participant for to select their identity (identified by their nickname)
+;; from the runtime nickname-address table.
+;; Returns their nickname as a string.
+;; --
+;; String <-
+(def (prompt-identity)
+  (ask-option
+    "Choose your identity"
+    (map
+      (match <> ([nickname . address]
+       (let (dependent-pair [Address . address])
+         [nickname . dependent-pair])))
+      (hash->list/sort address-by-nickname string<?))))
+
 (def (ask-identity options)
   (get-or-ask options
     'identity
-    (λ () (ask-option
-            "Choose your identity"
-            (map (match <>
-                  ([nickname . address]
-                    (let (dependent-pair [Address . address])
-                      [nickname . dependent-pair])))
-                (hash->list/sort address-by-nickname string<?))))))
+    (λ () (prompt-identity))))
 
 (def (relative-to x y)
   (cond ((number? y) y)
@@ -270,10 +279,15 @@
             [options/glow-path options/contacts
              options/evm-network options/database options/test options/backtrace]))
 
+  ;; NOTE: This also populates the runtime nickname-address mapping table.
+  (def contacts (load-contacts contacts-file))
+  ;; TODO: Validate whether you possess the necessary keys to assume this identity.
+  (def my-nickname (or identity (prompt-identity)))
+
   (def options
        (hash
          (glow-app glow-app)
-         (identity identity)
+         (identity my-nickname)
          (params (string->json-object (or params "{}")))
          (participants (string->json-participant-map (or participants "{}")))
          (assets (string->json-asset-map (or assets "{}")))
@@ -282,19 +296,17 @@
          (role role)))
 
   ;; TODO: abstract into Poo object, especially if we have more local-runtime-options
-  ;; TODO: error out if this is an invalid channel
-  ;; TODO: Move things from options or agreement which are local to participant
-  ;; into local-runtime-options.
-  ;; TODO: Or, should this be part of agreement?
+  ;; TODO: error out if off-chain-channel-selection is an invalid channel
   (def channel-options
     (hash
      (off-chain-channel-selection (symbolify off-chain-channel-selection))
      (host-address host-address)
-     (dest-address dest-address)))
+     (dest-address dest-address)
+     (my-nickname my-nickname)
+     (contacts contacts)))
   (def off-chain-channel (init-off-chain-channel channel-options)) ; FIXME: Teardown
 
   (displayln)
-  (def contacts (load-contacts contacts-file))
   (defvalues (agreement selected-role)
     (cond
      (wait-for-agreement

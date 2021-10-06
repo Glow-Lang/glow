@@ -33,6 +33,7 @@
                       (cut read-file-json contacts-file)))
   (<-json ContactList contacts-json))
 
+;; Contact list <-
 (def (load-contacts.db)
   (for/collect (contact (list-contacts.db))
     (force-object ; for immediate key registration
@@ -43,6 +44,7 @@
           (for/collect (identity (hash-ref contact 'identities []))
             (<-json Identity identity)))))))
 
+;; Contact list <- String?
 (def (load-contacts contacts-file)
   (match contacts-file
     ((? string?) (load-contacts.json contacts-file))
