@@ -16,6 +16,7 @@
   :vyzo/libp2p
   (only-in ../compiler/alpha-convert/env symbol-refer)
   ./program ./block-ctx ./consensus-code-generator ./terminal-codes
+  ./pb/private-key
   ../compiler/method-resolve/method-resolve
   ../compiler/project/runtime-2)
 
@@ -770,7 +771,7 @@
 ;; ---------------------------------------------------
 
 
-;; ------------------ Initializing channels
+;; ------------------ Channel types
 
 
 (define-type IoChannel
@@ -791,17 +792,11 @@
     ;; poll-buffer: [String]      ; [String] <- ;; TODO: find a way to declare function types
     ;; push-to-buffer: [String]   ; <- [String]
    { .make:
-     (lambda (host-address dest-address)
+     (lambda (my-nickname host-address dest-address)
        (let ()
-         ;; Ensure libp2p-daemon client is running
-         (def libp2p-client (open-libp2p-client host-addresses: host-address wait: 5))
 
-         ;; Get and Broadcast identity
-         (def self (libp2p-identify libp2p-client))
-         (for (p (peer-info->string* self))
-           (displayln "I am " p))
+         ;; ------------ Libp2p channel buffer setup
 
-         ;; Initialize buffer
          (def buffer (make-channel 10)) ;; TODO: Do we need a larger buffer?
 
          (def (poll-buffer (t 2)) ; poll every 2s by default
@@ -815,6 +810,23 @@
            (displayln "Received: " received-data)
            (channel-put buffer received-data) ; FIXME: Verify channel-put status - fail / error etc...
            (stream-close s))
+
+         ;; ------------ Libp2p listening thread setup
+
+         ;; Tempfile for seckey
+         ;; FIXME: Remove this once we are done with it.
+         (def seckey-tempfile-name (make-seckey-tempfile nickname: my-nickname))
+
+         ;; Ensure libp2p-daemon client is running
+         (displayln "Starting libp2p client")
+         (def libp2p-client (open-libp2p-client host-addresses: host-address
+                                                wait: 5
+                                                options: ["-id" seckey-tempfile-name]))
+
+         ;; Get and Broadcast identity
+         (def self (libp2p-identify libp2p-client))
+         (for (p (peer-info->string* self))
+           (displayln "I am " p))
 
          ;; Initialize listening thread
          ;; TODO: What is lifetime of this???
@@ -830,6 +842,49 @@
            poll-buffer
            push-to-buffer }))}))
 
+;; TODO Change this into with-seckey-tmpfile-of
+;; Which does cleanup after
+;; Returns filepath to seckey
+;; String <-
+;; FIXME: Create teardown function for removing seckey
+(def (make-seckey-tempfile nickname: nickname filename: (filename "/tmp/glow.tempkey")) ; TODO use random file
+  (displayln "Generating temporary keyfile")
+  (def seckey (get-my-seckey nickname: nickname))
+  (def seckey/bytes (export-secret-key/bytes seckey))
+  (def seckey/proto (make-seckey/proto seckey/bytes: seckey/bytes))
+  (write-seckey/proto filepath: filename seckey/proto: seckey/proto)
+  (displayln "Wrote key to file")
+  filename)
+
+(def (write-seckey/proto filepath: filepath seckey/proto: seckey/proto)
+  (displayln "Writing key to file")
+  (def buf (open-file-output-buffer filepath))
+  (bio-write-PrivateKey seckey/proto buf)
+  (displayln "Wrote key to buffer")
+  (call-with-input-file filepath
+    (lambda (port)
+      (def contents (read port))
+      (displayln "Contents: ")
+      (displayln contents)))
+  (bio-force-output buf)
+  (close-file-input-buffer buf)
+  (displayln "Closed file"))
+
+;; TODO: accept other types of secret keys
+;; FIXME: pb should be pulled in a dependency, so it remains in sync
+(def (make-seckey/proto seckey/bytes: seckey/bytes)
+  (make-PrivateKey Type: 'Secp256k1 Data: seckey/bytes))
+
+
+;; TODO: Upstream to gerbil-ethereum
+(def (get-my-seckey nickname: nickname)
+  (def my-address (address<-nickname nickname))
+  (def my-seckey (secret-key<-address my-address))
+  my-seckey)
+
+;; ------------------ Initialize Off-chain channels
+
+
 ;; FIXME: Use unwind / something else when program exits,
 ;; channel should be closed.
 (def (init-off-chain-channel options)
@@ -837,11 +892,20 @@
   (match off-chain-channel-selection
     ('stdio (.call IoChannel .make)) ; TODO: Initialize io:context object here
     ('libp2p (let ()
+     (def my-nickname (hash-get options 'my-nickname))
      (def host-address (hash-get options 'host-address))
      (def dest-address (hash-get options 'dest-address))
-     (.call Libp2pChannel .make host-address dest-address)))
+     (.call Libp2pChannel .make my-nickname host-address dest-address)))
     (else (error "Invalid off-chain channel selection"))))
 
+
+;; TODO: Eventually upstream changes to gerbil-libp2p to accept passing a seckey via an argument,
+;; instead of a file.
+
+
+(def (lookup-contact nickname: nickname contacts: contacts)
+  (for-each (lambda (contact) (displayln (.@ contact name))) contacts)
+  (find (lambda (contact) (equal? (.@ contact name) nickname)) contacts))
 
 ;; ------------------ Send Contract Agreement
 
