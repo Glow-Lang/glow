@@ -66,7 +66,7 @@
                    (else []))))
     ((publish! . _) (project-publish stx cpit this-p))
     ((deposit! . _) (project-deposit stx cpit this-p))
-    ((withdraw! p e) (project-withdraw stx cpit this-p))
+    ((withdraw! _ p e) (project-withdraw stx cpit this-p))
     ((require! v) (project-require stx cpit this-p))
     ((assert! v) (project-assert stx cpit this-p))
     ((switch c cases ...) (project-switch stx cpit this-p))
@@ -95,7 +95,7 @@
 ;; project-deposit : StmtStx CpiTable MPart -> [Listof StmtStx]
 (def (project-deposit stx cpit this-p)
   (syntax-case stx ()
-    ((_ p n)
+    ((_ _ p n)
      (append (project-set-participant #'p cpit this-p)
              (cond
                ((eq? (stx-e #'p) this-p) [#'(add-to-deposit n)])
@@ -104,7 +104,7 @@
 ;; project-withdraw : StmtStx CpiTable MPart -> [Listof StmtStx]
 (def (project-withdraw stx cpit this-p)
   (syntax-case stx ()
-    ((_ p n)
+    ((_ _ p n)
      (cond
        (this-p [#'(participant:withdraw p n)])
        (else [#'(consensus:withdraw p n)])))))

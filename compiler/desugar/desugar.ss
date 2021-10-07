@@ -186,8 +186,8 @@
     ((sign e) (desugar-keyword/sub-exprs stx))
     ((require! e) (desugar-keyword/sub-exprs stx))
     ((assert! e) (desugar-keyword/sub-exprs stx))
-    ((deposit! x e) (desugar-keyword/sub-exprs stx))
-    ((withdraw! x e) (desugar-keyword/sub-exprs stx))
+    ((deposit! _ x e) (desugar-keyword/sub-exprs stx))
+    ((withdraw! _ x e) (desugar-keyword/sub-exprs stx))
     ((verify! x ...) (desugar-verify #'(x ...)))
     ((@app a ...) (desugar-keyword/sub-exprs stx))))
 

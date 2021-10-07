@@ -217,9 +217,9 @@
 ;; mr-deposit-withdraw : ExprStx -> ExprStx
 (def (mr-deposit-withdraw stx)
   (syntax-case stx (@record)
-    ((_ p (@record (x e) ...))
+    ((_ lbl p (@record (x e) ...))
      (retail-stx stx
-       [(mr-expr #'p)
+       [#'lbl (mr-expr #'p)
         (cons '@record (stx-map list #'(x ...) (stx-map mr-expr #'(e ...))))]))))
 
 ;; mr-keyword/sub-exprs : ExprStx -> ExprStx

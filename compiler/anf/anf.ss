@@ -212,11 +212,11 @@
 
 (def (anf-k-deposit-withdraw k stx acc)
   (syntax-case stx (@record)
-    ((_ p (@record (x e) ...))
+    ((_ lbl p (@record (x e) ...))
      (let-values (((rs acc2) (anf-arg-exprs (syntax->list #'(e ...)) acc)))
        (anf-kontinue-stmt k
          (cons
-           (retail-stx stx [#'p (cons '@record (stx-map list #'(x ...) rs))])
+           (retail-stx stx [#'lbl #'p (cons '@record (stx-map list #'(x ...) rs))])
            acc2))))))
 
 ;; anf-body : KontStx StmtsStx [Listof StmtStx] -> [Listof StmtStx]

@@ -36,6 +36,12 @@
     ("&&" 'and)
     ("||" 'or)
     ("!" 'not)
+
+    ("OR" 'propOr)
+    ("AND" 'propAnd)
+    ("~>" 'propImpl)
+    ("NOT" 'propNot)
+    
     ("|||" 'bitwise-or)
     ("&&&" 'bitwise-and)
     ("^^^" 'bitwise-xor)
@@ -80,8 +86,8 @@
            `(@app ,f ,@(map expr->sexpr args)))))
     ((require-expression exp) `(require! ,(expr->sexpr exp)))
     ((assert-expression exp) `(assert! ,(expr->sexpr exp)))
-    ((deposit-expression id exp) `(deposit! ,(id->sexpr id) ,(expr->sexpr exp)))
-    ((withdraw-expression id exp) `(withdraw! ,(id->sexpr id) ,(expr->sexpr exp)))
+    ((deposit-expression id exp) `(deposit! #f ,(id->sexpr id) ,(expr->sexpr exp)))
+    ((withdraw-expression lbl id exp) `(withdraw! ,(and lbl (id->sexpr lbl)) ,(id->sexpr id) ,(expr->sexpr exp)))
     ((expression-with-attribute attr expr) `(@ ,(attr->sexpr attr) ,(expr->sexpr expr)))
     ((dot-expression expr id) `(@dot ,(expr->sexpr expr) ,(id->sexpr id)))
     ((type-annotation-expression expr typ) `(ann ,(expr->sexpr expr) ,(type->sexpr typ)))
