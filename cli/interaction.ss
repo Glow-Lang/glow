@@ -282,7 +282,14 @@
   ;; NOTE: This also populates the runtime nickname-address mapping table.
   (def contacts (load-contacts contacts-file))
   ;; TODO: Validate whether you possess the necessary keys to assume this identity.
-  (def my-nickname (or identity (prompt-identity)))
+  ;; TODO: Remove request for identity at stdio site.
+  ;; 1. Update integration tests to answer prompts earlier,
+  ;; 2. before agreements are generated / consumed (start-interaction/generate-agreement / start-interaction/with-agreement).
+  ;; Once 1, 2 are done, we can remove the conditional for this.
+  (def my-nickname
+    (match off-chain-channel-selection
+      ("libp2p" (or identity (prompt-identity)))
+      (else identity)))
 
   (def options
        (hash
