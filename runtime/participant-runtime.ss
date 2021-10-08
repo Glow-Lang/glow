@@ -813,15 +813,16 @@
 
          ;; ------------ Libp2p listening thread setup
 
-         ;; Tempfile for seckey
-         ;; FIXME: Remove this once we are done with it.
-         (def seckey-tempfile-name (make-seckey-tempfile nickname: my-nickname))
 
          ;; Ensure libp2p-daemon client is running
          (displayln "Starting libp2p client")
-         (def libp2p-client (open-libp2p-client host-addresses: host-address
-                                                wait: 5
-                                                options: ["-id" seckey-tempfile-name]))
+         (def libp2p-client
+           (with-seckey-tempfile nickname: my-nickname
+             (lambda (seckey-filename)
+               (open-libp2p-client
+                host-addresses: host-address
+                wait: 5
+                options: ["-id" seckey-filename]))))
 
          ;; Get and Broadcast identity
          (def self (libp2p-identify libp2p-client))
@@ -842,12 +843,14 @@
            poll-buffer
            push-to-buffer }))}))
 
-;; TODO Change this into with-seckey-tmpfile-of
-;; Which does cleanup after
-;; Returns filepath to seckey
-;; String <-
-;; FIXME: Create teardown function for removing seckey
-(def (make-seckey-tempfile nickname: nickname filename: (filename "/tmp/glow.tempkey")) ; TODO use random file
+;; TODO: Ensure file does not exist before creating it
+(def (with-seckey-tempfile nickname: nickname c)
+  (def file-name (make-seckey-tempfile nickname: nickname))
+  (with-unwind-protect (lambda () (c file-name))
+                       (lambda () (delete-file file-name))))
+
+(def (make-seckey-tempfile nickname: nickname filename: (filename "/tmp/glow.tempkey"))
+  (when (file-exists? filename) (delete-file filename))
   (displayln "Generating temporary keyfile")
   (def seckey (get-my-seckey nickname: nickname))
   (def seckey/bytes (export-secret-key/bytes seckey))
