@@ -30,7 +30,7 @@ they will need to supply both the digest and the fee,
 as indicated by the function signature.
 
 ```sh
-let payForSignature = (digest : Digest, price : Nat) => {
+let buySig = (digest : Digest, price : Nat) => {
 
 ```
 
