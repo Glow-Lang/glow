@@ -6,7 +6,7 @@
 //   sending the money to some multisig escrow contract for fall back arbitration.
 
 @interaction([Buyer, Seller])
-let payForSignature = (digest : Digest, price : Nat) => {
+let buySig = (digest : Digest, price : Nat) => {
   deposit! Buyer -> price;
 
   @publicly!(Seller) let signature = sign(digest);
