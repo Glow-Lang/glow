@@ -8,6 +8,14 @@
         :mukn/glow/compiler/syntax-context
         (for-template :mukn/glow/compiler/syntax-context))
 
+;; hash-kref : [Hashof K V] K [-> V] -> V
+;; I wish the normal `hash-ref` had better error messages
+(def (hash-kref h k
+       (d (cut error
+            (format "hash-kref Unbound key: ~r not found in ~r\n(hash-kref ~r ~r)\n" k (hash-keys h) h k)
+            h k)))
+  (hash-ref/default h k d))
+
 ;; transpose : [Listof [Listof A]] -> [Listof [Listof A]]
 ;; Like transposing a matrix, n-ary cartesian product, or n-ary zip,
 ;; ((a1 a2 a3) (b1 b2 b3)) <-> ((a1 b1) (a2 b2) (a3 b3))

@@ -6,6 +6,7 @@
   <expander-runtime>
   :mukn/ethereum/types
   :mukn/ethereum/ethereum
+  (only-in ../compiler/common hash-kref)
   (only-in ../compiler/alpha-convert/alpha-convert init-syms)
   ../compiler/typecheck/type
   ../compiler/checkpointify/checkpointify)
@@ -61,8 +62,8 @@
 ;; Interaction <- Program Symbol Symbol
 (def (get-interaction self name participant)
   (def specific-interactions
-        (.@ (hash-get (.@ self interactions) name) specific-interactions))
-  (hash-get specific-interactions participant))
+        (.@ (hash-kref (.@ self interactions) name) specific-interactions))
+  (hash-kref specific-interactions participant))
 
 ;; TODO: use typemethods table for custom data types
 ;; Runtime type descriptor from alpha-converted symbol
@@ -79,7 +80,7 @@
       ((type:name sym) (eval sym))
       ((type:name-subtype sym _) (eval sym))
       ((type:tuple ts) (apply Tuple (map type-methods ts)))))
-  (def t (hash-get type-table variable-name))
+  (def t (hash-kref type-table variable-name))
   (type-methods t))
 
 ;; : Symbol <- Program Symbol
@@ -91,12 +92,12 @@
 (def (lookup-live-variables self name code-block-label)
   (def live-variable-table (hash-ref (.@ self compiler-output) 'cpitable2.sexp))
   (def specific-interactions
-    (.@ (hash-get (.@ self interactions) name) specific-interactions))
+    (.@ (hash-kref (.@ self interactions) name) specific-interactions))
   ;; TODO: Store participants in fixed addresses.
   (def participants (filter (λ (x) x) (hash-keys specific-interactions)))
   (unique (append participants
     (filter (λ (x) (not (.call Program .definitely-constant? self x)))
-          (ci-variables-live (hash-get live-variable-table code-block-label))))))
+          (ci-variables-live (hash-kref live-variable-table code-block-label))))))
 
 (define-type ParseContext
   (.+
@@ -221,8 +222,8 @@
 
 (def (get-last-code-block-label self name)
   (def specific-interactions
-    (.@ (hash-get (.@ self interactions) name) specific-interactions))
-  (def consensus-interaction (hash-get specific-interactions #f))
+    (.@ (hash-kref (.@ self interactions) name) specific-interactions))
+  (def consensus-interaction (hash-kref specific-interactions #f))
   (let/cc return
     (for ((values label code-block) (in-hash consensus-interaction))
       (when (equal? (.@ code-block exit) #f)
