@@ -372,6 +372,7 @@
   (def sender-address (get-active-participant self))
   (def code-block (get-current-code-block self))
   (def next (.@ code-block exit))
+  (assert! (symbol? next))
   (def participant (.@ code-block participant))
   (def initial-state
     (create-frame-variables
@@ -436,6 +437,7 @@
 ;;
 ;; Write frame data to `out`, to be sent to the contract for restoration.
 (def (publish-frame-data self out)
+  (assert! (symbol? (.@ self current-code-block-label)))
   (def frame-variables
     (create-frame-variables
       self
@@ -722,8 +724,9 @@
                "check-consecutive-addresses: ending offset was incorrect; "
                "expected ~a but got ~a") end i))))
 
-;; : Frame <- Runtime Block (Table Offset <- Symbol) Symbol
+;; : Frame <- Runtime Block Symbol Symbol
 (def (create-frame-variables self timer-start code-block-label code-block-participant)
+  (assert! (symbol? code-block-label))
   (def consensus-code-generator (.@ self consensus-code-generator))
   (def checkpoint-location
     (hash-get (.@ consensus-code-generator labels) (make-checkpoint-label (.@ self name) code-block-label)))

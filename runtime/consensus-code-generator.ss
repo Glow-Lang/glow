@@ -1,7 +1,7 @@
 (export #t)
 
 (import
-  :std/iter :std/sort :std/srfi/1 :std/misc/hash :std/misc/list :std/misc/number
+  :std/iter :std/sort :std/sugar :std/srfi/1 :std/misc/hash :std/misc/list :std/misc/number
   :clan/base :clan/number :clan/syntax
   :clan/poo/io :clan/poo/object :clan/poo/brace :clan/poo/debug
   :mukn/ethereum/ethereum :mukn/ethereum/assembly :mukn/ethereum/evm-runtime
@@ -438,6 +438,7 @@
 ;; Directive <- ConsensusCodeGenerator Symbol CodeBlock
 (def (setup-tail-call self code-block-label code-block)
   (let* ((next-code-block-label (.@ code-block exit))
+         (_ (assert! (symbol? next-code-block-label)))
          (next-code-block-live-variables (sort (lookup-live-variables (.@ self program) (.@ self name) next-code-block-label) symbol<?))
          (next-code-block-frame-size (- params-start@ frame@)))
     (&begin
@@ -471,6 +472,7 @@
 
 ;; Offset <- ConsensusCodeGenerator Symbol
 (def (compute-variable-offsets self code-block-label)
+  (assert! (symbol? code-block-label))
   (def frame-variables (make-hash-table))
   ;; Initial offset computed by global registers, see :mukn/ethereum/evm-runtime
   (def frame-size params-start@)
