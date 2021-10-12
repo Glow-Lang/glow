@@ -1,0 +1,8 @@
+#lang glow
+
+@interaction([From, To])
+let transfer = (amount: Nat) => {
+    deposit! From -> amount;
+    withdraw! To <- amount;
+    amount
+};
