@@ -2,7 +2,7 @@
 
 (import
   :gerbil/gambit/bits :gerbil/gambit/bytes :gerbil/gambit/threads :gerbil/gambit/ports :std/net/bio
-  :std/pregexp :std/srfi/13
+  :std/pregexp :std/srfi/13 :std/misc/uuid
   :std/format :std/iter :std/misc/hash :std/sugar :std/misc/number :std/misc/list :std/sort :std/srfi/1 :std/text/json
   (for-syntax :std/stxutil)
   :clan/base :clan/exception :clan/io :clan/json :clan/number :clan/pure/dict/assq
@@ -849,7 +849,9 @@
   (with-unwind-protect (lambda () (c file-name))
                        (lambda () (delete-file file-name))))
 
-(def (make-seckey-tempfile nickname: nickname filename: (filename "/tmp/glow.tempkey"))
+(def (make-seckey-tempfile nickname: nickname
+                           filename: (filename (string-append "/tmp/glow-seckey-"
+                                                              (uuid->string (random-uuid)))))
   (when (file-exists? filename) (delete-file filename))
   (displayln "Generating temporary keyfile")
   (def seckey (get-my-seckey nickname: nickname))
@@ -933,6 +935,7 @@
   (displayln full-cmd-string)
   (force-output))
 
+;; TODO: Refactor this to be more general, handshake uses this as well.
 (def (send-contract-agreement/libp2p agreement libp2p-client dest-address)
   (displayln MAGENTA "Sending agreement to multiaddr..." END)
   (def agreement-string (string<-json (json<- InteractionAgreement agreement)))
