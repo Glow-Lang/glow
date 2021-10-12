@@ -5,6 +5,7 @@
   :std/pregexp :std/srfi/13 :std/misc/uuid
   :std/format :std/iter :std/misc/hash :std/sugar :std/misc/number :std/misc/list :std/sort :std/srfi/1 :std/text/json
   (for-syntax :std/stxutil)
+  :gerbil/gambit/exceptions
   :clan/base :clan/exception :clan/io :clan/json :clan/number :clan/pure/dict/assq
   :clan/path :clan/path-config :clan/ports :clan/syntax :clan/timestamp
   :clan/poo/object :clan/poo/brace :clan/poo/io :clan/poo/debug :clan/debug :clan/crypto/random
@@ -1075,9 +1076,22 @@
     (for (p (peer-info->string* self))
       (displayln "I am " p))
     (displayln "Connecting to " dest-address-str)
-    (libp2p-connect libp2p-client peer-multiaddr)
+    (libp2p-connect/poll libp2p-client peer-multiaddr timeout: 60)
     (let (s (libp2p-stream libp2p-client peer-multiaddr [chat-proto]))
       (chat-writer s contents))))
+
+;; polls every 1s if other party is offline / unreachable, until timeout
+(def (libp2p-connect/poll libp2p-client peer-multiaddr timeout: (timeout #f))
+  (try (libp2p-connect libp2p-client peer-multiaddr)
+    (catch (e)
+      ;; (display-exception e)
+      (displayln "Unable to connect to client...")
+      (if (and timeout (> timeout 0))
+          (let ()
+            (displayln "Polling again in 1s...")
+            (thread-sleep! 1)
+            (libp2p-connect/poll libp2p-client peer-multiaddr timeout: (- timeout 1)))
+          (displayln "Timeout while trying to connect to client.")))))
 
 (def chat-proto "/chat/1.0.0")
 
