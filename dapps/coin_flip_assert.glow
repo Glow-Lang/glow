@@ -4,7 +4,7 @@
 let coinFlip = (wagerAmount, escrowAmount) => {
     let valTrue = true;
     
-    assert! (canReach(A_wins) AND ((NOT isTrue(valTrue)) ~> canReach(B_wins)) );
+    @A assert! (canReach(A_wins) AND ((NOT isTrue(valTrue)) ~> canReach(B_wins)) );
     @A let randA = randomUInt256();
     @verifiably!(A) let commitment = digest(randA);
     publish! A -> commitment; deposit! A -> wagerAmount + escrowAmount;

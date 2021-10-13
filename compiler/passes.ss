@@ -154,7 +154,7 @@
 ;; *Projection*: contract and participants in a single file
 (define-pass project (checkpointify.sexp Unused cpitable2.sexp) (project.sexp))
 
-(define-pass verification (project.sexp stmnts-labels) ())
+(define-pass verification (project.sexp stmnts-labels typetable.sexp) ())
 
 ;; *Contract Projection*: extract a contract for every interaction
 ;;(define-pass contract-projection ".message.sexp" ".contract.sexp")
