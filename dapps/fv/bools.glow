@@ -3,23 +3,26 @@
 @interaction([A, B])
 let coinFlip = (x : Nat, flag : Bool) => {
 
-   assert! (canReach(branch1) OR canReach(branch2));
-   @A assert! canReach(branch1);
-   @A assert! canReach(branch2);
+   @A assert! (canReach(branch1) OR canReach(branch2));
+   // @A assert! canReach(branch1);
+   @B assert! canReach(branch1);
+   // @A assert! canReach(branch2);
    @B assert! canReach(branch2);
    
    @A let bA = input(Bool, "Enter A's parameter:");
    @B let bB = input(Bool, "Enter B's parameter:");
+   @B let bBB = input(Bool, "Enter B's second parameter:");
 
    let someBoolVal = false;
 
    publish! A -> bA;
    publish! B -> bB;
+   publish! B -> bBB;
 
    deposit! A -> x;
    deposit! B -> x;
 
-    if ((bA && bB) && flag) {
+    if (((bA && bB) && flag) || bBB) {
         branch1 : withdraw! A <- 2*x;
     } else {
         branch2 : withdraw! B <- 2*x;

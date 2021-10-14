@@ -79,7 +79,7 @@
 
 (def (verify-assertion typetable.sexp labels i-name i-parameters stmnts participant hypotesis-formula)
      ;; (pretty-print hypotesis-formula)
-     (pretty-print [i-name i-parameters (length stmnts) participant hypotesis-formula])
+     ;; (pretty-print [i-name i-parameters (length stmnts) participant hypotesis-formula])
      (letrec
          ((wrap-into-parameters-quantifiers
           (λ (params e)
@@ -215,14 +215,24 @@
                 ])
              (z3-result (run-z3 formula-for-z3)) 
              )
-         (pretty-print hypotesis-formula)
-         (pretty-print hypotesis-formula-z3)
+         ;; (pretty-print hypotesis-formula)
+         ;; (pretty-print hypotesis-formula-z3)
            ;; (pretty-print (wrap-into-quantifiers stmnts ()))
            ;; (pretty-print formula-for-z3)
-           (pretty-print z3-result)
+         ;; (pretty-print z3-result)
+         (match (syntax->list z3-result)
+                ((cons* 'sat _) ())
+                ((cons* 'unsat _)
+                 (begin
+                   (display "\n--- disproven assumption! ----------\n")
+                   (pretty-print hypotesis-formula)
+                   (pretty-print hypotesis-formula-z3)
+                   (display "\n------------------------------------\n")
+                 )
+                )
          )
 
-       )
+       ))
      
   ;; ()
 )
