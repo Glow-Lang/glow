@@ -77,9 +77,9 @@
      )
 
 
-(def (verify-assertion typetable.sexp labels i-name i-parameters stmnts participant assertion-formula)
-     ;; (pretty-print assertion-formula)
-     (pretty-print [i-name i-parameters (length stmnts) participant assertion-formula])
+(def (verify-assertion typetable.sexp labels i-name i-parameters stmnts participant hypotesis-formula)
+     ;; (pretty-print hypotesis-formula)
+     (pretty-print [i-name i-parameters (length stmnts) participant hypotesis-formula])
      (letrec
          ((wrap-into-parameters-quantifiers
           (λ (params e)
@@ -190,7 +190,17 @@
              (cons 'and acc)
              )
            )
-           (hypotesis-formula 'true)
+          (hy-fo-ev
+           (λ (e)
+             (match (syntax->list e)
+                    (['@app 'canReach l] l)
+                    (['@app 'propOr x y] ['or (hy-fo-ev x) (hy-fo-ev y) ])
+                    (['@app 'propAnd x y] ['and (hy-fo-ev x) (hy-fo-ev y) ])
+                    (['@app 'propImpl x y] ['=> (hy-fo-ev x) (hy-fo-ev y) ])
+                    (['@app 'propNot x] ['not (hy-fo-ev x)])
+                    ))
+           )
+           (hypotesis-formula-z3 (hy-fo-ev hypotesis-formula))
           )
        (letrec
            ((formula-for-z3
@@ -198,15 +208,15 @@
                  (wrap-into-labels-quantifiers labels
                    (wrap-into-parameters-quantifiers i-parameters
                           (wrap-into-quantifiers stmnts
-                              ['=> ['and exec-flow-formula-full
-                                                            label-reach-formulas]
-                               hypotesis-formula ])))]
+                              ['=> ['and exec-flow-formula-full label-reach-formulas]
+                               hypotesis-formula-z3 ])))]
                 ['check-sat-using ['then 'qe 'smt]]
                 ['get-model]
                 ])
              (z3-result (run-z3 formula-for-z3)) 
              )
-           (pretty-print label-reach-formulas)
+         (pretty-print hypotesis-formula)
+         (pretty-print hypotesis-formula-z3)
            ;; (pretty-print (wrap-into-quantifiers stmnts ()))
            ;; (pretty-print formula-for-z3)
            (pretty-print z3-result)
@@ -239,7 +249,7 @@
 
 ;; TODO : fix it! it sohuld work also with assertions outside the root branch of interaction!!
 (def (extract-assertions-from-stmnts stmnts) 
-     (map cdr (filter (lambda (x) (eq? (car x) 'assert!))  (syntax->list stmnts))))
+     (map (lambda (x) (car (cdr x))) (filter (lambda (x) (eq? (car x) 'assert!))  (syntax->list stmnts))))
 
 (def (extract-imputs-from-stmnts stmnts) 
      (map cdr (filter (lambda (x) (eq? (car x) 'assert!))  (syntax->list stmnts))))

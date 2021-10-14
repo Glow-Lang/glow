@@ -3,7 +3,7 @@
 @interaction([A, B])
 let coinFlip = (x : Nat, flag : Bool) => {
 
-   assert! (canReach(branch1) OR canReach(branch1));
+   assert! (canReach(branch1) OR canReach(branch2));
    @A assert! canReach(branch1);
    @A assert! canReach(branch2);
    @B assert! canReach(branch2);
