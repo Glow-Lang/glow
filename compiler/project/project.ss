@@ -104,10 +104,10 @@
 ;; project-withdraw : StmtStx CpiTable MPart -> [Listof StmtStx]
 (def (project-withdraw stx cpit this-p)
   (syntax-case stx ()
-    ((_ _ p n)
+    ((_ l p n)
      (cond
-       (this-p [#'(participant:withdraw p n)])
-       (else [#'(consensus:withdraw p n)])))))
+       (this-p [#'(participant:withdraw l p n)])
+       (else [#'(consensus:withdraw l p n)])))))
 
 ;; project-require : StmtStx CpiTable MPart -> [Listof StmtStx]
 (def (project-require stx cpit this-p)

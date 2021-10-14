@@ -77,7 +77,7 @@
      )
 
 
-(def (verify-assertion typetable.sexp i-name i-parameters stmnts participant assertion-formula)
+(def (verify-assertion typetable.sexp labels i-name i-parameters stmnts participant assertion-formula)
      ;; (pretty-print assertion-formula)
      (pretty-print [i-name i-parameters (length stmnts) participant assertion-formula])
      (letrec
@@ -88,6 +88,12 @@
                                  (let (ty (to-z3-type  (hash-get typetable.sexp param-sym)))
                                       (cond (ty ['forall (list [param-sym ty]) (wrap-into-parameters-quantifiers ss e)] )
                                             (else (wrap-into-parameters-quantifiers ss e) )))
+                    )
+                   (else e))))
+          (wrap-into-labels-quantifiers
+          (λ (labels e)
+            (match labels
+                   ((cons label-sym ss) ['forall (list [label-sym 'Bool]) (wrap-into-labels-quantifiers ss e)]
                     )
                    (else e))))
           (wrap-into-quantifiers
@@ -120,12 +126,12 @@
                     (['@debug-label _] #f)
                     (['participant:set-participant _] #f)
                     (['consensus:set-participant _] #f)
-                    (['consensus:withdraw _ _] #f)
+                    (['consensus:withdraw _ _ _] #f)
                     (['expect-deposited _] #f)
                     (['add-to-publish _ _] #f)
                     (['add-to-deposit _] #f)
                     (['assert! _] #f)
-                    (['participant:withdraw _ _] #f)
+                    (['participant:withdraw _ _ _] #f)
                     (['return _] #f)
                     
                     (['def _ ['input ty _]] #f)
@@ -151,17 +157,56 @@
            (λ (stmnts) (cons 'and (filter identity (map gen-exec-flow-formula-stmnt stmnts ))  ))
            )
           (exec-flow-formula-full (gen-exec-flow-formula-stmnts stmnts) )
+          (label-reach-formulas
+           (letrec ((acc ['true])
+                    (add-label-formula
+                     (λ (label-symbol assumptions)
+                       (set! acc (cons ['= label-symbol (cons 'and assumptions)] acc) )
+                       ))
+                    (step
+                     (λ (stmnts assumptions)
+                       (match stmnts
+                              ((cons stmnt ss)
+                               (begin
+                                 (match (syntax->list stmnt)
+                                        (['consensus:withdraw l _ _]
+                                          (add-label-formula l assumptions))
+                                        (['participant:withdraw l _ _]
+                                         (add-label-formula l assumptions))
+                                        
+                                        ((or ['switch sym (cons #t branchT)  (cons #f branchF)]
+                                             ['switch sym (cons #f branchF)  (cons #t branchT)])
+                                         (begin
+                                           (step branchT (cons sym assumptions))
+                                           (step branchF (cons ['not sym] assumptions)))
+                                         )
+                                        (else ())
+                                        )
+                                 (step ss assumptions)))
+                              (else ()) ))))
+
+                     
+             (step stmnts [])
+             (cons 'and acc)
+             )
+           )
+           (hypotesis-formula 'true)
           )
        (letrec
            ((formula-for-z3
-             [ ['assert (wrap-into-parameters-quantifiers i-parameters
+             [ ['assert
+                 (wrap-into-labels-quantifiers labels
+                   (wrap-into-parameters-quantifiers i-parameters
                           (wrap-into-quantifiers stmnts
-                          ['=> exec-flow-formula-full 'true ]))]
+                              ['=> ['and exec-flow-formula-full
+                                                            label-reach-formulas]
+                               hypotesis-formula ])))]
                 ['check-sat-using ['then 'qe 'smt]]
                 ['get-model]
                 ])
              (z3-result (run-z3 formula-for-z3)) 
              )
+           (pretty-print label-reach-formulas)
            ;; (pretty-print (wrap-into-quantifiers stmnts ()))
            ;; (pretty-print formula-for-z3)
            (pretty-print z3-result)
@@ -172,7 +217,7 @@
   ;; ()
 )
 
-(def (verify-interaction typetable.sexp i-name i-body)
+(def (verify-interaction typetable.sexp labels i-name i-body)
      (let ((i-parameters (car (cdr i-body)))
            (proj-stmnts (list->hash-table (cdr (cdr (cdr i-body)))))
            )
@@ -180,7 +225,7 @@
         (λ (participant stmnts)
           (map (λ (assertion-formula)
                  ;; (pretty-print stmnts)
-                 (verify-assertion typetable.sexp i-name i-parameters stmnts participant assertion-formula))
+                 (verify-assertion typetable.sexp labels i-name i-parameters stmnts participant assertion-formula))
                (extract-assertions-from-stmnts stmnts)))
         proj-stmnts)
        )
@@ -203,7 +248,7 @@
      ;; (pretty-print (to-z3-type  (hash-get typetable.sexp 'x)))
      ;; (pretty-print (hash-get typetable.sexp 'flag))
      (let ((intrctns (module-interactions proj)))
-         (hash-map (lambda (k x) (verify-interaction typetable.sexp k x)) intrctns))
+         (hash-map (lambda (k x) (verify-interaction typetable.sexp labels k x)) intrctns))
      
      ;; (pretty-print (run-z3 example-z3-input))
 
@@ -212,3 +257,5 @@
 
 ;;TODO : ask someone aobut:
 ;;                          (eq? (car '(a b)) 'a)
+
+;;TODO : check lexical scope of labels!!! 
