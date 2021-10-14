@@ -71,7 +71,7 @@
 (def (to-z3-type ty)
      (cond
       ((equal? ty type:Int) 'Int)
-      ((equal? ty type:Nat) 'Int)
+      ((equal? ty type:Nat) 'Int) ;;TODO handle this in some sane way!!
       ((equal? ty type:Bool) 'Bool)
       (else #f))
      )
