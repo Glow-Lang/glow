@@ -62,44 +62,101 @@
        (write-file-string "/tmp/z3.glow.tmp" z3-formula)
        ;; (pretty-print z3-input)
        (let ((z3-output (run-process ["z3" "/tmp/z3.glow.tmp"]  check-status: #f)))
-         ;; (pretty-print z3-output)
+         (write z3-output)
          (string->expr (string-join ["(" z3-output ")"] #\newline))
          )
        ))
 
 
-(def example-z3-input
-     ;; activate model generation
-  '(
-     (set-option :produce-models true)
+(def (to-z3-type ty)
+     (cond
+      ((equal? ty type:Int) 'Int)
+      ((equal? ty type:Nat) 'Int)
+      ((equal? ty type:Bool) 'Bool)
+      (else #f))
+     )
 
-     (declare-fun x () Int)
-     (declare-fun y1 () Int)
-     (declare-fun y2 () Int)
-     (declare-fun z () Int)
 
-     (assert (= x y1))
-     (assert (not (= y1 z)))
-     (assert (= x y2))
-     (assert (and (< y2 0) (< 2 1)))
+(def (verify-assertion typetable.sexp i-name i-parameters stmnts participant assertion-formula)
+     ;; (pretty-print assertion-formula)
+     (pretty-print [i-name i-parameters (length stmnts) participant assertion-formula])
+     (letrec
+         (wrap-into-quantifiers
+          (λ (stmnts e)
+            (match stmnts
+                   ((cons s ss)
+                    (match (syntax->list s)
+                           (['def sym v]
+                            (match (syntax->list v)
+                                   (['input ty _] ['exists (list [sym ty]) (wrap-into-quantifiers ss e)])
+                                   (else
+                                    (let (ty (to-z3-type  (hash-get typetable.sexp sym)))
+                                      (cond (ty ['forall (list [sym ty]) (wrap-into-quantifiers ss e)] )
+                                            (else (wrap-into-quantifiers ss e) ))) ;; TODO : hande this somehow!!!
+                                   )
+                            
+                            ))
+                           (else (wrap-into-quantifiers ss e))
+                           ))
+                   (else e)
+                   )
 
-     (check-sat)
+             )
+          )
+       (letrec
+           ((formula-for-z3
+              [ ['assert (wrap-into-quantifiers stmnts ['true])]
+                ['check-sat-using ['then 'qe 'smt]]
+                ['get-model]
+                ])
+             (z3-result (run-z3 formula-for-z3)) 
+            )
+           (pretty-print z3-result)
+         )
 
-     ;; ask for the model value of some of the constants
-     (get-value (x z y1 y2))
-
-     (exit)
-  )
+       )
+     
+  ;; ()
 )
 
-(def (verification proj labels typetable.sexp)
-     ;; (pretty-print (hash-get typetable.sexp 'x))
+(def (verify-interaction typetable.sexp i-name i-body)
+     (let ((i-parameters (car (cdr i-body)))
+           (proj-stmnts (list->hash-table (cdr (cdr (cdr i-body)))))
+           )
+       (hash-map
+        (λ (participant stmnts)
+          (map (λ (assertion-formula)
+                 ;; (pretty-print stmnts)
+                 (verify-assertion typetable.sexp i-name i-parameters stmnts participant assertion-formula))
+               (extract-assertions-from-stmnts stmnts)))
+        proj-stmnts)
+       )
+     )
 
-     ;; (pretty-print (hash->list (module-interactions proj)))
-     (pretty-print (run-z3 example-z3-input))
+
+;; generatl strucutre of model of z3 for particular assertion:
+;; quantifiers ( assertions infered from program flow  /\ assertion generated from formula ) 
+
+
+
+;; TODO : fix it! it sohuld work also with assertions outside the root branch of interaction!!
+(def (extract-assertions-from-stmnts stmnts) 
+     (map cdr (filter (lambda (x) (eq? (car x) 'assert!))  (syntax->list stmnts))))
+
+(def (extract-imputs-from-stmnts stmnts) 
+     (map cdr (filter (lambda (x) (eq? (car x) 'assert!))  (syntax->list stmnts))))
+
+(def (verification proj labels typetable.sexp)
+     ;; (pretty-print (to-z3-type  (hash-get typetable.sexp 'x)))
+     ;; (pretty-print (hash-get typetable.sexp 'flag))
+     (let ((intrctns (module-interactions proj)))
+         (hash-map (lambda (k x) (verify-interaction typetable.sexp k x)) intrctns))
+     
+     ;; (pretty-print (run-z3 example-z3-input))
 
      
   (values))
 
-
+;;TODO : ask someone aobut:
+;;                          (eq? (car '(a b)) 'a)
 

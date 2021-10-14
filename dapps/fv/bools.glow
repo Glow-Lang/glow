@@ -1,10 +1,17 @@
 #lang glow
 // TODO: insert escrow in a compiler pass
 @interaction([A, B])
-let coinFlip = (x) => {
+let coinFlip = (x : Nat, flag : Bool) => {
+
+   assert! (canReach(branch1) OR canReach(branch1));
    @A assert! canReach(branch1);
+   @A assert! canReach(branch2);
+   @B assert! canReach(branch2);
+   
    @A let bA = input(Bool, "Enter A's parameter:");
    @B let bB = input(Bool, "Enter B's parameter:");
+
+   let someBoolVal = false;
 
    publish! A -> bA;
    publish! B -> bB;
@@ -12,7 +19,7 @@ let coinFlip = (x) => {
    deposit! A -> x;
    deposit! B -> x;
 
-    if (bA && bB) {
+    if ((bA && bB) && flag) {
         branch1 : withdraw! A <- 2*x;
     } else {
         branch2 : withdraw! B <- 2*x;

@@ -145,7 +145,8 @@
 ;; Simplify an expression with a known head constructor
 ;; anf-multiarg-expr : ExprStx [Listof StmtStx] -> (values ExprStx [Listof StmtStx])
 (def (anf-multiarg-expr stx acc)
-  (syntax-case stx ()
+     (syntax-case stx ()
+       ((assert! . _) (values stx acc)) ;; TODO : make sure that this is good idea!!
     ((hd args ...)
      (let-values (((xs acc2) (anf-arg-exprs (syntax->list #'(args ...)) acc)))
        (values (restx stx [#'hd . xs]) acc2)))))
