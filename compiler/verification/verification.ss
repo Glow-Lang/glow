@@ -62,7 +62,7 @@
        (write-file-string "/tmp/z3.glow.tmp" z3-formula)
        ;; (pretty-print z3-input)
        (let ((z3-output (run-process ["z3" "/tmp/z3.glow.tmp"]  check-status: #f)))
-         (write z3-output)
+         ;; (write z3-output)
          (string->expr (string-join ["(" z3-output ")"] #\newline))
          )
        ))
@@ -81,7 +81,16 @@
      ;; (pretty-print assertion-formula)
      (pretty-print [i-name i-parameters (length stmnts) participant assertion-formula])
      (letrec
-         (wrap-into-quantifiers
+         ((wrap-into-parameters-quantifiers
+          (λ (params e)
+            (match params
+                   ((cons param-sym ss)
+                                 (let (ty (to-z3-type  (hash-get typetable.sexp param-sym)))
+                                      (cond (ty ['forall (list [param-sym ty]) (wrap-into-parameters-quantifiers ss e)] )
+                                            (else (wrap-into-parameters-quantifiers ss e) )))
+                    )
+                   (else e))))
+          (wrap-into-quantifiers
           (λ (stmnts e)
             (match stmnts
                    ((cons s ss)
@@ -92,25 +101,69 @@
                                    (else
                                     (let (ty (to-z3-type  (hash-get typetable.sexp sym)))
                                       (cond (ty ['forall (list [sym ty]) (wrap-into-quantifiers ss e)] )
-                                            (else (wrap-into-quantifiers ss e) ))) ;; TODO : hande this somehow!!!
-                                   )
+                                            (else (wrap-into-quantifiers ss e) ))))  ;; TODO : hande this somehow!!!
                             
-                            ))
+                                   ))
+                           ((or ['switch sym (cons #t branchT)  (cons #f branchF)]
+                                        ['switch sym (cons #f branchF)  (cons #t branchT)])
+                                    (wrap-into-quantifiers
+                                     (append (syntax->list branchT) (syntax->list branchF) (syntax->list ss))
+                                     e)
+                                    )
                            (else (wrap-into-quantifiers ss e))
                            ))
-                   (else e)
-                   )
-
-             )
+                   (else e))))
+          (gen-exec-flow-formula-stmnt
+           (λ (stmnt)
+             (match (syntax->list stmnt)
+                    (['@label _] #f)
+                    (['@debug-label _] #f)
+                    (['participant:set-participant _] #f)
+                    (['consensus:set-participant _] #f)
+                    (['consensus:withdraw _ _] #f)
+                    (['expect-deposited _] #f)
+                    (['add-to-publish _ _] #f)
+                    (['add-to-deposit _] #f)
+                    (['assert! _] #f)
+                    (['participant:withdraw _ _] #f)
+                    (['return _] #f)
+                    
+                    (['def _ ['input ty _]] #f)
+                    (['def _ ['expect-published _]] #f)
+                    (['def sy #f] ['= sy 'false])
+                    (['def sy #t] ['= sy 'true])
+                    (['def sy (cons '@app (cons f args))] ['= sy (cons f args)])
+                    (['def sy v] ['= sy v]) ;; TODO : check if v is symbol or atom
+                    
+                    ((or ['switch sym (cons #t branchT)  (cons #f branchF)]
+                         ['switch sym (cons #f branchF)  (cons #t branchT)])
+                     ['and
+                       ['=> sym (gen-exec-flow-formula-stmnts branchT)]
+                       ['=> ['not sym] (gen-exec-flow-formula-stmnts branchF)]
+                      ])
+                    
+                    (else (begin (pretty-print stmnt) (error "not implemented!!!")))
+                    )
+             
+              )
+           )
+          (gen-exec-flow-formula-stmnts
+           (λ (stmnts) (cons 'and (filter identity (map gen-exec-flow-formula-stmnt stmnts ))  ))
+           )
+          (exec-flow-formula-full (gen-exec-flow-formula-stmnts stmnts) )
           )
        (letrec
            ((formula-for-z3
-              [ ['assert (wrap-into-quantifiers stmnts ['true])]
+             [ ['assert (wrap-into-parameters-quantifiers i-parameters
+                          (wrap-into-quantifiers stmnts
+                          ['=> exec-flow-formula-full 'true ]))]
                 ['check-sat-using ['then 'qe 'smt]]
                 ['get-model]
                 ])
              (z3-result (run-z3 formula-for-z3)) 
-            )
+             )
+           ;; (pretty-print (wrap-into-quantifiers stmnts ()))
+           ;; (pretty-print formula-for-z3)
            (pretty-print z3-result)
          )
 
@@ -135,7 +188,7 @@
 
 
 ;; generatl strucutre of model of z3 for particular assertion:
-;; quantifiers ( assertions infered from program flow  /\ assertion generated from formula ) 
+;; quantifiers ( assertions infered from program flow  => assertion generated from formula ) 
 
 
 
@@ -159,4 +212,3 @@
 
 ;;TODO : ask someone aobut:
 ;;                          (eq? (car '(a b)) 'a)
-
