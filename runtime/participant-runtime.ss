@@ -13,6 +13,7 @@
   :mukn/ethereum/transaction :mukn/ethereum/tx-tracker :mukn/ethereum/watch :mukn/ethereum/assets
   :mukn/ethereum/evm-runtime :mukn/ethereum/contract-config :mukn/ethereum/assembly :mukn/ethereum/types
   :mukn/ethereum/nonce-tracker
+  (only-in :mukn/glow/compiler/common hash-kref)
   (only-in ../compiler/alpha-convert/env symbol-refer)
   ./program ./block-ctx ./consensus-code-generator ./terminal-codes
   ../compiler/method-resolve/method-resolve
@@ -729,9 +730,10 @@
   (assert! (symbol? code-block-label))
   (def consensus-code-generator (.@ self consensus-code-generator))
   (def checkpoint-location
-    (hash-get (.@ consensus-code-generator labels) (make-checkpoint-label (.@ self name) code-block-label)))
-  (def active-participant-offset
-    (lookup-variable-offset consensus-code-generator code-block-label code-block-participant))
+    (hash-kref (.@ consensus-code-generator labels) (make-checkpoint-label (.@ self name) code-block-label)))
+  ;TODO: delete if not used anywhere?
+  ;(def active-participant-offset
+  ;  (lookup-variable-offset consensus-code-generator code-block-label code-block-participant))
   (def balances (vector->list (.@ self contract-balances)))
   (def live-variables (lookup-live-variables (.@ self program) (.@ self name) code-block-label))
   ;; TODO: ensure keys are sorted in both hash-values
