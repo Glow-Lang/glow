@@ -2,7 +2,7 @@
 
 (import
   :std/iter :std/sort :std/sugar :std/srfi/1 :std/misc/hash :std/misc/list :std/misc/number
-  :clan/base :clan/number :clan/syntax
+  :clan/base :clan/number :clan/syntax :clan/debug
   :clan/poo/io :clan/poo/object :clan/poo/brace :clan/poo/debug
   :mukn/ethereum/ethereum :mukn/ethereum/assembly :mukn/ethereum/evm-runtime
   :mukn/ethereum/assets :mukn/ethereum/types
@@ -228,17 +228,20 @@
       (append-map (λ (statement) (compile-consensus-statement self code-block-label statement))
                 checkpoint-statements)...])
   (register-frame-size frame-size)
+  (DBG ccg231: code-block-label (get-last-code-block-label (.@ self program) (.@ self name)))
   (def end-code-block-directive
     (if (equal? code-block-label (get-last-code-block-label (.@ self program) (.@ self name)))
       &end-contract!
       (setup-tail-call self code-block-label code-block)))
   (snoc end-code-block-directive code-block-directives))
 
-;; : Symbol <- Symbol Symbol
+;; : Symbol <- Symbol (OrFalse Symbol)
+;; Given a project-label, return the assembly-label it corresponds to.
 (def (make-checkpoint-label name checkpoint)
   (unless (symbol? name)
     (error 'make-checkpoint-label "expected a symbol, given" name))
-  (symbolify name "--" checkpoint))
+  (cond ((symbol? checkpoint) (symbolify name "--" checkpoint))
+        (else                 'end-contract)))
 
 ;; (List Directive) <- ConsensusCodeGenerator Symbol Sexp
 (def (compile-consensus-statement self function-name statement)

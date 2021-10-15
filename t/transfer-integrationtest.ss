@@ -58,7 +58,7 @@
            (lambda ()
              (answer-questions
               [["Choose application:"
-                "transfer"]
+                "transfer_2tx"]
                ["Choose your identity:"
                 (lambda (id) (string-prefix? "t/alice " id))]
                ["Choose your role:"
@@ -97,6 +97,10 @@
        (def a-environment
          (with-io-port proc-a read-environment))
        (assert-equal! a-environment b-environment)
+
+       ;(printf "sleeping for 30 seconds...\n")
+       ;(thread-sleep! 30)
+       ;(printf "done sleeping.\n")
 
        (def a-pet-after (eth_getBalance a-address 'latest))
        (def b-pet-after (eth_getBalance b-address 'latest))

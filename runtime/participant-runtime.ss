@@ -161,6 +161,8 @@
     (def ccbl (.@ self current-code-block-label))
     (match (execute-1 self)
       (#f
+        ;TODO: delete if we aren't changing the CodeBlock data type to include #t
+        ;(set! (.@ self current-code-block-label) #t)
         (displayln)) ; contract finished
       (exit
         (set! (.@ self current-code-block-label) exit)
@@ -372,15 +374,17 @@
 (def (prepare-create-contract-transaction self)
   (def sender-address (get-active-participant self))
   (def code-block (get-current-code-block self))
-  (def next (.@ code-block exit))
-  (assert! (symbol? next))
+  (def next (.@ code-block exit)) ; why next instead of current label?
+  (assert! (or (symbol? next) (eq? next #f)))
   (def participant (.@ code-block participant))
   (def initial-state
     (create-frame-variables
       self
       (.@ self agreement options maxInitialBlock)
-      next
+      next ; why next instead of current label?
+      ;(.@ self current-code-block-label) ; TODO: does this ruin everything???
       participant))
+  (DBG pr385: initial-state)
   (def initial-state-digest
     (digest-product-f initial-state))
   (def contract-bytes
@@ -725,9 +729,9 @@
                "check-consecutive-addresses: ending offset was incorrect; "
                "expected ~a but got ~a") end i))))
 
-;; : Frame <- Runtime Block Symbol Symbol
+;; : Frame <- Runtime Block (OrFalse Symbol) Symbol
 (def (create-frame-variables self timer-start code-block-label code-block-participant)
-  (assert! (symbol? code-block-label))
+  (assert! (or (symbol? code-block-label) (not code-block-label)))
   (def consensus-code-generator (.@ self consensus-code-generator))
   (def checkpoint-location
     (hash-kref (.@ consensus-code-generator labels) (make-checkpoint-label (.@ self name) code-block-label)))

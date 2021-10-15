@@ -1,7 +1,7 @@
 (export #t)
 
 (import
-  :std/iter :std/sugar :std/misc/list :std/srfi/1 :clan/base :clan/pure/dict/symdict :clan/poo/object
+  :std/iter :std/sugar :std/misc/list :std/srfi/1 :clan/base :clan/pure/dict/symdict :clan/debug
   :clan/poo/io :clan/poo/object :clan/poo/brace :clan/poo/debug
   <expander-runtime>
   :mukn/ethereum/types
@@ -88,16 +88,20 @@
   (def alba (hash-kref (.@ self compiler-output) 'albatable.sexp))
   (hash-kref alba variable-name))
 
-;; : ListOf Symbol <- Program Symbol Symbol
+;; : ListOf Symbol <- Program Symbol (OrFalse Symbol)
 (def (lookup-live-variables self name code-block-label)
   (def live-variable-table (hash-kref (.@ self compiler-output) 'cpitable2.sexp))
   (def specific-interactions
     (.@ (hash-kref (.@ self interactions) name) specific-interactions))
   ;; TODO: Store participants in fixed addresses.
   (def participants (filter (λ (x) x) (hash-keys specific-interactions)))
-  (unique (append participants
-    (filter (λ (x) (not (.call Program .definitely-constant? self x)))
-          (ci-variables-live (hash-kref live-variable-table code-block-label))))))
+  (unique
+   (append participants
+    (if (symbol? code-block-label)
+        (filter
+          (λ (x) (not (.call Program .definitely-constant? self x)))
+          (ci-variables-live (hash-kref live-variable-table code-block-label)))
+        []))))
 
 (define-type ParseContext
   (.+
@@ -127,7 +131,7 @@
    (Record
     participant: [(OrFalse Symbol)]
     statements: [(List SExp)]
-    exit: [(OrFalse Symbol)])
+    exit: [(OrFalse Symbol)]) ; #f means either unknown, or known to end the interaction
    {.make: (lambda (participant statements exit)
              { participant
                statements
@@ -163,6 +167,18 @@
           (begin
             (set! (.@ self current-participant) new-participant)
             (hash-put! contract (.@ self current-label) (.call CodeBlock .make new-participant [] #f)))))))))
+
+#|
+;; <- ParseContext Sexpr
+(def (process-return self expr)
+  (let (contract (.@ self code))
+      (let (code-block (hash-get contract (.@ self current-label)))
+        (cond
+         ((element? CodeBlock code-block)
+          (with-slots (participant statements exit) code-block
+            (set! code-block-exit next-label-after-the-return)))
+         (else ())))))
+|#
 
 ;; Takes the S-expression from the project pass and creates a Program
 ;; by finding the code-blocks that are transaction boundaries
@@ -216,6 +232,8 @@
         (set-participant parse-context new-participant))
       (['consensus:set-participant new-participant]
         (set-participant parse-context new-participant))
+      ;(['return expr]
+      ;  (process-return parse-context expr))
       (else
         (add-statement parse-context statement)))))
   (.@ parse-context code))
