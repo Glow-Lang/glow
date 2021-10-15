@@ -54,9 +54,9 @@
      .definitely-constant?:
       (lambda (self variable-name)
         (or (and (memq variable-name init-syms) #t)
-              (let* ((alba (hash-ref (.@ self compiler-output) 'albatable.sexp))
-                     (alenv (hash-ref (.@ self compiler-output) 'AlphaEnv)))
-                (symdict-has-key? alenv (hash-ref alba variable-name)))))
+              (let* ((alba (hash-kref (.@ self compiler-output) 'albatable.sexp))
+                     (alenv (hash-kref (.@ self compiler-output) 'AlphaEnv)))
+                (symdict-has-key? alenv (hash-kref alba variable-name)))))
     }))
 
 ;; Interaction <- Program Symbol Symbol
@@ -69,7 +69,7 @@
 ;; Runtime type descriptor from alpha-converted symbol
 ;; : Type <- Program Symbol
 (def (lookup-type self variable-name)
-  (def type-table (hash-ref (.@ self compiler-output) 'typetable.sexp))
+  (def type-table (hash-kref (.@ self compiler-output) 'typetable.sexp))
   (def (type-methods t)
     (match t
       ((type:name 'Bool) Bool)
@@ -85,12 +85,12 @@
 
 ;; : Symbol <- Program Symbol
 (def (lookup-surface-name self variable-name)
-  (def alba (hash-ref (.@ self compiler-output) 'albatable.sexp))
-  (hash-ref alba variable-name))
+  (def alba (hash-kref (.@ self compiler-output) 'albatable.sexp))
+  (hash-kref alba variable-name))
 
 ;; : ListOf Symbol <- Program Symbol Symbol
 (def (lookup-live-variables self name code-block-label)
-  (def live-variable-table (hash-ref (.@ self compiler-output) 'cpitable2.sexp))
+  (def live-variable-table (hash-kref (.@ self compiler-output) 'cpitable2.sexp))
   (def specific-interactions
     (.@ (hash-kref (.@ self interactions) name) specific-interactions))
   ;; TODO: Store participants in fixed addresses.
@@ -168,7 +168,7 @@
 ;; by finding the code-blocks that are transaction boundaries
 ;; Program <- Sexp
 (def (parse-compiler-output compiler-output)
-  (def module (hash-ref compiler-output 'project.sexp))
+  (def module (hash-kref compiler-output 'project.sexp))
   (match (syntax->datum module)
     (['@module [initial-label final-label] . statements]
       (def program (.call Program .make compiler-output initial-label))
