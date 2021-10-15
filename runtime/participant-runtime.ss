@@ -308,7 +308,9 @@
   (set! (.@ self block-ctx) (.call ActiveBlockCtx .make))
   (when contract-config
     (publish-frame-data self (.@ self block-ctx outbox)))
-  (interpret-current-code-block self)
+  ;; TODO: Interpret as many code blocks as possible off-chain.
+  ;; Must accumulate side-effects to be done before contract creation.
+  ;(interpret-current-code-block self)
   (if (not contract-config)
     (let ()
       (deploy-contract self)
@@ -371,16 +373,16 @@
 ;; PreTransaction <- Runtime Block
 (def (prepare-create-contract-transaction self)
   (def sender-address (get-active-participant self))
+  (def current-code-block-label (.@ self current-code-block-label))
+  (DBG 'label current-code-block-label)
   (def code-block (get-current-code-block self))
-  (def next (.@ code-block exit))
-  (assert! (symbol? next))
   (def participant (.@ code-block participant))
   (def initial-state
     (create-frame-variables
-      self
-      (.@ self agreement options maxInitialBlock)
-      next
-      participant))
+     self
+     (.@ self agreement options maxInitialBlock)
+     current-code-block-label
+     participant))
   (def initial-state-digest
     (digest-product-f initial-state))
   (def contract-bytes
