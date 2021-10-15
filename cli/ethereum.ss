@@ -92,10 +92,10 @@
    (else
     (printf "\nThere is no faucet for network ~a - Go earn tokens the hard way.\n\n" network))))
 
-(define-entry-point (check-balance account
+(define-entry-point (show-balance account
                      contacts: (contacts-file #f))
-  (help: "Check the balance of the given account"
-   getopt: (make-options [(argument 'account help: "account whose balance is to be checked")]
+  (help: "Show the balance of the given account"
+   getopt: (make-options [(argument 'account help: "account whose balance is to be shown")]
                          []
                          [options/evm-network]))
   (load-contacts contacts-file)
