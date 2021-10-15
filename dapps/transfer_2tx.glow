@@ -1,0 +1,14 @@
+#lang glow
+
+@interaction([From, To])
+let transfer = (amount: Nat) => {
+    deposit! From -> amount;
+    // TODO: should the Glow language insert an implicit transaction boundary before the first
+    //       `withdraw!` statement, if it would otherwise be in the first transaction?
+    // reordering the withdraw rwt the publictly "fixes" something?
+    withdraw! To <- amount;
+    @publicly!(To) let go = true;
+    let x = 0;
+    withdraw! To <- x;
+    amount
+};
