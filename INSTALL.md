@@ -173,7 +173,7 @@ GCC probably comes with your Operating System or software distribution.
 On Windows, you may have to use WSL or [MinGW](http://mingw.org/).
 
 Note that the LLVM's Clang won't do: we use Gambit Scheme,
-which compiles ten times (10x) slower with Clang than with GCC,
+which reportedly compiles ten times (10x) slower with Clang than with GCC,
 producing code that runs three times (3x) slower.
 
 ### Second, install Gambit Scheme

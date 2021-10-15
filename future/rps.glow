@@ -31,7 +31,10 @@ let rockPaperScissors = (wagerAmount) => {
     // NB: implicitly, A will have to drop an escrow or have one already during this transaction,
     // because there is a step in the future of A where A may (actually must) publish a message.
     @A let handA = inputHand("First player, pick your hand");
-    // canReach = EF. can = E, must = A. Reach = F. Maintain = G ?
+    // canReach = EF. can (on some path) = E, must (on all paths) = A.
+    // Reach (on some state of the path) = F ("Finally").
+    // Maintain (on all subsequent states of the path) = G ("Globally").
+    // Next (on the next state of the path) = X.
     // (Where EF AF EG AG EX AX are the modal operators from CTL).
     // Except that since we're in an @A, each subsequent move by B inserts an AX (or conjunction thereof)
     // and move by us inserts another EX (or disjunction thereof), and
