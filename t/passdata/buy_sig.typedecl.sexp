@@ -1,4 +1,4 @@
-(symdict ('payForSignature
+(symdict ('buySig
           (entry:known
            #f
            (typing-scheme

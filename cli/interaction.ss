@@ -209,7 +209,7 @@
   (def compiler-output (run-passes contract.glow pass: 'project show?: #f))
   (parse-compiler-output compiler-output))
 
-;; Takes an application identifier like "buy_sig#payForSignature" and returns
+;; Takes an application identifier like "buy_sig#buySig" and returns
 ;; the part corresponding to a source file/path, e.g. "buy_sig"
 (def (extract-application-source-path application-name)
   (match (pregexp-match "([^#]*)#?.*" application-name)

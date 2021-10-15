@@ -59,7 +59,7 @@
       (mustReach 'mustReach)
       (not 'not)
       (or 'or)
-      (payForSignature 'payForSignature)
+      (buySig 'buySig)
       (price 'price)
       (publicly! 'publicly!)
       (publish! 'publish!)

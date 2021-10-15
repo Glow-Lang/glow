@@ -1,5 +1,5 @@
 (@module (@debug-label dlb)
-         (def payForSignature
+         (def buySig
               (@make-interaction
                ((@record (participants (@list Buyer Seller)) (assets (@list DefaultToken))))
                (digest0 price)

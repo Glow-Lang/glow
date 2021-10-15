@@ -24,7 +24,7 @@
 
 (def contract-code-from-bepp
 
-  ;;(def payForSignature
+  ;;(def buySig
 
   ;;(@make-interaction
   ;;((@list Buyer Seller))

@@ -2,7 +2,7 @@
         (ci 'begin
             (@list)
             (@list)
-            (@list (ti 'begin 'end #f (@list) (@list '(payForSignature . #f)) (@list) (@list)))))
+            (@list (ti 'begin 'end #f (@list) (@list '(buySig . #f)) (@list) (@list)))))
       (begin0 (ci 'begin0
                   (@list)
                   (@list)
@@ -44,7 +44,7 @@
                           (@list)))))
       (end (ci 'end
                (@list)
-               (@list (ti 'begin 'end #f (@list) (@list '(payForSignature . #f)) (@list) (@list)))
+               (@list (ti 'begin 'end #f (@list) (@list '(buySig . #f)) (@list) (@list)))
                (@list)))
       (end0 (ci 'end0
                 (@list)

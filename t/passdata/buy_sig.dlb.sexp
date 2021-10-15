@@ -1,7 +1,7 @@
 (@module
 (@debug-label dlb)
 (@ (interaction (@list Buyer Seller))
-   (def payForSignature
+   (def buySig
      (λ ((digest : Digest) (price : Nat))
        (@debug-label dlb0)
        (deposit! Buyer price)

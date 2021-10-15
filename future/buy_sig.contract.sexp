@@ -1,7 +1,7 @@
 ;;-*- Gerbil -*-
 ;; Right after contract projection
 
-(def payForSignature
+(def buySig
   (@make-interaction
    start: pc
    end: end

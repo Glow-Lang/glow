@@ -1,7 +1,7 @@
 ;;-*- Gerbil -*-
 ;; Last point Before Blockchain-End-Point-Projection
 
-(def payForSignature
+(def buySig
   (@make-interaction
    start: pc
    end: end

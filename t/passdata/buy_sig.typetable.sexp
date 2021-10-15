@@ -2,7 +2,7 @@
       (Seller (type:name 'Participant))
       (digest0 (type:name 'Digest))
       (isValidSignature (type:arrow (@list (type:name 'Participant) (type:name 'Digest) (type:name 'Signature)) (type:name 'Bool)))
-      (payForSignature
+      (buySig
        (type:arrow (@list (type:name 'Participant) (type:name 'Participant) (type:name 'Digest) (type:name-subtype 'Nat (type:name 'Int))) (type:tuple (@list))))
       (price (type:name-subtype 'Nat (type:name 'Int)))
       (signature (type:name 'Signature))

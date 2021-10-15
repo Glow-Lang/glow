@@ -2,7 +2,7 @@
 (@debug-label dlb)
 (@interaction
  ((@record (participants (@list Buyer Seller)) (assets (@list DefaultToken))))
- (def payForSignature
+ (def buySig
       (λ ((digest0 : Digest) (price : Nat))
          (@debug-label dlb0)
          (deposit! Buyer (@record (DefaultToken price)))

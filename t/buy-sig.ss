@@ -57,7 +57,7 @@
       maxInitialBlock: (maxInitialBlock #f))
   (set! block (or block (eth_blockNumber)))
   {;; To be filled "manually" from the user inputs
-   interaction: "buy_sig#payForSignature"
+   interaction: "buy_sig#buySig"
    participants: (.o Buyer: buyer Seller: seller)
    assets: (.o DefaultToken: PET)
    parameters: (hash

@@ -29,7 +29,7 @@
          "(return (@tuple))"
          "(@label end0)"
          ""
-         "buy_sig#payForSignature interaction finished"
+         "buy_sig#buySig interaction finished"
          "Final environment:"
          "Buyer => (address<-0x \"0xa71CEb0990dD1f29C2a064c29392Fe66baf05aE1\")"
          "Seller => (address<-0x \"0xb0bb1ed229f5Ed588495AC9739eD1555f5c3aabD\")"

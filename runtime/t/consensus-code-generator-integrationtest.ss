@@ -17,7 +17,7 @@
       (ensure-ethereum-connection "pet")
       (map
         (cut apply check-scratch-space-example <>)
-        [["buy_sig" 'payForSignature 760]
+        [["buy_sig" 'buySig 760]
          ["coin_flip" 'coinFlip 1016]
          ["rps_simple" 'rockPaperScissors 1049]]))))
 

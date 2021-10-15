@@ -32,7 +32,7 @@
 (define-type InteractionAgreement
   (Record
    glow-version: [String] ;; e.g. "Glow v0.0-560-gda782c9 on Gerbil-ethereum v0.0-83-g6568bc6" ;; TODO: have a function to compute that from versioning.ss
-   interaction: [String] ;; e.g. "buy_sig#payForSignature", fully qualified Gerbil symbol
+   interaction: [String] ;; e.g. "buy_sig#buySig", fully qualified Gerbil symbol
    participants: [(MonomorphicObject Address)] ;; e.g. {Buyer: alice Seller: bob}
    ;; TODO: rename assets to resources
    assets: [(MonomorphicObject Asset)] ;; not just asset names such as "ETH", "CED", "QASCED", "PET", or "QASPET", objects from `lookup-asset`

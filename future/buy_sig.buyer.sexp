@@ -2,7 +2,7 @@
 ;; First point After Blockchain-End-Point-Projection, for buyer
 #|
 (@ (interaction-participant (@list Buyer Seller) Buyer)
-   (def payForSignature
+   (def buySig
      (λ ((digest : Digest) (price : Assets))
        (perform-transaction
          (deposit! price))
@@ -12,7 +12,7 @@
          (expect-withdrawed Seller price)))))
 |#
 
-(def payForSignature
+(def buySig
   (@make-interaction
    start: pc
    end: end

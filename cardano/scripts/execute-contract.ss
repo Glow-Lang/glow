@@ -24,7 +24,7 @@
 (def contract-code
      "(@module (begin end)
               (@label begin)
-              (def payForSignature
+              (def buySig
                    (@make-interaction
                     ((@list Buyer Seller))
                     (digest0 price)
