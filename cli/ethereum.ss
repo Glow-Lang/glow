@@ -92,6 +92,21 @@
    (else
     (printf "\nThere is no faucet for network ~a - Go earn tokens the hard way.\n\n" network))))
 
+(define-entry-point (show-balance account
+                     contacts: (contacts-file #f))
+  (help: "Show the balance of the given account"
+   getopt: (make-options [(argument 'account help: "account whose balance is to be shown")]
+                         []
+                         [options/evm-network]))
+  (load-contacts contacts-file)
+  (set! account (parse-address account))
+  (def balance (eth_getBalance account))
+  (def-slots (name nativeCurrency) (ethereum-config))
+  (def token-symbol (.@ nativeCurrency symbol))
+  (printf "\nNetwork: ~a" name)
+  (printf "\nAccount: ~a" (0x<-address account))
+  (printf "\nBalance: ~a ~a\n\n" (decimal-string-ether<-wei balance) token-symbol))
+
 (def options/erc20
   (make-options [(option 'erc20 "-e" "--erc20" help: "Address of ERC20 contract")]
                 [] options/evm-network))
