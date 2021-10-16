@@ -1,0 +1,22 @@
+#lang glow
+@interaction([A, B])
+let i1 = (x : Nat) => {
+
+   @A assert! (canReach(branch3));
+   @A assert! (canReach(branch4)); // <- this would be disproved by compiler
+   
+   @A let k = input(Nat, "Enter A's parameter:");
+   publish! A -> k;
+
+   let a1 = (k >= 0) && (k <= 3);   
+   require! a1;
+
+   switch (k) {
+      | 0 => branch0 : withdraw! A <- 2*x      
+      | 1 => branch1 : withdraw! B <- 2*x
+      | 2 => branch2 : withdraw! B <- 2*x
+      | 3 => branch3 : withdraw! B <- 2*x
+      | 4 => branch4 : withdraw! B <- 2*x
+      };
+
+};
