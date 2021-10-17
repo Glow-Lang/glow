@@ -3,6 +3,6 @@
   "repo": "nixpkgs",
   "branch": "devel",
   "private": false,
-  "rev": "fcd5b991a0bd1553f0b49494ec22e990eb3788db",
-  "sha256": "0imag67fl1qmyl887di70cs8apjmj7xrrl8a23g4bskwra3k6r4h"
+  "rev": "d5afcae24454a814fb2ffcad0afdd29e4791a30e",
+  "sha256": "080lc3d4w329ldb5rggayk35q8nm6dwmcflzvi5nj8qs7c82gk3h"
 }
