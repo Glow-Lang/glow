@@ -313,11 +313,11 @@
   (set! (.@ self block-ctx) (.call ActiveBlockCtx .make))
   (when contract-config
     (publish-frame-data self (.@ self block-ctx outbox)))
-  ;; TODO: Interpret as many code blocks as possible off-chain.
-  ;; Must accumulate side-effects to be done before contract creation.
-  ;(interpret-current-code-block self)
   (if (not contract-config)
     (let ()
+      ;; TODO: Interpret as many code blocks as possible off-chain.
+      ;; Must accumulate side-effects to be done before contract creation.
+      ;(interpret-current-code-block self)
       (deploy-contract self)
       (def contract-config (.@ self contract-config))
       (def agreement (.@ self agreement))
@@ -325,6 +325,7 @@
       (def handshake (.new AgreementHandshake agreement contract-config published-data))
       (send-contract-handshake self handshake))
     (let ()
+      (interpret-current-code-block self)
       ;; TODO: Verify asset transfers using previous transaction and balances
       ;; recorded in Message's asset-transfer table during interpretation. Probably
       ;; requires getting TransactionInfo using the TransactionReceipt.
