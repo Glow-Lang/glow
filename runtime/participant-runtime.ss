@@ -276,9 +276,14 @@
        (error "agreements don't match" (.@ self agreement) agreement))
      (set! (.@ self timer-start) (.@ agreement options maxInitialBlock))
      (set! (.@ self first-unprocessed-block) (.@ contract-config creation-block))
-     (interpret-current-code-block self))
+     ;; TODO: Interpret as many code blocks as possible off-chain.
+     ;; Must accumulate side-effects to be done before contract creation.
+     ;(interpret-current-code-block self)
+     (void))
    (let (create-pretx (prepare-create-contract-transaction self))
+     (DBG pr-rpcb/h-281-before-vcc: contract-config create-pretx)
      (verify-contract-config contract-config create-pretx)
+     (DBG pr-rpcb/h-283-after-vcc:)
      (set! (.@ self contract-config) contract-config)))
   #t)
 
