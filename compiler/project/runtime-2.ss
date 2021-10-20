@@ -265,8 +265,8 @@
   ;; ignore x, by order not by name
   (unmarshal t (message-published (current-receiving-message))))
 
-;; add-to-deposit : Nat -> Void
-(def (add-to-deposit n)
+;; add-to-deposit : Label Nat -> Void
+(def (add-to-deposit l n)
   (def msg (current-in-progress-message))
   (def p (message-sender msg))
   (def mat (message-asset-transfers msg))
@@ -274,8 +274,8 @@
   (def mat3 (assq-update mat2 #f (cut + <> n) 0))
   (set! (message-asset-transfers msg) mat3))
 
-;; expect-deposited : Nat -> Void
-(def (expect-deposited n)
+;; expect-deposited : Label Nat -> Void
+(def (expect-deposited l n)
   (def msg (current-receiving-message))
   (def p (message-sender msg))
   (def mat (message-asset-transfers msg))

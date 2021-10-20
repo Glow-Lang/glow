@@ -95,11 +95,11 @@
 ;; project-deposit : StmtStx CpiTable MPart -> [Listof StmtStx]
 (def (project-deposit stx cpit this-p)
   (syntax-case stx ()
-    ((_ _ p n)
+    ((_ l p n)
      (append (project-set-participant #'p cpit this-p)
              (cond
-               ((eq? (stx-e #'p) this-p) [#'(add-to-deposit n)])
-               (else [#'(expect-deposited n)]))))))
+               ((eq? (stx-e #'p) this-p) [#'(add-to-deposit l n)])
+               (else [#'(expect-deposited l n)]))))))
 
 ;; project-withdraw : StmtStx CpiTable MPart -> [Listof StmtStx]
 (def (project-withdraw stx cpit this-p)

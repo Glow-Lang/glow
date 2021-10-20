@@ -23,9 +23,12 @@
      (letrec
          ((acc [])
           (f (lambda (x)
-               (if (eq? (car x) 'withdraw!)
+               (cond ((eq? (car x) 'withdraw!)
                    (let (l (car (cdr x)))
-                     (if l (set! acc (cons l acc))))
+                     (if l (set! acc (cons l acc)))))
+                     ((eq? (car x) 'deposit!)
+                   (let (l (car (cdr x)))
+                     (if l (set! acc (cons l acc)))))
                    )))
           (step (lambda (x)                   
                    (if (list? x)
@@ -123,7 +126,7 @@
                      ((cons s ss)
                       (match (syntax->list s)
                              (['def sym v]
-                              (match (syntax->list v)
+                              (match (syntax->list v) 
                                      (['input ty _] ['exists (list [sym (to-z3-type-sym ty)]) (wrap-into-quantifiers ss e)])
                                      (else
                                       (let (ty (to-z3-type  (hash-get typetable.sexp sym)))
@@ -158,9 +161,9 @@
                     (['participant:set-participant _] #f)
                     (['consensus:set-participant _] #f)
                     (['consensus:withdraw _ _ _] #f)
-                    (['expect-deposited _] #f)
+                    (['expect-deposited _ _] #f)
                     (['add-to-publish _ _] #f)
-                    (['add-to-deposit _] #f)
+                    (['add-to-deposit _ _] #f)
                     (['assert! _] #f)
                     (['participant:withdraw _ _ _] #f)
                     (['return _] #f)
@@ -213,9 +216,9 @@
           (exec-flow-formula-full (gen-exec-flow-formula-stmnts stmnts) )
           (label-reach-formulas
            (letrec ((acc ['true])                    
-                    (add-label-formula
+                    (add-label-formula 
                      (λ (label-symbol assumptions)
-                       (set! acc (cons ['= label-symbol (andZ3l assumptions)] acc))
+                       (if label-symbol (set! acc (cons ['= label-symbol (andZ3l assumptions)] acc)))
                        #f
                        ))
                     (step ;; this function returns assumptions resulting from executing particular statement,
@@ -227,6 +230,12 @@
                                         (['participant:withdraw l _ _]
                                          (add-label-formula l assumptions))
 
+                                        (['expect-deposited l _]
+                                          (add-label-formula l assumptions))
+
+                                        (['add-to-deposit l _]
+                                          (add-label-formula l assumptions))
+                                        
                                         (['require! y] ;;TODO check if y is identifier or atom!
                                            y 
                                            )
@@ -238,9 +247,7 @@
                                           ['and
                                            ['=> sym (andZ3l (stmnts-fold branchT (cons sym assumptions)))]
                                            ['=> ['not sym] (andZ3l (stmnts-fold branchF (cons ['not sym] assumptions)))]
-                                          ]
-                                           
-                                         )
+                                          ])
                                         
                                         ((cons* 'switch (cons* sym branches))
                                            

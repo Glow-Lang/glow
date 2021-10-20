@@ -35,7 +35,7 @@
 ;;  - (call-expression Expression Arguments)
 ;;  - (require-expression Expression)
 ;;  - (assert-expression Expression)
-;;  - (deposit-expression Identifier Expression)
+;;  - (deposit-expression Label Identifier Expression)
 ;;  - (withdraw-expression Label Identifier Expression)
 ;;  - (dot-expression Expression Identifier)
 ;;  - (type-annotation-expression Expression Type)
@@ -282,10 +282,10 @@
     (.let* ((exp ConditionalExpression))
           (return (assert-expression exp))))
 
-(defstruct (deposit-expression expression) (id exp) transparent: #t)
+(defstruct (deposit-expression expression) (lbl id exp) transparent: #t)
 (def DepositExpression
     (.let* ((id Identifier) (_(equal-token-value? "->")) (exp Expression))
-          (return (deposit-expression id exp))))
+          (return (deposit-expression #f id exp))))
 
 (defstruct (withdraw-expression expression) (lbl id exp) transparent: #t)
 (def WithdrawExpression
@@ -305,6 +305,19 @@
                     (withdraw-expression-id wexp)
                     (withdraw-expression-exp wexp)
                     ))))
+
+(def LabelledDepositExpression
+    (.let* ((lbl Identifier)
+            (_(equal-token-value?  #\:))
+            (_(equal-token-value? "deposit!"))
+            (dexp DepositExpression)
+            )
+           (return (deposit-expression
+                    lbl
+                    (deposit-expression-id dexp)
+                    (deposit-expression-exp dexp)
+                    ))))
+
 
 
 
@@ -499,7 +512,9 @@
 
 
 (def Expression
-  (.begin (.or ExpressionWithAttribute IfExpression SwitchExpression LabelledWithdrawExpression
+     (.begin (.or ExpressionWithAttribute IfExpression SwitchExpression
+                  LabelledWithdrawExpression
+                  LabelledDepositExpression
     (.begin (peek (member-token-value? ["deposit!" "withdraw!" "assert!" "require!"]))
       (.let* (t (item))
         (cond

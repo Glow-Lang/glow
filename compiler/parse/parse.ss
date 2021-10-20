@@ -86,7 +86,7 @@
            `(@app ,f ,@(map expr->sexpr args)))))
     ((require-expression exp) `(require! ,(expr->sexpr exp)))
     ((assert-expression exp) `(assert! ,(expr->sexpr exp)))
-    ((deposit-expression id exp) `(deposit! #f ,(id->sexpr id) ,(expr->sexpr exp)))
+    ((deposit-expression lbl id exp) `(deposit! ,(and lbl (id->sexpr lbl)) ,(id->sexpr id) ,(expr->sexpr exp)))
     ((withdraw-expression lbl id exp) `(withdraw! ,(and lbl (id->sexpr lbl)) ,(id->sexpr id) ,(expr->sexpr exp)))
     ((expression-with-attribute attr expr) `(@ ,(attr->sexpr attr) ,(expr->sexpr expr)))
     ((dot-expression expr id) `(@dot ,(expr->sexpr expr) ,(id->sexpr id)))
