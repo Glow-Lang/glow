@@ -8,9 +8,11 @@ let i1 = (x : Nat) => {
    @A let k = input(Nat, "Enter A's parameter:");
    publish! A -> k;
 
+   let a1 = true;   
+   require! a1;
 
    switch (k) {
-      | 3 => let z = (k == 2); require! (z);
+      | 3 => let z = (k == 2); branchR : require! (z);
       };
 
    switch (k) {

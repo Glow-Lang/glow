@@ -123,7 +123,7 @@
     ((λ . _) (ac-expr-function env stx))
     ((input type tag) (retail-stx stx [(alpha-convert-type env #'type) (ace #'tag)]))
     ((digest e ...) (alpha-convert-keyword/sub-exprs env stx))
-    ((require! e) (retail-stx stx [(ace #'e)]))
+    ((require! lbl e) (retail-stx stx [#'lbl (ace #'e)]))
     ((assert! e) (retail-stx stx [(ace #'e)]))
     ((deposit! lbl x e) (identifier? #'x)
      (alpha-convert-deposit-withdraw env stx))
@@ -416,10 +416,10 @@
 ;; the env result contains only the new symbols introduced by the statement
 (def (ac-stmt-publish env stx)
   (syntax-case stx (@ : quote def λ deftype defdata publish! verify!)
-    ((pub x ...) (stx-andmap identifier? #'(x ...))
+    ((pub lbl x ...) (stx-andmap identifier? #'(x ...))
      (values
       empty-symdict
-      (restx stx (cons #'pub (stx-map (lambda (x) (identifier-refer env x)) #'(x ...))))))))
+      (cons #'pub (restx stx (cons #'lbl (stx-map (lambda (x) (identifier-refer env x)) #'(x ...)))))))))
 
 ;; ac-stmt-verify : Env StmtStx -> (values Env StmtStx)
 ;; the env result contains only the new symbols introduced by the statement

@@ -305,12 +305,12 @@
     ((deftype . _) (simple [] []))
     ;; NB: after ANF, p e v below are guaranteed identifiers
     ((withdraw! lbl p (@record (_ e) ...)) (simple [stx] (used<-args #'(p e ...))))
-    ((require! v) (simple [] (used<-arg #'v)))
+    ((require! lvl v) (simple [] (used<-arg #'v)))
     ((assert! v) (simple [] (used<-arg #'v)))))
 
 (def (checkpointify-publish stx)
   (syntax-case stx ()
-    ((_ p v)
+    ((_ lbl p v)
      (values stx (make-ssi (stx-e #'p) [stx] (used<-arg #'v) (cons (syntax->datum #'(v . p)) (used<-arg #'p)))))))
 
 (def (checkpointify-deposit stx)

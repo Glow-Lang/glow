@@ -85,10 +85,13 @@
 
 (def (desugar-publish! stx)
   (syntax-case stx ()
-    ((_ participant variable) stx)
-    ((_ participant variable ...)
-     (with-syntax (((pubvar ...) (stx-map (lambda (v) (retail-stx stx [#'participant v])) #'(variable ...))))
-       (restx1 stx #'(splice pubvar ...))))))
+    ((_ lbl participant variable) stx)
+    ((_ lbl participant variable ...)
+     (error "publishing multiple values in the singe publish! statement is not imeplemnted on this branch"))))
+     ;; TODO handle this somehow!!
+    ;; ((_ lbl participant variable ...) 
+    ;;  (with-syntax (((pubvar ...) (stx-map (lambda (v) (retail-stx stx [#'participant v])) #'(variable ...))))
+    ;;    (restx1 stx #'(splice pubvar ...))))))
 
 ;; TODO: input, isA, JSON converters, EthBytes converters, etc.
 ;; desugar-deftype : Stx -> Stx
@@ -184,7 +187,7 @@
     ((input type tag) (retail-stx stx [#'type (desugar-expr #'tag)]))
     ((digest e ...) (desugar-keyword/sub-exprs stx))
     ((sign e) (desugar-keyword/sub-exprs stx))
-    ((require! e) (desugar-keyword/sub-exprs stx))
+    ((require! _ e) (desugar-keyword/sub-exprs stx))
     ((assert! e) (desugar-keyword/sub-exprs stx))
     ((deposit! _ x e) (desugar-keyword/sub-exprs stx))
     ((withdraw! _ x e) (desugar-keyword/sub-exprs stx))

@@ -153,7 +153,7 @@
     ((λ params out-type body ...) (mr-expr-lambda stx))
     ((== a b) (mr-keyword/sub-exprs stx))
     ((input type tag) (retail-stx stx [#'type (mr-expr #'tag)]))
-    ((require! . _) (mr-keyword/sub-exprs stx))
+    ((require! . _) (mr-require stx))
     ((assert! . _) (mr-keyword/sub-exprs stx))
     ((deposit! . _) (mr-deposit-withdraw stx))
     ((withdraw! . _) (mr-deposit-withdraw stx))
@@ -221,6 +221,14 @@
      (retail-stx stx
        [#'lbl (mr-expr #'p)
         (cons '@record (stx-map list #'(x ...) (stx-map mr-expr #'(e ...))))]))))
+
+;; mr-require : ExprStx -> ExprStx
+(def (mr-require stx)
+  (syntax-case stx (@record)
+    ((_ lbl e)
+     (retail-stx stx
+       [#'lbl (mr-expr #'e)]))))
+;; TODO: make shure what is happening above with someone who actualny knows how this works!
 
 ;; mr-keyword/sub-exprs : ExprStx -> ExprStx
 (def (mr-keyword/sub-exprs stx)

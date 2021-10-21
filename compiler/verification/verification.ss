@@ -23,10 +23,20 @@
      (letrec
          ((acc [])
           (f (lambda (x)
-               (cond ((eq? (car x) 'withdraw!)
+               (cond ;; TODO: rewrite this to use match (or discuss refactoring with someone more expreneced)
+                  ((eq? (car x) 'withdraw!)
                    (let (l (car (cdr x)))
                      (if l (set! acc (cons l acc)))))
-                     ((eq? (car x) 'deposit!)
+                   ((eq? (car x) 'deposit!)
+                   (let (l (car (cdr x)))
+                     (if l (set! acc (cons l acc)))))
+                   ((eq? (car x) 'require!)
+                   (let (l (car (cdr x)))
+                     (if l (set! acc (cons l acc)))))
+                   ((eq? (car x) 'add-to-publish)
+                   (let (l (car (cdr x)))
+                     (if l (set! acc (cons l acc)))))
+                   ((eq? (car x) 'expect-published)
                    (let (l (car (cdr x)))
                      (if l (set! acc (cons l acc)))))
                    )))
@@ -162,14 +172,14 @@
                     (['consensus:set-participant _] #f)
                     (['consensus:withdraw _ _ _] #f)
                     (['expect-deposited _ _] #f)
-                    (['add-to-publish _ _] #f)
+                    (['add-to-publish _ _ _] #f)
                     (['add-to-deposit _ _] #f)
                     (['assert! _] #f)
                     (['participant:withdraw _ _ _] #f)
                     (['return _] #f)
 
                     
-                    (['require! _] #f) ;; those are treated seperatly!
+                    (['require! _ _] #f) ;; those are treated seperatly!
                     ;; (as preassumptions for reachability of labels,
                     ;; in <label-reach-formulas> function)
                     ;; TODO : investigate if we can put those assumption here (to centralize tratment of 'require construct)
@@ -180,7 +190,7 @@
 
                     
                     (['def _ ['input ty _]] #f)
-                    (['def _ ['expect-published _]] #f)
+                    (['def _ ['expect-published _ _]] #f)
                     (['def sy #f] ['= sy 'false])
                     (['def sy #t] ['= sy 'true])
                     
@@ -235,10 +245,19 @@
 
                                         (['add-to-deposit l _]
                                           (add-label-formula l assumptions))
+
+                                        (['add-to-publish l _ _]
+                                          (add-label-formula l assumptions))
                                         
-                                        (['require! y] ;;TODO check if y is identifier or atom!
-                                           y 
-                                           )
+                                        (['def _ ['expect-published l _]] 
+                                          (add-label-formula l assumptions))
+                                        
+                                        (['require! l y] ;;TODO check if y is identifier or atom!
+                                         (begin
+                                           (add-label-formula l (cons-truthfull y assumptions))
+                                           y))
+                                           ;;TODO !!! this is ugly!!!
+                                        
 
                                         
                                         ;; TODO : reconsider if it is worthwile to handle this case sepearately

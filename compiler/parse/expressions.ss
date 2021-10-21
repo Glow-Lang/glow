@@ -33,7 +33,7 @@
 ;;  - (list-expression (Listof Expression))
 ;;  - (record-expression (Assocof Identifier Expression))
 ;;  - (call-expression Expression Arguments)
-;;  - (require-expression Expression)
+;;  - (require-expression Label Expression)
 ;;  - (assert-expression Expression)
 ;;  - (deposit-expression Label Identifier Expression)
 ;;  - (withdraw-expression Label Identifier Expression)
@@ -60,7 +60,7 @@
 ;; runs the body expression if the pattern matches the dispatch value
 
 ;; A Statement is one of:
-;;  - (publish-statement Identifier (Listof Identifier))
+;;  - (publish-statement Label Identifier (Listof Identifier))
 ;;  - (verify-statement (Listof Identifier))
 ;;  - (type-alias-declaration Identifier (OrFalse (Listof Identifier)) Type)
 ;;  - (data-type-declaration Identifier (OrFalse (Listof Variant)))
@@ -272,10 +272,23 @@
 
 (defstruct (call-expression expression) (function arguments)  transparent: #t)
 
-(defstruct (require-expression expression) (exp) transparent: #t)
+(defstruct (require-expression expression) (lbl exp) transparent: #t)
 (def RequireExpression
     (.let* ((exp ConditionalExpression))
-          (return (require-expression exp))))
+          (return (require-expression #f exp))))
+
+
+(def LabelledRequireExpression
+    (.let* ((lbl Identifier)
+            (_(equal-token-value?  #\:))
+            (_(equal-token-value? "require!"))
+            (rexp RequireExpression)
+            )
+           (return (require-expression
+                    lbl
+                    (require-expression-exp rexp)
+                    ))))
+
 
 (defstruct (assert-expression expression) (exp) transparent: #t)
 (def AssertExpression
@@ -515,6 +528,8 @@
      (.begin (.or ExpressionWithAttribute IfExpression SwitchExpression
                   LabelledWithdrawExpression
                   LabelledDepositExpression
+                  LabelledRequireExpression
+                  
     (.begin (peek (member-token-value? ["deposit!" "withdraw!" "assert!" "require!"]))
       (.let* (t (item))
         (cond
@@ -524,10 +539,10 @@
           ((string=? (get-token-value t) "require!") RequireExpression))))
     ArithmeticExpression)))
 
-(defstruct (publish-statement statement) (id expr) transparent: #t)
+(defstruct (publish-statement statement) (lbl id expr) transparent: #t)
 (def PublishStatement
     (.let* ( (p-id Identifier) (_(equal-token-value? "->")) (x-ids (sepby1 Identifier (equal-token-value? #\,))) )
-      (return (publish-statement p-id x-ids))))
+      (return (publish-statement #f p-id x-ids))))
 
 (defstruct (verify-statement statement) (id) transparent: #t)
 (def VerifyStatement

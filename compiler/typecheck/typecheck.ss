@@ -759,7 +759,7 @@
     ((deftype . _) (tc-stmt-deftype part env stx))
     ((defdata . _) (tc-stmt-defdata part env stx))
     ((def . _) (tc-stmt-def part env stx))
-    ((publish! participant v) (and (identifier? #'participant) (identifier? #'v))
+    ((publish! _ participant v) (and (identifier? #'participant) (identifier? #'v))
      (tc-stmt-publish part env stx))
     (expr
      (with (((typing-scheme menv _) (tc-expr part env #'expr)))
@@ -976,7 +976,7 @@
 ;; tc-stmt-publish : MPart Env StmtStx -> (values Env MonoEnv)
 (def (tc-stmt-publish part env stx)
   (syntax-case stx (publish!)
-    ((publish! participant v) (and (identifier? #'participant) (identifier? #'v))
+    ((publish! _ participant v) (and (identifier? #'participant) (identifier? #'v))
      (if part (error 'publish! "only allowed in the consensus")
          (let (pt (tc-expr/check part env #'participant type:Participant))
            ;; TODO LATER: check that v is a variable with a *data* type.
@@ -1059,7 +1059,7 @@
        ;;       can be computed for
        (typing-scheme (menvs-meet (map typing-scheme-menv ts))
                       type:Digest)))
-    ((require! e)
+    ((require! _ e)
      (let ((et (tce/bool #'e)))
        (typing-scheme (typing-scheme-menv et) type:Unit)))
     ((assert! e)
