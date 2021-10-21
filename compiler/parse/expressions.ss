@@ -544,6 +544,19 @@
     (.let* ( (p-id Identifier) (_(equal-token-value? "->")) (x-ids (sepby1 Identifier (equal-token-value? #\,))) )
       (return (publish-statement #f p-id x-ids))))
 
+(def LabelledPublishStatement
+    (.let* ((lbl Identifier)
+            (_(equal-token-value?  #\:))
+            (_(equal-token-value? "publish!"))
+            (pstmnt PublishStatement)
+            )
+           (return (publish-statement
+                    lbl
+                    (publish-statement-id pstmnt)
+                    (publish-statement-expr pstmnt)
+                    ))))
+
+
 (defstruct (verify-statement statement) (id) transparent: #t)
 (def VerifyStatement
     (.let* (ids (sepby1 Identifier (equal-token-value? #\,)))
@@ -568,13 +581,15 @@
         (return (data-type-declaration name typarams variants))))
 
 (def SubStatement
+     (.begin (.or LabelledPublishStatement
+              
   (.begin (peek (member-token-value? ["verify!" "publish!" "data" "type"]))
     (.let* (t (item))
       (cond
         ((string=? (get-token-value t) "verify!") VerifyStatement)
         ((string=? (get-token-value t) "publish!") PublishStatement)
         ((string=? (get-token-value t) "type") TypeAliasDeclaration)
-        ((string=? (get-token-value t) "data") DataTypeDeclaration)))))
+        ((string=? (get-token-value t) "data") DataTypeDeclaration)))))))
 
 (defstruct (expression-statement statement) (expr) transparent: #t)
 (def ExpressionStatement (.let* ((exp Expression) )
