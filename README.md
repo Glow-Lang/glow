@@ -31,17 +31,12 @@ glow help <command> # View help for a command
 
 The full, in-depth tutorial may be found [here](https://glow-lang.org/docs/Glow_Tutorial.html).
 
-### Being worked on
-
-You can watch our [GitHub repository](https://github.com/Glow-Lang/glow)
-for current developments.
-
 ### More information
 
 For more information on Glow, see our web site
-[glow-lang.org](https://glow-lang.org), including
+[glow-lang.org](https://glow-lang.org), which includes
 [our documentation](https://glow-lang.org/docs).
 
 If you are a developer, you may also be interested in
-[our wiki](https://github.com/Glow-lang/glow/wiki), including
+[our wiki](https://github.com/Glow-lang/glow/wiki), which includes
 [our Roadmap](https://github.com/Glow-lang/glow/wiki/Roadmap).
