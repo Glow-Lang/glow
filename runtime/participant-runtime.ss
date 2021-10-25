@@ -15,6 +15,7 @@
   :mukn/ethereum/evm-runtime :mukn/ethereum/contract-config :mukn/ethereum/assembly :mukn/ethereum/types
   :mukn/ethereum/nonce-tracker
   :vyzo/libp2p
+  :vyzo/libp2p/client
   (only-in ../compiler/alpha-convert/env symbol-refer)
   ./program ./block-ctx ./consensus-code-generator ./terminal-codes
   ./pb/private-key
@@ -817,13 +818,7 @@
 
          ;; Ensure libp2p-daemon client is running
          (displayln "Starting libp2p client")
-         (def libp2p-client
-           (with-seckey-tempfile nickname: my-nickname
-             (lambda (seckey-filename)
-               (open-libp2p-client
-                host-addresses: host-address
-                wait: 5
-                options: ["-id" seckey-filename]))))
+         (def libp2p-client (ensure-libp2p-client! nickname: my-nickname host-address: host-address))
 
          ;; Get and Broadcast identity
          (def self (libp2p-identify libp2p-client))
@@ -844,6 +839,42 @@
            poll-buffer
            push-to-buffer }))}))
 
+
+;; public key is used for namespacing, to check if the libp2p unix socket exists
+;; host-address verifies that it is running at the correct host-addr
+;; FIXME: It should do the following checks -
+;; If client is running and host-address is correct, it continues.
+;; If client is running and host-address is wrong, kill the client, start a new instance
+;; If client is not running, start a new instance.
+;; TODO: To check if the client is listening at correct host-address,
+;; we have to re-construct the peerId and ping the client.
+;; NOTE: The implementation below simply chooses to stop any previous running instances of the peer's p2pd,
+;; and spin up a new one.
+(def (ensure-libp2p-client! nickname: nickname host-address: host-address)
+  (def my-address (address<-nickname nickname))
+  (def expected-libp2p-socket-path (make-libp2p-socket-path address: my-address))
+  (def existing-libp2p-client (get-libp2p-client path: expected-libp2p-socket-path))
+  (when existing-libp2p-client
+    (stop-libp2p-daemon! existing-libp2p-client))
+  (new-libp2p-client nickname: nickname host-address: host-address))
+
+(def (new-libp2p-client nickname: nickname host-address: host-address)
+  (with-seckey-tempfile nickname: nickname
+    (lambda (seckey-filename)
+      (open-libp2p-client
+       host-addresses: host-address
+       wait: 5
+       options: ["-id" seckey-filename]))))
+
+(def (get-libp2p-client path: path)
+  (and (file-exists? path)
+    (let ()
+      (def libp2p-daemon (use-libp2p-daemon! path))
+      (make-client libp2p-daemon (make-mutex 'libp2p-client) (make-hash-table) #f #f #f))))
+
+(def (make-libp2p-socket-path address: address)
+  (string-append "/tmp/libp2p-socket-" (.call Address .string<- address)))
+
 ;; TODO: Ensure file does not exist before creating it
 (def (with-seckey-tempfile nickname: nickname c)
   (def file-name (make-seckey-tempfile nickname: nickname))
@@ -853,7 +884,6 @@
 (def (make-seckey-tempfile nickname: nickname
                            filename: (filename (string-append "/tmp/glow-seckey-"
                                                               (uuid->string (random-uuid)))))
-  (when (file-exists? filename) (delete-file filename))
   (displayln "Generating temporary keyfile")
   (def seckey (get-my-seckey nickname: nickname))
   (def seckey/bytes (export-secret-key/bytes seckey))
@@ -880,7 +910,6 @@
 ;; FIXME: pb should be pulled in a dependency, so it remains in sync
 (def (make-seckey/proto seckey/bytes: seckey/bytes)
   (make-PrivateKey Type: 'Secp256k1 Data: seckey/bytes))
-
 
 ;; TODO: Upstream to gerbil-ethereum
 (def (get-my-seckey nickname: nickname)
