@@ -3,6 +3,7 @@
 (import
   :gerbil/gambit/bits :gerbil/gambit/bytes :gerbil/gambit/threads :gerbil/gambit/ports :std/net/bio
   :std/pregexp :std/srfi/13 :std/misc/uuid
+  :std/crypto
   :std/format :std/iter :std/misc/hash :std/sugar :std/misc/number :std/misc/list :std/sort :std/srfi/1 :std/text/json
   (for-syntax :std/stxutil)
   :gerbil/gambit/exceptions
@@ -840,23 +841,15 @@
            push-to-buffer }))}))
 
 
-;; public key is used for namespacing, to check if the libp2p unix socket exists
+;; public key + host-address hash is used for namespacing,
+;; to check if the libp2p unix socket exists
 ;; host-address verifies that it is running at the correct host-addr
-;; FIXME: It should do the following checks -
-;; If client is running and host-address is correct, it continues.
-;; If client is running and host-address is wrong, kill the client, start a new instance
-;; If client is not running, start a new instance.
-;; TODO: To check if the client is listening at correct host-address,
-;; we have to re-construct the peerId and ping the client.
-;; NOTE: The implementation below simply chooses to stop any previous running instances of the peer's p2pd,
-;; and spin up a new one.
 (def (ensure-libp2p-client! nickname: nickname host-address: host-address)
   (def my-address (address<-nickname nickname))
-  (def expected-libp2p-socket-path (make-libp2p-socket-path address: my-address))
+  (def expected-libp2p-socket-path (make-libp2p-socket-path address: my-address host-address: host-address))
   (def existing-libp2p-client (get-libp2p-client path: expected-libp2p-socket-path))
-  (when existing-libp2p-client
-    (stop-libp2p-daemon! existing-libp2p-client))
-  (new-libp2p-client nickname: nickname host-address: host-address))
+  (or existing-libp2p-client
+    (new-libp2p-client nickname: nickname host-address: host-address)))
 
 (def (new-libp2p-client nickname: nickname host-address: host-address)
   (with-seckey-tempfile nickname: nickname
@@ -872,8 +865,9 @@
       (def libp2p-daemon (use-libp2p-daemon! path))
       (make-client libp2p-daemon (make-mutex 'libp2p-client) (make-hash-table) #f #f #f))))
 
-(def (make-libp2p-socket-path address: address)
-  (string-append "/tmp/libp2p-socket-" (.call Address .string<- address)))
+(def (make-libp2p-socket-path address: address host-address: host-address)
+  (def multiaddr-hash (sha256 (string-append (.call Address .string<- address) host-address)))
+  (string-append "/tmp/libp2p-socket-" multiaddr-hash))
 
 ;; TODO: Ensure file does not exist before creating it
 (def (with-seckey-tempfile nickname: nickname c)
