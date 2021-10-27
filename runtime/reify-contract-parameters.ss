@@ -8,6 +8,7 @@
   :mukn/ethereum/network-config :mukn/ethereum/json-rpc
   :mukn/glow/compiler/syntax-context :mukn/glow/compiler/multipass :mukn/glow/compiler/passes
   (only-in ../compiler/alpha-convert/env symbol-refer)
+  (only-in ../compiler/common hash-kref)
   ./program ./participant-runtime ./terminal-codes ./glow-path)
 
 (def (write-json-handshake handshake port)
@@ -107,8 +108,11 @@
                   io-context: ctx))
   (execute runtime)
   (printf "~a~a interaction finished~a\n" BOLD (.@ a interaction) END)
+  ; (unless (symbol? (.@ runtime current-debug-label))
+  ;   (error "expected a symbol for runtime current-debug-label, given:" (.@ runtime current-debug-label)))
   (surface-name-environment
-   (hash-get (hash-get (.@ program compiler-output) 'DebugLabelTable)
-             (.@ runtime current-debug-label))
+   (or (hash-get (hash-get (.@ program compiler-output) 'DebugLabelTable)
+                 (.@ runtime current-debug-label))
+       empty-symdict)
    (program-environment-type-value-pairs program (.@ runtime environment))))
 
