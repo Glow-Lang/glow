@@ -304,6 +304,7 @@
 
   ;; TODO: abstract into Poo object, especially if we have more local-runtime-options
   ;; TODO: error out if off-chain-channel-selection is an invalid channel
+  ;; FIXME: Mark off-chain-channel as experimental, print it in a console prompt
   (def channel-options
     (hash
      (off-chain-channel-selection (symbolify off-chain-channel-selection))
@@ -312,31 +313,34 @@
      (my-nickname my-nickname)
      (contacts contacts)))
   (def off-chain-channel (init-off-chain-channel channel-options)) ; FIXME: Teardown
-
-  (displayln)
-  (defvalues (agreement selected-role)
-    (cond
-     (wait-for-agreement
-      (let (agreement (listen-for-agreement off-chain-channel))
-       (start-interaction/with-agreement options agreement)))
-     (agreement-json-string
-      (let (agreement (<-json InteractionAgreement (json<-string agreement-json-string)))
-        (start-interaction/with-agreement options agreement)))
-     (else (start-interaction/generate-agreement options contacts off-chain-channel))))
-  (def environment
-    (let ((role (symbolify selected-role)))
-      (if handshake
-        (run:command ["/bin/sh" "-c" handshake] role agreement off-chain-channel)
-        (run:terminal role agreement off-chain-channel))))
-  (displayln "Final environment:")
-  ;; TODO: get run to include type t and pre-alpha-converted labels,
-  ;; and output the entire thing as JSON omitting shadowed variables (rather than having conflicts)
-  ;; TODO: highlight the returned value in the interaction, and have buy_sig return signature
-  (for-each (match <> ([k t . v]
-              (if (equal? (symbolify k) 'signature)
-                (display-object-ln BOLD k END " => " t v)
-                (display-object-ln k " => " t v))))
-            (hash->list/sort environment symbol<?)))
+  (try
+    ;; Start the interaction
+      (displayln)
+      (defvalues (agreement selected-role)
+        (cond
+          (wait-for-agreement
+          (let (agreement (listen-for-agreement off-chain-channel))
+          (start-interaction/with-agreement options agreement)))
+          (agreement-json-string
+          (let (agreement (<-json InteractionAgreement (json<-string agreement-json-string)))
+               (start-interaction/with-agreement options agreement)))
+            (else (start-interaction/generate-agreement options contacts off-chain-channel))))
+          (def environment
+            (let ((role (symbolify selected-role)))
+              (if handshake
+                (run:command ["/bin/sh" "-c" handshake] role agreement off-chain-channel)
+                (run:terminal role agreement off-chain-channel))))
+          (displayln "Final environment:")
+          ;; TODO: get run to include type t and pre-alpha-converted labels,
+          ;; and output the entire thing as JSON omitting shadowed variables (rather than having conflicts)
+          ;; TODO: highlight the returned value in the interaction, and have buy_sig return signature
+          (for-each (match <> ([k t . v]
+            (if (equal? (symbolify k) 'signature)
+              (display-object-ln BOLD k END " => " t v)
+              (display-object-ln k " => " t v))))
+                    (hash->list/sort environment symbol<?))
+    ;; Close channel once done / after erroring out
+    (finally (close-off-chain-channel off-chain-channel))))
 
 (def (string->json-participant-map str)
   (def object (string->json-object str))
