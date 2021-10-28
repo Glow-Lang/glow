@@ -108,11 +108,10 @@
                   io-context: ctx))
   (execute runtime)
   (printf "~a~a interaction finished~a\n" BOLD (.@ a interaction) END)
-  ; (unless (symbol? (.@ runtime current-debug-label))
-  ;   (error "expected a symbol for runtime current-debug-label, given:" (.@ runtime current-debug-label)))
+  (unless (symbol? (.@ runtime current-debug-label))
+    (error "expected a symbol for runtime current-debug-label, given:" (.@ runtime current-debug-label)))
   (surface-name-environment
-   (or (hash-get (hash-get (.@ program compiler-output) 'DebugLabelTable)
-                 (.@ runtime current-debug-label))
-       empty-symdict)
+   (hash-kref (hash-kref (.@ program compiler-output) 'DebugLabelTable)
+              (.@ runtime current-debug-label))
    (program-environment-type-value-pairs program (.@ runtime environment))))
 

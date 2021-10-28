@@ -288,9 +288,7 @@
      ;   in the same if-branches under (not contract-config)
      (void))
    (let (create-pretx (prepare-create-contract-transaction self))
-     (DBG pr-rpcb/h-281-before-vcc: contract-config create-pretx)
      (verify-contract-config contract-config create-pretx)
-     (DBG pr-rpcb/h-283-after-vcc:)
      (set! (.@ self contract-config) contract-config)))
   #t)
 
