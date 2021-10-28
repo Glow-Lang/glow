@@ -3,6 +3,7 @@
 (import
   :gerbil/gambit/bits :gerbil/gambit/bytes :gerbil/gambit/threads :gerbil/gambit/ports :std/net/bio
   :std/pregexp :std/srfi/13 :std/misc/uuid
+  :std/text/base64
   :std/crypto
   :std/format :std/iter :std/misc/hash :std/sugar :std/misc/number :std/misc/list :std/sort :std/srfi/1 :std/text/json
   (for-syntax :std/stxutil)
@@ -810,7 +811,7 @@
 
          (def (push-to-buffer s)
            (def received-data (chat-reader s))
-           (displayln "Received: " received-data)
+           ;; (displayln "Received: " received-data)
            (channel-put buffer received-data) ; FIXME: Verify channel-put status - fail / error etc...
            (stream-close s))
 
@@ -819,7 +820,7 @@
 
          ;; Ensure libp2p-daemon client is running
          (displayln "Starting libp2p client")
-         (def libp2p-client (ensure-libp2p-client! nickname: my-nickname host-address: host-address))
+         (def libp2p-client (ensure-libp2p-client nickname: my-nickname host-address: host-address))
 
          ;; Get and Broadcast identity
          (def self (libp2p-identify libp2p-client))
@@ -844,12 +845,12 @@
 ;; public key + host-address hash is used for namespacing,
 ;; to check if the libp2p unix socket exists
 ;; host-address verifies that it is running at the correct host-addr
-(def (ensure-libp2p-client! nickname: nickname host-address: host-address)
-  (def my-address (address<-nickname nickname))
-  (def expected-libp2p-socket-path (make-libp2p-socket-path address: my-address host-address: host-address))
-  (def existing-libp2p-client (get-libp2p-client path: expected-libp2p-socket-path))
-  (or existing-libp2p-client
-    (new-libp2p-client nickname: nickname host-address: host-address)))
+(def (ensure-libp2p-client nickname: nickname host-address: host-address)
+  ;; (def my-address (address<-nickname nickname))
+  ;; (def expected-libp2p-socket-path (make-libp2p-socket-path address: my-address host-address: host-address))
+  ;; (def existing-libp2p-client (get-libp2p-client path: expected-libp2p-socket-path))
+  ;; (or existing-libp2p-client
+    (new-libp2p-client nickname: nickname host-address: host-address))
 
 (def (new-libp2p-client nickname: nickname host-address: host-address)
   (with-seckey-tempfile nickname: nickname
@@ -860,13 +861,17 @@
        options: ["-id" seckey-filename]))))
 
 (def (get-libp2p-client path: path)
+  (displayln "Path:")
+  (displayln path)
   (and (file-exists? path)
     (let ()
       (def libp2p-daemon (use-libp2p-daemon! path))
       (make-client libp2p-daemon (make-mutex 'libp2p-client) (make-hash-table) #f #f #f))))
 
 (def (make-libp2p-socket-path address: address host-address: host-address)
-  (def multiaddr-hash (sha256 (string-append (.call Address .string<- address) host-address)))
+  (def multiaddr-hash
+    (let (address-str (.call Address .string<- address))
+      (u8vector->base64-string (sha256 (string-append address-str host-address)))))
   (string-append "/tmp/libp2p-socket-" multiaddr-hash))
 
 ;; TODO: Ensure file does not exist before creating it
@@ -935,6 +940,25 @@
 (def (lookup-contact nickname: nickname contacts: contacts)
   (for-each (lambda (contact) (displayln (.@ contact name))) contacts)
   (find (lambda (contact) (equal? (.@ contact name) nickname)) contacts))
+
+;; ------------------ Cleanup off-chain channels
+
+
+(def (close-off-chain-channel off-chain-channel)
+  (match (.@ off-chain-channel tag)
+    ('stdio #f)
+    ('libp2p (let ()
+     (def libp2p-client (.@ off-chain-channel libp2p-client))
+     ;; (displayln "closing client...")
+     ;; (libp2p-close libp2p-client)
+     ;; (def dest-address? (.@ off-chain-channel dest-address))
+     ;; (when dest-address? (libp2p-disconnect libp2p-client dest-address?))
+     ;; (stop-libp2p-daemon!) ; NOTE: We should be using libp2p-close instead, but that's broken...
+     ;; (displayln "closed client...")
+     ))
+    (else (error "Invalid channel")))) ; TODO: This is an internal error,
+                                        ; ensure this is handled at cli options parsing step.
+
 
 ;; ------------------ Send Contract Agreement
 
@@ -1099,7 +1123,7 @@
     (for (p (peer-info->string* self))
       (displayln "I am " p))
     (displayln "Connecting to " dest-address-str)
-    (libp2p-connect/poll libp2p-client peer-multiaddr timeout: 60)
+    (libp2p-connect/poll libp2p-client peer-multiaddr timeout: 600)
     (let (s (libp2p-stream libp2p-client peer-multiaddr [chat-proto]))
       (chat-writer s contents))))
 
@@ -1127,20 +1151,20 @@
        ((string-empty? line)
         (displayln "*** Received"))
        (else
-        (write-u8 #x1b)
-        (display "[32m")
-        (display line)
-        (write-u8 #x1b)
-        (displayln "[0m")
-        (display "> ")
-        (displayln "*** Done")
+        ;; (write-u8 #x1b)
+        ;; (display "[32m")
+        ;; (display line)
+        ;; (write-u8 #x1b)
+        ;; (displayln "[0m")
+        ;; (display "> ")
+        ;; (displayln "*** Done")
         line)))))
 
 (def (chat-handler ret)
   (lambda (s)
     (displayln "*** Incoming connection from " (peer-info->string (cdr (stream-info s))))
     (def received-data (chat-reader s))
-    (displayln "Received: " received-data)
+    ;; (displayln "Received: " received-data)
     (ret received-data)
     (stream-close s)
     (displayln "*** STREAM CLOSED")))
