@@ -1,0 +1,4 @@
+#lang glow
+
+@interaction([A, B])
+let noop = () => ();
