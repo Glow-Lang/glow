@@ -172,12 +172,16 @@
 ;;
 ;; #f | Symbol <- Runtime
 (def (execute-1 self)
+  (def contract-config (.@ self contract-config))
   (def result
     (if (is-active-participant self)
       (run-active-code-block self)
       (run-passive-code-block self)))
   (set! (.@ self block-ctx) #f)
-  (and result (.@ (get-current-code-block self) exit)))
+  (and
+    result
+    (cond (contract-config (.@ (get-current-code-block self) exit))
+          (else            (.@ self current-code-block-label)))))
 
 ;; Update the stored balance of the contract based on the deposits and withdrawals
 ;; in the block context.
@@ -279,6 +283,9 @@
      ;; TODO: Interpret as many code blocks as possible off-chain.
      ;; Must accumulate side-effects to be done before contract creation.
      ;(interpret-current-code-block self)
+     ; as long as this is commented out, the execute-1 function needs to use
+     ;   the current-code-block-label instead of the current-code-block exit field,
+     ;   in the same if-branches under (not contract-config)
      (void))
    (let (create-pretx (prepare-create-contract-transaction self))
      (DBG pr-rpcb/h-281-before-vcc: contract-config create-pretx)
@@ -318,6 +325,9 @@
       ;; TODO: Interpret as many code blocks as possible off-chain.
       ;; Must accumulate side-effects to be done before contract creation.
       ;(interpret-current-code-block self)
+      ; as long as this is commented out, the execute-1 function needs to use
+      ;   the current-code-block-label instead of the current-code-block exit field,
+      ;   in the same if-branches under (not contract-config)
       (deploy-contract self)
       (def contract-config (.@ self contract-config))
       (def agreement (.@ self agreement))
