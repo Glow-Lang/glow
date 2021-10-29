@@ -947,18 +947,14 @@
 (def (close-off-chain-channel off-chain-channel)
   (match (.@ off-chain-channel tag)
     ('stdio #f)
-    ('libp2p (let ()
-     (def libp2p-client (.@ off-chain-channel libp2p-client))
-     ;; (displayln "closing client...")
-     ;; (libp2p-close libp2p-client)
-     ;; (def dest-address? (.@ off-chain-channel dest-address))
-     ;; (when dest-address? (libp2p-disconnect libp2p-client dest-address?))
-     ;; (stop-libp2p-daemon!) ; NOTE: We should be using libp2p-close instead, but that's broken...
-     ;; (displayln "closed client...")
-     ))
+    ('libp2p (close-libp2p-channel off-chain-channel))
     (else (error "Invalid channel")))) ; TODO: This is an internal error,
                                         ; ensure this is handled at cli options parsing step.
 
+;; Gracefully close the channel
+;; does libp2p-close suffice??
+(def (close-libp2p-channel chan)
+  (stop-libp2p-daemon!))
 
 ;; ------------------ Send Contract Agreement
 

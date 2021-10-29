@@ -161,7 +161,7 @@
        (def seller-environment
          (with-io-port proc-seller
            (lambda ()
-             (thread-sleep! 40)
+             (thread-sleep! 5)
              (read-environment))))
 
 
