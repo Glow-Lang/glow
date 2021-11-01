@@ -1,5 +1,9 @@
 #lang :std/protobuf/proto ; -*- Protobuf -*-
 
+/* TODO: pb should be pulled in a dependency, so it remains in sync
+ * Pull it from https://github.com/libp2p/go-libp2p-core/blob/master/crypto/pb/crypto.proto
+ */
+
 syntax = "proto2";
 
 enum KeyType {

@@ -811,8 +811,8 @@
 
          (def (push-to-buffer s)
            (def received-data (chat-reader s))
-           ;; (displayln "Received: " received-data)
-           (channel-put buffer received-data) ; FIXME: Verify channel-put status - fail / error etc...
+           ; NOTE: This blocks indefinitely if channel buffer is full
+           (channel-put buffer received-data)
            (stream-close s))
 
          ;; ------------ Libp2p listening thread setup
@@ -827,8 +827,6 @@
          (for (p (peer-info->string* self))
            (displayln "I am " p))
 
-         ;; Initialize listening thread
-         ;; TODO: What is lifetime of this???
          (def listening-thread
            (begin
             (displayln "Listening for messages...")
@@ -874,7 +872,6 @@
       (u8vector->base64-string (sha256 (string-append address-str host-address)))))
   (string-append "/tmp/libp2p-socket-" multiaddr-hash))
 
-;; TODO: Ensure file does not exist before creating it
 (def (with-seckey-tempfile nickname: nickname c)
   (def file-name (make-seckey-tempfile nickname: nickname))
   (with-unwind-protect (lambda () (c file-name))
@@ -883,30 +880,19 @@
 (def (make-seckey-tempfile nickname: nickname
                            filename: (filename (string-append "/tmp/glow-seckey-"
                                                               (uuid->string (random-uuid)))))
-  (displayln "Generating temporary keyfile")
   (def seckey (get-my-seckey nickname: nickname))
   (def seckey/bytes (export-secret-key/bytes seckey))
   (def seckey/proto (make-seckey/proto seckey/bytes: seckey/bytes))
   (write-seckey/proto filepath: filename seckey/proto: seckey/proto)
-  (displayln "Wrote key to file")
   filename)
 
 (def (write-seckey/proto filepath: filepath seckey/proto: seckey/proto)
-  (displayln "Writing key to file")
   (def buf (open-file-output-buffer filepath))
   (bio-write-PrivateKey seckey/proto buf)
-  (displayln "Wrote key to buffer")
-  (call-with-input-file filepath
-    (lambda (port)
-      (def contents (read port))
-      (displayln "Contents: ")
-      (displayln contents)))
   (bio-force-output buf)
-  (close-file-input-buffer buf)
-  (displayln "Closed file"))
+  (close-file-input-buffer buf))
 
 ;; TODO: accept other types of secret keys
-;; FIXME: pb should be pulled in a dependency, so it remains in sync
 (def (make-seckey/proto seckey/bytes: seckey/bytes)
   (make-PrivateKey Type: 'Secp256k1 Data: seckey/bytes))
 
@@ -919,8 +905,6 @@
 ;; ------------------ Initialize Off-chain channels
 
 
-;; FIXME: Use unwind / something else when program exits,
-;; channel should be closed.
 (def (init-off-chain-channel options)
   (def off-chain-channel-selection (hash-get options 'off-chain-channel-selection))
   (match off-chain-channel-selection
@@ -933,8 +917,8 @@
     (else (error "Invalid off-chain channel selection"))))
 
 
-;; TODO: Eventually upstream changes to gerbil-libp2p to accept passing a seckey via an argument,
-;; instead of a file.
+;; TODO: Eventually upstream changes to gerbil-libp2p to accept passing
+;; a seckey via an environment variable, instead of a file.
 
 
 (def (lookup-contact nickname: nickname contacts: contacts)
@@ -959,7 +943,8 @@
 ;; ------------------ Send Contract Agreement
 
 
-;; FIXME: Take in participant addresses as a parameter
+;; FIXME: Take in participant addresses as a parameter,
+;; update this when there's support for mapping users to peerIDs via the contacts store.
 (def (send-contract-agreement agreement off-chain-channel)
   (displayln MAGENTA "Sending Agreement to other participants...")
   (match (.@ off-chain-channel tag)
@@ -979,13 +964,9 @@
   (displayln full-cmd-string)
   (force-output))
 
-;; TODO: Refactor this to be more general, handshake uses this as well.
 (def (send-contract-agreement/libp2p agreement libp2p-client dest-address)
   (displayln MAGENTA "Sending agreement to multiaddr..." END)
   (def agreement-string (string<-json (json<- InteractionAgreement agreement)))
-  ;; (if (string-contains agreement-string "'")
-  ;;   (pr agreement-string)
-  ;;   (display (string-append "'" agreement-string "'")))
   (dial-and-send-contents libp2p-client dest-address agreement-string)
   (displayln)
   (force-output))
@@ -1022,7 +1003,6 @@
     (for (p (peer-info->string* self))
       (displayln "I am " p))
     (displayln "Listening for incoming connections")
-    ;; TODO: use parameterize instead?
     (def ret (make-parameter #f))
     (libp2p-listen libp2p-client [chat-proto] (chat-handler ret))
     ;; TODO close the connection
@@ -1108,7 +1088,7 @@
   (bio-force-output (stream-out s)))
 
 ;; peer-multiaddr-str: destination multiaddress,
-;; NOTE: has the constraint that it needs to contain a peerId,
+;; NOTE: It has the constraint that it needs to contain a peerId,
 ;; so we can verify the recipient's identity.
 ;;
 ;; host-addresses: Multi addresses this participant listens to on their host machine.
@@ -1123,7 +1103,7 @@
     (let (s (libp2p-stream libp2p-client peer-multiaddr [chat-proto]))
       (chat-writer s contents))))
 
-;; polls every 1s if other party is offline / unreachable, until timeout
+;; Polls every 1s if other party is offline / unreachable, until timeout
 (def (libp2p-connect/poll libp2p-client peer-multiaddr timeout: (timeout #f))
   (try (libp2p-connect libp2p-client peer-multiaddr)
     (catch (e)
