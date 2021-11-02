@@ -65,7 +65,8 @@
                 (&simple-contract-prelude)
                 &define-tail-call
                 (&define-commit-contract-call/simple self)
-                (&define-check-participant-or-timeout assets-and-vars)
+                (&define-check-participant-or-timeout
+                 assets-and-vars #| TODO: pass a timeout: parameter |#)
                 (&define-end-contract assets-and-vars)
                 compiled-small-functions
                 compiled-medium-functions

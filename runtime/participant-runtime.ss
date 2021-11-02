@@ -50,8 +50,13 @@
 
 (define-type IOContext
   (instance Class
-    slots: (.o send-handshake: (.o type: (Fun Unit <- AgreementHandshake))
-               receive-handshake: (.o type: (Fun AgreementHandshake <-)))))
+    slots: (.o
+            ;; Asynchronous, cannot fail. Any error handling to happen in separate thread;
+            ;; ultimate communication failure to be later detected and handled
+            ;; by regular synchronous continuation.
+            send-handshake: (.o type: (Fun Unit <- AgreementHandshake))
+            ;; Synchronous, will always return (or else timeout exception to caught)
+            receive-handshake: (.o type: (Fun AgreementHandshake <-)))))
 
 ;; split-interaction-path-name : String -> (values String Symbol)
 (def (split-interaction-path-name interaction-str)
@@ -207,8 +212,9 @@
 ;; and updates the first-unprocessed-block, unprocessed-event-in-block in Runtime
 ;; TODO: Return logs in batches, rather than singly. Store unprocessed logs to avoid calling getLogs.
 ;; TODO: MUCH LATER: present results of speculative execution to user.
-;; TODO: (optional) push all the previously processed log objects to the processed list after processing
-;; : LogObject <- Runtime
+;; TODO: (to be done by whoever processes the watch results, or by a callback that does)
+;;   push all the previously processed log objects to the processed list after processing.
+;; : (Maybe LogObject) <- Runtime
 (def (watch self)
   (def-slots (timer-start contract-config first-unprocessed-block first-unprocessed-event-in-block)
     self)
@@ -221,17 +227,16 @@
       (return log))
     (def from-block first-unprocessed-block)
     (def to-block (+ timer-start (.@ self agreement options timeoutInBlocks)))
-    (watch-contract callback contract-address from-block to-block first-unprocessed-event-in-block))
-  )
+    (watch-contract callback contract-address from-block to-block first-unprocessed-event-in-block)))
 
 (def (run-passive-code-block/contract self role contract-config)
   (displayln BOLD "\nWaiting for " (.@ (get-current-code-block self) participant) " to make a move ..." END)
   (def new-log-object (watch self))
-  (if (eq? new-log-object #!void)
-    (let
-      ;; No log objects -- this indicates a timeout. The contract will send us
-      ;; the escrowed funds, but we need to kick it so that it runs.
-      ((address (.@ contract-config contract-address)))
+  (display-object-ln "\nWatch returned: " (Maybe LogObject) new-log-object)
+  (if (void? new-log-object)
+    ;; No log objects -- this indicates a timeout. The contract will send us
+    ;; the escrowed funds, but we need to kick it so that it runs.
+    (let (address (.@ contract-config contract-address))
       (displayln RED "Timed out waiting for other participant; claiming escrowed funds..." END)
       (post-transaction
         (call-function
@@ -239,7 +244,8 @@
           address
           (call-with-output-u8vector
             (lambda (out)
-              (publish-frame-data self out)))))
+              (publish-frame-data self out)))
+          gas: 1000000))
       #f)
     (let ()
       (def log-data (.@ new-log-object data))
@@ -310,12 +316,14 @@
   (interpret-current-code-block self)
   (if (not contract-config)
     (let ()
+      ;; TODO: AS PART OF DEPLOY CONTRACT, we want to post the timeout-continuation for it.
+      ;; so even if the handshake fails we get the money back.
       (deploy-contract self)
       (def contract-config (.@ self contract-config))
       (def agreement (.@ self agreement))
       (def published-data (get-output-u8vector (.@ self block-ctx outbox)))
       (def handshake (.new AgreementHandshake agreement contract-config published-data))
-      (send-contract-handshake self handshake))
+      (send-contract-handshake self handshake)) ;; TODO: send asynchronously?
     (let ()
       ;; TODO: Verify asset transfers using previous transaction and balances
       ;; recorded in Message's asset-transfer table during interpretation. Probably
@@ -722,6 +730,17 @@
                "check-consecutive-addresses: ending offset was incorrect; "
                "expected ~a but got ~a") end i))))
 
+(define-type (FrameBinding @ Type.)
+  .element?: (match <> ([var val] (and (element? VarDesc var) (element? (.@ var type) val))) (_ #f))
+  .sexp<-: (match <> ([var val] [(sexp<- VarDesc var) (sexp<- (.@ var type) val)]))
+  .json<-: (match <> ([var val] [(.@ var name) (json<- (.@ var type) val)]))
+  .<-json: invalid
+  .marshal: invalid
+  .unmarshal: invalid)
+
+(def Frame (List TypeValuePair))
+
+;; A frame is a list of [VarDesc Value] where each value is to be stored in the described variable.
 ;; : Frame <- Runtime Block (Table Offset <- Symbol) Symbol
 (def (create-frame-variables self timer-start code-block-label code-block-participant)
   (def consensus-code-generator (.@ self consensus-code-generator))
@@ -732,6 +751,7 @@
   (def balances (vector->list (.@ self contract-balances)))
   (def live-variables (lookup-live-variables (.@ self program) (.@ self name) code-block-label))
   ;; TODO: ensure keys are sorted in both hash-values
+  (def frame-variables
   (append
    (frame-variables/consecutive-addresses frame@ params-start@
     (append
@@ -746,6 +766,7 @@
        (def variable-value (hash-get (.@ self environment) variable-name))
        [variable-type . variable-value])
      (sort live-variables symbol<?))))
+  (DDT 'create-frame-variables Frame frame-variables))
 
 (def (interaction-input t s)
   (def env-input (ignore-errors (getenv "INPUT")))
