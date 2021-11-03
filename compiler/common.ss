@@ -10,6 +10,9 @@
 
 ;; hash-kref : [Hashof K V] K [-> V] -> V
 ;; I wish the normal `hash-ref` had better error messages
+;; But this should not be used for looking up confidential information,
+;; or looking up in hashes that contain confidential information, because
+;; it prints the hash contents on error.
 (def (hash-kref h k (d (hash-kref-error h k)))
   (hash-ref/default h k d))
 

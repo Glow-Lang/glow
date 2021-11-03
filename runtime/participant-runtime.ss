@@ -309,6 +309,7 @@
   ;; before running `interpret-current-code-block`
   ;; TODO: as an optimization, it could be possible to run interpret-current-code-block
   ;;       before this, in the cases where it doesn't have side-effects such as withdraws
+  ;;       call it first-transaction-optimization
   (when (not (.@ self contract-config))
    (let ()
     (deploy-contract self)
@@ -372,7 +373,6 @@
 (def (prepare-create-contract-transaction self)
   (def sender-address (get-active-participant self))
   (def current-code-block-label (.@ self current-code-block-label))
-  (DBG 'label current-code-block-label)
   (def code-block (get-current-code-block self))
   (def participant (.@ code-block participant))
   (def initial-state
