@@ -22,7 +22,7 @@
   ../runtime/reify-contract-parameters
   ./cli-integration)
 
-(def buy-sig-libp2p-local-integration-test
+(def buy-sig-libp2p-integrationtest
   (test-suite "integration test for ethereum/buy-sig over libp2p channel"
     (test-case "buy sig runs successfully"
       (delete-agreement-handshake)
