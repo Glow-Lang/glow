@@ -24,7 +24,7 @@
 
 (def buy-sig-libp2p-integrationtest
   (test-suite "integration test for ethereum/buy-sig over libp2p channel"
-    (test-case "buy sig runs successfully"
+    (test-case "buy sig over libp2p runs successfully"
       (delete-agreement-handshake)
       (ensure-ethereum-connection "pet")
       (ensure-db-connection "testdb")
@@ -48,7 +48,7 @@
       (def proc-buyer #f)
       (def proc-seller #f)
 
-      (displayln "Starting buyer thread")
+      (DBG "Starting buyer thread")
 
 
       ;; FIXME: Test for polling
@@ -62,7 +62,7 @@
       ;;
       ;; The following test steps start the seller first to avoid this problem.
       (try
-       (displayln "Spawning seller proc")
+       (DBG "Spawning seller proc")
 
        (set! proc-seller
          (open-process
@@ -86,7 +86,7 @@
                        "--database" "/tmp/alt-glow-db"
                        ]]))
 
-       (displayln "Filling up seller prompt")
+       (DBG "Filling up seller prompt")
 
        ;; reply to seller prompts
        (with-io-port proc-seller
@@ -124,7 +124,7 @@
                        ]
            ]))
 
-       (displayln "Filling up buyer prompt")
+       (DBG "Filling up buyer prompt")
 
        ;; Fill up buyer prompt
        ;; (def peer-command
@@ -151,13 +151,13 @@
 
 
 
-       (displayln "Choosing role")
+       (DBG "Choosing role")
 
        (with-io-port proc-seller
          (lambda ()
            ;; Wait for handshake to come in
            (thread-sleep! 10)
-           ;; (displayln "2")
+           ;; (DBG "2")
            ;; (force-output)
 
            (answer-questions
@@ -165,7 +165,7 @@
                "Seller"]])
            ))
 
-       (displayln "Reading end environment for seller")
+       (DBG "Reading end environment for seller")
 
        (def seller-environment
          (with-io-port proc-seller
@@ -174,16 +174,16 @@
              (read-environment))))
 
 
-       (displayln "Reading end environment for buyer")
+       (DBG "Reading end environment for buyer")
 
        (def buyer-environment
          (with-io-port proc-buyer read-environment))
 
-       (displayln "Checking buyer and seller environment")
+       (DBG "Checking buyer and seller environment")
 
        (assert! (equal? buyer-environment seller-environment))
 
-       (displayln "Verifying signature")
+       (DBG "Verifying signature")
 
        (def signature
          (match (hash-ref buyer-environment 'signature)
@@ -204,7 +204,7 @@
             (.@ Ether .string<-) seller-balance-after)
 
 
-       (displayln "Verify gas balance")
+       (DBG "Verify gas balance")
 
        ;; Check that the signature was valid and that the money transfer happened, modulo gas allowance
        (def gas-allowance (wei<-ether .01))
