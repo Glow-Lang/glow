@@ -72,7 +72,7 @@
                        "--evm-network" "pet"
                        "--test"
 
-                       "--host-address" "/ip4/10.0.0.6/tcp/10333"
+                       "--host-address" "/ip4/127.0.0.1/tcp/10333"
                        "--off-chain-channel" "libp2p"
                        "--wait-for-agreement"
                        ;; Similarly, specify one of the participants here. There are only two,
@@ -109,10 +109,10 @@
                        ;; other below.
                        "--params" (string-append "{\"price\": " (number->string price) "}")
 
-                       "--host-address" "/ip4/10.0.0.6/tcp/10300"
+                       "--host-address" "/ip4/127.0.0.1/tcp/10300"
                        "--off-chain-channel" "libp2p"
                        ;; TODO: derive the peerid
-                       "--dest-address" "/ip4/10.0.0.6/tcp/10333/ipfs/16Uiu2HAmUXHHL7qEMNmwgynPF3GLGjo8n72TDnMPAgAFYPmnfpv8"
+                       "--dest-address" "/ip4/127.0.0.1/tcp/10333/ipfs/16Uiu2HAmUXHHL7qEMNmwgynPF3GLGjo8n72TDnMPAgAFYPmnfpv8"
 
                        ;; Similarly, specify one of the participants here. There are only two,
                        ;; so this test doesn't excercise the logic to read this from stdin,
