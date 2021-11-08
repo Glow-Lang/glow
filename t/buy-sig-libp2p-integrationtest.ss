@@ -157,8 +157,6 @@
          (lambda ()
            ;; Wait for handshake to come in
            (thread-sleep! 10)
-           ;; (DBG "2")
-           ;; (force-output)
 
            (answer-questions
              [["Choose your role:"
