@@ -1050,7 +1050,14 @@
   (def io-context (.@ self io-context))
   (.call io-context receive-handshake))
 
+
 ;; ------------------ Libp2p client methods
+;;
+;; The structure of functions used here are similar to those found in:
+;; https://github.com/vyzo/gerbil-libp2p/blob/master/example/libp2p-chat.ss
+;;
+;; See: https://github.com/vyzo/gerbil-libp2p#libp2p-api
+;; for a complete reference of libp2p API.
 
 
 ;; TODO: Rename
