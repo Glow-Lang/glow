@@ -844,7 +844,7 @@
     (new-libp2p-client nickname: nickname host-address: host-address))
 
 (def (new-libp2p-client nickname: nickname host-address: host-address)
-  (with-seckey-tempfile nickname: nickname
+  (call-with-seckey-tempfile nickname: nickname
     (lambda (seckey-filename)
       (open-libp2p-client
        host-addresses: host-address
@@ -859,9 +859,13 @@
       (def libp2p-daemon (use-libp2p-daemon! path))
       (make-client libp2p-daemon (make-mutex 'libp2p-client) (make-hash-table) #f #f #f))))
 
-(def (with-seckey-tempfile nickname: nickname c)
+;; Creates a seckey temporary file,
+;; and passes its filename as an argument to f,
+;; purging the file after that.
+;; The seckey used is determined using the nickname.
+(def (call-with-seckey-tempfile nickname: nickname f)
   (def file-name (make-seckey-tempfile nickname: nickname))
-  (with-unwind-protect (lambda () (c file-name))
+  (with-unwind-protect (lambda () (f file-name))
                        (lambda () (delete-file file-name))))
 
 (def (make-seckey-tempfile nickname: nickname
@@ -897,9 +901,9 @@
   (match off-chain-channel-selection
     ('stdio (.call IoChannel .make)) ; TODO: Initialize io:context object here
     ('libp2p (let ()
-     (def my-nickname (hash-get options 'my-nickname))
-     (def host-address (hash-get options 'host-address))
-     (def dest-address (hash-get options 'dest-address))
+     (def my-nickname (hash-ref options 'my-nickname))
+     (def host-address (hash-ref options 'host-address))
+     (def dest-address (hash-ref options 'dest-address))
      (.call Libp2pChannel .make my-nickname host-address dest-address)))
     (else (error "Invalid off-chain channel selection"))))
 
