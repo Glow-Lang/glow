@@ -928,6 +928,7 @@
 ;; ------------------ Cleanup off-chain channels
 
 
+;; TODO: We should log messages from libp2p somewhere, NOT to stdout.
 (def (close-off-chain-channel off-chain-channel)
   (match (.@ off-chain-channel tag)
     ('stdio #f)
@@ -935,8 +936,6 @@
     (else (error "Invalid channel")))) ; TODO: This is an internal error,
                                         ; ensure this is handled at cli options parsing step.
 
-;; Gracefully close the channel
-;; does libp2p-close suffice??
 (def (close-libp2p-channel chan)
   (stop-libp2p-daemon!))
 
@@ -1005,7 +1004,6 @@
     (displayln "Listening for incoming connections")
     (def ret (make-parameter #f))
     (libp2p-listen libp2p-client [chat-proto] (chat-handler ret))
-    ;; TODO close the connection
     (let loop ()
       (or (ret)
           (begin
@@ -1070,7 +1068,6 @@
     ;; TODO: use parameterize instead?
     (def ret (make-parameter #f))
     (libp2p-listen libp2p-client [chat-proto] (chat-handler ret))
-    ;; TODO close the connection
     (let loop ()
       (or (ret)
           (begin
@@ -1101,7 +1098,8 @@
     (displayln "Connecting to " dest-address-str)
     (libp2p-connect/poll libp2p-client peer-multiaddr timeout: 600)
     (let (s (libp2p-stream libp2p-client peer-multiaddr [chat-proto]))
-      (chat-writer s contents))))
+      (chat-writer s contents)
+      (stream-close s))))
 
 ;; Polls every 1s if other party is offline / unreachable, until timeout
 (def (libp2p-connect/poll libp2p-client peer-multiaddr timeout: (timeout #f))
@@ -1127,20 +1125,12 @@
        ((string-empty? line)
         (displayln "*** Received"))
        (else
-        ;; (write-u8 #x1b)
-        ;; (display "[32m")
-        ;; (display line)
-        ;; (write-u8 #x1b)
-        ;; (displayln "[0m")
-        ;; (display "> ")
-        ;; (displayln "*** Done")
         line)))))
 
 (def (chat-handler ret)
   (lambda (s)
     (displayln "*** Incoming connection from " (peer-info->string (cdr (stream-info s))))
     (def received-data (chat-reader s))
-    ;; (displayln "Received: " received-data)
     (ret received-data)
     (stream-close s)
     (displayln "*** STREAM CLOSED")))
