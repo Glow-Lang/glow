@@ -1059,25 +1059,10 @@
   (def io-context (.@ self io-context))
   (.call io-context receive-handshake))
 
-
-(def (listen-for-handshake/libp2p libp2p-client)
-  (let* ((self (libp2p-identify libp2p-client)))
-    (for (p (peer-info->string* self))
-      (displayln "I am " p))
-    (displayln "Listening for incoming connections")
-    ;; TODO: use parameterize instead?
-    (def ret (make-parameter #f))
-    (libp2p-listen libp2p-client [chat-proto] (chat-handler ret))
-    (let loop ()
-      (or (ret)
-          (begin
-            (thread-sleep! 3)
-            (loop))))))
-
-
 ;; ------------------ Libp2p client methods
 
 
+;; TODO: Rename
 (def (chat-writer s contents)
   (display "> ")
   (bio-write-string contents (stream-out s))
@@ -1116,6 +1101,7 @@
 
 (def chat-proto "/chat/1.0.0")
 
+;; TODO rename
 (def (chat-reader s)
   (let lp ()
     (let (line (bio-read-line (stream-in s)))
@@ -1127,6 +1113,7 @@
        (else
         line)))))
 
+;; TODO rename
 (def (chat-handler ret)
   (lambda (s)
     (displayln "*** Incoming connection from " (peer-info->string (cdr (stream-info s))))
