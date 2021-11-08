@@ -313,7 +313,7 @@
      (dest-address dest-address)
      (my-nickname my-nickname)
      (contacts contacts)))
-  (def off-chain-channel (init-off-chain-channel channel-options)) ; FIXME: Teardown
+  (def off-chain-channel (init-off-chain-channel channel-options))
   (try
     ;; Start the interaction
       (displayln)
