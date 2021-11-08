@@ -840,14 +840,7 @@
            push-to-buffer }))}))
 
 
-;; public key + host-address hash is used for namespacing,
-;; to check if the libp2p unix socket exists
-;; host-address verifies that it is running at the correct host-addr
 (def (ensure-libp2p-client nickname: nickname host-address: host-address)
-  ;; (def my-address (address<-nickname nickname))
-  ;; (def expected-libp2p-socket-path (make-libp2p-socket-path address: my-address host-address: host-address))
-  ;; (def existing-libp2p-client (get-libp2p-client path: expected-libp2p-socket-path))
-  ;; (or existing-libp2p-client
     (new-libp2p-client nickname: nickname host-address: host-address))
 
 (def (new-libp2p-client nickname: nickname host-address: host-address)
@@ -865,12 +858,6 @@
     (let ()
       (def libp2p-daemon (use-libp2p-daemon! path))
       (make-client libp2p-daemon (make-mutex 'libp2p-client) (make-hash-table) #f #f #f))))
-
-(def (make-libp2p-socket-path address: address host-address: host-address)
-  (def multiaddr-hash
-    (let (address-str (.call Address .string<- address))
-      (u8vector->base64-string (sha256 (string-append address-str host-address)))))
-  (string-append "/tmp/libp2p-socket-" multiaddr-hash))
 
 (def (with-seckey-tempfile nickname: nickname c)
   (def file-name (make-seckey-tempfile nickname: nickname))
