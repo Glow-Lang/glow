@@ -20,17 +20,19 @@
   ../runtime/program
   ../runtime/participant-runtime
   ../runtime/reify-contract-parameters
-  ./cli-integration)
-
-(register-test-keys)
-(def a-address alice)
-(def b-address bob)
-(def gas-allowance (wei<-ether .01))
-(def t (wei<-ether .01))
-(def u (wei<-ether .02))
+  ./cli-integration
+  ./utils)
 
 (def asset-swap-integrationtest
   (test-suite "integration test for ethereum/asset_swap"
+    (setup-test-env)
+
+    (def a-address alice)
+    (def b-address bob)
+    (def gas-allowance (wei<-ether .01))
+    (def t (wei<-ether .01))
+    (def u (wei<-ether .02))
+
     (delete-agreement-handshake)
     (ensure-ethereum-connection "pet")
     (ensure-db-connection "testdb")

@@ -19,22 +19,18 @@
   ../runtime/program
   ../runtime/participant-runtime
   ../runtime/reify-contract-parameters
-  ./cli-integration)
-
-(register-test-keys)
-(def a-address alice)
-(def b-address bob)
-(def wagerAmount (wei<-ether .5))
-(def escrowAmount (wei<-ether .01))
+  ./cli-integration
+  ./utils)
 
 (def coin-flip-integrationtest
   (test-suite "integration test for ethereum/coin-flip"
-    (delete-agreement-handshake)
-    (ensure-ethereum-connection "pet")
-    (ensure-db-connection "testdb")
-    (DBG "Ensure participants funded")
-    (ensure-addresses-prefunded)
-    (DBG "DONE")
+    (setup-test-env)
+
+    (def a-address alice)
+    (def b-address bob)
+    (def wagerAmount (wei<-ether .5))
+    (def escrowAmount (wei<-ether .01))
+
 
     (test-case "coin flip executes"
       (def a-balance-before (eth_getBalance a-address 'latest))
