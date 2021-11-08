@@ -20,18 +20,13 @@
   ../runtime/program
   ../runtime/participant-runtime
   ../runtime/reify-contract-parameters
-  ./cli-integration)
+  ./cli-integration
+  ./utils)
 
 (def buy-sig-integrationtest
   (test-suite "integration test for ethereum/buy-sig"
     (test-case "buy sig runs successfully"
-      (delete-agreement-handshake)
-      (ensure-ethereum-connection "pet")
-      (ensure-db-connection "testdb")
-      (register-test-keys)
-
-      (DBG "Ensure participants funded")
-      (ensure-addresses-prefunded)
+      (setup-test-env)
 
       (def buyer-address alice)
       (def seller-address bob)

@@ -19,19 +19,14 @@
   ../runtime/program
   ../runtime/participant-runtime
   ../runtime/reify-contract-parameters
-  ./cli-integration)
-
-(register-test-keys)
-(def wagerAmount (wei<-ether 1))
+  ./cli-integration
+  ./utils)
 
 (def escrow-timeout-integrationtest
   (test-suite "integration test checking escrow return on timeout"
-    (delete-agreement-handshake)
-    (ensure-ethereum-connection "pet")
-    (ensure-db-connection "testdb")
-    (DBG "Ensure participants funded")
-    (ensure-addresses-prefunded)
-    (DBG "DONE")
+    (setup-test-env)
+
+    (def wagerAmount (wei<-ether 1))
 
     (def balance-before (eth_getBalance alice 'latest))
 
