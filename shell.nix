@@ -15,6 +15,10 @@ in
       # To speed this one up: nix path-info -f ./pkgs.nix -r thunkExe | cachix push mukn
       lib.optional thunk thunkExe ++
       [ netcat go-libp2p-daemon ] # used by integration tests
+                                  # TODO: Save at compile time
+                                  # the path to the p2pd (go-libp2p-daemon) binary.
+                                  # The path is useful because it is a hash -
+                                  # so nix knows we depend on this exact version.
       );
     shellHook = ''
       echo ${gerbil-poo.src}; echo ${pkgs.gerbilPackages-unstable.gerbil-poo.src} ; echo
