@@ -1110,10 +1110,13 @@
       (current-libp2p-daemon d)
       d))))
 
+;; NOTE: This is needed to call initialize our version of the daemon process (by `start-libp2p-daemon!'),
+;; one which writes to a logfile.
+;; TODO: Once the above changes are upstreamed for `start-libp2p-daemon!',
+;; this command can be made obsolete too.
 (def (open-libp2p-client host-addresses: (host-addresses #f) options: (args [])  address: (sock #f)  wait: (timeo 12) (path #f)) ;; Extra arguments host-address and options
   (let (d (start-libp2p-daemon! host-addresses: host-addresses options: args address: sock wait: timeo)) ;; Should go with host-address/tranpsort/port
     (make-client d (make-mutex 'libp2p-client) (make-hash-table) path #f #f)))
-
 
 (def (chat-writer s contents)
   (display "> ")
