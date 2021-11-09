@@ -1,23 +1,28 @@
 (export #t)
 
 (import
+  :clan/debug
   :gerbil/gambit/bits :gerbil/gambit/bytes :gerbil/gambit/threads :gerbil/gambit/ports :std/net/bio
+  :gerbil/gambit
   :std/pregexp :std/srfi/13 :std/misc/uuid
   :std/text/base64
   :std/crypto
-  :std/format :std/iter :std/misc/hash :std/sugar :std/misc/number :std/misc/list :std/sort :std/srfi/1 :std/text/json
+  :std/format :std/iter :std/misc/hash :std/sugar :std/misc/number :std/misc/list
+  :std/sort :std/srfi/1 :std/text/json :std/os/pid
   (for-syntax :std/stxutil)
   :gerbil/gambit/exceptions
   :clan/base :clan/exception :clan/io :clan/json :clan/number :clan/pure/dict/assq
   :clan/path :clan/path-config :clan/ports :clan/syntax :clan/timestamp
   :clan/poo/object :clan/poo/brace :clan/poo/io :clan/poo/debug :clan/debug :clan/crypto/random
-  :clan/persist/content-addressing
+  :clan/persist/content-addressing :clan/shell
   :mukn/ethereum/hex :mukn/ethereum/ethereum :mukn/ethereum/network-config :mukn/ethereum/json-rpc
   :mukn/ethereum/transaction :mukn/ethereum/tx-tracker :mukn/ethereum/watch :mukn/ethereum/assets
   :mukn/ethereum/evm-runtime :mukn/ethereum/contract-config :mukn/ethereum/assembly :mukn/ethereum/types
   :mukn/ethereum/nonce-tracker
   :vyzo/libp2p
-  :vyzo/libp2p/client
+  :std/os/signal
+  (only-in :vyzo/libp2p/client make-client)
+  :vyzo/libp2p/daemon
   (only-in ../compiler/alpha-convert/env symbol-refer)
   ./program ./block-ctx ./consensus-code-generator ./terminal-codes
   ./pb/private-key
@@ -1053,14 +1058,63 @@
 
 ;; ------------------ Libp2p client methods
 ;;
-;; The structure of functions used here are similar to those found in:
-;; https://github.com/vyzo/gerbil-libp2p/blob/master/example/libp2p-chat.ss
-;;
+;; For a complete reference of libp2p API.
 ;; See: https://github.com/vyzo/gerbil-libp2p#libp2p-api
-;; for a complete reference of libp2p API.
+;;
+;; To understand what multiaddresses are,
+;; see: https://github.com/multiformats/multiaddr
+;;
+;; We use the chat protocol
+;;
+;; The implementation of client methods here are influenced by those found in:
+;; https://github.com/vyzo/gerbil-libp2p/blob/master/example/libp2p-chat.ss
 
 
-;; TODO: Rename
+;; TODO: To fix this
+;; 1. Upstream to gambit
+;;    Extend open-process to allow you to redirect to file or file descriptor.
+;;    See how `run-program` in uiop does this:
+;;    https://common-lisp.net/project/asdf/uiop.html#UIOP_002fRUN_002dPROGRAM
+;;   
+;; 2. Upstream to gerbil-libp2p
+;;    process-options to use the redirecting option
+;;    for writing the error logs to a file instead
+;;    or the console.
+;;
+;; In the short run we use the shell to redirect error logs to a file (see the implementation below).
+(def (start-libp2p-daemon! host-addresses: (host-addrs #f) daemon: (bin "p2pd")
+                           options: (options [])
+                           address: (sock #f)
+                           wait: (timeo 0.4)
+                           p2pd-log-path: (p2pd-log-path (log-path "p2pd.log")))
+  (cond
+   ((current-libp2p-daemon)
+    => values)
+   (else
+    (let* ((path (or sock (string-append "/tmp/p2pd." (number->string (getpid)) ".sock")))
+           (addr (string-append "/unix" path))
+
+           (raw-cmd (escape-shell-tokens [bin "-q" "-listen" addr
+                                          (if host-addrs ["-hostAddrs" host-addrs] [])...
+                                          options ...]))
+           (cmd (format "{ echo ~a ; exec ~a ; } < /dev/null >> ~a 2>&1"
+                 raw-cmd raw-cmd p2pd-log-path))
+
+           (proc (open-process [path: "/bin/sh" arguments: ["-c" cmd]]))
+
+           (d (daemon proc path)))
+      (cond
+       ((process-status proc timeo #f)
+        => (lambda (status)
+             (error "p2pd exited prematurely" status))))
+      (current-libp2p-daemon d)
+      d))))
+
+(def (open-libp2p-client host-addresses: (host-addresses #f) options: (args [])  address: (sock #f)  wait: (timeo 12) (path #f)) ;; Extra arguments host-address and options
+  (let (d (start-libp2p-daemon! host-addresses: host-addresses options: args address: sock wait: timeo)) ;; Should go with host-address/tranpsort/port
+    (make-client d (make-mutex 'libp2p-client) (make-hash-table) path #f #f)))
+
+
 (def (chat-writer s contents)
   (display "> ")
   (bio-write-string contents (stream-out s))
@@ -1097,6 +1151,10 @@
             (libp2p-connect/poll libp2p-client peer-multiaddr timeout: (- timeout 1)))
           (displayln "Timeout while trying to connect to client.")))))
 
+
+;; NOTE: This is a placeholder,
+;; it's not an actual libp2p protocol.
+;; This just falls back to plaintext messaging
 (def chat-proto "/chat/1.0.0")
 
 ;; TODO rename
@@ -1111,7 +1169,7 @@
        (else
         line)))))
 
-;; TODO rename
+
 (def (chat-handler ret)
   (lambda (s)
     (displayln "*** Incoming connection from " (peer-info->string (cdr (stream-info s))))
