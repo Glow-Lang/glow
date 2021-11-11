@@ -954,7 +954,7 @@
 (def (send-contract-agreement/stdout agreement)
   (displayln MAGENTA "One line command for other participants to generate the same agreement:" END)
   (def agreement-string (string<-json (json<- InteractionAgreement agreement)))
-  (def escaped-agreement-string (escape-json-string agreement-string))
+  (def escaped-agreement-string (escape-agreement-string/shell agreement-string))
   (def full-cmd-string (string-append "glow start-interaction --agreement " escaped-agreement-string))
   (displayln full-cmd-string)
   (force-output))
@@ -966,11 +966,18 @@
   (displayln)
   (force-output))
 
-;; TODO: Generalize & Upstream to gerbil-utils/json
-(def (escape-json-string json-string)
-  (if (string-contains json-string "'")
-    json-string
-    (string-append "'" json-string "'")))
+;; TODO: Generalize this for escaping arbitrary strings in the shell, upstream to `gerbil-utils'.
+;; NOTE: It currently does not correctly escape things for the shell. E.g:
+;; "$(rm -rf /) ''" would be passed through unchanged, since it contains a single quote.
+;; If you got rid of that first case,
+;; then "'$(rm -rf /)'" would still slip by the escaping in the second case;
+;; due to the way shell escaping works,
+;; you can unquote back into an interpreted context.
+;; So you also need to substitute out any single quotes in the middle of the string.
+(def (escape-agreement-string/shell agreement-string)
+  (if (string-contains agreement-string "'")
+    agreement-string
+    (string-append "'" agreement-string "'")))
 
 
 ;; ------------------ Listen for agreements
@@ -1051,13 +1058,11 @@
 ;; To understand what multiaddresses are,
 ;; see: https://github.com/multiformats/multiaddr
 ;;
-;; We use the chat protocol
-;;
 ;; The implementation of client methods here are influenced by those found in:
 ;; https://github.com/vyzo/gerbil-libp2p/blob/master/example/libp2p-chat.ss
 
 
-;; TODO: Fix this
+;; FIXME:
 ;; In the upstream branch,
 ;; the `start-libp2p-daemon!' procedure doesn't redirect output
 ;; to a logfile, instead just directly outputs it to the terminal.
@@ -1173,7 +1178,7 @@
 ;; See: https://docs.libp2p.io/concepts/protocols/#handler-functions
 (def chat-proto "/chat/1.0.0")
 
-;; TODO rename
+;; This function reads the
 (def (chat-reader s)
   (let lp ()
     (let (line (bio-read-line (stream-in s)))
