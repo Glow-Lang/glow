@@ -1,5 +1,9 @@
 # Glow
 
+<p align="center">
+  <img src="./images/glow_logo.jpg">
+</p>
+
 MuKn Glow is a language to write safe Decentralized Applications (DApps)
 interacting with cryptocurrency blockchains.
 It is designed to minimize the effort required to trust
