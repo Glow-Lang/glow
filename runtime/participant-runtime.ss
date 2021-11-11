@@ -993,19 +993,6 @@
        agreement))
     (else (error "Invalid channel"))))
 
-(def (listen-for-agreement/libp2p libp2p-client)
-  (let* ((self (libp2p-identify libp2p-client)))
-    (for (p (peer-info->string* self))
-      (displayln "I am " p))
-    (displayln "Listening for incoming connections")
-    (def ret (make-parameter #f))
-    (libp2p-listen libp2p-client [chat-proto] (chat-handler ret))
-    (let loop ()
-      (or (ret)
-          (begin
-            (thread-sleep! 3)
-            (loop))))))
-
 
 ;; ------------------ Sending handshake
 
@@ -1070,16 +1057,22 @@
 ;; https://github.com/vyzo/gerbil-libp2p/blob/master/example/libp2p-chat.ss
 
 
-;; TODO: To fix this
+;; TODO: Fix this
+;; In the upstream branch,
+;; the `start-libp2p-daemon!' procedure doesn't redirect output
+;; to a logfile, instead just directly outputs it to the terminal.
+;;
+;; To fix this we have to:
 ;; 1. Upstream to gambit
 ;;    Extend open-process to allow you to redirect to file or file descriptor.
+;;    (In our case this allows us to redirect the output / error messages to a log-file)
 ;;    See how `run-program` in uiop does this:
 ;;    https://common-lisp.net/project/asdf/uiop.html#UIOP_002fRUN_002dPROGRAM
 ;;   
 ;; 2. Upstream to gerbil-libp2p
 ;;    process-options to use the redirecting option
 ;;    for writing the error logs to a file instead
-;;    or the console.
+;;    of the console.
 ;;
 ;; In the short run we use the shell to redirect error logs to a file (see the implementation below).
 (def (start-libp2p-daemon! host-addresses: (host-addrs #f) daemon: (bin "p2pd")
@@ -1110,14 +1103,18 @@
       (current-libp2p-daemon d)
       d))))
 
-;; NOTE: This is needed to call initialize our version of the daemon process (by `start-libp2p-daemon!'),
-;; one which writes to a logfile.
+;; NOTE: This is needed to call initialize our version
+;; of the daemon process (by `start-libp2p-daemon!'),
+;; see the implementation above.
 ;; TODO: Once the above changes are upstreamed for `start-libp2p-daemon!',
 ;; this command can be made obsolete too.
 (def (open-libp2p-client host-addresses: (host-addresses #f) options: (args [])  address: (sock #f)  wait: (timeo 12) (path #f)) ;; Extra arguments host-address and options
   (let (d (start-libp2p-daemon! host-addresses: host-addresses options: args address: sock wait: timeo)) ;; Should go with host-address/tranpsort/port
     (make-client d (make-mutex 'libp2p-client) (make-hash-table) path #f #f)))
 
+;; `s' here is a stream between two peers,
+;; which is opened by the client.
+;; This writes contents to the stream.
 (def (chat-writer s contents)
   (display "> ")
   (bio-write-string contents (stream-out s))
@@ -1125,27 +1122,35 @@
   (bio-force-output (stream-out s)))
 
 ;; peer-multiaddr-str: destination multiaddress,
-;; NOTE: It has the constraint that it needs to contain a peerId,
+;; It has the additional constraint that it needs to contain a peerId,
 ;; so we can verify the recipient's identity.
 ;;
 ;; host-addresses: Multi addresses this participant listens to on their host machine.
+;;
 ;; contents: string
-(def (dial-and-send-contents libp2p-client dest-address-str contents)
+;;
+;; This is used to connect to a destination address of another participant,
+;; and send the contents over the opened connection.
+;; If the other participant is not online,
+;; it will poll until `timeout'.
+(def (dial-and-send-contents libp2p-client dest-address-str contents timeout: (timeout 600))
   (let* ((self (libp2p-identify libp2p-client))
          (peer-multiaddr (string->peer-info dest-address-str)))
     (for (p (peer-info->string* self))
       (displayln "I am " p))
     (displayln "Connecting to " dest-address-str)
-    (libp2p-connect/poll libp2p-client peer-multiaddr timeout: 600)
+    (libp2p-connect/poll libp2p-client peer-multiaddr timeout: timeout)
     (let (s (libp2p-stream libp2p-client peer-multiaddr [chat-proto]))
       (chat-writer s contents)
       (stream-close s))))
 
-;; Polls every 1s if other party is offline / unreachable, until timeout
+;; This is used to connect to a destination address of another participant,
+;; and send the contents over the opened connection.
+;; If the other participant is not online,
+;; it will poll until `timeout'.
 (def (libp2p-connect/poll libp2p-client peer-multiaddr timeout: (timeout #f))
   (try (libp2p-connect libp2p-client peer-multiaddr)
     (catch (e)
-      ;; (display-exception e)
       (displayln "Unable to connect to client...")
       (if (and timeout (> timeout 0))
           (let ()
@@ -1155,9 +1160,17 @@
           (displayln "Timeout while trying to connect to client.")))))
 
 
-;; NOTE: This is a placeholder,
+;; This is a libp2p protocol spec.
+;; These protocols work on the application level.
+;; See: https://docs.libp2p.io/concepts/protocols/
+;;
+;; NOTE: This libp2p-protocol is a placeholder,
 ;; it's not an actual libp2p protocol.
-;; This just falls back to plaintext messaging
+;; It just falls back to plaintext messaging.
+;;
+;; When we want to have a specific protocol
+;; we will need to `register' handlers for them.
+;; See: https://docs.libp2p.io/concepts/protocols/#handler-functions
 (def chat-proto "/chat/1.0.0")
 
 ;; TODO rename
@@ -1171,12 +1184,3 @@
         (displayln "*** Received"))
        (else
         line)))))
-
-
-(def (chat-handler ret)
-  (lambda (s)
-    (displayln "*** Incoming connection from " (peer-info->string (cdr (stream-info s))))
-    (def received-data (chat-reader s))
-    (ret received-data)
-    (stream-close s)
-    (displayln "*** STREAM CLOSED")))
