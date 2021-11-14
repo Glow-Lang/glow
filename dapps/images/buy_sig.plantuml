@@ -1,0 +1,12 @@
+@startuml
+
+title Closing of a Sale
+actor Buyer
+database Consensus
+actor Seller
+
+Buyer -> Consensus: create contract, escrow Price
+Seller -> Consensus: publish Signature
+Consensus -> Consensus: verify Signature, release escrow
+
+@enduml
