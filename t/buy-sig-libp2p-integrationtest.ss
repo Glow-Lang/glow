@@ -122,45 +122,39 @@
        (DBG "Filling up buyer prompt")
 
        ;; Fill up buyer prompt
-       ;; (def peer-command
-         (with-io-port proc-buyer
-           (lambda ()
-             (answer-questions
-              [["Choose your identity:"
-                (lambda (id)
-                  (string-prefix? "t/alice " id))]
-               ["Choose application:"
-                "buy_sig"]
-               ["Choose your role:"
-                "Buyer"]])
-             (supply-parameters
+       (with-io-port proc-buyer
+         (lambda ()
+           (answer-questions
+            [["Choose your identity:"
+              (lambda (id)
+                (string-prefix? "t/alice " id))]
+             ["Choose application:"
+              "buy_sig"]
+             ["Choose your role:"
+              "Buyer"]])
+            (supply-parameters
               [["digest" (string-append "0x" (hex-encode digest))]])
-             (set-initial-block 1000))) ; Provides an offset from the current-block,
-                                        ; so we have ample time (in blocks) to create a contract
-                                        ; and for other active participants to run side
-                                        ; of the interaction before timeout.
-                                        ;
-                                        ; Also used for regression testing against:
-                                        ; https://gitlab.com/mukn/glow/-/issues/195
+            (set-initial-block 1000))) ; Provides an offset from the current-block,
+                                       ; so we have ample time (in blocks) to create a contract
+                                       ; and for other active participants to run side
+                                       ; of the interaction before timeout.
+                                       ;
+                                       ; Also used for regression testing against:
+                                       ; https://gitlab.com/mukn/glow/-/issues/195
 
        (DBG "Choosing role")
 
        (with-io-port proc-seller
          (lambda ()
-           ;; Wait for handshake to come in
-           (thread-sleep! 10)
-
            (answer-questions
              [["Choose your role:"
-               "Seller"]])
-           ))
+               "Seller"]])))
 
        (DBG "Reading end environment for seller")
 
        (def seller-environment
          (with-io-port proc-seller
            (lambda ()
-             (thread-sleep! 5)
              (read-environment))))
 
 
