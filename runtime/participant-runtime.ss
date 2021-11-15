@@ -1057,7 +1057,7 @@
 ;; and send the contents over the opened connection.
 ;; If the other participant is not online,
 ;; it will poll until `timeout'.
-(def (dial-and-send-contents libp2p-client dest-address-str contents timeout: (timeout 600))
+(def (dial-and-send-contents libp2p-client dest-address-str contents timeout: (timeout 10))
   (let* ((self (libp2p-identify libp2p-client))
          (peer-multiaddr (string->peer-info dest-address-str)))
     (for (p (peer-info->string* self))
@@ -1081,7 +1081,7 @@
             (displayln "Polling again in 1s...")
             (thread-sleep! 1)
             (libp2p-connect/poll libp2p-client peer-multiaddr timeout: (- timeout 1)))
-          (displayln "Timeout while trying to connect to client.")))))
+          (error "Timeout while trying to connect to client.")))))
 
 
 ;; This is a libp2p protocol spec.
