@@ -1,0 +1,28 @@
+@startuml
+
+title Rock Paper Scissors
+actor Alice
+database Blockchain
+actor Bob
+
+Alice -> Alice: Choose her Hand (Rock or Paper or Scissors)
+Alice <-> Blockchain: Store obfuscated selected Hand
+Alice -> Blockchain: Deposit wager
+
+Bob -> Bob: Choose his Hand
+Bob -> Blockchain: Store his Hand (It doesn't need obfuscation)
+Bob -> Blockchain: Deposit wager
+Blockchain -> Blockchain: Calculate winner
+
+alt [Alice wins]
+Blockchain -> Alice: Withdraw both wagers
+else [Bob wins]
+Blockchain -> Bob: Withdraw both wagers
+End
+
+Blockchain -> Alice: Withdraw her wager
+Blockchain -> Bob: Withdraw his wager
+Blockchain -> Blockchain: Send proceeds according to outcome
+
+
+@enduml
