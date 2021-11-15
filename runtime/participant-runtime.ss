@@ -272,7 +272,8 @@
 
 (def (run-passive-code-block/handshake self role)
   (nest
-   (let (agreement-handshake (listen-for-handshake self)))
+   (let (off-chain-channel (.@ self off-chain-channel)))
+   (let (agreement-handshake (.call off-chain-channel .listen-for-handshake self)))
    (begin
      (force-current-outputs))
    (with-slots (agreement contract-config published-data) agreement-handshake)
@@ -325,7 +326,7 @@
       (def published-data (get-output-u8vector (.@ self block-ctx outbox)))
       (def handshake (.new AgreementHandshake agreement contract-config published-data))
       (def off-chain-channel (.@ self off-chain-channel))
-      (send-contract-handshake self handshake))
+      (.call off-chain-channel .send-contract-handshake self handshake))
     (let ()
       ;; TODO: Verify asset transfers using previous transaction and balances
       ;; recorded in Message's asset-transfer table during interpretation. Probably
@@ -782,26 +783,37 @@
 
 ;; ------------------ Channel types
 
+(define-type (IoChannel self [])
+  .make: (lambda ()
+    { .listen-for-agreement: (lambda ()
+        (displayln MAGENTA "Listening for agreement via stdin ...")
+        (def agreement-json (parameterize ((json-symbolic-keys #f)) (read-json)))
+        (def agreement (<-json InteractionAgreement agreement-json))
+        agreement)
 
-(define-type IoChannel
-  (.+
-   (Record
-    tag: [Symbol]) ; 'stdio
-   { .make: (lambda () { tag: 'stdio })}))
+      .listen-for-handshake: (lambda (runtime)
+        (displayln MAGENTA "Listening for handshake via stdin ...")
+        (def io-context (.@ runtime io-context))
+        (.call io-context receive-handshake))
 
-;; TODO: Feels like I'm reinventing the wheel with `tag`...
-;; or introducing an arbitrary abstraction...
-;; is there a principled way to discriminate between channel types?
-(define-type Libp2pChannel
-  (.+
-   (Record
-    libp2p-client: [String] ; [Conn] / [Client] / ???
-    tag: [Symbol] ; 'libp2p ; TODO: Upstream to gerbil-poo, as "Tagged" type descriptor
-    dest-address: [String]) ; FIXME: Remove once this is stored in contacts.
-    ;; poll-buffer: [String]      ; [String] <- ;; TODO: find a way to declare function types
-    ;; push-to-buffer: [String]   ; <- [String]
-   { .make:
-     (lambda (my-nickname host-address dest-address)
+      .send-contract-agreement: (lambda (agreement)
+        (displayln MAGENTA "One line command for other participants to generate the same agreement:" END)
+        (def agreement-string (string<-json (json<- InteractionAgreement agreement)))
+        (def escaped-agreement-string (escape-agreement-string/shell agreement-string))
+        (def full-cmd-string (string-append "glow start-interaction --agreement " escaped-agreement-string))
+        (displayln full-cmd-string)
+        (force-output))
+
+      .send-contract-handshake: (lambda (runtime handshake)
+        (def io-context (.@ runtime io-context))
+        (.call io-context send-handshake handshake))
+
+      .close: (lambda () #f)
+    })
+  )
+
+(define-type (Libp2pChannel @ [])
+    .make: (lambda (my-nickname host-address dest-address)
        (let ()
 
          ;; ------------ Libp2p channel buffer setup
@@ -837,12 +849,47 @@
             (displayln "Listening for messages...")
             (spawn libp2p-listen libp2p-client [chat-proto] push-to-buffer)))
 
+
+
+
          { libp2p-client
-           tag: 'libp2p
            dest-address
-           _listening-thread: listening-thread
            poll-buffer
-           push-to-buffer }))}))
+           push-to-buffer
+           _listening-thread: listening-thread
+           ;; FIXME: Get other participant addresses from contacts,
+           ;; pass these in as a parameter,
+           ;; instead of storing and using dest-address within the libp2p channel object.
+           .send-contract-agreement: (lambda (agreement)
+             (displayln MAGENTA "Sending agreement to multiaddr..." END)
+             (def agreement-string (string<-json (json<- InteractionAgreement agreement)))
+             (dial-and-send-contents libp2p-client dest-address agreement-string)
+             (displayln)
+             (force-output))
+
+           .send-contract-handshake: (lambda (_runtime handshake)
+             (displayln MAGENTA "Sending handshake to multiaddr..." END)
+             (def handshake-string (string<-json (json<- AgreementHandshake handshake)))
+             (dial-and-send-contents libp2p-client dest-address handshake-string)
+             (displayln)
+             (force-output))
+
+           .listen-for-handshake: (lambda (_runtime)
+             (displayln MAGENTA "Listening for handshake via libp2p ...")
+             (def handshake-str (poll-buffer))
+             (displayln MAGENTA "Received handshake")
+             (def handshake (<-json AgreementHandshake (json<-string handshake-str)))
+             handshake)
+
+           .listen-for-agreement: (lambda ()
+             (displayln MAGENTA "Listening for agreement via libp2p ...")
+             (def agreement-str (poll-buffer))
+             (displayln MAGENTA "Received agreement")
+             (def agreement (<-json InteractionAgreement (json<-string agreement-str)))
+             agreement)
+
+            .close: (lambda () (stop-libp2p-daemon!))
+           })))
 
 
 (def (ensure-libp2p-client nickname: nickname host-address: host-address)
@@ -920,134 +967,6 @@
 (def (lookup-contact nickname: nickname contacts: contacts)
   (for-each (lambda (contact) (displayln (.@ contact name))) contacts)
   (find (lambda (contact) (equal? (.@ contact name) nickname)) contacts))
-
-;; ------------------ Cleanup off-chain channels
-
-
-;; TODO: We should log messages from libp2p somewhere, NOT to stdout.
-(def (close-off-chain-channel off-chain-channel)
-  (match (.@ off-chain-channel tag)
-    ('stdio #f)
-    ('libp2p (close-libp2p-channel off-chain-channel))
-    (else (error "Invalid channel")))) ; TODO: This is an internal error,
-                                        ; ensure this is handled at cli options parsing step.
-
-(def (close-libp2p-channel chan)
-  (stop-libp2p-daemon!))
-
-;; ------------------ Send Contract Agreement
-
-
-;; FIXME: Take in participant addresses as a parameter,
-;; update this when there's support for mapping users to peerIDs via the contacts store.
-(def (send-contract-agreement agreement off-chain-channel)
-  (displayln MAGENTA "Sending Agreement to other participants...")
-  (match (.@ off-chain-channel tag)
-    ('stdio (send-contract-agreement/stdout agreement))
-    ('libp2p (let ()
-     (def libp2p-client (.@ off-chain-channel libp2p-client))
-     (def dest-address (.@ off-chain-channel dest-address))
-     (send-contract-agreement/libp2p agreement libp2p-client dest-address)))
-    (else (error "Invalid channel")))) ; TODO: This is an internal error,
-                                       ; ensure this is handled at cli options parsing step.
-
-(def (send-contract-agreement/stdout agreement)
-  (displayln MAGENTA "One line command for other participants to generate the same agreement:" END)
-  (def agreement-string (string<-json (json<- InteractionAgreement agreement)))
-  (def escaped-agreement-string (escape-agreement-string/shell agreement-string))
-  (def full-cmd-string (string-append "glow start-interaction --agreement " escaped-agreement-string))
-  (displayln full-cmd-string)
-  (force-output))
-
-(def (send-contract-agreement/libp2p agreement libp2p-client dest-address)
-  (displayln MAGENTA "Sending agreement to multiaddr..." END)
-  (def agreement-string (string<-json (json<- InteractionAgreement agreement)))
-  (dial-and-send-contents libp2p-client dest-address agreement-string)
-  (displayln)
-  (force-output))
-
-;; TODO: Generalize this for escaping arbitrary strings in the shell, upstream to `gerbil-utils'.
-;; NOTE: It currently does not correctly escape things for the shell. E.g:
-;; "$(rm -rf /) ''" would be passed through unchanged, since it contains a single quote.
-;; If you got rid of that first case,
-;; then "'$(rm -rf /)'" would still slip by the escaping in the second case;
-;; due to the way shell escaping works,
-;; you can unquote back into an interpreted context.
-;; So you also need to substitute out any single quotes in the middle of the string.
-(def (escape-agreement-string/shell agreement-string)
-  (if (string-contains agreement-string "'")
-    agreement-string
-    (string-append "'" agreement-string "'")))
-
-
-;; ------------------ Listen for agreements
-
-
-(def (listen-for-agreement off-chain-channel)
-  (match (.@ off-chain-channel tag)
-    ('stdio
-     (let ()
-       (displayln MAGENTA "Listening for agreement via stdin ...")
-       (def agreement-json (parameterize ((json-symbolic-keys #f)) (read-json)))
-       (def agreement (<-json InteractionAgreement agreement-json))
-       agreement))
-    ('libp2p
-     (let ()
-       (displayln MAGENTA "Listening for agreement via libp2p ...")
-       (def agreement-str (.call off-chain-channel poll-buffer))
-       (displayln MAGENTA "Received agreement")
-       (def agreement (<-json InteractionAgreement (json<-string agreement-str)))
-       agreement))
-    (else (error "Invalid channel"))))
-
-
-;; ------------------ Sending handshake
-
-
-(def (send-contract-handshake self handshake) ;; TODO: channel is 'stdio | 'libp2p
-  (def channel (.@ self off-chain-channel))
-  (match (.@ channel tag)
-    ('stdio (send-contract-handshake/stdout self handshake))
-    ('libp2p (send-contract-handshake/libp2p
-              (.@ channel libp2p-client) (.@ channel dest-address) handshake))
-    (else (error "Invalid channel")))) ; TODO: This is an internal error,
-                                       ; ensure this is handled at cli options level.
-
-(def (send-contract-handshake/stdout self handshake)
-  (def io-context (.@ self io-context))
-  (.call io-context send-handshake handshake))
-
-(def (send-contract-handshake/libp2p libp2p-client dest-address handshake)
-  (displayln MAGENTA "Sending handshake to multiaddr..." END)
-  (def handshake-string (string<-json (json<- AgreementHandshake handshake)))
-  (dial-and-send-contents libp2p-client dest-address handshake-string)
-  (displayln)
-  (force-output))
-
-
-;; ------------------ Listen for handshake
-
-
-;; : AgreementHandshake <- Runtime
-(def (listen-for-handshake self)
-  (def channel (.@ self off-chain-channel))
-  (match (.@ channel tag)
-    ('stdio
-     (let ()
-       (displayln MAGENTA "Listening for handshake via stdin ...")
-       (listen-for-handshake/stdio self)))
-    ('libp2p
-     (let ()
-       (displayln MAGENTA "Listening for handshake via libp2p ...")
-       (def handshake-str (.call channel poll-buffer))
-       (displayln MAGENTA "Received handshake")
-       (def handshake (<-json AgreementHandshake (json<-string handshake-str)))
-       handshake))
-    (else (error "Invalid channel"))))
-
-(def (listen-for-handshake/stdio self)
-  (def io-context (.@ self io-context))
-  (.call io-context receive-handshake))
 
 
 ;; ------------------ Libp2p client methods
@@ -1189,3 +1108,20 @@
         (displayln "*** Received"))
        (else
         line)))))
+
+
+;; ------------------ Misc
+
+
+;; TODO: Generalize this for escaping arbitrary strings in the shell, upstream to `gerbil-utils'.
+;; NOTE: It currently does not correctly escape things for the shell. E.g:
+;; "$(rm -rf /) ''" would be passed through unchanged, since it contains a single quote.
+;; If you got rid of that first case,
+;; then "'$(rm -rf /)'" would still slip by the escaping in the second case;
+;; due to the way shell escaping works,
+;; you can unquote back into an interpreted context.
+;; So you also need to substitute out any single quotes in the middle of the string.
+(def (escape-agreement-string/shell agreement-string)
+  (if (string-contains agreement-string "'")
+    agreement-string
+    (string-append "'" agreement-string "'")))
