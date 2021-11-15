@@ -19,21 +19,16 @@
   ../runtime/program
   ../runtime/participant-runtime
   ../runtime/reify-contract-parameters
-  ./cli-integration)
-
-(register-test-keys)
-(def a-address alice)
-(def b-address bob)
-(def wagerAmount (wei<-ether .01))
+  ./cli-integration
+  ./utils)
 
 (def rps-simple-integrationtest
   (test-suite "integration test for ethereum/rps_simple"
-    (delete-agreement-handshake)
-    (ensure-ethereum-connection "pet")
-    (ensure-db-connection "testdb")
-    (DBG "Ensure participants funded")
-    (ensure-addresses-prefunded)
-    (DBG "DONE")
+    (setup-test-env)
+
+    (def a-address alice)
+    (def b-address bob)
+    (def wagerAmount (wei<-ether .01))
 
     (test-case "rps_simple executes"
       (def proc-a #f)

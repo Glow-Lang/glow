@@ -1,7 +1,7 @@
 (export #t)
 
 (import
-  :gerbil/expander :gerbil/gambit/ports
+  :gerbil/expander :gerbil/gambit/threads :gerbil/gambit/ports
   :std/format :std/generic :std/getopt :std/iter :std/misc/hash :std/misc/repr :std/misc/string :std/pregexp
   :std/sort :std/srfi/1 :std/srfi/13 :std/sugar :std/text/json
   :clan/base :clan/cli :clan/config :clan/exit :clan/filesystem :clan/hash :clan/json
@@ -151,31 +151,30 @@
   (displayln)
   parameters)
 
-(def (print-command agreement)
-  (displayln MAGENTA "One line command for other participants to generate the same agreement:" END)
-  (display "glow start-interaction --agreement ")
-  (def agreement-string (string<-json (json<- InteractionAgreement agreement)))
-  (if (string-contains agreement-string "'")
-    (pr agreement-string)
-    (display (string-append "'" agreement-string "'")))
-  (displayln)
-  (force-output))
-
 (def (ask-role options role-names)
   (get-or-ask options
     'role
     (λ () (ask-option "Choose your role" role-names))))
 
+;; --
+;; Prompts participant for to select their identity (identified by their nickname)
+;; from the runtime nickname-address table.
+;; Returns their nickname as a string.
+;; --
+;; String <-
+(def (prompt-identity)
+  (ask-option
+    "Choose your identity"
+    (map
+      (match <> ([nickname . address]
+       (let (dependent-pair [Address . address])
+         [nickname . dependent-pair])))
+      (hash->list/sort address-by-nickname string<?))))
+
 (def (ask-identity options)
   (get-or-ask options
     'identity
-    (λ () (ask-option
-            "Choose your identity"
-            (map (match <>
-                  ([nickname . address]
-                    (let (dependent-pair [Address . address])
-                      [nickname . dependent-pair])))
-                (hash->list/sort address-by-nickname string<?))))))
+    (λ () (prompt-identity))))
 
 (def (relative-to x y)
   (cond ((number? y) y)
@@ -217,6 +216,8 @@
     (else (error "Bad application name" application-name))))
 
 ;; TODO: accept alternative ethereum networks, etc
+;; TODO: Option spec should be able to take in parsers in option spec
+;; to parse the options, using `getopt-parse`.
 (define-entry-point (start-interaction
                      agreement: (agreement-json-string #f)
                      glow-app: (glow-app #f)
@@ -229,7 +230,11 @@
                      handshake: (handshake #f)
                      params: (params #f)
                      participants: (participants #f)
-                     assets: (assets #f))
+                     assets: (assets #f)
+                     off-chain-channel-selection: (off-chain-channel-selection 'stdio)
+                     host-address: (host-address #f)
+                     dest-address: (dest-address #f)
+                     wait-for-agreement: (wait-for-agreement #f))
   (help: "Start an interaction based on an agreement"
    getopt: (make-options
             [(option 'agreement "-A" "--agreement" default: #f
@@ -257,40 +262,86 @@
              (option 'timeout-in-blocks "-T" "--timeout-in-blocks" default: #f
                      help: "number of blocks after which to time out")
              (option 'handshake "-H" "--handshake" default: #f
-                     help: "command to use to transfer handshakes")]
+                     help: "command to use to transfer handshakes")
+             ;; TODO: Abstract into Enum - See gerbil-poo
+             ;; enum off-chain-channel = 'stdio | 'libp2p
+             (option 'off-chain-channel-selection "-C" "--off-chain-channel" default: 'stdio
+                     help: "command to specify off-chain-channel")
+             (option 'host-address "-O" "--host-address" default: #f
+                     help: "host-address (only required if using libp2p as off-chain-channel)")
+             ;; FIXME: This should be stored and extracted from `contacts`.
+             ;; It is supplied here as a temporary workaround,
+             ;; until storing peerIds in `contacts` is supported.
+             (option 'dest-address "-D" "--dest-address" default: #f
+                     help: "dest-address (only required if using libp2p as off-chain-channel)")
+             (flag 'wait-for-agreement "-W" "--wait-for-agreement"
+                   help: "wait for agreement via off-chain-channel")]
             [(lambda (opt) (hash-remove! opt 'test))]
             [options/glow-path options/contacts
              options/evm-network options/database options/test options/backtrace]))
+
+  ;; NOTE: This also populates the runtime nickname-address mapping table.
+  (def contacts (load-contacts contacts-file))
+  ;; TODO: Validate whether you possess the necessary keys to assume this identity.
+  ;; TODO: Remove request for identity at stdio site.
+  ;; 1. Update integration tests to answer prompts earlier,
+  ;; 2. before agreements are generated / consumed (start-interaction/generate-agreement / start-interaction/with-agreement).
+  ;; Once 1, 2 are done, we can remove the conditional for this.
+  (def my-nickname
+    (match off-chain-channel-selection
+      ("libp2p" (or identity (prompt-identity)))
+      (else identity)))
+
   (def options
        (hash
          (glow-app glow-app)
-         (identity identity)
+         (identity my-nickname)
          (params (string->json-object (or params "{}")))
          (participants (string->json-participant-map (or participants "{}")))
          (assets (string->json-asset-map (or assets "{}")))
          (max-initial-block max-initial-block)
          (timeout-in-blocks timeout-in-blocks)
          (role role)))
-  (displayln)
-  (def contacts (load-contacts contacts-file))
-  (defvalues (agreement selected-role)
-    (if agreement-json-string
-      (start-interaction/with-agreement options (<-json InteractionAgreement (json<-string agreement-json-string)))
-      (start-interaction/generate-agreement options contacts)))
-  (def environment
-    (let ((role (symbolify selected-role)))
-      (if handshake
-        (run:command ["/bin/sh" "-c" handshake] role agreement)
-        (run:terminal role agreement))))
-  (displayln "Final environment:")
-  ;; TODO: get run to include type t and pre-alpha-converted labels,
-  ;; and output the entire thing as JSON omitting shadowed variables (rather than having conflicts)
-  ;; TODO: highlight the returned value in the interaction, and have buy_sig return signature
-  (for-each (match <> ([k t . v]
-              (if (equal? (symbolify k) 'signature)
-                (display-object-ln BOLD k END " => " t v)
-                (display-object-ln k " => " t v))))
-            (hash->list/sort environment symbol<?)))
+
+  ;; TODO: abstract into Poo object, especially if we have more local-runtime-options
+  ;; TODO: error out if off-chain-channel-selection is an invalid channel
+  ;; FIXME: Mark off-chain-channel as experimental, print it in a console prompt
+  (def channel-options
+    (hash
+     (off-chain-channel-selection (symbolify off-chain-channel-selection))
+     (host-address host-address)
+     (dest-address dest-address)
+     (my-nickname my-nickname)
+     (contacts contacts)))
+  (def off-chain-channel (init-off-chain-channel channel-options))
+  (try
+    ;; Start the interaction
+    (displayln)
+    (defvalues (agreement selected-role)
+      (cond
+        (wait-for-agreement
+          (let (agreement (.call off-chain-channel .listen-for-agreement))
+               (start-interaction/with-agreement options agreement)))
+        (agreement-json-string
+          (let (agreement (<-json InteractionAgreement (json<-string agreement-json-string)))
+               (start-interaction/with-agreement options agreement)))
+        (else (start-interaction/generate-agreement options contacts off-chain-channel))))
+    (def environment
+      (let ((role (symbolify selected-role)))
+        (if handshake
+          (run:command ["/bin/sh" "-c" handshake] role agreement off-chain-channel)
+          (run:terminal role agreement off-chain-channel))))
+    (displayln "Final environment:")
+    ;; TODO: get run to include type t and pre-alpha-converted labels,
+    ;; and output the entire thing as JSON omitting shadowed variables (rather than having conflicts)
+    ;; TODO: highlight the returned value in the interaction, and have buy_sig return signature
+    (for-each (match <> ([k t . v]
+      (if (equal? (symbolify k) 'signature)
+        (display-object-ln BOLD k END " => " t v)
+        (display-object-ln k " => " t v))))
+      (hash->list/sort environment symbol<?))
+    ;; Close channel once done / after erroring out
+    (finally (.call off-chain-channel .close))))
 
 (def (string->json-participant-map str)
   (def object (string->json-object str))
@@ -316,7 +367,8 @@
          (selected-role (ask-role options role-names)))
   (values agreement selected-role)))
 
-(def (start-interaction/generate-agreement options contacts)
+(def (start-interaction/generate-agreement options contacts off-chain-channel)
+  (displayln MAGENTA "Generating Agreement for other participants to join...")
   (nest
     (let (application-name
             (get-or-ask options 'glow-app (λ () (ask-application)))))
@@ -377,7 +429,7 @@
                 maxInitialBlock: max-initial-block}}))
     (begin
       (.call InteractionAgreement .validate agreement)
-      (print-command agreement)
+      (.call off-chain-channel .send-contract-agreement agreement)
       (values agreement selected-role))))
 
 ;; UTILS

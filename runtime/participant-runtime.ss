@@ -1,21 +1,32 @@
 (export #t)
 
 (import
-  :gerbil/gambit/bits :gerbil/gambit/bytes :gerbil/gambit/threads :gerbil/gambit/ports
-  :std/pregexp
-  :std/format :std/iter :std/misc/hash :std/sugar :std/misc/number :std/misc/list :std/sort :std/srfi/1 :std/text/json
+  :clan/debug
+  :gerbil/gambit/bits :gerbil/gambit/bytes :gerbil/gambit/threads :gerbil/gambit/ports :std/net/bio
+  :gerbil/gambit
+  :std/pregexp :std/srfi/13 :std/misc/uuid
+  :std/text/base64
+  :std/crypto
+  :std/format :std/iter :std/misc/hash :std/sugar :std/misc/number :std/misc/list
+  :std/sort :std/srfi/1 :std/text/json :std/os/pid
   (for-syntax :std/stxutil)
+  :gerbil/gambit/exceptions
   :clan/base :clan/exception :clan/io :clan/json :clan/number :clan/pure/dict/assq
   :clan/path :clan/path-config :clan/ports :clan/syntax :clan/timestamp
   :clan/poo/object :clan/poo/brace :clan/poo/io :clan/poo/debug :clan/debug :clan/crypto/random
-  :clan/persist/content-addressing
+  :clan/persist/content-addressing :clan/shell
   :mukn/ethereum/hex :mukn/ethereum/ethereum :mukn/ethereum/network-config :mukn/ethereum/json-rpc
   :mukn/ethereum/transaction :mukn/ethereum/tx-tracker :mukn/ethereum/watch :mukn/ethereum/assets
   :mukn/ethereum/evm-runtime :mukn/ethereum/contract-config :mukn/ethereum/assembly :mukn/ethereum/types
   :mukn/ethereum/nonce-tracker
   (only-in :mukn/glow/compiler/common hash-kref)
+  :vyzo/libp2p
+  :std/os/signal
+  (only-in :vyzo/libp2p/client make-client)
+  :vyzo/libp2p/daemon
   (only-in ../compiler/alpha-convert/env symbol-refer)
   ./program ./block-ctx ./consensus-code-generator ./terminal-codes
+  ./pb/private-key
   ../compiler/method-resolve/method-resolve
   ../compiler/project/runtime-2)
 
@@ -116,11 +127,13 @@
     program: [Program]
     name: [Symbol]
     consensus-code-generator: [ConsensusCodeGenerator]
+    off-chain-channel: [Symbol] ;; [Conn] ;; ???
    )
    {.make: (lambda (role: role
                     agreement: agreement
                     io-context: (io-context io-context:special-file)
-                    program: program)
+                    program: program
+                    off-chain-channel: off-chain-channel)
              (let* (((values modpath surface-name)
                      (split-interaction-path-name (.@ agreement interaction)))
                     (name
@@ -148,6 +161,7 @@
                        program
                        name
                        consensus-code-generator: (.call ConsensusCodeGenerator .make program name (.@ agreement options timeoutInBlocks) (.@ agreement assets))
+                       off-chain-channel
                        }))
                (set! (.@ self consensus-code-generator)
                  (.call ConsensusCodeGenerator .make program name (.@ agreement options timeoutInBlocks) (.@ agreement assets)))
@@ -259,7 +273,8 @@
 
 (def (passive-participant-handshake self role)
   (nest
-   (let (agreement-handshake (read-handshake self)))
+   (let (off-chain-channel (.@ self off-chain-channel)))
+   (let (agreement-handshake (.call off-chain-channel .listen-for-handshake self)))
    (begin
      (force-current-outputs))
    (with-slots (agreement contract-config published-data) agreement-handshake)
@@ -293,11 +308,6 @@
     (passive-participant-handshake self role))
   (run-passive-code-block/contract self role (.@ self contract-config)))
 
-;; : AgreementHandshake <- Runtime
-(def (read-handshake self)
-  (def io-context (.@ self io-context))
-  (.call io-context receive-handshake))
-
 ;; Run the active participant's side of the interaction. Return value
 ;; indicates whether we should continue executing (#t) or stop now (#f).
 ;;
@@ -317,7 +327,8 @@
     (def agreement (.@ self agreement))
     (def published-data (get-output-u8vector (.@ self block-ctx outbox)))
     (def handshake (.new AgreementHandshake agreement contract-config published-data))
-    (send-contract-handshake self handshake)))
+    (def off-chain-channel (.@ self off-chain-channel))
+    (.call off-chain-channel .send-contract-handshake self handshake)))
   (publish-frame-data self (.@ self block-ctx outbox))
   (interpret-current-code-block self)
   ;; TODO: Verify asset transfers using previous transaction and balances
@@ -429,10 +440,6 @@
   (verify-contract-config contract-config pretx)
   (set! (.@ self contract-config) contract-config)
   (set! (.@ self first-unprocessed-block) (.@ contract-config creation-block)))
-
-(def (send-contract-handshake self handshake)
-  (def io-context (.@ self io-context))
-  (.call io-context send-handshake handshake))
 
 ;; <- Runtime BytesOutputPort
 ;;
@@ -772,3 +779,354 @@
       (hash-ref j
         (cond ((symbol? k) (symbol->string k))
               (else        (string->symbol k)))))))
+
+
+;; ---------------------------------------------------
+;; ------------------ Off-chain communication channels
+;; ---------------------------------------------------
+
+
+;; ------------------ Channel types
+
+(define-type (IoChannel self [])
+  .make: (lambda ()
+    { .listen-for-agreement: (lambda ()
+        (displayln MAGENTA "Listening for agreement via stdin ...")
+        (def agreement-json (parameterize ((json-symbolic-keys #f)) (read-json)))
+        (def agreement (<-json InteractionAgreement agreement-json))
+        agreement)
+
+      .listen-for-handshake: (lambda (runtime)
+        (displayln MAGENTA "Listening for handshake via stdin ...")
+        (def io-context (.@ runtime io-context))
+        (.call io-context receive-handshake))
+
+      .send-contract-agreement: (lambda (agreement)
+        (displayln MAGENTA "One line command for other participants to generate the same agreement:" END)
+        (def agreement-string (string<-json (json<- InteractionAgreement agreement)))
+        (def escaped-agreement-string (escape-agreement-string/shell agreement-string))
+        (def full-cmd-string (string-append "glow start-interaction --agreement " escaped-agreement-string))
+        (displayln full-cmd-string)
+        (force-output))
+
+      .send-contract-handshake: (lambda (runtime handshake)
+        (def io-context (.@ runtime io-context))
+        (.call io-context send-handshake handshake))
+
+      .close: (lambda () #f)
+    })
+  )
+
+(define-type (Libp2pChannel @ [])
+    .make: (lambda (my-nickname host-address dest-address)
+       (let ()
+
+         ;; ------------ Libp2p channel buffer setup
+
+         (def buffer (make-channel 10)) ;; TODO: Do we need a larger buffer?
+
+         (def (poll-buffer (t 2)) ; poll every 2s by default
+           (def res (channel-try-get buffer))
+           (or res
+             (begin (thread-sleep! t)
+                    (poll-buffer t))))
+
+         (def (push-to-buffer s)
+           (def received-data (chat-reader s))
+           ; NOTE: This blocks indefinitely if channel buffer is full
+           (channel-put buffer received-data)
+           (stream-close s))
+
+         ;; ------------ Libp2p listening thread setup
+
+
+         ;; Ensure libp2p-daemon client is running
+         (displayln "Starting libp2p client")
+         (def libp2p-client (ensure-libp2p-client nickname: my-nickname host-address: host-address))
+
+         ;; Get and Broadcast identity
+         (def self (libp2p-identify libp2p-client))
+         (for (p (peer-info->string* self))
+           (displayln "I am " p))
+
+         (def listening-thread
+           (begin
+            (displayln "Listening for messages...")
+            (spawn libp2p-listen libp2p-client [chat-proto] push-to-buffer)))
+
+
+
+
+         { libp2p-client
+           dest-address
+           poll-buffer
+           push-to-buffer
+           _listening-thread: listening-thread
+           ;; FIXME: Get other participant addresses from contacts,
+           ;; pass these in as a parameter,
+           ;; instead of storing and using dest-address within the libp2p channel object.
+           .send-contract-agreement: (lambda (agreement)
+             (displayln MAGENTA "Sending agreement to multiaddr..." END)
+             (def agreement-string (string<-json (json<- InteractionAgreement agreement)))
+             (dial-and-send-contents libp2p-client dest-address agreement-string)
+             (displayln)
+             (force-output))
+
+           .send-contract-handshake: (lambda (_runtime handshake)
+             (displayln MAGENTA "Sending handshake to multiaddr..." END)
+             (def handshake-string (string<-json (json<- AgreementHandshake handshake)))
+             (dial-and-send-contents libp2p-client dest-address handshake-string)
+             (displayln)
+             (force-output))
+
+           .listen-for-handshake: (lambda (_runtime)
+             (displayln MAGENTA "Listening for handshake via libp2p ...")
+             (def handshake-str (poll-buffer))
+             (displayln MAGENTA "Received handshake")
+             (def handshake (<-json AgreementHandshake (json<-string handshake-str)))
+             handshake)
+
+           .listen-for-agreement: (lambda ()
+             (displayln MAGENTA "Listening for agreement via libp2p ...")
+             (def agreement-str (poll-buffer))
+             (displayln MAGENTA "Received agreement")
+             (def agreement (<-json InteractionAgreement (json<-string agreement-str)))
+             agreement)
+
+            .close: (lambda () (stop-libp2p-daemon!))
+           })))
+
+
+(def (ensure-libp2p-client nickname: nickname host-address: host-address)
+    (new-libp2p-client nickname: nickname host-address: host-address))
+
+(def (new-libp2p-client nickname: nickname host-address: host-address)
+  (call-with-seckey-tempfile nickname: nickname
+    (lambda (seckey-filename)
+      (open-libp2p-client
+       host-addresses: host-address
+       wait: 5
+       options: ["-id" seckey-filename]))))
+
+(def (get-libp2p-client path: path)
+  (displayln "Path:")
+  (displayln path)
+  (and (file-exists? path)
+    (let ()
+      (def libp2p-daemon (use-libp2p-daemon! path))
+      (make-client libp2p-daemon (make-mutex 'libp2p-client) (make-hash-table) #f #f #f))))
+
+;; Creates a seckey temporary file,
+;; and passes its filename as an argument to f,
+;; purging the file after that.
+;; The seckey used is determined using the nickname.
+(def (call-with-seckey-tempfile nickname: nickname f)
+  (def file-name (make-seckey-tempfile nickname: nickname))
+  (with-unwind-protect (lambda () (f file-name))
+                       (lambda () (delete-file file-name))))
+
+(def (make-seckey-tempfile nickname: nickname
+                           filename: (filename (string-append "/tmp/glow-seckey-"
+                                                              (uuid->string (random-uuid)))))
+  (def seckey (get-my-seckey nickname: nickname))
+  (def seckey/bytes (export-secret-key/bytes seckey))
+  (def seckey/proto (make-seckey/proto seckey/bytes: seckey/bytes))
+  (write-seckey/proto filepath: filename seckey/proto: seckey/proto)
+  filename)
+
+(def (write-seckey/proto filepath: filepath seckey/proto: seckey/proto)
+  (def buf (open-file-output-buffer filepath))
+  (bio-write-PrivateKey seckey/proto buf)
+  (bio-force-output buf)
+  (close-file-input-buffer buf))
+
+;; TODO: accept other types of secret keys
+(def (make-seckey/proto seckey/bytes: seckey/bytes)
+  (make-PrivateKey Type: 'Secp256k1 Data: seckey/bytes))
+
+;; TODO: Upstream to gerbil-ethereum
+(def (get-my-seckey nickname: nickname)
+  (def my-address (address<-nickname nickname))
+  (def my-seckey (secret-key<-address my-address))
+  my-seckey)
+
+;; ------------------ Initialize Off-chain channels
+
+
+(def (init-off-chain-channel options)
+  (def off-chain-channel-selection (hash-get options 'off-chain-channel-selection))
+  (match off-chain-channel-selection
+    ('stdio (.call IoChannel .make)) ; TODO: Initialize io:context object here
+    ('libp2p (let ()
+     (def my-nickname (hash-ref options 'my-nickname))
+     (def host-address (hash-ref options 'host-address))
+     (def dest-address (hash-ref options 'dest-address))
+     (.call Libp2pChannel .make my-nickname host-address dest-address)))
+    (else (error "Invalid off-chain channel selection"))))
+
+
+;; TODO: Eventually upstream changes to gerbil-libp2p to accept passing
+;; a seckey via an environment variable, instead of a file.
+
+
+(def (lookup-contact nickname: nickname contacts: contacts)
+  (for-each (lambda (contact) (displayln (.@ contact name))) contacts)
+  (find (lambda (contact) (equal? (.@ contact name) nickname)) contacts))
+
+
+;; ------------------ Libp2p client methods
+;;
+;; For a complete reference of libp2p API.
+;; See: https://github.com/vyzo/gerbil-libp2p#libp2p-api
+;;
+;; To understand what multiaddresses are,
+;; see: https://github.com/multiformats/multiaddr
+;;
+;; The implementation of client methods here are influenced by those found in:
+;; https://github.com/vyzo/gerbil-libp2p/blob/master/example/libp2p-chat.ss
+
+
+;; FIXME:
+;; In the upstream branch,
+;; the `start-libp2p-daemon!' procedure doesn't redirect output
+;; to a logfile, instead just directly outputs it to the terminal.
+;;
+;; To fix this we have to:
+;; 1. Upstream to gambit
+;;    Extend open-process to allow you to redirect to file or file descriptor.
+;;    (In our case this allows us to redirect the output / error messages to a log-file)
+;;    See how `run-program` in uiop does this:
+;;    https://common-lisp.net/project/asdf/uiop.html#UIOP_002fRUN_002dPROGRAM
+;;
+;; 2. Upstream to gerbil-libp2p
+;;    process-options to use the redirecting option
+;;    for writing the error logs to a file instead
+;;    of the console.
+;;
+;; In the short run we use the shell to redirect error logs to a file (see the implementation below).
+(def (start-libp2p-daemon! host-addresses: (host-addrs #f) daemon: (bin "p2pd")
+                           options: (options [])
+                           address: (sock #f)
+                           wait: (timeo 0.4)
+                           p2pd-log-path: (p2pd-log-path (log-path "p2pd.log")))
+  (cond
+   ((current-libp2p-daemon)
+    => values)
+   (else
+    (let* ((path (or sock (string-append "/tmp/p2pd." (number->string (getpid)) ".sock")))
+           (addr (string-append "/unix" path))
+
+           (raw-cmd (escape-shell-tokens [bin "-q" "-listen" addr
+                                          (if host-addrs ["-hostAddrs" host-addrs] [])...
+                                          options ...]))
+           (cmd (format "{ echo ~a ; exec ~a ; } < /dev/null >> ~a 2>&1"
+                 raw-cmd raw-cmd p2pd-log-path))
+
+           (proc (open-process [path: "/bin/sh" arguments: ["-c" cmd]]))
+
+           (d (daemon proc path)))
+      (cond
+       ((process-status proc timeo #f)
+        => (lambda (status)
+             (error "p2pd exited prematurely" status))))
+      (current-libp2p-daemon d)
+      d))))
+
+;; NOTE: This is needed to call initialize our version
+;; of the daemon process (by `start-libp2p-daemon!'),
+;; see the implementation above.
+;; TODO: Once the above changes are upstreamed for `start-libp2p-daemon!',
+;; this command can be made obsolete too.
+(def (open-libp2p-client host-addresses: (host-addresses #f) options: (args [])  address: (sock #f)  wait: (timeo 12) (path #f)) ;; Extra arguments host-address and options
+  (let (d (start-libp2p-daemon! host-addresses: host-addresses options: args address: sock wait: timeo)) ;; Should go with host-address/tranpsort/port
+    (make-client d (make-mutex 'libp2p-client) (make-hash-table) path #f #f)))
+
+;; `s' here is a stream between two peers,
+;; which is opened by the client.
+;; This writes contents to the stream.
+(def (chat-writer s contents)
+  (display "> ")
+  (bio-write-string contents (stream-out s))
+  (bio-write-char #\newline (stream-out s))
+  (bio-force-output (stream-out s)))
+
+;; peer-multiaddr-str: destination multiaddress,
+;; It has the additional constraint that it needs to contain a peerId,
+;; so we can verify the recipient's identity.
+;;
+;; host-addresses: Multi addresses this participant listens to on their host machine.
+;;
+;; contents: string
+;;
+;; This is used to connect to a destination address of another participant,
+;; and send the contents over the opened connection.
+;; If the other participant is not online,
+;; it will poll until `timeout'.
+(def (dial-and-send-contents libp2p-client dest-address-str contents timeout: (timeout 10))
+  (let* ((self (libp2p-identify libp2p-client))
+         (peer-multiaddr (string->peer-info dest-address-str)))
+    (for (p (peer-info->string* self))
+      (displayln "I am " p))
+    (displayln "Connecting to " dest-address-str)
+    (libp2p-connect/poll libp2p-client peer-multiaddr timeout: timeout)
+    (let (s (libp2p-stream libp2p-client peer-multiaddr [chat-proto]))
+      (chat-writer s contents)
+      (stream-close s))))
+
+;; This is used to connect to a destination address of another participant,
+;; and send the contents over the opened connection.
+;; If the other participant is not online,
+;; it will poll until `timeout'.
+(def (libp2p-connect/poll libp2p-client peer-multiaddr timeout: (timeout #f))
+  (try (libp2p-connect libp2p-client peer-multiaddr)
+    (catch (e)
+      (displayln "Unable to connect to client...")
+      (if (and timeout (> timeout 0))
+          (let ()
+            (displayln "Polling again in 1s...")
+            (thread-sleep! 1)
+            (libp2p-connect/poll libp2p-client peer-multiaddr timeout: (- timeout 1)))
+          (error "Timeout while trying to connect to client.")))))
+
+
+;; This is a libp2p protocol spec.
+;; These protocols work on the application level.
+;; See: https://docs.libp2p.io/concepts/protocols/
+;;
+;; NOTE: This libp2p-protocol is a placeholder,
+;; it's not an actual libp2p protocol.
+;; It just falls back to plaintext messaging.
+;;
+;; When we want to have a specific protocol
+;; we will need to `register' handlers for them.
+;; See: https://docs.libp2p.io/concepts/protocols/#handler-functions
+(def chat-proto "/chat/1.0.0")
+
+;; This function reads the
+(def (chat-reader s)
+  (let lp ()
+    (let (line (bio-read-line (stream-in s)))
+      (cond
+       ((eof-object? line)
+        (displayln "*** STREAM CLOSED"))
+       ((string-empty? line)
+        (displayln "*** Received"))
+       (else
+        line)))))
+
+
+;; ------------------ Misc
+
+
+;; TODO: Generalize this for escaping arbitrary strings in the shell, upstream to `gerbil-utils'.
+;; NOTE: It currently does not correctly escape things for the shell. E.g:
+;; "$(rm -rf /) ''" would be passed through unchanged, since it contains a single quote.
+;; If you got rid of that first case,
+;; then "'$(rm -rf /)'" would still slip by the escaping in the second case;
+;; due to the way shell escaping works,
+;; you can unquote back into an interpreted context.
+;; So you also need to substitute out any single quotes in the middle of the string.
+(def (escape-agreement-string/shell agreement-string)
+  (if (string-contains agreement-string "'")
+    agreement-string
+    (string-append "'" agreement-string "'")))
