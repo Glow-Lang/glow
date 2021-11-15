@@ -13,6 +13,7 @@
   :mukn/ethereum/transaction :mukn/ethereum/tx-tracker :mukn/ethereum/watch :mukn/ethereum/assets
   :mukn/ethereum/evm-runtime :mukn/ethereum/contract-config :mukn/ethereum/assembly :mukn/ethereum/types
   :mukn/ethereum/nonce-tracker
+  (only-in :mukn/glow/compiler/common hash-kref)
   (only-in ../compiler/alpha-convert/env symbol-refer)
   ./program ./block-ctx ./consensus-code-generator ./terminal-codes
   ../compiler/method-resolve/method-resolve
@@ -256,7 +257,7 @@
       (interpret-participant-statement self statement))
     (update-contract-balances self)))
 
-(def (run-passive-code-block/handshake self role)
+(def (passive-participant-handshake self role)
   (nest
    (let (agreement-handshake (read-handshake self)))
    (begin
@@ -275,7 +276,7 @@
        (error "agreements don't match" (.@ self agreement) agreement))
      (set! (.@ self timer-start) (.@ agreement options maxInitialBlock))
      (set! (.@ self first-unprocessed-block) (.@ contract-config creation-block))
-     (interpret-current-code-block self))
+     (void))
    (let (create-pretx (prepare-create-contract-transaction self))
      (verify-contract-config contract-config create-pretx)
      (set! (.@ self contract-config) contract-config)))
@@ -287,10 +288,10 @@
 ;; Bool <- Runtime
 (def (run-passive-code-block self)
   (def role (.@ self role))
-  (def contract-config (.@ self contract-config))
-  (if contract-config
-    (run-passive-code-block/contract self role contract-config)
-    (run-passive-code-block/handshake self role)))
+  ;; if the contract has not been created yet, do handshake first
+  (when (not (.@ self contract-config))
+    (passive-participant-handshake self role))
+  (run-passive-code-block/contract self role (.@ self contract-config)))
 
 ;; : AgreementHandshake <- Runtime
 (def (read-handshake self)
@@ -303,35 +304,36 @@
 ;; Bool <- Runtime
 (def (run-active-code-block self)
   (def role (.@ self role))
-  (def contract-config (.@ self contract-config))
   (set! (.@ self block-ctx) (.call ActiveBlockCtx .make))
-  (when contract-config
-    (publish-frame-data self (.@ self block-ctx outbox)))
+  ;; if the contract has not been created yet, create it first,
+  ;; before running `interpret-current-code-block`
+  ;; TODO: as an optimization, it could be possible to run interpret-current-code-block
+  ;;       before this, in the cases where it doesn't have side-effects such as withdraws
+  ;;       call it first-transaction-optimization
+  (when (not (.@ self contract-config))
+   (let ()
+    (deploy-contract self)
+    (def contract-config (.@ self contract-config))
+    (def agreement (.@ self agreement))
+    (def published-data (get-output-u8vector (.@ self block-ctx outbox)))
+    (def handshake (.new AgreementHandshake agreement contract-config published-data))
+    (send-contract-handshake self handshake)))
+  (publish-frame-data self (.@ self block-ctx outbox))
   (interpret-current-code-block self)
-  (if (not contract-config)
-    (let ()
-      (deploy-contract self)
-      (def contract-config (.@ self contract-config))
-      (def agreement (.@ self agreement))
-      (def published-data (get-output-u8vector (.@ self block-ctx outbox)))
-      (def handshake (.new AgreementHandshake agreement contract-config published-data))
-      (send-contract-handshake self handshake))
-    (let ()
-      ;; TODO: Verify asset transfers using previous transaction and balances
-      ;; recorded in Message's asset-transfer table during interpretation. Probably
-      ;; requires getting TransactionInfo using the TransactionReceipt.
-      (def contract-address (.@ contract-config contract-address))
-      (approve-deposits self contract-address)
-      (def message-pretx
-           (prepare-call-function-transaction
-             self
-             contract-address
-             (.@ self block-ctx outbox)))
-      (def new-tx-receipt (post-transaction message-pretx))
-      (set! (.@ self timer-start) (.@ new-tx-receipt blockNumber))
-      (set! (.@ self first-unprocessed-block) (1+ (.@ new-tx-receipt blockNumber)))
-      (set! (.@ self first-unprocessed-event-in-block) 0)
-      ))
+  ;; TODO: Verify asset transfers using previous transaction and balances
+  ;; recorded in Message's asset-transfer table during interpretation. Probably
+  ;; requires getting TransactionInfo using the TransactionReceipt.
+  (def contract-address (.@ self contract-config contract-address))
+  (approve-deposits self contract-address)
+  (def message-pretx
+       (prepare-call-function-transaction
+         self
+         contract-address
+         (.@ self block-ctx outbox)))
+  (def new-tx-receipt (post-transaction message-pretx))
+  (set! (.@ self timer-start) (.@ new-tx-receipt blockNumber))
+  (set! (.@ self first-unprocessed-block) (1+ (.@ new-tx-receipt blockNumber)))
+  (set! (.@ self first-unprocessed-event-in-block) 0)
   #t)
 
 ;; Pre-approve any deposits that the current block will need to perform
@@ -370,15 +372,15 @@
 ;; PreTransaction <- Runtime Block
 (def (prepare-create-contract-transaction self)
   (def sender-address (get-active-participant self))
+  (def current-code-block-label (.@ self current-code-block-label))
   (def code-block (get-current-code-block self))
-  (def next (.@ code-block exit))
   (def participant (.@ code-block participant))
   (def initial-state
     (create-frame-variables
-      self
-      (.@ self agreement options maxInitialBlock)
-      next
-      participant))
+     self
+     (.@ self agreement options maxInitialBlock)
+     current-code-block-label
+     participant))
   (def initial-state-digest
     (digest-product-f initial-state))
   (def contract-bytes
@@ -436,6 +438,7 @@
 ;;
 ;; Write frame data to `out`, to be sent to the contract for restoration.
 (def (publish-frame-data self out)
+  (assert! (symbol? (.@ self current-code-block-label)))
   (def frame-variables
     (create-frame-variables
       self
@@ -722,13 +725,15 @@
                "check-consecutive-addresses: ending offset was incorrect; "
                "expected ~a but got ~a") end i))))
 
-;; : Frame <- Runtime Block (Table Offset <- Symbol) Symbol
+;; : Frame <- Runtime Block Symbol Symbol
 (def (create-frame-variables self timer-start code-block-label code-block-participant)
+  (assert! (symbol? code-block-label))
   (def consensus-code-generator (.@ self consensus-code-generator))
   (def checkpoint-location
-    (hash-get (.@ consensus-code-generator labels) (make-checkpoint-label (.@ self name) code-block-label)))
-  (def active-participant-offset
-    (lookup-variable-offset consensus-code-generator code-block-label code-block-participant))
+    (hash-kref (.@ consensus-code-generator labels) (make-checkpoint-label (.@ self name) code-block-label)))
+  ;TODO: delete if not used anywhere?
+  ;(def active-participant-offset
+  ;  (lookup-variable-offset consensus-code-generator code-block-label code-block-participant))
   (def balances (vector->list (.@ self contract-balances)))
   (def live-variables (lookup-live-variables (.@ self program) (.@ self name) code-block-label))
   ;; TODO: ensure keys are sorted in both hash-values
