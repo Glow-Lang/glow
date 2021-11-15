@@ -1,0 +1,29 @@
+@startuml
+
+title Simple Auction
+actor Seller
+database Blockchain
+actor Alice
+actor Bob
+actor Peter
+actor Paula
+
+Seller -> Blockchain: create an auction for Goods, expiring on<date> with BuyItNowPrice of <$$$>
+Blockchain -> Blockchain: CurrentLeader is Seller with 0 ADA
+Alice -> Blockchain: Bid 100 ADA
+Blockchain -> Blockchain: CurrentLeader is Alice with 100 ADA
+Bob -> Blockchain: Bid 200 ADA
+Blockchain -> Blockchain: CurrentLeader is Bob with 200 ADA
+Blockchain -> Alice: take back your 100 ADA, you are no longer the leader
+
+alt [someone pays the BuyItNowPrice]
+Paula -> Blockchain: I'm paying the buy it now price.
+Blockchain -> Blockchain: Current Leader is Paula
+Blockchain -> Bob: take back your 200 ADA you are no longer the leader
+end
+
+Blockchain -> Paula: winner take the goods
+Blockchain -> Seller: Another authentication Response
+
+
+@enduml
