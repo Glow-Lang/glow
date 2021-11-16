@@ -85,27 +85,28 @@
        ((cons k v)
         (cons k (cons (lookup-type prg k) v)))))))
 
-(def (run:terminal role a)
-  (run io-context:terminal role a))
+(def (run:terminal role a off-chain-channel)
+  (run io-context:terminal role a off-chain-channel))
 
-(def (run:command cmd role a)
+(def (run:command cmd role a off-chain-channel)
   (def ctx (io-context:command cmd))
   (with-unwind-protect
-    (lambda () (run ctx role a))
-    (lambda () (.call ctx teardown))))
+    (lambda () (run ctx role a off-chain-channel))
+    (lambda () (.call ctx teardown)))) ;; FIXME: teardown off-chain-channel here also
 
-(def (run:special-file role a)
-  (run io-context:special-file role a))
+(def (run:special-file role a off-chain-channel)
+  (run io-context:special-file role a off-chain-channel))
 
 ;; run : Symbol InteractionAgreement -> [Hashof Symbol TypeValuePair]
 ;; Produces an environment mapping surface names to type-value-pairs
-(def (run ctx role a)
+(def (run ctx role a off-chain-channel)
   (def program (interaction-agreement->program a))
   (def runtime
     (.call Runtime .make role: role
                   agreement: a
                   program: program
-                  io-context: ctx))
+                  io-context: ctx
+                  off-chain-channel: off-chain-channel))
   (execute runtime)
   (printf "~a~a interaction finished~a\n" BOLD (.@ a interaction) END)
   (unless (symbol? (.@ runtime current-debug-label))
