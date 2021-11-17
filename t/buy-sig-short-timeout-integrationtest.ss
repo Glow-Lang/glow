@@ -45,20 +45,7 @@
       (def proc-buyer #f)
       (def proc-seller #f)
 
-      ;; Original command:
-      ;; glow start-interaction --evm-network pet --max-initial-block '%10' --timeout-in-blocks 1 --glow-app buy_sig --my-identity alice --role Buyer --database alice --assets '{"DefaultToken": "PET"}' --participants '{"Buyer": "0xa11cE3d7466d87169693843785b4bAa89B1BeA94", "Seller": "0xb0bCd0F25DAa620352FDeD9824527081265447eF"}' --params '{"digest": "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470", "price": 123451234512345}'
-      ;; Modified command:
       ;; glow start-interaction --evm-network pet --test --max-initial-block '%10' --timeout-in-blocks 1 --glow-app buy_sig --my-identity t/alice --role Buyer --database alice --assets '{"DefaultToken": "PET"}' --participants '{"Buyer": "0xa71CEb0990dD1f29C2a064c29392Fe66baf05aE1", "Seller": "0xb0bb1ed229f5Ed588495AC9739eD1555f5c3aabD"}' --params '{"digest": "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470", "price": 123451234512345}'
-      ;; Waiting for Seller to make a move ...
-      ;; Timed out waiting for other participant; claiming escrowed funds...
-      ;; In thread primordial:
-      ;; *** ERROR IN ##dynamic-env-bind -- This object was raised: #<json-rpc-error #107 code: -32000 message: "execution reverted" data: #!void>
-      ;; 0  ##dynamic-env-bind
-      ;; 1  ##dynamic-wind
-      ;; 2  mukn/ethereum/transaction#gas-estimate
-      ;; 3  mukn/ethereum/transaction#call-function__%
-      ;; 4  mukn/glow/runtime/participant-runtime#run-passive-code-block/contract
-
 
       (try
        (set! proc-buyer
