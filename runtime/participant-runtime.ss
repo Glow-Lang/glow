@@ -235,6 +235,7 @@
       (set! (.@ self first-unprocessed-event-in-block) next-event)
       (return log))
     (def from-block first-unprocessed-block)
+    ;; TODO: press X to doubt
     (def to-block (+ timer-start (.@ self agreement options timeoutInBlocks)))
     (watch-contract callback contract-address from-block to-block first-unprocessed-event-in-block))
   )
@@ -254,7 +255,9 @@
           address
           (call-with-output-u8vector
             (lambda (out)
-              (publish-frame-data self out)))))
+              (publish-frame-data self out)))
+          ;; TODO: Remove when done debugging the short-timeout bug
+          gas: 1000000))
       #f)
     (let ()
       (def log-data (.@ new-log-object data))

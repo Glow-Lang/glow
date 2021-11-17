@@ -2,10 +2,11 @@
 
 (import
   :std/iter :std/sort :std/sugar :std/srfi/1 :std/misc/hash :std/misc/list :std/misc/number
-  :clan/base :clan/number :clan/syntax
+  :clan/base :clan/number :clan/syntax :clan/debug
   :clan/poo/io :clan/poo/object :clan/poo/brace :clan/poo/debug
   :mukn/ethereum/ethereum :mukn/ethereum/assembly :mukn/ethereum/evm-runtime
   :mukn/ethereum/assets :mukn/ethereum/types
+  :mukn/ethereum/network-config
   (only-in :mukn/glow/compiler/common hash-kref)
   ./program)
 
@@ -66,6 +67,7 @@
                 (&simple-contract-prelude)
                 &define-tail-call
                 (&define-commit-contract-call/simple self)
+                ;; TODO: pass in timeoutInBlocks option?
                 (&define-check-participant-or-timeout assets-and-vars)
                 (&define-end-contract assets-and-vars)
                 compiled-small-functions
@@ -247,6 +249,8 @@
     (['set-participant new-participant]
       ;; TODO: support more than two participants
       (let (other-participant (find-other-participant self new-participant))
+        ;; TODO: pass in timeoutInBlocks option?
+        (DBG ccg252: (.@ self timeout) (ethereum-timeout-in-blocks))
         [(&check-participant-or-timeout!
           must-act: (lookup-variable-offset self function-name new-participant)
           or-end-in-favor-of: (lookup-variable-offset self function-name other-participant))]))
