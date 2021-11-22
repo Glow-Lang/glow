@@ -20,6 +20,7 @@
   :mukn/glow/compiler/checkpointify/checkpoint-info-table
   :mukn/glow/compiler/liveness/checkpoint-liveness
   :mukn/glow/compiler/project/project
+  :mukn/glow/compiler/schema/schema
   )
 
 ;;; Layers, passes and strategies
@@ -86,6 +87,8 @@
 (define-layer contract.sexp read-sexp-module write-sexp-module stx-sexpr=?) ;; BEPP for contracts
 (define-layer client.sexp read-sexp-module write-sexp-module stx-sexpr=?) ;; BEPP for clients
 
+;; UI integration
+(define-layer schema.sexp read-sexp-module write-sexp-module stx-sexpr=?)
 
 ;;; Passes
 
@@ -146,6 +149,9 @@
 ;; *Projection*: contract and participants in a single file
 (define-pass project (checkpointify.sexp Unused cpitable2.sexp) (project.sexp))
 
+;; *User Interface Integration*: extract JSON schema from contract
+(define-pass schema (project.sexp) (schema.sexp))
+
 ;; *Contract Projection*: extract a contract for every interaction
 ;;(define-pass contract-projection ".message.sexp" ".contract.sexp")
 
@@ -168,6 +174,9 @@
 
 (define-strategy ethereum-direct-style
   parse debug-label alpha-convert desugar typecheck method-resolve anf checkpointify checkpoint-liveness project) ;; ...
+
+(define-strategy schema
+  parse debug-label alpha-convert desugar typecheck method-resolve anf checkpointify checkpoint-liveness project schema)
 
 ;; Different layers and passes for State-Channel style:
 ;; the previous contract is virtualized, so that

@@ -44,14 +44,22 @@
 ;; and compare these results to pre-recorded results if available;
 ;; unless the pre-recorded results exist and match, print the pass results.
 ;; Either way, print test results.
-(define-entry-point (process-to-pass pass . files)
+(define-entry-point (process-to-pass pass strategy: (strategy default-strategy) . files)
   (name: 'pass
-   help: "Given a pass and files, process them until the end of it"
+   help: "Process files until the end of the given pass"
    getopt: (make-options
-             [(argument 'pass help: "pass up to which to process the files" value: string->symbol)
-              (rest-arguments 'files help: "files to process through the compiler")] []
-              [options/glow-path]))
-  (for (file files) (run-passes file pass: pass)))
+            [(argument 'pass
+                       value: string->symbol
+                       help: "pass up to which to process the files")
+             (rest-arguments 'files help: "files to process through the compiler")
+             (option 'strategy "-S" "--strategy"
+                     default: default-strategy
+                     value: string->symbol
+                     help: "compiler strategy (list of passes) to use")]
+            []
+            [options/glow-path]))
+  (for (file files)
+    (run-passes file strategy: strategy pass: pass)))
 
 ;; TODO: make the choice of the digest algorithm controllable,
 ;; with the defualt dependent on the current network type, etc.
