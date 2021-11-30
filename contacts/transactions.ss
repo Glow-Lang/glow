@@ -6,13 +6,14 @@
  :clan/ffi
  :gerbil/gambit/ports
  :gerbil/gambit/threads
+ :std/assert
  :std/db/dbi
  :std/format
  :std/misc/hash
  :std/misc/ports
  :std/misc/process
  (only-in :std/srfi/1 first)
- :std/sugar :std/assert
+ :std/sugar
  :std/text/json
  :mukn/glow/contacts/db)
 

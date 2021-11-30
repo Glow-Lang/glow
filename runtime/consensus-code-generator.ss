@@ -1,7 +1,11 @@
 (export #t)
 
 (import
-  :std/iter :std/sort :std/sugar :std/assert :std/srfi/1 :std/misc/hash :std/misc/list :std/misc/number
+  :std/assert :std/iter
+  :std/misc/hash :std/misc/list :std/misc/number
+  :std/sort
+  :std/srfi/1
+  :std/sugar
   :clan/base :clan/number :clan/syntax
   :clan/poo/io :clan/poo/object :clan/poo/brace :clan/poo/debug
   :mukn/ethereum/ethereum :mukn/ethereum/assembly :mukn/ethereum/evm-runtime

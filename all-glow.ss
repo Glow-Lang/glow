@@ -14,7 +14,7 @@
   :gerbil/expander <expander-runtime> :std/interactive
   :gerbil/gambit/bytes :gerbil/gambit/exact :gerbil/gambit/threads :gerbil/gambit/ports
   :scheme/base-impl :scheme/char
-  :std/actor :std/coroutine
+  :std/actor :std/assert :std/coroutine
   :std/debug/heap :std/debug/memleak :std/debug/threads
   :std/error :std/format :std/getopt :std/iter :std/logger
   :std/misc/bytes :std/misc/deque :std/misc/hash :std/misc/list :std/misc/number
@@ -22,7 +22,9 @@
   :std/net/request :std/net/websocket
   :std/pregexp :std/sort
   :std/srfi/1 :std/srfi/13 (except-in :std/srfi/19 time) ;; :std/srfi/43
-  :std/sugar :std/assert :std/text/csv :std/text/hex :std/text/json :std/test
+  :std/sugar
+  :std/text/csv :std/text/hex :std/text/json
+  :std/test
 
   ;; swank
   ;; NB: until https://github.com/ecraven/r7rs-swank/pull/10 is merged,

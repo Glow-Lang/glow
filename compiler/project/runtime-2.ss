@@ -1,7 +1,8 @@
 (export #t
         (import:
-          :std/sugar :std/assert
+          :std/assert
           :std/misc/channel
+          :std/sugar
           :gerbil/gambit/threads
           :clan/base
           :clan/poo/object
@@ -13,13 +14,14 @@
           :mukn/ethereum/ethereum
           :mukn/ethereum/known-addresses))
 
-(import :std/sugar :std/assert
+(import :std/assert
         :std/format
         :std/iter
-        :std/text/json
         :std/misc/list
         :std/misc/number
         :std/misc/channel
+        :std/sugar
+        :std/text/json
         :gerbil/gambit/threads
         (only-in :gerbil/gambit/ports output-port-readtable output-port-readtable-set! read-u8)
         (only-in :gerbil/gambit/readtables readtable-sharing-allowed?-set)
