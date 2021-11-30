@@ -7,7 +7,7 @@
   :std/pregexp :std/srfi/13 :std/misc/uuid
   :std/text/base64
   :std/crypto
-  :std/format :std/iter :std/misc/hash :std/sugar :std/misc/number :std/misc/list
+  :std/format :std/iter :std/misc/hash :std/sugar :std/assert :std/misc/number :std/misc/list
   :std/sort :std/srfi/1 :std/text/json :std/os/pid
   (for-syntax :std/stxutil)
   :gerbil/gambit/exceptions

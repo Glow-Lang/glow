@@ -12,7 +12,7 @@
  :std/misc/ports
  :std/misc/process
  (only-in :std/srfi/1 first)
- :std/sugar
+ :std/sugar :std/assert
  :std/text/json
  :mukn/glow/contacts/db)
 

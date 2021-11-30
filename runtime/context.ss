@@ -7,7 +7,7 @@
 (import
   (rename-in :gerbil/core (lambda λ))
   :gerbil/core
-  :std/sugar
+  :std/sugar :std/assert
   :clan/crypto/secp256k1
   ;;:clan/base
   )

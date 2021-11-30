@@ -22,7 +22,7 @@
   :std/net/request :std/net/websocket
   :std/pregexp :std/sort
   :std/srfi/1 :std/srfi/13 (except-in :std/srfi/19 time) ;; :std/srfi/43
-  :std/sugar :std/text/csv :std/text/hex :std/text/json :std/test
+  :std/sugar :std/assert :std/text/csv :std/text/hex :std/text/json :std/test
 
   ;; swank
   ;; NB: until https://github.com/ecraven/r7rs-swank/pull/10 is merged,

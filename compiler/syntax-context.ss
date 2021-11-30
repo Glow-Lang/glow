@@ -5,7 +5,7 @@
 (import
   (rename-in :gerbil/core (lambda λ))
   :gerbil/core
-  :std/sugar
+  :std/sugar :std/assert
   ;;:clan/base
   :mukn/glow/runtime/context
   )

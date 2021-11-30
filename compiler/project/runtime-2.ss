@@ -1,6 +1,6 @@
 (export #t
         (import:
-          :std/sugar
+          :std/sugar :std/assert
           :std/misc/channel
           :gerbil/gambit/threads
           :clan/base
@@ -13,7 +13,7 @@
           :mukn/ethereum/ethereum
           :mukn/ethereum/known-addresses))
 
-(import :std/sugar
+(import :std/sugar :std/assert
         :std/format
         :std/iter
         :std/text/json
