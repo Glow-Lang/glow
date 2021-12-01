@@ -1,7 +1,11 @@
 (export #t)
 
 (import
-  :std/iter :std/sort :std/sugar :std/srfi/1 :std/misc/hash :std/misc/list :std/misc/number
+  :std/assert :std/iter
+  :std/misc/hash :std/misc/list :std/misc/number
+  :std/sort
+  :std/srfi/1
+  :std/sugar
   :clan/base :clan/number :clan/syntax
   :clan/poo/io :clan/poo/object :clan/poo/brace :clan/poo/debug
   :mukn/ethereum/ethereum :mukn/ethereum/assembly :mukn/ethereum/evm-runtime
@@ -21,7 +25,8 @@
 
       ; TODO: rename params-end; its actual meaning is all statically-allocated
       ; space in the executable, incl. globals, so the name should reflect that.
-      params-end: [(OrFalse Nat)])
+      params-end: [(OrFalse Nat)]
+      timeout: [Nat])
     {.make:
       (lambda (some-program some-name some-timeout assets)
         {program: some-program
@@ -66,7 +71,7 @@
                 (&simple-contract-prelude)
                 &define-tail-call
                 (&define-commit-contract-call/simple self)
-                (&define-check-participant-or-timeout assets-and-vars)
+                (&define-check-participant-or-timeout assets-and-vars timeout: (.@ self timeout))
                 (&define-end-contract assets-and-vars)
                 compiled-small-functions
                 compiled-medium-functions
@@ -247,6 +252,7 @@
     (['set-participant new-participant]
       ;; TODO: support more than two participants
       (let (other-participant (find-other-participant self new-participant))
+        ;; timeout argument is passed into `&define-check-participant-or-timeout`, not here
         [(&check-participant-or-timeout!
           must-act: (lookup-variable-offset self function-name new-participant)
           or-end-in-favor-of: (lookup-variable-offset self function-name other-participant))]))

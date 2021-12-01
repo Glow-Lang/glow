@@ -4,11 +4,14 @@
   :clan/debug
   :gerbil/gambit/bits :gerbil/gambit/bytes :gerbil/gambit/threads :gerbil/gambit/ports :std/net/bio
   :gerbil/gambit
-  :std/pregexp :std/srfi/13 :std/misc/uuid
-  :std/text/base64
-  :std/crypto
-  :std/format :std/iter :std/misc/hash :std/sugar :std/misc/number :std/misc/list
-  :std/sort :std/srfi/1 :std/text/json :std/os/pid
+  :std/assert :std/crypto :std/format :std/iter
+  :std/misc/hash :std/misc/list :std/misc/number :std/misc/uuid
+  :std/os/pid :std/os/signal
+  :std/pregexp
+  :std/sort
+  :std/srfi/1 :std/srfi/13
+  :std/sugar
+  :std/text/base64 :std/text/json
   (for-syntax :std/stxutil)
   :gerbil/gambit/exceptions
   :clan/base :clan/exception :clan/io :clan/json :clan/number :clan/pure/dict/assq
@@ -21,7 +24,6 @@
   :mukn/ethereum/nonce-tracker
   (only-in :mukn/glow/compiler/common hash-kref)
   :vyzo/libp2p
-  :std/os/signal
   (only-in :vyzo/libp2p/client make-client)
   :vyzo/libp2p/daemon
   (only-in ../compiler/alpha-convert/env symbol-refer)
