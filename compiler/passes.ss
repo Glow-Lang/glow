@@ -3,6 +3,7 @@
 (export #t)
 
 (import
+  :std/text/json
   :mukn/glow/compiler/multipass :mukn/glow/compiler/common
   :mukn/glow/compiler/parse/parse
   :mukn/glow/compiler/debug-label/debug-label
@@ -88,7 +89,8 @@
 (define-layer client.sexp read-sexp-module write-sexp-module stx-sexpr=?) ;; BEPP for clients
 
 ;; UI integration
-(define-layer schema.sexp read-sexp-module write-sexp-module stx-sexpr=?)
+(define-layer schema.sexp read-sexp-module write equal?)
+(define-layer schema.json read write-json equal?)
 
 ;;; Passes
 
@@ -149,8 +151,8 @@
 ;; *Projection*: contract and participants in a single file
 (define-pass project (checkpointify.sexp Unused cpitable2.sexp) (project.sexp))
 
-;; *User Interface Integration*: extract JSON schema from contract
-(define-pass schema (project.sexp) (schema.sexp))
+;; *User Interface Integration*: extract UI schema from contract
+(define-pass schema (project.sexp) (schema.json))
 
 ;; *Contract Projection*: extract a contract for every interaction
 ;;(define-pass contract-projection ".message.sexp" ".contract.sexp")

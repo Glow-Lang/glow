@@ -1,6 +1,7 @@
 (export #t)
 
 (import :clan/debug
+        :std/sugar
         (for-template :mukn/glow/compiler/syntax-context)
         :mukn/glow/compiler/common)
 
@@ -13,7 +14,10 @@
 ;; Accumulate (in reverse order) schemata from a single statement.
 (def (schema-stmt stx)
   (syntax-case stx (def input)
-    ((def var (input ty prompt)) (list #'(var ty prompt)))
+    ((def var (input ty prompt))
+     (list (hash (var (syntax->datum #'var))
+                 (type (syntax->datum #'ty))
+                 (prompt (syntax->datum #'prompt)))))
     (expr (schema-expr stx))))
 
 ;; Accumulate (in reverse order) schemata from a list of statements.
