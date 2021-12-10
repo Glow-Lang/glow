@@ -11,7 +11,8 @@
   :mukn/ethereum/assets :mukn/ethereum/cli :mukn/ethereum/ethereum :mukn/ethereum/network-config
   :mukn/ethereum/types :mukn/ethereum/json-rpc :mukn/ethereum/known-addresses
   :mukn/ethereum/test-contracts ; TODO: should this be more "dynamic", only imported when the network is known to be pet?
-  :mukn/glow/runtime/participant-runtime :mukn/glow/runtime/reify-contract-parameters
+  :mukn/glow/runtime/participant-runtime
+  :mukn/glow/runtime/reify-contract-parameters
   :mukn/glow/runtime/program :mukn/glow/runtime/terminal-codes :mukn/glow/runtime/glow-path
   (only-in :mukn/glow/compiler/alpha-convert/alpha-convert init-syms)
   :mukn/glow/compiler/passes :mukn/glow/compiler/multipass :mukn/glow/compiler/syntax-context

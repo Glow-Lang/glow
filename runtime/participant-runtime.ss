@@ -14,7 +14,7 @@
   :std/text/base64 :std/text/json
   (for-syntax :std/stxutil)
   :gerbil/gambit/exceptions
-  :clan/base :clan/exception :clan/io :clan/json :clan/number :clan/pure/dict/assq
+  :clan/base :clan/exception :clan/io :clan/json :clan/lazy-import :clan/number :clan/pure/dict/assq
   :clan/path :clan/path-config :clan/ports :clan/syntax :clan/timestamp
   :clan/poo/object :clan/poo/brace :clan/poo/io :clan/poo/debug :clan/debug :clan/crypto/random
   :clan/persist/content-addressing :clan/shell
@@ -23,14 +23,16 @@
   :mukn/ethereum/evm-runtime :mukn/ethereum/contract-config :mukn/ethereum/assembly :mukn/ethereum/types
   :mukn/ethereum/nonce-tracker
   (only-in :mukn/glow/compiler/common hash-kref)
-  :vyzo/libp2p
-  (only-in :vyzo/libp2p/client make-client)
-  :vyzo/libp2p/daemon
   (only-in ../compiler/alpha-convert/env symbol-refer)
   ./program ./block-ctx ./consensus-code-generator ./terminal-codes
   ./pb/private-key
   ../compiler/method-resolve/method-resolve
   ../compiler/project/runtime-2)
+
+(lazy-import
+  (:vyzo/libp2p (libp2p-connect libp2p-identify libp2p-listen libp2p-stream peer-info->string* stream-close stream-in stream-out string->peer-info))
+  (:vyzo/libp2p/client (make-client))
+  (:vyzo/libp2p/daemon (current-libp2p-daemon daemon stop-libp2p-daemon! use-libp2p-daemon!)))
 
 ;; NB: Whichever function exports data end-users / imports from them should make sure to put in a Json array (Scheme list) prepend by the name of the type. And/or we may have a {"": "InteractionAgreement" ...} field with this asciibetically always-first name. Maybe such function belongs to gerbil-poo, too.
 
