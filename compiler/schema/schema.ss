@@ -5,13 +5,7 @@
         (for-template :mukn/glow/compiler/syntax-context)
         :mukn/glow/compiler/common)
 
-;; Accumulate (in reverse order) schemata from an expression.
-(def (schema-expr stx)
-  (if (trivial-expr? stx)
-      []
-      (stx-foldl append [] (stx-map schema-stmt stx))))
-
-;; Accumulate (in reverse order) schemata from a single statement.
+;; Recursively accumulate schemata from a statement.
 (def (schema-stmt stx)
   (syntax-case stx (def input @make-interaction @record @list participants assets)
     ;; Named user input.
@@ -31,12 +25,14 @@
                   (participants (syntax->datum #'(p ...)))
                   (assets (syntax->datum #'(a ...)))
                   (params (syntax->datum #'params)))
-            (schema-expr #'body)))
+            (schema-stmt #'body)))
 
-    ;; Default: descend into expression.
-    (expr (schema-expr stx))))
+    ;; Descend into non-trivial sub-statements.
+    (_ (if (trivial-expr? stx)
+           []
+           (stx-foldr append [] (stx-map schema-stmt stx))))))
 
-;; Accumulate (in reverse order) schemata from a list of statements.
+;; Accumulate schemata from a list of statements.
 (def (schema-stmts stmts)
   (match stmts
     ([] [])
@@ -44,8 +40,8 @@
     ([x . xs] (append (schema-stmt x)
                       (schema-stmts xs)))))
 
-;; Accumulate and return (in forward order) schemata from a module.
+;; Accumulate and return schemata from a module.
 (def (schema module)
   (syntax-case module (@module)
     ((@module stmts ...)
-     (reverse (schema-stmts (syntax->list #'(stmts ...)))))))
+     (schema-stmts (syntax->list #'(stmts ...))))))
