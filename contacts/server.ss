@@ -12,7 +12,8 @@
  :clan/multicall
  :drewc/ftw
  :std/format :std/getopt :std/iter :std/misc/hash :std/sugar :std/text/json
- ./db ./transactions)
+ ./db ./transactions
+ ../runtime/glow-path)
 
 ;;; First, the client is just a bunch of static files we must serve.
 
@@ -170,6 +171,17 @@
                               (output output))))
         (catch _ (respond/JSON-error code: 404 "No such transaction"
                                      `((txid ,txid)))))))
+
+;; List available DApps.
+;; FIXME: Maybe move to runtime/glow-path.ss
+(define-endpoint list-applications "^/contacts/applications$")
+(def (list-applications/GET)
+  (def apps (hash->list/sort (ensure-glow-dapps) string<?))
+  (respond/JSON (for/collect ((app apps))
+                  (match app
+                    ([name . path]
+                     (hash (name name)
+                           (path path)))))))
 
 (define-entry-point (start-server address: (address #f) port: (port #f))
   (help: "Start the contacts API server"
