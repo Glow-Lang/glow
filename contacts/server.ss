@@ -13,6 +13,7 @@
  :drewc/ftw
  :std/format :std/getopt :std/iter :std/misc/hash :std/sugar :std/text/json
  ./db ./transactions
+ ../compiler/multipass
  ../runtime/glow-path)
 
 ;;; First, the client is just a bunch of static files we must serve.
@@ -173,7 +174,7 @@
                                      `((txid ,txid)))))))
 
 ;; List available DApps.
-;; FIXME: Maybe move to runtime/glow-path.ss
+;; TODO: Maybe move to runtime/glow-path.ss
 (define-endpoint list-applications "^/contacts/applications$")
 (def (list-applications/GET)
   (def apps (hash->list/sort (ensure-glow-dapps) string<?))
@@ -182,6 +183,19 @@
                     ([name . path]
                      (hash (name name)
                            (path path)))))))
+
+;; Fetch the parameter & input schema for a DApp.
+;; TODO: Move to ??
+(define-endpoint schema "^/contacts/schema/(.*)$")
+(def (schema/GET path)
+  (respond/JSON
+   (with-output-to-string
+     (lambda ()
+       (run-passes path
+                   strategy: 'schema
+                   pass: 'schema
+                   show?: #t
+                   show-path?: #f)))))
 
 (define-entry-point (start-server address: (address #f) port: (port #f))
   (help: "Start the contacts API server"

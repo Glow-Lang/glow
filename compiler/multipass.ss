@@ -162,6 +162,7 @@
                  strategy: (strategy default-strategy)
                  pass: (last-pass #f)
                  show?: (show? #t)
+                 show-path?: (show-path? #t)
                  ;;override?: (override? #f)
                  save?: (save? #f))
   (def filepath (or (find-dapp-path dapp-path) (error "Cannot find" dapp-path)))
@@ -177,7 +178,7 @@
     (when (and rl (layer-writer rl))
       (let (path (format "~a.~a" dapp-name l))
         (when show?
-          (displayln path)
+          (when show-path? (displayln path))
           (write-last (current-output-port)))
         (when save?
           (clobber-file path write-last)))))
