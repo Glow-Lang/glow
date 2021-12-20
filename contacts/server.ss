@@ -11,7 +11,7 @@
  (only-in :std/srfi/13 string-trim)
  :clan/multicall
  :drewc/ftw
- :std/format :std/getopt :std/iter :std/misc/hash :std/sugar :std/text/json
+ :std/format :std/getopt :std/iter :std/misc/hash :std/net/uri :std/sugar :std/text/json
  ./db ./transactions
  ../compiler/multipass
  ../runtime/glow-path)
@@ -191,7 +191,7 @@
   (respond/JSON
    (with-output-to-string
      (lambda ()
-       (run-passes path
+       (run-passes (uri-decode path)
                    strategy: 'schema
                    pass: 'schema
                    show?: #t
