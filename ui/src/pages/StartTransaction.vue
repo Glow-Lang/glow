@@ -26,47 +26,6 @@
         </template>
         ...
       </h3>
-      <q-form>
-        <q-card>
-          <q-select emit-value filled map-options
-                    v-model="action"
-                    :options="actions"
-                    option-value="name"
-                    option-label="label"
-                    label="Action"
-                    @input="getSchema"/>
-          <q-card-section v-for="(entry, index) in schema" :key="index">
-            <q-card-section v-if="nonTrivialAssets(entry)">
-              <div class="text-h6">Assets</div>
-              <q-select v-for="(asset, index) in entry['assets']"
-                        v-model="assets[asset]"
-                        :label="asset"
-                        :key="index"
-                        :options="tokens" />
-            </q-card-section>
-            <q-card-section v-if="'params' in entry">
-              <div class="text-h6">Parameters</div>
-              <q-input v-for="(param, index) in entry['params']"
-                       v-model="params[param]"
-                       :label="param"
-                       :key="index" />
-            </q-card-section>
-            <q-card-section v-if="'participants' in entry">
-              <div class="text-h6">Participants</div>
-              <q-select v-for="(role, index) in entry['participants']"
-                        v-model="participants[role]"
-                        :label="role"
-                        :key="index"
-                        :options="contacts.flatMap(contact => contact.identities)"
-                        option-label="nickname"
-                        option-value="address" />
-            </q-card-section>
-          </q-card-section>
-          <q-card-actions>
-            <q-btn>Run {{ action }}</q-btn>
-          </q-card-actions>
-        </q-card>
-      </q-form>
     </template>
   </q-page>
 </template>
