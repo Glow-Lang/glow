@@ -55,6 +55,13 @@
                       :options="contacts.flatMap(contact => contact.identities)"
                       option-label="nickname"
                       option-value="address" />
+            <!-- FIXME: Add "my identity" option. -->
+          </q-card-section>
+          <q-card-section v-if="'var' in entry"> <!-- FIXME: && participant is us -->
+            <div class="text-h6">{{ entry['var'] }}</div>
+            <q-input v-model="inputs[entry['var']]"
+                     :label="entry['tag']" />
+                     <!-- :rules="entry['type']..." -->
           </q-card-section>
         </q-card-section>
         <q-card-actions v-if="dapp">
@@ -75,6 +82,7 @@ export default {
             dapp: null,
             dapps: [],
             dapp_paths: {}, // name → path
+            inputs: {}, // var → value
             params: {}, // param → value
             participants: {}, // role → participant
             schemas: {}, // name → schema
