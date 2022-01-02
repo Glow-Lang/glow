@@ -38,18 +38,7 @@
             <q-item-label caption>No addresses found.</q-item-label>
           </q-item>
           <q-item clickable
-                  :to="{
-                      name: 'start-transaction',
-                      params: {
-                          source: {
-                              cid: contact.cid,
-                              name: contact.name,
-                              network: identity.network,
-                              address: identity.address,
-                              nickname: identity.nickname
-                          }
-                      }
-                  }"
+                  :to="{name: 'dapps', params: {source: identity}}"
                   v-for="(identity, index) in contact.identities" :key="index">
             <q-item-section avatar>{{ identity.nickname }}</q-item-section>
             <q-item-section avatar><q-avatar icon="contact_mail" /></q-item-section>

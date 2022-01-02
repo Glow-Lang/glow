@@ -1,13 +1,13 @@
 <template>
   <!-- Choose a DApp, assign roles, parameters, and inputs from the schema. -->
   <q-page class="flex flex-center">
-    <div class="q-pa-md q-gutter-sm" style="width:100%">
+    <div class="q-pa-md q-gutter-sm" style="width: 100%">
       <q-breadcrumbs>
         <q-breadcrumbs-el icon="home" to="/" />
         <q-breadcrumbs-el icon="apps" to="/dapps" />
       </q-breadcrumbs>
     </div>
-    <q-form>
+    <q-form class="justify-center" style="width: 66%">
       <q-card>
         <q-select filled
                   label="DApp"
@@ -48,24 +48,29 @@
           </q-card-section>
           <q-card-section v-if="'participants' in entry">
             <div class="text-h6">Participants</div>
-            <q-select v-for="(role, index) in entry['participants']"
-                      v-model="participants[role]"
-                      :label="role"
-                      :key="index"
-                      :options="contacts.flatMap(contact => contact.identities)"
-                      option-label="nickname"
-                      option-value="address" />
-            <!-- FIXME: Add "my identity" option. -->
+            <div v-for="(role, index) in entry['participants']" :key="index">
+              <q-select v-model="participants[role]"
+                        :label="role"
+                        :options="contacts.flatMap(contact => contact.identities)"
+                        option-label="nickname"
+                        option-value="address" />
+              <q-radio v-model="my_identity"
+                       :disabled="!participants[role] || !participants[role].secret_key"
+                       :val="participants[role] && participants[role].address"
+                       label="My Identity" />
+            </div>
           </q-card-section>
           <q-card-section v-if="'var' in entry"> <!-- FIXME: && participant is us -->
-            <div class="text-h6">{{ entry['var'] }}</div>
+            <div class="text-h6">{{ entry['var'] }}: {{ entry['type'] }}</div>
             <q-input v-model="inputs[entry['var']]"
                      :label="entry['tag']" />
-                     <!-- :rules="entry['type']..." -->
+                <!-- :rules="switch (entry['type']) ..." -->
           </q-card-section>
         </q-card-section>
         <q-card-actions v-if="dapp">
-          <q-btn>Run {{ dapp }}</q-btn>
+          <q-card-section>
+            <q-btn>Run {{ dapp }}</q-btn>
+          </q-card-section>
         </q-card-actions>
       </q-card>
     </q-form>
@@ -75,6 +80,7 @@
 <script>
 const axios = require("axios");
 export default {
+    props: ["source"],
     data() {
         return {
             assets: {}, // name → token
@@ -83,6 +89,7 @@ export default {
             dapps: [],
             dapp_paths: {}, // name → path
             inputs: {}, // var → value
+            my_identity: null,
             params: {}, // param → value
             participants: {}, // role → participant
             schemas: {}, // name → schema
@@ -91,6 +98,10 @@ export default {
         }
     },
     created() {
+        if (!this.my_identity && this.source && this.source.secret_key && this.source.address) {
+            this.my_identity = this.source.address;
+        }
+
         axios.get("/contacts/assets")
              .then((response) => {
                  this.tokens = response.data;
@@ -109,6 +120,7 @@ export default {
              });
     },
     methods: {
+        // Fetch the schema for the current dapp.
         getSchema() {
             if (!this.dapp) {
                 // No dapp, no schema.
@@ -116,6 +128,7 @@ export default {
             } else if (this.dapp in this.schemas) {
                 // Cache hit.
                 this.schema = this.schemas[this.dapp];
+                this.reset();
             } else {
                 // Cache miss: fetch & cache schema.
                 console.log("Fetching schema for", this.dapp);
@@ -123,16 +136,19 @@ export default {
                           encodeURIComponent(this.dapp_paths[this.dapp] || this.dapp))
                      .then((response) => {
                          this.schema = this.schemas[this.dapp] = response.data;
+                         this.reset();
                      });
             }
+        },
 
-            // Reset schema-dependent data.
+        // Reset schema-dependent data.
+        reset() {
             this.assets = {}
             this.params = {}
             this.participants = {}
-
-            return this.schema;
         },
+
+        // Predicate: does the schema entry have a non-trivial asset list?
         nonTrivialAssets(entry) {
             return ("assets" in entry &&
                     entry["assets"].length > 0 &&
