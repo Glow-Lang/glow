@@ -1,7 +1,7 @@
 
 
 {-# OPTIONS --cubical --no-import-sorts #-}
-module Cubical.Experiments.Chain where
+module Glow.Chain where
 
 open import Agda.Builtin.String
 -- open import Agda.Builtin.List
@@ -54,16 +54,23 @@ module Chains {ℓn ℓe} (Node : Type ℓn) (node₀ : Node)
  _c∷_ : ∀ {n} → ∀ {s} → (e : Edge s) → Chain n s → Chain (suc n) (target _ e) 
  e c∷ x = link _ x e refl
 
- buildChainUpTo : ℕ → (∀ node → IsEmpty (Edge node) ⊎ (Edge node)) → ChainΣΣ 
- buildChainUpTo zero f = zero , node₀ , lift refl
- buildChainUpTo (suc k) f =
-   let (m , (s , y)) = buildChainUpTo k f
+ DecidableEdges : Type (ℓ-max ℓn ℓe)
+ DecidableEdges = (∀ node → IsEmpty (Edge node) ⊎ (Edge node))
+
+ buildChainUpTo : DecidableEdges → ℕ → ChainΣΣ 
+ buildChainUpTo f zero = zero , node₀ , lift refl
+ buildChainUpTo f (suc k) =
+   let (m , (s , y)) = buildChainUpTo f k
 
    in Cubical.Data.Sum.elim
         (λ a → _ , _ , y)
         (λ b → _ , _ , b c∷ y)
         (f s)
-      
+
+
+ FinitePaths : DecidableEdges → Type ℓe 
+ FinitePaths de = Σ ℕ (IsEmpty ∘ Edge ∘ fst ∘ snd ∘ (buildChainUpTo de))
+
 
 module test1 where
 

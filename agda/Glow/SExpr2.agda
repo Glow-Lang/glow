@@ -1,7 +1,7 @@
 -- cubical demo
 
 {-# OPTIONS --cubical --no-import-sorts #-}
-module Cubical.Experiments.GlowSExpr2 where
+module Glow.SExpr2 where
 
 open import Agda.Builtin.String
 -- open import Agda.Builtin.List

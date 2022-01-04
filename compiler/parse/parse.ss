@@ -3,6 +3,7 @@
 (import :drewc/smug
         :mukn/glow/compiler/parse/lexical
         :mukn/glow/compiler/parse/expressions
+        :std/misc/repr
         (only-in :mukn/glow/compiler/alpha-convert/alpha-convert keyword-syms))
 
 ;; parse : InputPort -> SExpr
@@ -14,6 +15,7 @@
 (def (parseStr str)
   (def lex (lexify str))
   (def stmts (run Program lex))
+  (prn stmts)
   (and stmts (stmts->module stmts)))
 
 ;; stmts->module : StatementList -> SExpr

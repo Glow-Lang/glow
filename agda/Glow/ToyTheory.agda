@@ -1,7 +1,7 @@
 
 
 {-# OPTIONS --cubical --no-import-sorts #-}
-module Cubical.Experiments.ToyTheory where
+module Glow.ToyTheory where
 
 open import Agda.Builtin.String
 -- open import Agda.Builtin.List

@@ -1,0 +1,22 @@
+#lang glow
+@interaction([A, B])
+let interaction = () => {
+
+//   @B assert! (canReach(bTakesAll));
+
+   deposit! A -> 1;
+   deposit! B -> 1;
+
+   @A let a = input(Bool, "Enter A's choice.");
+   publish! A -> a;
+
+   @B let b = input(Bool, "Enter B's choice.");
+   publish! B -> b;
+
+    if (a == b) {
+        withdraw! A <- 2;
+    } else {
+        withdraw! B <- 2;
+    }
+
+};

@@ -1,0 +1,4 @@
+name: glow
+depend: cubical-0.4
+include: .
+flags:  --cubical --no-import-sorts

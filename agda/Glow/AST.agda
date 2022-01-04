@@ -1,6 +1,6 @@
 
-{-# OPTIONS --cubical --no-import-sorts #-}
-module Cubical.Experiments.GlowAST where
+{-# OPTIONS --cubical  #-}
+module Glow.AST where
 
 open import Agda.Builtin.String
 -- open import Agda.Builtin.List
@@ -31,14 +31,14 @@ module GlowAST (IdentifierTy : Type₀) where
   data Expression : Type₀
 
   data Identifier : Type₀ where
-    indentifier : IdentifierTy → Identifier
+    identifier : IdentifierTy → Identifier
 
   data Op : Type₀ where
     op : IdentifierTy → Op
 
   data Literal : Type₀ where
     boolean-literal : Bool → Literal
-    numeric-literal : Int → Literal
+    numeric-literal : ℤ → Literal
     string-literal : String → Literal
 
 
@@ -108,7 +108,12 @@ module GlowAST (IdentifierTy : Type₀) where
      𝓔-withdraw-expression : Identifier → Expression → Expression
      𝓔-dot-expression : Expression → Identifier → Expression
      𝓔-type-annotation-expression : Expression → GType → Expression
-     𝓔-body-expression : (List Statement) → Expression → Expression
+     𝓔-body-expression : (List Statement) → Maybe Expression → Expression
      𝓔-if-expression : Expression → Expression → Expression → Expression
      𝓔-switch-expression : Expression →  (List Case) → Expression
      𝓔-expression-with-attribute : Attribute → Expression → Expression
+
+
+  App = List Statement
+
+-- 𝓔𝓛𝑺𝑰𝑻

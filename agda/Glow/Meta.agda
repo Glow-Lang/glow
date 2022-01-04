@@ -1,7 +1,7 @@
 
 
 {-# OPTIONS --cubical --no-import-sorts #-}
-module Cubical.Experiments.GlowMeta where
+module Glow.Meta where
 
 open import Agda.Builtin.String
 -- open import Agda.Builtin.List
@@ -19,7 +19,7 @@ open import Cubical.Functions.Logic
 
 open import Cubical.Relation.Nullary.Base renaming (¬_ to IsEmpty)
 
-open import Cubical.Experiments.Chain
+open import Glow.Chain
 
 -- module _ (LanguageId : Type₀)
 --          (LanguageVersioning : Type₀) where
@@ -78,7 +78,11 @@ record ProgramRuntime' {eℓ pvℓ sℓ reℓ epℓ}
     executionStep : (s : State)  → (re : RuntimeEvent s)
                        → IsEmpty (ExecutionStep s)
                           ⊎ Σ (ExecutionStep s) λ es → RuntimeCommand (runtimeStep s es) 
-
+    
+  module RuntimeChain = Chains State initialize ExecutionStep runtimeStep
+  
+  field
+    terminates : ∀ de → RuntimeChain.FinitePaths de 
 
     
 
@@ -99,7 +103,6 @@ record Runtime {eℓ pvℓ sℓ reℓ epℓ} : Type (ℓ-suc (ℓ-max eℓ (ℓ-
 
     open ProgramRuntime' (ProgramRuntime executable paramsVal) public
 
-    open Chains State initialize ExecutionStep runtimeStep public               
 
   open Invocation public
 
@@ -120,15 +123,18 @@ open Runtime
 
 record EnvironmentModel {ℓ} : Type (ℓ-suc ℓ) where 
   field
-   EnvironmentState : Type ℓ
-   EnvironmentStateTransition : (es : EnvironmentState) → Type ℓ
-   environmentStateTransition : (es : EnvironmentState)
+    EnvironmentState : Type ℓ
+    EnvironmentStateTransition : (es : EnvironmentState) → Type ℓ
+    environmentStateTransition : (es : EnvironmentState)
                                 → EnvironmentStateTransition es
                                 → EnvironmentState  
-   EnvironmentEvent : (es : EnvironmentState) → Type ℓ
-   environmentStep : (es : EnvironmentState)
-                                → EnvironmentStateTransition es
-                                   × EnvironmentEvent es
+    EnvironmentEvent : (es : EnvironmentState) → Type ℓ
+                                   
+  EnvDynamics : Type ℓ
+  EnvDynamics = (es : EnvironmentState)
+                                → Σ (EnvironmentStateTransition es)
+                                    (EnvironmentEvent ∘ environmentStateTransition _ )
+    
 
   record EnvironmentModelInterface : Type (ℓ-suc ℓ) where 
     field
@@ -138,28 +144,55 @@ record EnvironmentModel {ℓ} : Type (ℓ-suc ℓ) where
 
 record InteractionModel {ℓ} (runtime : Runtime {ℓ} {ℓ} {ℓ} {ℓ} {ℓ})
                             (env : EnvironmentModel {ℓ}) : Type (ℓ-suc ℓ) where
- field
-   envInterface : EnvironmentModel.EnvironmentModelInterface env
+  field
+    envInterface : EnvironmentModel.EnvironmentModelInterface env
 
- open EnvironmentModel env
-
-
- open EnvironmentModelInterface envInterface
-
- field
-   env→rt : ∀ {es} → {rs : Runtime.Invocation runtime} → ∀ s
-              → MsgFromEnvironment es
-              → Maybe (Invocation.RuntimeEvent rs s)
-   rt→env : ∀ {es} → {rs : Runtime.Invocation runtime} → ∀ s
-              → Invocation.RuntimeCommand rs s
-              → Maybe (MsgToEnvironment es)
-   initialTurn : (rs : Runtime.Invocation runtime)
-                      → RuntimeEvent rs (initialize rs)
-                         -- ⊎ EnvironmentEvent es
+  open EnvironmentModel env
 
 
- execute : EnvironmentState → (rs : Runtime.Invocation runtime) → ChainΣΣ rs
- execute = {!!} 
+  open EnvironmentModelInterface envInterface
+
+  field
+    env→rt : ∀ {es} → {rs : Runtime.Invocation runtime} → ∀ s
+               → MsgFromEnvironment es
+               → Maybe (Invocation.RuntimeEvent rs s)
+    rt→env : ∀ {es} → {rs : Runtime.Invocation runtime} → ∀ s
+               → Invocation.RuntimeCommand rs s
+               → Maybe (MsgToEnvironment es)
+    initialTurn : (rs : Runtime.Invocation runtime)
+                       → RuntimeEvent rs (initialize rs)
+                          -- ⊎ EnvironmentEvent es
+                          
+  record WorldInvocation : Type {!!} where
+    field
+      initEnvState : EnvironmentState
+      runtimeInvocation : Runtime.Invocation runtime
+
+
+    record WorldEdge (rs : ProgramRuntime'.State
+          (ProgramRuntime runtime (executable runtimeInvocation)
+           (paramsVal runtimeInvocation))) (es : EnvironmentState) : Type {!!} where
+      field
+        runtimeEvent : RuntimeEvent runtimeInvocation rs
+        envEvent : {!EnvironmentEvent !}
+
+    module ExecChain = 
+      Chains (State runtimeInvocation × EnvironmentState)
+                ((initialize runtimeInvocation) , initEnvState)
+                (λ x → WorldEdge (proj₁ x) (proj₂ x))
+                {!!}
+
+
+  -- mkDecidableEdges : EnvDynamics
+  --                          → (rs : Runtime.Invocation runtime) → DecidableEdges rs
+  -- mkDecidableEdges envDynamics rs node =
+  --   let re = {!!}
+  --       z = executionStep rs node {!!}
+  --   in {!z!}
+    
+  -- execute : EnvironmentState → EnvDynamics → (rs : Runtime.Invocation runtime) → ChainΣΣ rs
+  -- execute envState₀ envDynamics rs = {!!}
+    
 
 
 record LanguageImplementation {ℓ} (language : Language) : Type (ℓ-suc ℓ) where

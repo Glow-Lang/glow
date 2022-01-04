@@ -15,6 +15,7 @@ t/solidity
 *~
 [#]*[#]
 .vscode/
+.#*
 
 # Scribble-generated files
 doc/
