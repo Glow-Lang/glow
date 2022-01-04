@@ -4,6 +4,8 @@ build-deps
 version.ss
 result
 .build
+*.agdai
+_build/
 
 # Runtime data
 run/
