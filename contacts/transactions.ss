@@ -163,6 +163,35 @@
          "--assets" ,(json-object->string assets)
          "--participants" ,(json-object->string participants)
          "--params" ,(json-object->string parameters))))
+    ("run-dapp"
+     (let* ((dapp (hash-ref args 'dapp))
+            (assets (hash-ref args 'assets))
+            (my-identity (hash-ref args 'my_identity))
+            (participants (hash-ref args 'participants))
+            (role (hash-find (lambda (role identity)
+                               (and (string=? my-identity (hash-ref identity 'address))
+                                    role))
+                             participants))
+            (params (hash-ref args 'params))
+            (handshake (if #t ; FIXME: decide who should listen
+                           "nc -l 3141"
+                           "nc localhost 3141")))
+       `("glow" "start-interaction"
+         "--max-initial-block" "%10000"
+         "--timeout-in-blocks" "1000"
+         "--glow-app" ,dapp
+         "--role" ,(symbol->string role)
+         "--my-identity" ,my-identity
+         "--database" ,(symbol->string role)
+         "--evm-network" ,(hash-ref (hash-ref participants role) 'network)
+         "--handshake" ,handshake
+         "--assets" ,(json-object->string assets)
+         "--participants" ,(json-object->string
+                            (list->hash-table
+                             (hash-map
+                              (lambda (k v) (cons k (hash-ref v 'address)))
+                              participants)))
+         "--params" ,(json-object->string params))))
     (else
      (error (format "Unsupported action ~a" action)))))
 

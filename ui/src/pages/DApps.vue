@@ -31,7 +31,7 @@
           </template>
         </q-select>
         <q-card-section v-for="(entry, index) in schema" :key="index">
-          <q-card-section v-if="nonTrivialAssets(entry)">
+          <q-card-section> <!-- v-if="nonTrivialAssets(entry)" -->
             <div class="text-h6">Assets</div>
             <q-select v-for="(asset, index) in entry['assets']"
                       v-model="assets[asset]"
@@ -69,7 +69,16 @@
         </q-card-section>
         <q-card-actions v-if="dapp">
           <q-card-section>
-            <q-btn>Run {{ dapp }}</q-btn>
+            <q-btn :to="{
+                       name: 'run-dapp',
+                       params: {
+                           dapp: dapp,
+                           assets: assets,
+                           my_identity: my_identity,
+                           participants: participants,
+                           params: params,
+                       }
+                   }">Run {{ dapp }}</q-btn>
           </q-card-section>
         </q-card-actions>
       </q-card>

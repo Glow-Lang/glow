@@ -12,6 +12,7 @@ const routes = [
             { path: 'generate-identity', name: 'generate-identity', props: true, component: () => import('pages/GenerateIdentity.vue') },
             { path: 'networks', component: () => import('pages/Networks.vue') },
             { path: 'start-transaction', name: 'start-transaction', props: true, component: () => import('pages/StartTransaction.vue') },
+            { path: 'run-dapp', name: 'run-dapp', props: true, component: () => import('pages/RunDApp.vue') },
             { path: 'run-transaction', name: 'run-transaction', props: true, component: () => import('pages/RunTransaction.vue') },
         ]
     }
