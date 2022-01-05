@@ -115,5 +115,3 @@ module GlowAST (IdentifierTy : Type₀) where
 
 
   App = List Statement
-
--- 𝓔𝓛𝑺𝑰𝑻
