@@ -107,14 +107,15 @@ isParticipantSymbol {participants = p} _ k = MemberBy primCharEquality p k
 
 
 statementScopeCheck : {participants : List Char} {paramtersTy : List GType}
-                        → (ib : InteractionBody {participants} {paramtersTy}) → InteractionPart {participants} {paramtersTy} ib →  Type₀
+                        → (ib : InteractionBody {participants} {paramtersTy})
+                        → InteractionPart {participants} {paramtersTy} ib →  Type₀
 statementScopeCheck ib ip = ⟨ ⊤ ⟩ 
 
 infixl 6 interaction⟨_,_⟩⁅_⁆
 
 infix 60 _ₗ
 infix 60 _ₗ'
-infix 60 𝓵_
+infix 60 𝓁_
 
 
 
@@ -129,7 +130,7 @@ data TopLevelDefinition where
 
 data InteractionEffect ib where
   -- verify!  : {!!} → InteractionEffect ib
-  publish!_⟶_ : (k : Char) → {_ : isParticipantSymbol ib k} →
+  publish!_⟶𝓁_ : (k : Char) → {_ : isParticipantSymbol ib k} →
                     (j : ℕ) → {_ : isDefinedSymbol ib j} → InteractionEffect ib
   deposit!_⟶_  : (k : Char) → {_ : isParticipantSymbol ib k}
                    → InteractionValue ib Intᵍ
@@ -138,11 +139,11 @@ data InteractionEffect ib where
                    → InteractionValue ib Intᵍ
                    → InteractionEffect ib
 
-infix 40 _-_∶_≔_
+infix 40 _[𝓁_∶_]≔_
 infix 20 ↯_
 
 data InteractionPart {participants} {paramtersTy} ib where
-  _-_∶_≔_ : (j : Maybe Char) → {_ : recMaybe  ⟨ ⊤ ⟩ ( isParticipantSymbol ib) j } →
+  _[𝓁_∶_]≔_ : (j : Maybe Char) → {_ : recMaybe  ⟨ ⊤ ⟩ ( isParticipantSymbol ib) j } →
                (k : ℕ) → (gTy : GType) → {_ : forceFreeSymbol ib k} →  InteractionValue ib gTy
                  → InteractionPart ib
   ↯_ : InteractionEffect ib → InteractionPart ib
@@ -174,7 +175,7 @@ record IsGlowTy {a} (A : Type a) : Type a where
 infix 50 _==_
 
 data InteractionValue {participants} {paramtersTy} ib gTy where
-  𝓵_ : (k : ℕ) → {_ : isDefinedSymbolOfTy ib k gTy} → InteractionValue ib gTy
+  𝓁_ : (k : ℕ) → {_ : isDefinedSymbolOfTy ib k gTy} → InteractionValue ib gTy
   _ₗ' : GTypeAgdaRep gTy → InteractionValue ib gTy
   input : String → InteractionValue ib gTy
   _==_ : InteractionValue ib gTy → InteractionValue ib gTy → InteractionValue ib gTy
@@ -213,14 +214,13 @@ pattern _；₁ x = ∙ib ； x
 
 pattern _；'_ x y = ∙ib ； x ； y  
 
--- data InteractionExpression {participants} {paramtersTy} where
 
 getFreeSymbol {paramtersTy = l} ∙ib = length l
-getFreeSymbol (x ； (_ - _ ∶ _ ≔ _)) = suc (getFreeSymbol x)
+getFreeSymbol (x ； (_ [𝓁 _ ∶ _ ]≔ _)) = suc (getFreeSymbol x)
 getFreeSymbol (x ； _) = getFreeSymbol x
 
 getSymbolTy ∙ib k = ◦
-getSymbolTy (ib ； _ - k' ∶ gTy ≔ x) k with discreteℕ k k'
+getSymbolTy (ib ； _ [𝓁 k' ∶ gTy ]≔ x) k with discreteℕ k k'
 ... | yes p = • gTy
 ... | no ¬p = getSymbolTy ib k
 getSymbolTy (ib ； _) k = getSymbolTy ib k
@@ -245,13 +245,13 @@ boolGameModule =
       ↯ deposit! 'A' ⟶ 1 ₗ ； 
       ↯ deposit! 'B' ⟶ 1 ₗ ；
       
-      • 'A' - 1 ∶ Boolᵍ ≔ input "Enter A's choice." ；
-      ↯ publish! 'A' ⟶ 1 ；
+      • 'A' [𝓁 1 ∶ Boolᵍ ]≔ input "Enter A's choice." ；
+      ↯ publish! 'A' ⟶𝓁 1 ；
       
-      • 'B' - 2 ∶ Boolᵍ ≔ input "Enter B's choice." ；
-      ↯ publish! 'B' ⟶ 2 ；
+      • 'B' [𝓁 2 ∶ Boolᵍ ]≔ input "Enter B's choice." ；
+      ↯ publish! 'B' ⟶𝓁 2 ；
       
-      if  𝓵 1 == 𝓵 2  
+      if  𝓁 1 == 𝓁 2  
         then (↯ withdraw! 'A' ⟵ 2 ₗ ；₁)
         else (↯ withdraw! 'B' ⟵ 2 ₗ ；₁)
   ⁆
