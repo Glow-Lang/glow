@@ -121,7 +121,9 @@ test = do
                let x' = fmap (fmap fixConstructor) x
                -- putStrLn $ show (toVanilaASTL' $ fmap (toSExpr') x')
                TIO.putStrLn $ generateAgdaCode (toVanilaASTL' $ fmap (toSExpr') x')
- 
+
+-- TODO: load those from file, maybe even generate from scheme code?
+  
 allowedTokens :: [T.Text]
 allowedTokens = ["statement-with-attribute","attribute","identifier","list-expression","function-definition","hash-f","body-expression","expression-statement","deposit-expression","numeric-literal","value-definition","call-expression","arguments","string-literal","publish-statement","if-expression","equality-expression","withdraw-expression"]
 
@@ -139,7 +141,7 @@ printTokensAgdaCode = do
   
 
 
-
+-- TODO : generate Token constructors  with reflection
 
 data Token =
     StatementWithAttribute
