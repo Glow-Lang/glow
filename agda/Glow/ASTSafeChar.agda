@@ -51,22 +51,25 @@ GTypeAgdaRep Boolᵍ = Bool
 GTypeAgdaRep Intᵍ = ℤ
 GTypeAgdaRep Natᵍ = ℕ
 
-
-data InteractionBody {participants : List Char} {paramtersTy : List GType} : Type₀
-
-data InteractionEffect {participants : List Char} {paramtersTy : List GType} (ib : InteractionBody {participants} {paramtersTy}) : Type₀
-
-data InteractionPart {participants : List Char} {paramtersTy : List GType} (ib : InteractionBody {participants} {paramtersTy}) : Type₀
-
-data InteractionValue {participants : List Char} {paramtersTy : List GType} (ib : InteractionBody {participants} {paramtersTy}) GType : Type₀
+data InteractionParameter : Type₀ where
+  [_∶_] : String → GType → InteractionParameter
 
 
--- data InteractionExpression {participants : List Char} {paramtersTy : List GType} : Type₀
+data InteractionBody {participants : List Char} {paramtersTy : List InteractionParameter} : Type₀
+
+data InteractionEffect {participants : List Char} {paramtersTy : List InteractionParameter} (ib : InteractionBody {participants} {paramtersTy}) : Type₀
+
+data InteractionPart {participants : List Char} {paramtersTy : List InteractionParameter} (ib : InteractionBody {participants} {paramtersTy}) : Type₀
+
+data InteractionValue {participants : List Char} {paramtersTy : List InteractionParameter} (ib : InteractionBody {participants} {paramtersTy}) GType : Type₀
+
+
+-- data InteractionExpression {participants : List Char} {paramtersTy : List InteractionParameter} : Type₀
 
 
 
 
-getFreeSymbol : {participants : List Char} {paramtersTy : List GType}
+getFreeSymbol : {participants : List Char} {paramtersTy : List InteractionParameter}
                         → InteractionBody {participants} {paramtersTy} → ℕ
 
 Disc→Ty : ∀ {ℓ} → ∀ {A : Type ℓ} → Dec A → Type₀
@@ -76,20 +79,20 @@ Disc→Ty (no ¬p) = ⟨ ⊥ ⟩
 =ℕTy : ℕ → ℕ → Type₀
 =ℕTy x x₁ = Disc→Ty (discreteℕ x x₁)
 
-forceFreeSymbol : {participants : List Char} {paramtersTy : List GType}
+forceFreeSymbol : {participants : List Char} {paramtersTy : List InteractionParameter}
                         → InteractionBody {participants} {paramtersTy} → ℕ → Type₀
 forceFreeSymbol ib k = k ≤ getFreeSymbol ib
 
-isDefinedSymbol : {participants : List Char} {paramtersTy : List GType}
+isDefinedSymbol : {participants : List Char} {paramtersTy : List InteractionParameter}
                         → InteractionBody {participants} {paramtersTy} → ℕ → Type₀
 isDefinedSymbol ib k = k < getFreeSymbol ib
 
-getSymbolTy : {participants : List Char} {paramtersTy : List GType}
+getSymbolTy : {participants : List Char} {paramtersTy : List InteractionParameter}
                         → InteractionBody {participants} {paramtersTy} → ℕ → Maybe GType
 
 
 
-isDefinedSymbolOfTy : {participants : List Char} {paramtersTy : List GType}
+isDefinedSymbolOfTy : {participants : List Char} {paramtersTy : List InteractionParameter}
                         → InteractionBody {participants} {paramtersTy} → ℕ → GType → Type₀
 isDefinedSymbolOfTy ib k ty = 
   recMaybe ⟨ ⊥ ⟩ (λ x → if (GTy== ty x) then ⟨ ⊤ ⟩ else' ⟨ ⊥ ⟩) (getSymbolTy ib k)
@@ -101,28 +104,27 @@ MemberBy f (x' ∷ xs) x =
    then ⟨ ⊤ ⟩
    else' MemberBy f xs x
    
-isParticipantSymbol : {participants : List Char} {paramtersTy : List GType}
+isParticipantSymbol : {participants : List Char} {paramtersTy : List InteractionParameter}
                         → InteractionBody {participants} {paramtersTy} → Char → Type₀
 isParticipantSymbol {participants = p} _ k = MemberBy primCharEquality p k 
 
 
-statementScopeCheck : {participants : List Char} {paramtersTy : List GType}
+statementScopeCheck : {participants : List Char} {paramtersTy : List InteractionParameter}
                         → (ib : InteractionBody {participants} {paramtersTy})
                         → InteractionPart {participants} {paramtersTy} ib →  Type₀
 statementScopeCheck ib ip = ⟨ ⊤ ⟩ 
 
-infixl 6 interaction⟨_,_⟩⁅_⁆
+infixl 6 interaction_⟨_,_⟩⁅_⁆
 
 infix 60 _ₗ
 infix 60 _ₗ'
 infix 60 𝓁_
 
 
-
 data TopLevelDefinition where
-  interaction⟨_,_⟩⁅_⁆ :
+  interaction_⟨_,_⟩⁅_⁆ : String → 
      (participants : List Char) →
-     (paramtersTy : List GType) →
+     (paramtersTy : List InteractionParameter) →
      InteractionBody {participants} {paramtersTy} →
        TopLevelDefinition
 
@@ -151,13 +153,13 @@ data InteractionPart {participants} {paramtersTy} ib where
                     InteractionBody {participants} {paramtersTy} →
                     InteractionBody {participants} {paramtersTy} → InteractionPart ib
   
--- let'_∶_≡_ : {participants : List Char} {paramtersTy : List GType}
+-- let'_∶_≡_ : {participants : List Char} {paramtersTy : List InteractionParameter}
 --                         → {ib : InteractionBody {participants} {paramtersTy}} →                
 --                (k : ℕ) → (gTy : GType) → {_ : forceFreeSymbol ib k} →  InteractionValue ib gTy
 --                  → InteractionPart ib
 -- let'_∶_≡_ = (_letᵍ_∶_≡_) nothing
 
--- ⒜_let'_∶_≡_ : {participants : List Char} {paramtersTy : List GType}
+-- ⒜_let'_∶_≡_ : {participants : List Char} {paramtersTy : List InteractionParameter}
 --                         → {ib : InteractionBody {participants} {paramtersTy}} →
 --                (j : ℕ) → {_ : isParticipantSymbol ib j } →
 --                (k : ℕ) → (gTy : GType) → {_ : forceFreeSymbol ib k} →  InteractionValue ib gTy
@@ -181,7 +183,7 @@ data InteractionValue {participants} {paramtersTy} ib gTy where
   _==_ : InteractionValue ib gTy → InteractionValue ib gTy → InteractionValue ib gTy
   -- 𝓹 : (k : ℕ) → {_ : isParticipantSymbol ib k} →  InteractionValue ib gTy
 
-_ₗ : {participants : List Char} {paramtersTy : List GType} → 
+_ₗ : {participants : List Char} {paramtersTy : List InteractionParameter} → 
       {ib : InteractionBody {participants} {paramtersTy}} → 
                         {A : Type₀} → {{isGlowTy : IsGlowTy A}} →
                         A →  InteractionValue ib (IsGlowTy.glowRep isGlowTy)
@@ -240,7 +242,7 @@ getSymbolTy (ib ； _) k = getSymbolTy ib k
 
 boolGameModule : Module
 boolGameModule =
-  interaction⟨  'A' ∷ 'B' ∷ [] , Boolᵍ ∷ [] ⟩⁅ ∙ib ； 
+  interaction "boolGame" ⟨  'A' ∷ 'B' ∷ [] , [ "p" ∶ Boolᵍ ] ∷ [] ⟩⁅ ∙ib ； 
       
       ↯ deposit! 'A' ⟶ 1 ₗ ； 
       ↯ deposit! 'B' ⟶ 1 ₗ ；

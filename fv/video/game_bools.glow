@@ -14,7 +14,7 @@ let interaction = () => {
    publish! B -> b;
 
     if (a == b) {
-        withdraw! A <- x;
+        withdraw! A <- 2;
     } else {
         withdraw! B <- 2;
     }
