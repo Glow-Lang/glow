@@ -211,6 +211,7 @@ record IHead : Type₀ where
 
   data NBStmnt (Γ : IContext) : Type₀
 
+  data NBStmnt+Expr (Γ : IContext) : Type₀
 
   data Expr (Γ : IContext) (Τ : GType): Type₀
 
@@ -228,16 +229,19 @@ record IHead : Type₀ where
   data Stmnt Γ where
     -- not necessary binding, but rather context changing
     bindingS : BStmnt Γ → Stmnt Γ
-    nonBindingS : NBStmnt Γ → Stmnt Γ
+    nonBindingS : NBStmnt+Expr Γ → Stmnt Γ
 
   data BStmnt Γ where
     bind : (ce : IContextEntry) → {asn : ⟨ AllowedScopeNarrowing Γ (scope ce) ⟩}
                 → Expr (narrow (scope ce) Γ asn) (type ce) → BStmnt Γ    
-        
 
   data NBStmnt Γ where
-    stmntNBS : {!!} → NBStmnt Γ
-    exprNBS : ∀ {Τ} → Expr Γ Τ → NBStmnt Γ
+        
+  
+
+  data NBStmnt+Expr Γ where
+    stmntNBS : NBStmnt Γ → NBStmnt+Expr Γ
+    exprNBS : ∀ {Τ} → Expr Γ Τ → NBStmnt+Expr Γ
 
   bindingMechanics Γ x = {!!}
 
