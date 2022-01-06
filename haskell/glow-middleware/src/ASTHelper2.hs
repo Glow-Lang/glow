@@ -119,7 +119,12 @@ test = do
                -- putStrLn "-------"
                -- TIO.putStrLn $ encode (basicPrint id) (fromWellFormed <$> x)
                let x' = fmap (fmap fixConstructor) x
-               -- putStrLn $ show (toVanilaASTL' $ fmap (toSExpr') x')
+               putStrLn "-------"
+               
+               TIO.putStrLn $ encode (basicPrint id) (fromWellFormed <$> x)
+               putStrLn "-------"
+               putStrLn $ show (toVanilaASTL' $ fmap (toSExpr') x')
+               putStrLn "-------"
                TIO.putStrLn $ generateAgdaCode (toVanilaASTL' $ fmap (toSExpr') x')
 
 -- TODO: load those from file, maybe even generate from scheme code?

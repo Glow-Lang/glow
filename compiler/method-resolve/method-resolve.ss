@@ -36,7 +36,8 @@
 
 ;; method-resolve : ModuleStx UnusedTable -> (values ModuleStx TypeTable TysymMethodsTable MethodsIdBackTable)
 (def (method-resolve stx unused-table)
-  (def type-table (make-has-type-table))
+     (def type-table (make-has-type-table))
+     (prn type-table)
   (def tysym-methods-table (make-tysym-methods-table))
   (def methods-id-back-table (make-methods-id-back-table))
   (parameterize ((current-unused-table unused-table)

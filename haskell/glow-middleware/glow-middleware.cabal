@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 728d4a8857fc656fb4e6b8ec5bafabf327a9eeda773b12ea1c06a27a60b7e77c
+-- hash: 89e87472832ecbd027b015be8993d623e969ecea1efc8bb779d25dabfd195a42
 
 name:           glow-middleware
 version:        0.1.0.0
@@ -15,7 +15,6 @@ author:         Author name here
 maintainer:     example@example.com
 copyright:      2022 Author name here
 license:        BSD3
-license-file:   LICENSE
 build-type:     Simple
 extra-source-files:
     README.md

@@ -1,0 +1,53 @@
+#lang glow
+@interaction([A, B])
+let A = (qq : Bool) => {
+
+//   @B assert! (canReach(bTakesAll));
+
+   deposit! A -> 1;
+   deposit! B -> 1;
+
+   @A let a = input(Bool, "Enter A's choice.");
+
+   @B let b = input(Bool, "Enter B's choice.");
+
+   @B let bb = input(Bool, "Enter B's choice.");
+
+    let q  = (if (qq) { A } else { B });
+    @q let zz = input(Int ,"Input unknown at compile time");
+    @q let zz = input(Int ,"Input unknown at compile time");
+    publish! q -> zz;
+
+
+
+   @A let z = switch (a) {
+      // A_Wins
+      | true =>
+           let w = 2;
+              // publish! A -> a;         
+           3;
+      // B_Wins
+      | false => false;
+      // Draw      
+     };
+
+   let pp = ( 2 , 3 , (if(qq){ true } else { if(qq){ 11 } else { "dasds"} }) );
+
+   publish! A -> a;
+
+   publish! A -> z;
+
+
+   publish! B -> b;
+
+ 
+
+
+    if (1 == zz) {
+        withdraw! A <- 2;
+    } else {
+        withdraw! q <- 2;
+    }
+
+
+};

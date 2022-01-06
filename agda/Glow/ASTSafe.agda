@@ -208,12 +208,16 @@ boolGameModule =
   
       ↯ deposit! 0 ⟶ 1 ₗ ；
       ↯ deposit! 1 ⟶ 1 ₗ ；
+
       
+
       • 0 - 1 ∶ Boolᵍ ≔ input "Enter A's choice." ；
       ↯ publish! 0 ⟶ 1 ；
       
       • 1 - 2 ∶ Boolᵍ ≔ input "Enter B's choice." ；
       ↯ publish! 1 ⟶ 2 ；
+
+      ◦ - ? ∶ ?  ≔ ? ；
       
       if 𝓵 {!!}  
         then (↯ withdraw! 0 ⟵ 2 ₗ ；₁)
