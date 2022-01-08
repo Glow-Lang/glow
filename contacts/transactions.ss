@@ -166,12 +166,9 @@
     ("run-dapp"
      (let* ((dapp (hash-ref args 'dapp))
             (assets (hash-ref args 'assets))
-            (my-identity (hash-ref args 'my_identity))
+            (my-role (hash-ref args 'my_role))
             (participants (hash-ref args 'participants))
-            (role (hash-find (lambda (role identity)
-                               (and (string=? my-identity (hash-ref identity 'address))
-                                    role))
-                             participants))
+            (my-identity (hash-ref participants (string->symbol my-role)))
             (params (hash-ref args 'params))
             (handshake (if #t ; FIXME: decide who should listen
                            "nc -l 3141"
@@ -180,10 +177,10 @@
          "--max-initial-block" "%10000"
          "--timeout-in-blocks" "1000"
          "--glow-app" ,dapp
-         "--role" ,(symbol->string role)
-         "--my-identity" ,my-identity
-         "--database" ,(symbol->string role)
-         "--evm-network" ,(hash-ref (hash-ref participants role) 'network)
+         "--role" ,my-role
+         "--database" ,my-role
+         "--evm-network" ,(hash-ref my-identity 'network)
+         "--my-identity" ,(hash-ref my-identity 'address)
          "--handshake" ,handshake
          "--assets" ,(json-object->string assets)
          "--participants" ,(json-object->string

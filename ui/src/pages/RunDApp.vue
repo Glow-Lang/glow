@@ -8,7 +8,7 @@
         <q-breadcrumbs-el icon="play_arrow" label="Run DApp" />
       </q-breadcrumbs>
     </div>
-    <template v-if="dapp && my_identity">
+    <template v-if="dapp && my_role">
       <h3 style="display: inline-flex; justify-content: center; flex-basis: 100%">
         <template v-if="dapp">{{ dapp }}</template>
       </h3>
@@ -28,7 +28,7 @@
 <script>
 const axios = require("axios");
 export default {
-    props: ["dapp", "assets", "my_identity", "participants", "params"],
+    props: ["dapp", "assets", "my_role", "participants", "params"],
     data() {
         return {
             txid: null,
@@ -49,7 +49,7 @@ export default {
                 args: {
                     dapp: this.dapp,
                     assets: this.assets,
-                    my_identity: this.my_identity,
+                    my_role: this.my_role,
                     participants: this.participants,
                     params: this.params,
                 }

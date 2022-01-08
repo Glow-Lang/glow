@@ -31,7 +31,7 @@
           </template>
         </q-select>
         <q-card-section v-for="(entry, index) in schema" :key="index">
-          <q-card-section> <!-- v-if="nonTrivialAssets(entry)" -->
+          <q-card-section v-if="'assets' in entry"> <!-- v-if="nonTrivialAssets(entry)" -->
             <div class="text-h6">Assets</div>
             <q-select v-for="(asset, index) in entry['assets']"
                       v-model="assets[asset]"
@@ -54,13 +54,13 @@
                         :options="contacts.flatMap(contact => contact.identities)"
                         option-label="nickname"
                         option-value="address" />
-              <q-radio v-model="my_identity"
+              <q-radio v-model="my_role"
                        :disabled="!participants[role] || !participants[role].secret_key"
-                       :val="participants[role] && participants[role].address"
+                       :val="role"
                        label="My Identity" />
             </div>
           </q-card-section>
-          <q-card-section v-if="'var' in entry"> <!-- FIXME: && participant is us -->
+          <q-card-section v-if="'var' in entry && 'participant' in entry && entry['participant'] == my_role">
             <div class="text-h6">{{ entry['var'] }}: {{ entry['type'] }}</div>
             <q-input v-model="inputs[entry['var']]"
                      :label="entry['tag']" />
@@ -74,7 +74,7 @@
                        params: {
                            dapp: dapp,
                            assets: assets,
-                           my_identity: my_identity,
+                           my_role: my_role,
                            participants: participants,
                            params: params,
                        }
@@ -98,7 +98,7 @@ export default {
             dapps: [],
             dapp_paths: {}, // name → path
             inputs: {}, // var → value
-            my_identity: null,
+            my_role: null,
             params: {}, // param → value
             participants: {}, // role → participant
             schemas: {}, // name → schema
@@ -107,10 +107,6 @@ export default {
         }
     },
     created() {
-        if (!this.my_identity && this.source && this.source.secret_key && this.source.address) {
-            this.my_identity = this.source.address;
-        }
-
         axios.get("/contacts/assets")
              .then((response) => {
                  this.tokens = response.data;
