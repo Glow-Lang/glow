@@ -272,7 +272,7 @@
              ;; FIXME: This should be stored and extracted from `contacts`.
              ;; It is supplied here as a temporary workaround,
              ;; until storing peerIds in `contacts` is supported.
-             (option 'dest-address "-D" "--dest-address" default: #f
+             (option 'dest-address "-d" "--dest-address" default: #f
                      help: "dest-address (only required if using libp2p as off-chain-channel)")
              (flag 'wait-for-agreement "-W" "--wait-for-agreement"
                    help: "wait for agreement via off-chain-channel")]
