@@ -37,3 +37,4 @@ data Linked {C} {A} fld c  where
 foldLinked {c = c} L[] = c
 foldLinked {fld = fld} (x L∷ x₁) = fld (foldLinked x) x₁
 
+

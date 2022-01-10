@@ -217,7 +217,7 @@ boolGameModule =
       • 1 - 2 ∶ Boolᵍ ≔ input "Enter B's choice." ；
       ↯ publish! 1 ⟶ 2 ；
 
-      ◦ - ? ∶ ?  ≔ ? ；
+      ◦ - {!!} ∶ {!!}  ≔ {!!} ；
       
       if 𝓵 {!!}  
         then (↯ withdraw! 0 ⟵ 2 ₗ ；₁)

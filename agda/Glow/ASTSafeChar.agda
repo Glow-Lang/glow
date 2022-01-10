@@ -34,6 +34,12 @@ open import Glow.Linked
 
 -- pattern • x = just x
 
+-- TODO : check
+-- can you define private function?
+---- can you publish function?
+---- can you definie interaction within interaction ?
+
+
 data GType : Type₀ where
   Boolᵍ : GType 
   Intᵍ : GType
@@ -118,33 +124,57 @@ findBy : ∀ {ℓ} → {A : Type ℓ} → (A → Bool) → List A → Maybe A
 findBy _ [] = nothing
 findBy test (x ∷ xs) = if (test x) then (just x) else (findBy test xs)
 
-data Parameter : Type₀ where
-  param : String → GType → Parameter
+record IdentifierWithType : Type₀ where
+  pattern
+  constructor iwt
+  field
+    name : String
+    type : GType
 
 
-record IHead : Type₀ where
-  constructor iHead
+IsParticipantId : Maybe (List IdentifierTy) → IdentifierTy → hProp ℓ-zero
+IsParticipantId mbL name =
+   recMaybe ⊥ (λ participants → MemberBy IdentifierTyTest participants name) mbL
+
+record ParticipantId' (mbL : Maybe (List IdentifierTy)) : Type₀ where
+  constructor pId
+  field
+    name : IdentifierTy
+    {isIn} : ⟨ IsParticipantId mbL name ⟩
+
+open ParticipantId'
+    
+record ContextEntry' (mbL : Maybe (List IdentifierTy)) : Type₀ where
+  constructor ice
 
   field
-    participants : List IdentifierTy
-    paramtersTy : List Parameter
-    
+    scope : Maybe (ParticipantId' mbL)
+    name : IdentifierTy
+    type : GType
 
+open ContextEntry'
 
-  IsParticipantId : IdentifierTy → hProp ℓ-zero
-  IsParticipantId name = MemberBy IdentifierTyTest participants name
+record Context : Type₀ where
+  pattern
+  constructor con
 
-  record ParticipantId : Type₀ where
-    constructor pId
-    field
-      name : IdentifierTy
-      {isIn} : ⟨ IsParticipantId name ⟩
-      
+  field
+    participants : Maybe (List IdentifierTy)
 
-  open ParticipantId
+  ContextEntry = ContextEntry' participants
+
+  field
+    entries : List ContextEntry
+
+  ParticipantId = ParticipantId' participants
 
   Scope : Type₀
   Scope = Maybe ParticipantId
+
+  field
+    scope' : Scope
+
+
 
   _canAccessTest_ : Scope → Scope → Bool
   _ canAccessTest nothing = true
@@ -154,99 +184,151 @@ record IHead : Type₀ where
   _canAccess_ : Scope → Scope → hProp ℓ-zero
   x canAccess x₁ = Bool→Type' (x canAccessTest x₁)
 
-  record IContextEntry : Type₀ where
-    constructor ice
 
+  entryLookup : IdentifierTy → Maybe ContextEntry
+  entryLookup x = findBy (IdentifierTyTest x ∘ name) entries
+
+  IsDefinedSymbolOfTyTest : GType → IdentifierTy → Bool
+  IsDefinedSymbolOfTyTest ty x =
+    recMaybe false (λ y → (scope') canAccessTest (scope y)) (entryLookup x) 
+
+  IsDefinedSymbolOfTy : GType → IdentifierTy → hProp ℓ-zero
+  IsDefinedSymbolOfTy ty x = Bool→Type' (IsDefinedSymbolOfTyTest ty x) 
+
+  record DefinedSymbolOfTy (Τ : GType) : Type ℓ-zero where
+    constructor dsot
     field
-      scope : Maybe ParticipantId
       name : IdentifierTy
-      type : GType
+      {isDefinedSymbolOfTy} : ⟨ IsDefinedSymbolOfTy Τ name ⟩
 
-  open IContextEntry
+  IsPrivateSymbolOfTyTest : ParticipantId → GType → IdentifierTy → Bool
+  IsPrivateSymbolOfTyTest p ty x =
+    recMaybe
+       false
+       (λ y → recMaybe false (λ p' → IdentifierTyTest (name p) (name p')) (scope y))
+       (entryLookup x)
 
-  record IContext : Type₀ where
-    pattern
-    constructor iCon
-    
+  IsPrivateSymbolOfTy : ParticipantId → GType → IdentifierTy → hProp ℓ-zero
+  IsPrivateSymbolOfTy p ty x = Bool→Type' (IsDefinedSymbolOfTyTest ty x) 
+
+  record PrivateSymbolOf (p : ParticipantId) : Type ℓ-zero where
+    constructor psof
     field
-      entries : List IContextEntry   
-      scope' : Scope
+      type : GType
+      name : IdentifierTy
+      {isDefinedSymbolOfTy} : ⟨ IsPrivateSymbolOfTy p type name ⟩
 
-    entryLookup : IdentifierTy → Maybe IContextEntry
-    entryLookup x = findBy (IdentifierTyTest x ∘ name) entries
+  AllowedScopeNarrowingTest : Scope → Bool
+  AllowedScopeNarrowingTest nothing = true
+  AllowedScopeNarrowingTest (just x) = caseMaybe true false scope'
 
-    IsDefinedSymbolOfTyTest : GType → IdentifierTy → Bool
-    IsDefinedSymbolOfTyTest ty x =
-      recMaybe false (λ y → (scope') canAccessTest (scope y)) (entryLookup x) 
+  AllowedScopeNarrowing : Scope → hProp ℓ-zero
+  AllowedScopeNarrowing =  Bool→Type' ∘ AllowedScopeNarrowingTest  
 
-    IsDefinedSymbolOfTy : GType → IdentifierTy → hProp ℓ-zero
-    IsDefinedSymbolOfTy ty x = Bool→Type' (IsDefinedSymbolOfTyTest ty x) 
-
-    record DefinedSymbolOfTy (Τ : GType) : Type ℓ-zero where
-      constructor dsot
-      field
-        name : IdentifierTy
-        {isDefinedSymbolOfTy} : ⟨ IsDefinedSymbolOfTy Τ name ⟩
-
-    AllowedScopeNarrowingTest : Scope → Bool
-    AllowedScopeNarrowingTest nothing = true
-    AllowedScopeNarrowingTest (just x) = caseMaybe true false scope'
-
-    AllowedScopeNarrowing : Scope → hProp ℓ-zero
-    AllowedScopeNarrowing =  Bool→Type' ∘ AllowedScopeNarrowingTest  
+  IsInteraction : hProp ℓ-zero
+  IsInteraction = caseMaybe ⊤ ⊥ participants
 
 
-  open IContext
-
-  narrow : (s : Scope) → (iC : IContext) → (⟨ AllowedScopeNarrowing iC s ⟩)  →  IContext
-  narrow nothing (iCon es nothing) _ = iCon es nothing
-  narrow nothing a@(iCon es (just x)) _ = a
-  narrow (just x) (iCon es nothing) _ = (iCon es (just x))
+  IsConsensus : hProp ℓ-zero
+  IsConsensus = caseMaybe ⊤ ⊥ scope'
 
 
-  data Stmnt (Γ : IContext) : Type₀
+open Context
 
-  data BStmnt (Γ : IContext) : Type₀
-
-
-  data NBStmnt (Γ : IContext) : Type₀
-
-  data NBStmnt+Expr (Γ : IContext) : Type₀
-
-  data Expr (Γ : IContext) (Τ : GType): Type₀
-
-  bindingMechanics : (Γ : IContext) → BStmnt Γ → IContext 
-
-  bindingMechanics' : (Γ : IContext) → Stmnt Γ → IContext 
- 
-
-  data Expr Γ Τ where
-    var : DefinedSymbolOfTy Γ Τ → Expr Γ Τ
-    body : (stmnts : Linked bindingMechanics' Γ) → Expr (foldLinked stmnts) Τ → Expr Γ Τ
-    lit' : GTypeAgdaRep Τ → Expr Γ Τ
+emptyContext : Context
+emptyContext = con nothing [] nothing
 
 
-  data Stmnt Γ where
-    -- not necessary binding, but rather context changing
-    bindingS : BStmnt Γ → Stmnt Γ
-    nonBindingS : NBStmnt+Expr Γ → Stmnt Γ
+narrow : (Γ : Context) → (s : Scope Γ)  → (⟨ AllowedScopeNarrowing Γ s ⟩) → Context
+narrow a@(con _ _ nothing) (just x) _ = a
+narrow a nothing  _ = a
 
-  data BStmnt Γ where
-    bind : (ce : IContextEntry) → {asn : ⟨ AllowedScopeNarrowing Γ (scope ce) ⟩}
-                → Expr (narrow (scope ce) Γ asn) (type ce) → BStmnt Γ    
 
-  data NBStmnt Γ where
-        
-  
 
-  data NBStmnt+Expr Γ where
-    stmntNBS : NBStmnt Γ → NBStmnt+Expr Γ
-    exprNBS : ∀ {Τ} → Expr Γ Τ → NBStmnt+Expr Γ
 
-  bindingMechanics Γ x = {!!}
+data Stmnt (Γ : Context) : Type₀
 
-  bindingMechanics' Γ (bindingS x) = bindingMechanics Γ x
-  bindingMechanics' Γ (nonBindingS x) = Γ
+data BStmnt (Γ : Context) : Type₀
+
+
+data NBStmnt (Γ : Context) : Type₀
+
+data NBStmnt+Expr (Γ : Context) : Type₀
+
+data Expr (Γ : Context) (Τ : GType): Type₀
+
+bindingMechanics : (Γ : Context) → BStmnt Γ → Context 
+
+bindingMechanics' : (Γ : Context) → Stmnt Γ → Context 
+
+
+record Body (Γ : _) (Τ : _ ) : Type₀ where
+  pattern
+  inductive
+  constructor bodyR
+  field
+    stmnts : Linked bindingMechanics' Γ
+    expr : Expr (foldLinked stmnts) Τ
+
+
+record Module : Type₀ where
+  pattern
+  constructor moduleᵍ
+  field
+    stmnts : Linked bindingMechanics' emptyContext
+
+
+
+
+-- slightly diferent organisation (more granularx)
+-- but apart from this following closely grammar of glow
+
+
+data InLetExpr (Γ : _) (Τ : _) : Type₀ where
+  val : Expr Γ Τ → InLetExpr Γ Τ 
+  lam : List (IdentifierWithType) → Expr Γ → InLetExpr Γ Τ
+  interaction : List IdentifierTy → List (IdentifierWithType) → InLetExpr Γ Τ
+
+data Expr Γ Τ where
+  var : DefinedSymbolOfTy Γ Τ → Expr Γ Τ
+  body : Body Γ Τ → Expr Γ Τ
+  lit' : GTypeAgdaRep Τ → Expr Γ Τ
+
+data Stmnt Γ where
+  -- not necessary binding, but rather context changing
+  bindingS : BStmnt Γ → Stmnt Γ
+  nonBindingS : NBStmnt+Expr Γ → Stmnt Γ
+
+data BStmnt Γ where
+                -- warning: scope in "ce" is interpreted in unusual way!
+                -- (TODO : consider speical type here)
+  BS-let : (ce : ContextEntry Γ) → {asn : ⟨ AllowedScopeNarrowing Γ (scope ce) ⟩}
+              → InLetExpr (narrow Γ (scope ce) asn) (type ce) → BStmnt Γ    
+  BS-publish!_⟶_ : (p : ParticipantId Γ) → List (PrivateSymbolOf Γ p) → BStmnt Γ
+  -- verify! ‹ids›
+
+data NBStmnt Γ where
+  NBS-require! : Expr Γ Boolᵍ → NBStmnt Γ
+  NBS-deposit!_ ⟶_ : ParticipantId Γ → Expr Γ Natᵍ → NBStmnt Γ
+  NBS-withdraw!_ ⟵_ : ParticipantId Γ → Expr Γ Natᵍ → NBStmnt Γ
+
+
+data NBStmnt+Expr Γ where
+  stmntNBS : NBStmnt Γ → {⟨ IsConsensus Γ ⟩} → NBStmnt+Expr Γ
+  exprNBS : ∀ {Τ} → Expr Γ Τ → NBStmnt+Expr Γ
+
+bindingMechanics Γ (BS-let ce _ x) = record Γ { entries =  ce ∷ entries Γ }
+bindingMechanics Γ (BS-publish! p ⟶ x) =
+  let makePublic  e = if (recMaybe false (λ p' → IdentifierTyTest (name p) (name p))
+                                   (scope e))
+                          then (record e { scope = nothing })
+                          else e
+
+  in record Γ { entries =  Cubical.Data.List.map makePublic (entries Γ) }
+
+
+bindingMechanics' Γ (bindingS x) = bindingMechanics Γ x
+bindingMechanics' Γ (nonBindingS x) = Γ
 
 
 
@@ -265,12 +347,12 @@ record IHead : Type₀ where
 --     IsPrivateSymbolOf = {!!}
 
 
---   open IContext
+--   open Context
 
---   emptyIContext : ∀ iH → IContext iH
---   emptyIContext iH = iCon [] ◦
+--   emptyContext : ∀ iH → Context iH
+--   emptyContext iH = iCon [] ◦
 
---   addToContext : ∀ {iH} → IContext iH → SymInContext iH →  IContext iH
+--   addToContext : ∀ {iH} → Context iH → SymInContext iH →  Context iH
 --   definedS (addToContext {iH} x x₁) = x₁ ∷ x .definedS
 --   scope (addToContext {iH} x x₁) = x .scope
 
@@ -279,17 +361,17 @@ record IHead : Type₀ where
 --   Module = List TopLevelDefinition
 
 
---   data IBody {iH : IHead} (iC₀ : IContext iH) : Type₀
+--   data IBody {iH : IHead} (iC₀ : Context iH) : Type₀
 
---   contextAfter : {iH : IHead} {iC₀ : IContext iH} → IBody iC₀ → IContext iH
+--   contextAfter : {iH : IHead} {iC₀ : Context iH} → IBody iC₀ → Context iH
 
---   data IEffect {iH : IHead} {iC₀ : IContext iH}
+--   data IEffect {iH : IHead} {iC₀ : Context iH}
 --                             (ib : IBody iC₀) : Type₀
 
---   data IPart {iH : IHead} {iC₀ : IContext iH}
+--   data IPart {iH : IHead} {iC₀ : Context iH}
 --                             (ib : IBody iC₀) : Type₀
 
- --   data IValue {iH : IHead} {iC₀ : IContext iH}
+ --   data IValue {iH : IHead} {iC₀ : Context iH}
 --                             (ib : IBody iC₀) (sC : Scope iH) GType : Type₀
 
 
@@ -314,7 +396,7 @@ record IHead : Type₀ where
 --     field
 --       name : Identifier
 --       head : IHead
---       body : IBody (emptyIContext head)
+--       body : IBody (emptyContext head)
 
 --   data TopLevelDefinition where
 --     tlInteraction : IDefinition → TopLevelDefinition
