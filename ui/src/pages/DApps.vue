@@ -41,10 +41,16 @@
           </q-card-section>
           <q-card-section v-if="'params' in entry">
             <div class="text-h6">Parameters</div>
-            <q-input v-for="(param, index) in entry['params']"
-                     v-model="params[param]"
-                     :label="param"
-                     :key="index" />
+            <div v-for="(param, index) in entry['params']" :key="index">
+              <q-input v-if="param['type'] === 'UInt256'"
+                       v-model.number="params[param['name']]"
+                       type="number"
+                       :label="param['name']" />
+              <q-input v-else
+                       v-model="params[param['name']]"
+                       type="text"
+                       :label="param['name']" />
+            </div>
           </q-card-section>
           <q-card-section v-if="'participants' in entry">
             <div class="text-h6">Participants</div>
@@ -61,10 +67,16 @@
             </div>
           </q-card-section>
           <q-card-section v-if="'var' in entry && 'participant' in entry && entry['participant'] == my_role">
-            <div class="text-h6">{{ entry['var'] }}: {{ entry['type'] }}</div>
-            <q-input v-model="inputs[entry['var']]"
+            <!-- Inputs for the current participant. -->
+            <div class="text-h6">{{ entry['var'] }}</div>
+            <q-input v-if="entry['type'] === 'UInt256'"
+                     v-model.number="inputs[entry['var']]"
+                     type="number"
                      :label="entry['tag']" />
-                <!-- :rules="switch (entry['type']) ..." -->
+            <q-input v-else
+                     v-model="inputs[entry['var']]"
+                     type="text"
+                     :label="entry['tag']" />
           </q-card-section>
         </q-card-section>
         <q-card-actions v-if="dapp">

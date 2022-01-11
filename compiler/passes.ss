@@ -152,7 +152,7 @@
 (define-pass project (checkpointify.sexp Unused cpitable2.sexp) (project.sexp))
 
 ;; *User Interface Integration*: extract UI schema from contract
-(define-pass schema (project.sexp albatable.sexp) (schema.json))
+(define-pass schema (project.sexp albatable.sexp typetable.sexp) (schema.json))
 
 ;; *Contract Projection*: extract a contract for every interaction
 ;;(define-pass contract-projection ".message.sexp" ".contract.sexp")

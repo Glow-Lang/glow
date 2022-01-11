@@ -11,6 +11,7 @@
  :std/misc/hash
  :std/misc/ports
  :std/misc/process
+ :std/sort
  (only-in :std/srfi/1 first)
  :std/sugar
  :std/text/json
@@ -170,7 +171,10 @@
             (participants (hash-ref args 'participants))
             (my-identity (hash-ref participants (string->symbol my-role)))
             (params (hash-ref args 'params))
-            (handshake (if #t ; FIXME: decide who should listen
+            (handshake (if (string=? my-role
+                                     (first (sort (map symbol->string
+                                                       (hash-keys participants))
+                                                  string<?)))
                            "nc -l 3141"
                            "nc localhost 3141")))
        `("glow" "start-interaction"
@@ -180,7 +184,7 @@
          "--role" ,my-role
          "--database" ,my-role
          "--evm-network" ,(hash-ref my-identity 'network)
-         "--my-identity" ,(hash-ref my-identity 'address)
+         "--my-identity" ,(hash-ref my-identity 'nickname)
          "--handshake" ,handshake
          "--assets" ,(json-object->string assets)
          "--participants" ,(json-object->string
