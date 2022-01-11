@@ -132,401 +132,460 @@ record IdentifierWithType : Type₀ where
     type : GType
 
 
-IsParticipantId : Maybe (List IdentifierTy) → IdentifierTy → hProp ℓ-zero
-IsParticipantId mbL name =
-   recMaybe ⊥ (λ participants → MemberBy IdentifierTyTest participants name) mbL
 
-record ParticipantId' (mbL : Maybe (List IdentifierTy)) : Type₀ where
-  constructor pId
-  field
-    name : IdentifierTy
-    {isIn} : ⟨ IsParticipantId mbL name ⟩
-
-open ParticipantId'
-    
-record ContextEntry' (mbL : Maybe (List IdentifierTy)) : Type₀ where
-  constructor ice
-
-  field
-    scope : Maybe (ParticipantId' mbL)
-    name : IdentifierTy
-    type : GType
-
-open ContextEntry'
-
-record Context : Type₀ where
+record InteractionHead : Type₀ where
+  constructor interactionHead
   pattern
-  constructor con
-
   field
-    participants : Maybe (List IdentifierTy)
+    participants : List IdentifierTy
+    parameters : List IdentifierWithType
 
-  ContextEntry = ContextEntry' participants
 
-  field
-    entries : List ContextEntry
 
-  ParticipantId = ParticipantId' participants
+  IsParticipantId : IdentifierTy → hProp ℓ-zero
+  IsParticipantId name =
+      MemberBy IdentifierTyTest participants name
+
+
+  record ParticipantId : Type₀ where
+    constructor pId
+    field
+      name : IdentifierTy
+      {isIn} : ⟨ IsParticipantId name ⟩
+
+  open ParticipantId
+
 
   Scope : Type₀
   Scope = Maybe ParticipantId
 
-  field
-    scope' : Scope
 
+  record ContextEntry : Type₀ where
+    constructor ice
 
-
-  _canAccessTest_ : Scope → Scope → Bool
-  _ canAccessTest nothing = true
-  just x canAccessTest just x₁ = IdentifierTyTest (name x) (name x₁)
-  nothing canAccessTest just x₁ = false
-
-  _canAccess_ : Scope → Scope → hProp ℓ-zero
-  x canAccess x₁ = Bool→Type' (x canAccessTest x₁)
-
-
-  entryLookup : IdentifierTy → Maybe ContextEntry
-  entryLookup x = findBy (IdentifierTyTest x ∘ name) entries
-
-  IsDefinedSymbolOfTyTest : GType → IdentifierTy → Bool
-  IsDefinedSymbolOfTyTest ty x =
-    recMaybe false (λ y → (scope') canAccessTest (scope y)) (entryLookup x) 
-
-  IsDefinedSymbolOfTy : GType → IdentifierTy → hProp ℓ-zero
-  IsDefinedSymbolOfTy ty x = Bool→Type' (IsDefinedSymbolOfTyTest ty x) 
-
-  record DefinedSymbolOfTy (Τ : GType) : Type ℓ-zero where
-    constructor dsot
     field
+      scope : Scope
       name : IdentifierTy
-      {isDefinedSymbolOfTy} : ⟨ IsDefinedSymbolOfTy Τ name ⟩
-
-  IsPrivateSymbolOfTyTest : ParticipantId → GType → IdentifierTy → Bool
-  IsPrivateSymbolOfTyTest p ty x =
-    recMaybe
-       false
-       (λ y → recMaybe false (λ p' → IdentifierTyTest (name p) (name p')) (scope y))
-       (entryLookup x)
-
-  IsPrivateSymbolOfTy : ParticipantId → GType → IdentifierTy → hProp ℓ-zero
-  IsPrivateSymbolOfTy p ty x = Bool→Type' (IsDefinedSymbolOfTyTest ty x) 
-
-  record PrivateSymbolOf (p : ParticipantId) : Type ℓ-zero where
-    constructor psof
-    field
       type : GType
-      name : IdentifierTy
-      {isDefinedSymbolOfTy} : ⟨ IsPrivateSymbolOfTy p type name ⟩
 
-  AllowedScopeNarrowingTest : Scope → Bool
-  AllowedScopeNarrowingTest nothing = true
-  AllowedScopeNarrowingTest (just x) = caseMaybe true false scope'
+  open ContextEntry
 
-  AllowedScopeNarrowing : Scope → hProp ℓ-zero
-  AllowedScopeNarrowing =  Bool→Type' ∘ AllowedScopeNarrowingTest  
-
-  IsInteraction : hProp ℓ-zero
-  IsInteraction = caseMaybe ⊤ ⊥ participants
+  record Context : Type₀ where
+    pattern
+    constructor con
 
 
-  IsConsensus : hProp ℓ-zero
-  IsConsensus = caseMaybe ⊤ ⊥ scope'
+    field
+      entries : List ContextEntry
 
-
-open Context
-
-emptyContext : Context
-emptyContext = con nothing [] nothing
-
-
-narrow : (Γ : Context) → (s : Scope Γ)  → (⟨ AllowedScopeNarrowing Γ s ⟩) → Context
-narrow a@(con _ _ nothing) (just x) _ = a
-narrow a nothing  _ = a
+    field
+      scope' : Scope
 
 
 
+    _canAccessTest_ : Scope → Scope → Bool
+    _ canAccessTest nothing = true
+    just x canAccessTest just x₁ = IdentifierTyTest (name x) (name x₁)
+    nothing canAccessTest just x₁ = false
 
-data Stmnt (Γ : Context) : Type₀
-
-data BStmnt (Γ : Context) : Type₀
-
-
-data NBStmnt (Γ : Context) : Type₀
-
-data NBStmnt+Expr (Γ : Context) : Type₀
-
-data Expr (Γ : Context) (Τ : GType): Type₀
-
-bindingMechanics : (Γ : Context) → BStmnt Γ → Context 
-
-bindingMechanics' : (Γ : Context) → Stmnt Γ → Context 
+    _canAccess_ : Scope → Scope → hProp ℓ-zero
+    x canAccess x₁ = Bool→Type' (x canAccessTest x₁)
 
 
-record Body (Γ : _) (Τ : _ ) : Type₀ where
+    entryLookup : IdentifierTy → Maybe ContextEntry
+    entryLookup x = findBy (IdentifierTyTest x ∘ name) entries
+
+    IsDefinedSymbolOfTyTest : GType → IdentifierTy → Bool
+    IsDefinedSymbolOfTyTest ty x =
+      recMaybe false (λ y → (scope') canAccessTest (scope y)) (entryLookup x) 
+
+    IsDefinedSymbolOfTy : GType → IdentifierTy → hProp ℓ-zero
+    IsDefinedSymbolOfTy ty x = Bool→Type' (IsDefinedSymbolOfTyTest ty x) 
+
+    record DefinedSymbolOfTy (Τ : GType) : Type ℓ-zero where
+      constructor dsot
+      field
+        name : IdentifierTy
+        {isDefinedSymbolOfTy} : ⟨ IsDefinedSymbolOfTy Τ name ⟩
+
+    IsPrivateSymbolOfTyTest : ParticipantId → GType → IdentifierTy → Bool
+    IsPrivateSymbolOfTyTest p ty x =
+      recMaybe
+         false
+         (λ y → recMaybe false (λ p' → IdentifierTyTest (name p) (name p')) (scope y))
+         (entryLookup x)
+
+    IsPrivateSymbolOfTy : ParticipantId → GType → IdentifierTy → hProp ℓ-zero
+    IsPrivateSymbolOfTy p ty x = Bool→Type' (IsDefinedSymbolOfTyTest ty x) 
+
+    record PrivateSymbolOf (p : ParticipantId) : Type ℓ-zero where
+      constructor psof
+      field
+        type : GType
+        name : IdentifierTy
+        {isDefinedSymbolOfTy} : ⟨ IsPrivateSymbolOfTy p type name ⟩
+
+    AllowedScopeNarrowingTest : Scope → Bool
+    AllowedScopeNarrowingTest nothing = true
+    AllowedScopeNarrowingTest (just x) = caseMaybe true false scope'
+
+    AllowedScopeNarrowing : Scope → hProp ℓ-zero
+    AllowedScopeNarrowing =  Bool→Type' ∘ AllowedScopeNarrowingTest  
+
+    IsConsensus : hProp ℓ-zero
+    IsConsensus = caseMaybe ⊤ ⊥ scope'
+
+
+  open Context public
+
+  emptyContext : Context
+  emptyContext = con [] nothing
+
+
+  narrow : (Γ : Context) → (s : Scope)  → (⟨ AllowedScopeNarrowing Γ s ⟩) → Context
+  narrow (con y nothing) a _ = (con y a)
+  narrow a@(con _ (just x)) _ _ = a
+
+
+
+
+  data Stmnt (Γ : Context) : Type₀
+
+  data BStmnt (Γ : Context) : Type₀
+
+
+  data NBStmnt (Γ : Context) : Type₀
+
+  data NBStmnt+Expr (Γ : Context) : Type₀
+
+  data Expr (Γ : Context) (Τ : GType): Type₀
+
+  bindingMechanics : (Γ : Context) → BStmnt Γ → Context 
+
+  bindingMechanics' : (Γ : Context) → Stmnt Γ → Context 
+
+
+  record Body (Γ : _) (Τ : _ ) : Type₀ where
+    pattern
+    inductive
+    constructor bodyR
+    field
+      stmnts : Linked bindingMechanics' Γ
+      expr : Expr (foldLinked stmnts) Τ
+
+
+  record Module : Type₀ where
+    pattern
+    constructor moduleᵍ
+    field
+      stmnts : Linked bindingMechanics' emptyContext
+
+
+
+
+  data Expr Γ Τ where
+    var : DefinedSymbolOfTy Γ Τ → Expr Γ Τ
+    body : Body Γ Τ → Expr Γ Τ
+    lit : GTypeAgdaRep Τ → Expr Γ Τ
+
+  data Stmnt Γ where
+    -- not necessary binding, but rather context changing
+    bindingS : BStmnt Γ → Stmnt Γ
+    nonBindingS : NBStmnt+Expr Γ → Stmnt Γ
+
+  data BStmnt Γ where
+                  -- warning: scope in "ce" is interpreted in unusual way!
+                  -- (TODO : consider speical type here)
+    BS-let : (ce : ContextEntry) → {asn : ⟨ AllowedScopeNarrowing Γ (scope ce) ⟩}
+                → Expr (narrow Γ (scope ce) asn) (type ce) → BStmnt Γ    
+    BS-publish!_⟶_ : (p : ParticipantId) → List (PrivateSymbolOf Γ p) → BStmnt Γ
+    -- verify! ‹ids›
+
+  data NBStmnt Γ where
+    NBS-require! : Expr Γ Boolᵍ → NBStmnt Γ
+    NBS-deposit!_ ⟶_ : ParticipantId → Expr Γ Natᵍ → NBStmnt Γ
+    NBS-withdraw!_ ⟵_ : ParticipantId → Expr Γ Natᵍ → NBStmnt Γ
+
+
+  data NBStmnt+Expr Γ where
+    stmntNBS : NBStmnt Γ → {⟨ IsConsensus Γ ⟩} → NBStmnt+Expr Γ
+    exprNBS : ∀ {Τ} → Expr Γ Τ → NBStmnt+Expr Γ
+
+  bindingMechanics Γ (BS-let ce _) = record Γ { entries =  ce ∷ entries Γ }
+  bindingMechanics Γ (BS-publish! p ⟶ x) =
+    let makePublic  e = if (recMaybe false (λ p' → IdentifierTyTest (name p) (name p))
+                                     (scope e))
+                            then (record e { scope = nothing })
+                            else e
+
+    in record Γ { entries =  Cubical.Data.List.map makePublic (entries Γ) }
+
+
+  bindingMechanics' Γ (bindingS x) = bindingMechanics Γ x
+  bindingMechanics' Γ (nonBindingS x) = Γ
+
+record Interaction : Type₀ where
   pattern
-  inductive
-  constructor bodyR
+  constructor interaction
   field
-    stmnts : Linked bindingMechanics' Γ
-    expr : Expr (foldLinked stmnts) Τ
+    head : InteractionHead
+    
+  open InteractionHead head public
 
-
-record Module : Type₀ where
-  pattern
-  constructor moduleᵍ
   field
-    stmnts : Linked bindingMechanics' emptyContext
+    code : Linked bindingMechanics' emptyContext 
 
 
 
+infixl 6 interaction⟨_,_⟩_
+infixr 50 _∶_ 
 
--- slightly diferent organisation (more granularx)
--- but apart from this following closely grammar of glow
+infixl 15 _;_
+infix 17 _;₁
+infixl 15 _;'_
 
+infix 30 set_∶_≔_
 
-data InLetExpr (Γ : _) (Τ : _) : Type₀ where
-  val : Expr Γ Τ → InLetExpr Γ Τ 
-  lam : List (IdentifierWithType) → Expr Γ → InLetExpr Γ Τ
-  interaction : List IdentifierTy → List (IdentifierWithType) → InLetExpr Γ Τ
 
-data Expr Γ Τ where
-  var : DefinedSymbolOfTy Γ Τ → Expr Γ Τ
-  body : Body Γ Τ → Expr Γ Τ
-  lit' : GTypeAgdaRep Τ → Expr Γ Τ
+infix 60 <_>
 
-data Stmnt Γ where
-  -- not necessary binding, but rather context changing
-  bindingS : BStmnt Γ → Stmnt Γ
-  nonBindingS : NBStmnt+Expr Γ → Stmnt Γ
+pattern interaction⟨_,_⟩ prts prms stmnts = interaction (interactionHead prts prms ) stmnts
 
-data BStmnt Γ where
-                -- warning: scope in "ce" is interpreted in unusual way!
-                -- (TODO : consider speical type here)
-  BS-let : (ce : ContextEntry Γ) → {asn : ⟨ AllowedScopeNarrowing Γ (scope ce) ⟩}
-              → InLetExpr (narrow Γ (scope ce) asn) (type ce) → BStmnt Γ    
-  BS-publish!_⟶_ : (p : ParticipantId Γ) → List (PrivateSymbolOf Γ p) → BStmnt Γ
-  -- verify! ‹ids›
+pattern _∶_ x y = iwt x y 
 
-data NBStmnt Γ where
-  NBS-require! : Expr Γ Boolᵍ → NBStmnt Γ
-  NBS-deposit!_ ⟶_ : ParticipantId Γ → Expr Γ Natᵍ → NBStmnt Γ
-  NBS-withdraw!_ ⟵_ : ParticipantId Γ → Expr Γ Natᵍ → NBStmnt Γ
+pattern _;_ x y = _L∷_ x y
 
 
-data NBStmnt+Expr Γ where
-  stmntNBS : NBStmnt Γ → {⟨ IsConsensus Γ ⟩} → NBStmnt+Expr Γ
-  exprNBS : ∀ {Τ} → Expr Γ Τ → NBStmnt+Expr Γ
+pattern _;₁ x = L[] ; x  
 
-bindingMechanics Γ (BS-let ce _ x) = record Γ { entries =  ce ∷ entries Γ }
-bindingMechanics Γ (BS-publish! p ⟶ x) =
-  let makePublic  e = if (recMaybe false (λ p' → IdentifierTyTest (name p) (name p))
-                                   (scope e))
-                          then (record e { scope = nothing })
-                          else e
+pattern _;'_ x y = x ;₁ ; y  
 
-  in record Γ { entries =  Cubical.Data.List.map makePublic (entries Γ) }
+pattern set_∶_≔_ x y z =
+  InteractionHead.bindingS (InteractionHead.BS-let (InteractionHead.ice nothing x y) z)
 
+pattern at_set_∶_≔_ p x y z =
+  InteractionHead.bindingS
+     (InteractionHead.BS-let (InteractionHead.ice (just (InteractionHead.pId p)) x y) z)
 
-bindingMechanics' Γ (bindingS x) = bindingMechanics Γ x
-bindingMechanics' Γ (nonBindingS x) = Γ
+<_> : ∀ {IH Γ} → {A : Type₀} → ⦃ isGlowTy : IsGlowTy A ⦄ →
+         A →  InteractionHead.Expr IH Γ (IsGlowTy.glowRep isGlowTy)
+<_> {IH} {Γ} {A} ⦃ isGlowTy ⦄ x = InteractionHead.lit (IsGlowTy.cast isGlowTy x)
 
+infixr 60 v_
 
+pattern v_ x = InteractionHead.var (InteractionHead.dsot x)
 
 
+someInteraction : Interaction
+someInteraction =
+   interaction⟨   "A" ∷ "B" ∷ [] , "b1" ∶ Boolᵍ ∷ [] ⟩ (
+        set "x" ∶ Boolᵍ ≔ < true > ;'
+        at "B" set "y" ∶ Boolᵍ ≔ < true > ;
+        set "xx" ∶ Boolᵍ ≔ v "x" ;
+        at "B" set "yy" ∶ Natᵍ ≔ v "y" ;
+        {!!}
+     )
 
-    -- recMaybe ⟨ ⊥ ⟩ (λ x → if (GTy== ty x) then ⟨ ⊤ ⟩ else' ⟨ ⊥ ⟩) (getSymbolTy sc vI)
 
 
-    -- IsFreeSymbol : String → Type₀
-    -- IsFreeSymbol s = ? 
 
---     getSymbolTy : Scope iH → ValIdentifier → Maybe GType
---     getSymbolTy sc = {!!}
 
---     IsPrivateSymbolOf : ValidParticipantSymbol iH → ValIdentifier → Type₀
---     IsPrivateSymbolOf = {!!}
 
 
---   open Context
 
---   emptyContext : ∀ iH → Context iH
---   emptyContext iH = iCon [] ◦
+--   -- --     -- recMaybe ⟨ ⊥ ⟩ (λ x → if (GTy== ty x) then ⟨ ⊤ ⟩ else' ⟨ ⊥ ⟩) (getSymbolTy sc vI)
 
---   addToContext : ∀ {iH} → Context iH → SymInContext iH →  Context iH
---   definedS (addToContext {iH} x x₁) = x₁ ∷ x .definedS
---   scope (addToContext {iH} x x₁) = x .scope
 
---   data TopLevelDefinition : Type₀
+--   -- --     -- IsFreeSymbol : String → Type₀
+--   -- --     -- IsFreeSymbol s = ? 
 
---   Module = List TopLevelDefinition
+--   -- -- --     getSymbolTy : Scope iH → ValIdentifier → Maybe GType
+--   -- -- --     getSymbolTy sc = {!!}
 
+--   -- -- --     IsPrivateSymbolOf : ValidParticipantSymbol iH → ValIdentifier → Type₀
+--   -- -- --     IsPrivateSymbolOf = {!!}
 
---   data IBody {iH : IHead} (iC₀ : Context iH) : Type₀
 
---   contextAfter : {iH : IHead} {iC₀ : Context iH} → IBody iC₀ → Context iH
+--   -- -- --   open Context
 
---   data IEffect {iH : IHead} {iC₀ : Context iH}
---                             (ib : IBody iC₀) : Type₀
+--   -- -- --   emptyContext : ∀ iH → Context iH
+--   -- -- --   emptyContext iH = iCon [] ◦
 
---   data IPart {iH : IHead} {iC₀ : Context iH}
---                             (ib : IBody iC₀) : Type₀
+--   -- -- --   addToContext : ∀ {iH} → Context iH → SymInContext iH →  Context iH
+--   -- -- --   definedS (addToContext {iH} x x₁) = x₁ ∷ x .definedS
+--   -- -- --   scope (addToContext {iH} x x₁) = x .scope
 
- --   data IValue {iH : IHead} {iC₀ : Context iH}
---                             (ib : IBody iC₀) (sC : Scope iH) GType : Type₀
+--   -- -- --   data TopLevelDefinition : Type₀
 
+--   -- -- --   Module = List TopLevelDefinition
 
 
+--   -- -- --   data IBody {iH : IHead} (iC₀ : Context iH) : Type₀
 
---   Disc→Ty : ∀ {ℓ} → ∀ {A : Type ℓ} → Dec A → Type₀
---   Disc→Ty (yes p) = ⟨ ⊤ ⟩
---   Disc→Ty (no ¬p) = ⟨ ⊥ ⟩
+--   -- -- --   contextAfter : {iH : IHead} {iC₀ : Context iH} → IBody iC₀ → Context iH
 
---   =ℕTy : ℕ → ℕ → Type₀
---   =ℕTy x x₁ = Disc→Ty (discreteℕ x x₁)
+--   -- -- --   data IEffect {iH : IHead} {iC₀ : Context iH}
+--   -- -- --                             (ib : IBody iC₀) : Type₀
 
+--   -- -- --   data IPart {iH : IHead} {iC₀ : Context iH}
+--   -- -- --                             (ib : IBody iC₀) : Type₀
 
---   -- infixl 6 interaction_⟨_,_⟩⁅_⁆
+--   -- --  --   data IValue {iH : IHead} {iC₀ : Context iH}
+--   -- -- --                             (ib : IBody iC₀) (sC : Scope iH) GType : Type₀
 
---   -- infix 60 _ₗ
---   -- infix 60 _ₗ'
---   -- infix 60 𝓁_
 
---   record IDefinition : Type₀ where
---     constructor iDefinition
---     field
---       name : Identifier
---       head : IHead
---       body : IBody (emptyContext head)
 
---   data TopLevelDefinition where
---     tlInteraction : IDefinition → TopLevelDefinition
 
+--   -- -- --   Disc→Ty : ∀ {ℓ} → ∀ {A : Type ℓ} → Dec A → Type₀
+--   -- -- --   Disc→Ty (yes p) = ⟨ ⊤ ⟩
+--   -- -- --   Disc→Ty (no ¬p) = ⟨ ⊥ ⟩
 
---   data IEffect {iH} ib where
---     -- verify!  : {!!} → IEffect ib
---     publish!_⟶𝓁_ : (pC : ValidParticipantSymbol iH) → 
---                       (vI : ValIdentifier) → {_ :  IsPrivateSymbolOf (contextAfter ib) pC vI } → IEffect ib
---     deposit!_⟶_  : (pC : ValidParticipantSymbol iH)
---                      → IValue ib ◦ Intᵍ
---                      → IEffect ib
---     withdraw!_⟵_ : (pC : ValidParticipantSymbol iH)
---                      → IValue ib ◦ Intᵍ
---                      → IEffect ib
+--   -- -- --   =ℕTy : ℕ → ℕ → Type₀
+--   -- -- --   =ℕTy x x₁ = Disc→Ty (discreteℕ x x₁)
 
---   infix 40 _[𝓁_∶_]≔_
---   infix 20 ↯_
 
---   data IPart {iH} {iC₀} ib where
---     _[𝓁_∶_]≔_ : (j : Scope iH) 
---                  (k : ValIdentifier) → (gTy : GType) →  IValue ib {!!} gTy
---                    → IPart ib
---     ↯_ : IEffect ib → IPart ib
---     if_then_else_ : IValue ib {!!} Boolᵍ →
---                       IBody (contextAfter ib) →
---                       IBody (contextAfter ib) → IPart ib
+--   -- -- --   -- infixl 6 interaction_⟨_,_⟩⁅_⁆
 
+--   -- -- --   -- infix 60 _ₗ
+--   -- -- --   -- infix 60 _ₗ'
+--   -- -- --   -- infix 60 𝓁_
 
---   -- record IsGlowTy {a} (A : Type a) : Type a where
---   --   field
---   --     glowRep : GType
---   --     cast : A → GTypeAgdaRep glowRep
+--   -- -- --   record IDefinition : Type₀ where
+--   -- -- --     constructor iDefinition
+--   -- -- --     field
+--   -- -- --       name : Identifier
+--   -- -- --       head : IHead
+--   -- -- --       body : IBody (emptyContext head)
 
---   -- instance
---   --   Bool-IsGlowTy : IsGlowTy Bool
---   --   Bool-IsGlowTy = record { glowRep = Boolᵍ ; cast = idfun _}
+--   -- -- --   data TopLevelDefinition where
+--   -- -- --     tlInteraction : IDefinition → TopLevelDefinition
 
---   -- instance
---   --   ℤ-IsGlowTy : IsGlowTy ℤ
---   --   ℤ-IsGlowTy = record { glowRep = Intᵍ  ; cast = idfun _ }
 
---   -- instance
---   --   ℕ-IsGlowTy : IsGlowTy ℕ
---   --   ℕ-IsGlowTy = record { glowRep = Natᵍ  ; cast = idfun _ }
+--   -- -- --   data IEffect {iH} ib where
+--   -- -- --     -- verify!  : {!!} → IEffect ib
+--   -- -- --     publish!_⟶𝓁_ : (pC : ValidParticipantSymbol iH) → 
+--   -- -- --                       (vI : ValIdentifier) → {_ :  IsPrivateSymbolOf (contextAfter ib) pC vI } → IEffect ib
+--   -- -- --     deposit!_⟶_  : (pC : ValidParticipantSymbol iH)
+--   -- -- --                      → IValue ib ◦ Intᵍ
+--   -- -- --                      → IEffect ib
+--   -- -- --     withdraw!_⟵_ : (pC : ValidParticipantSymbol iH)
+--   -- -- --                      → IValue ib ◦ Intᵍ
+--   -- -- --                      → IEffect ib
 
+--   -- -- --   infix 40 _[𝓁_∶_]≔_
+--   -- -- --   infix 20 ↯_
 
---   -- infix 50 _==_
+--   -- -- --   data IPart {iH} {iC₀} ib where
+--   -- -- --     _[𝓁_∶_]≔_ : (j : Scope iH) 
+--   -- -- --                  (k : ValIdentifier) → (gTy : GType) →  IValue ib {!!} gTy
+--   -- -- --                    → IPart ib
+--   -- -- --     ↯_ : IEffect ib → IPart ib
+--   -- -- --     if_then_else_ : IValue ib {!!} Boolᵍ →
+--   -- -- --                       IBody (contextAfter ib) →
+--   -- -- --                       IBody (contextAfter ib) → IPart ib
 
---   data IValue {iH} {iC₀} ib sC gTy where
---     𝓁_ : (k : ValIdentifier) → {kProof : IsDefinedSymbolOfTy iC₀ sC k gTy} → IValue ib sC gTy
---     _ₗ' : GTypeAgdaRep gTy → IValue ib sC gTy
---     input : String → IValue ib sC gTy
---     _==_ : IValue ib sC gTy → IValue ib sC  gTy → IValue ib sC  gTy
---     -- 𝓹 : (k : ℕ) → {_ : isParticipantSymbol ib k} →  IValue ib gTy
 
---   -- _ₗ : {participants : List Char} {paramtersTy : List IParameter} → 
---   --       {ib : IBody {participants} {paramtersTy}} → 
---   --                         {A : Type₀} → {{isGlowTy : IsGlowTy A}} →
---   --                         A →  IValue ib (IsGlowTy.glowRep isGlowTy)
---   -- _ₗ {participants} {paramtersTy} {ib} {A} ⦃ isGlowTy ⦄ x = IsGlowTy.cast isGlowTy x ₗ' 
+--   -- -- --   -- record IsGlowTy {a} (A : Type a) : Type a where
+--   -- -- --   --   field
+--   -- -- --   --     glowRep : GType
+--   -- -- --   --     cast : A → GTypeAgdaRep glowRep
 
+--   -- -- --   -- instance
+--   -- -- --   --   Bool-IsGlowTy : IsGlowTy Bool
+--   -- -- --   --   Bool-IsGlowTy = record { glowRep = Boolᵍ ; cast = idfun _}
 
+--   -- -- --   -- instance
+--   -- -- --   --   ℤ-IsGlowTy : IsGlowTy ℤ
+--   -- -- --   --   ℤ-IsGlowTy = record { glowRep = Intᵍ  ; cast = idfun _ }
 
+--   -- -- --   -- instance
+--   -- -- --   --   ℕ-IsGlowTy : IsGlowTy ℕ
+--   -- -- --   --   ℕ-IsGlowTy = record { glowRep = Natᵍ  ; cast = idfun _ }
 
---   -- infixl 15 _；_
---   -- infix 17 _；₁
---   -- infixl 15 _；'_
 
---   data Statements {iH} iC₀ where
---    ∙ib : Body iC₀
---    _；_ : ∀ {iC} → (ss : Body {iH} iC)
---            →  (s : IPart ss) → Body iC₀
+--   -- -- --   -- infix 50 _==_
 
---   -- pattern _；₁ x = ∙ib ； x  
+--   -- -- --   data IValue {iH} {iC₀} ib sC gTy where
+--   -- -- --     𝓁_ : (k : ValIdentifier) → {kProof : IsDefinedSymbolOfTy iC₀ sC k gTy} → IValue ib sC gTy
+--   -- -- --     _ₗ' : GTypeAgdaRep gTy → IValue ib sC gTy
+--   -- -- --     input : String → IValue ib sC gTy
+--   -- -- --     _==_ : IValue ib sC gTy → IValue ib sC  gTy → IValue ib sC  gTy
+--   -- -- --     -- 𝓹 : (k : ℕ) → {_ : isParticipantSymbol ib k} →  IValue ib gTy
 
---   -- pattern _；'_ x y = ∙ib ； x ； y  
+--   -- -- --   -- _ₗ : {participants : List Char} {paramtersTy : List IParameter} → 
+--   -- -- --   --       {ib : IBody {participants} {paramtersTy}} → 
+--   -- -- --   --                         {A : Type₀} → {{isGlowTy : IsGlowTy A}} →
+--   -- -- --   --                         A →  IValue ib (IsGlowTy.glowRep isGlowTy)
+--   -- -- --   -- _ₗ {participants} {paramtersTy} {ib} {A} ⦃ isGlowTy ⦄ x = IsGlowTy.cast isGlowTy x ₗ' 
 
---   contextAfter = {!!}
 
---   -- contextAfter {iC₀ = iC₀} ∙ib = iC₀
---   -- contextAfter (x ； j [𝓁 k ∶ gTy ]≔  x₁) =
---   --   addToContext (contextAfter x) (symInContext j k gTy)
---   -- contextAfter (x ； _) = contextAfter x
 
 
+--   -- -- --   -- infixl 15 _；_
+--   -- -- --   -- infix 17 _；₁
+--   -- -- --   -- infixl 15 _；'_
 
---   -- getFreeSymbol = ?
---   -- -- getFreeSymbol {paramtersTy = l} ∙ib = length l
---   -- -- getFreeSymbol (x ； (_ [𝓁 _ ∶ _ ]≔ _)) = suc (getFreeSymbol x)
---   -- -- getFreeSymbol (x ； _) = getFreeSymbol x
+--   -- -- --   data Statements {iH} iC₀ where
+--   -- -- --    ∙ib : Body iC₀
+--   -- -- --    _；_ : ∀ {iC} → (ss : Body {iH} iC)
+--   -- -- --            →  (s : IPart ss) → Body iC₀
 
---   -- getSymbolTy ∙ib k = ◦
---   -- getSymbolTy (ib ； _ [𝓁 k' ∶ gTy ]≔ x) k with discreteℕ k k'
---   -- ... | yes p = • gTy
---   -- ... | no ¬p = getSymbolTy ib k
---   -- getSymbolTy (ib ； _) k = getSymbolTy ib k
+--   -- -- --   -- pattern _；₁ x = ∙ib ； x  
 
---   -- -- -- testModule : Module
---   -- -- -- testModule =
---   -- -- --   interaction⟨ 2 , Boolᵍ ∷ [] ⟩⁅
---   -- -- --      ∙ib ；
---   -- -- --      ◦ - 1 ∶ Boolᵍ ≔ false ₗ ；
---   -- -- --      ◦ - 1 ∶ Natᵍ ≔ 3 ₗ ；
+--   -- -- --   -- pattern _；'_ x y = ∙ib ； x ； y  
 
---   -- -- --      {! !} ；
---   -- -- --      {!!}
---   -- -- --   ⁆
+--   -- -- --   contextAfter = {!!}
 
---   -- -- --     ∷ []
+--   -- -- --   -- contextAfter {iC₀ = iC₀} ∙ib = iC₀
+--   -- -- --   -- contextAfter (x ； j [𝓁 k ∶ gTy ]≔  x₁) =
+--   -- -- --   --   addToContext (contextAfter x) (symInContext j k gTy)
+--   -- -- --   -- contextAfter (x ； _) = contextAfter x
 
 
---   -- -- boolGameModule : Module
---   -- -- boolGameModule =
---   -- --   interaction "boolGame" ⟨  'A' ∷ 'B' ∷ [] , [ "p" ∶ Intᵍ ] ∷ [] ⟩⁅ ∙ib ； 
 
---   -- --       ↯ deposit! 'A' ⟶ 1 ₗ ； 
---   -- --       ↯ deposit! 'B' ⟶ 1 ₗ ；
+--   -- -- --   -- getFreeSymbol = ?
+--   -- -- --   -- -- getFreeSymbol {paramtersTy = l} ∙ib = length l
+--   -- -- --   -- -- getFreeSymbol (x ； (_ [𝓁 _ ∶ _ ]≔ _)) = suc (getFreeSymbol x)
+--   -- -- --   -- -- getFreeSymbol (x ； _) = getFreeSymbol x
 
---   -- --       • 'A' [𝓁 1 ∶ Boolᵍ ]≔ input "Enter A's choice." ；
---   -- --       ↯ publish! 'A' ⟶𝓁 1 ；
+--   -- -- --   -- getSymbolTy ∙ib k = ◦
+--   -- -- --   -- getSymbolTy (ib ； _ [𝓁 k' ∶ gTy ]≔ x) k with discreteℕ k k'
+--   -- -- --   -- ... | yes p = • gTy
+--   -- -- --   -- ... | no ¬p = getSymbolTy ib k
+--   -- -- --   -- getSymbolTy (ib ； _) k = getSymbolTy ib k
 
---   -- --       • 'B' [𝓁 2 ∶ Boolᵍ ]≔ input "Enter B's choice." ；
---   -- --       ↯ publish! 'B' ⟶𝓁 2 ；
+--   -- -- --   -- -- -- testModule : Module
+--   -- -- --   -- -- -- testModule =
+--   -- -- --   -- -- --   interaction⟨ 2 , Boolᵍ ∷ [] ⟩⁅
+--   -- -- --   -- -- --      ∙ib ；
+--   -- -- --   -- -- --      ◦ - 1 ∶ Boolᵍ ≔ false ₗ ；
+--   -- -- --   -- -- --      ◦ - 1 ∶ Natᵍ ≔ 3 ₗ ；
 
---   -- --       ◦ [𝓁 3 ∶ Intᵍ ]≔  1 ₗ  ；
+--   -- -- --   -- -- --      {! !} ；
+--   -- -- --   -- -- --      {!!}
+--   -- -- --   -- -- --   ⁆
 
---   -- --       if  𝓁 1 == 𝓁 2   
---   -- --         then (↯ withdraw! 'A' ⟵ 2 ₗ ；₁)
---   -- --         else (↯ withdraw! 'B' ⟵ 2 ₗ ；₁)
---   -- --   ⁆
+--   -- -- --   -- -- --     ∷ []
 
---   -- --     ∷ []
+
+--   -- -- --   -- -- boolGameModule : Module
+--   -- -- --   -- -- boolGameModule =
+--   -- -- --   -- --   interaction "boolGame" ⟨  'A' ∷ 'B' ∷ [] , [ "p" ∶ Intᵍ ] ∷ [] ⟩⁅ ∙ib ； 
+
+--   -- -- --   -- --       ↯ deposit! 'A' ⟶ 1 ₗ ； 
+--   -- -- --   -- --       ↯ deposit! 'B' ⟶ 1 ₗ ；
+
+--   -- -- --   -- --       • 'A' [𝓁 1 ∶ Boolᵍ ]≔ input "Enter A's choice." ；
+--   -- -- --   -- --       ↯ publish! 'A' ⟶𝓁 1 ；
+
+--   -- -- --   -- --       • 'B' [𝓁 2 ∶ Boolᵍ ]≔ input "Enter B's choice." ；
+--   -- -- --   -- --       ↯ publish! 'B' ⟶𝓁 2 ；
+
+--   -- -- --   -- --       ◦ [𝓁 3 ∶ Intᵍ ]≔  1 ₗ  ；
+
+--   -- -- --   -- --       if  𝓁 1 == 𝓁 2   
+--   -- -- --   -- --         then (↯ withdraw! 'A' ⟵ 2 ₗ ；₁)
+--   -- -- --   -- --         else (↯ withdraw! 'B' ⟵ 2 ₗ ；₁)
+--   -- -- --   -- --   ⁆
+
+--   -- -- --   -- --     ∷ []
