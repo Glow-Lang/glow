@@ -359,6 +359,18 @@ record InteractionHead : Type₀ where
   bindingMechanics' Γ (bindingS x) = record Γ { entries =  bindingMechanics x } 
   bindingMechanics' Γ (nonBindingS x) = Γ
 
+-- PrivateSymbolOf' : ∀ {ih} → (r : InteractionHead.Context ih)
+--                      (p : InteractionHead.ParticipantId ih) →
+--                      Type
+-- PrivateSymbolOf' {ih} r p =
+--   Σ IdentifierTy {!λ x → Bool→Type' (
+--       recMaybe
+--          false
+--          (λ y → recMaybe false (λ p' → IdentifierTyTest (name p) (name p')) (InteractionHead.scope y))
+--          (findBy (IdentifierTyTest x ∘ name) entries)) !} 
+
+PrivateSymbolOf'= : ∀ {ih} → InteractionHead.PrivateSymbolOf {ih} ≡ {!!}
+PrivateSymbolOf'= = {!!}
 
 record Interaction : Type₀ where
   pattern
@@ -630,7 +642,7 @@ module paramsSubst where
          (stripParamsCtx Γ) (h x)
       hh {Γ} {x = bindingS (BS-let ce x)} = 
         cong (λ q → con q (map-Maybe (λ x → pId (x .name) {x .isIn}) (Γ .scope'))) refl
-      hh {Γ} {x = bindingS (BS-publish! p x)} = 
+      hh {Γ} {x = bindingS (BS-publish! p x)} =  
         cong (λ q → con q _) (map-List-∘ _ _ _ ∙ cong (λ a → map-List a (Γ .entries)) (funExt qqq) ∙ (sym (map-List-∘ _ _ _))   )
         where
           qqq : _
