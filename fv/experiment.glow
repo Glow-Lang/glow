@@ -18,14 +18,22 @@ let A = (qq : Bool) => {
     @q let zz = input(Int ,"Input unknown at compile time");
     publish! q -> zz;
 
-
+   let wzw = switch (qq) {
+      // A_Wins
+      | true => { @B let tt = input(Int ,"Input unknown at compile time") ; publish! B -> tt  ; tt }
+           // 3;
+      // B_Wins
+      | false => { @A let tt = input(Int ,"Input unknown at compile time") ; publish! A -> tt  ; tt }
+      // Draw      
+     };
 
    @A let z = switch (a) {
       // A_Wins
       | true =>
-           let w = 2;
-              // publish! A -> a;         
-           3;
+           let w = input(Int ,"Input unknown at compile time") ;
+	   require! qq;
+           // publish! A -> a;         
+           w == 5;
       // B_Wins
       | false => false;
       // Draw      
