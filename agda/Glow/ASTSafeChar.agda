@@ -29,6 +29,22 @@ open import Glow.Linked
 -- In the future we can intorduce it, or maybe on next level
 
 
+and-comm  : ∀ x y → x and y ≡ y and x
+and-comm false false = refl
+and-comm false true = refl
+and-comm true false = refl
+and-comm true true = refl
+
+and-F  : ∀ x → x and false ≡ false
+and-F false = refl
+and-F true = refl
+
+F-and  : ∀ x → false and x ≡ false
+F-and false = refl
+F-and true = refl
+
+
+
 
 -- infixr 80 •
 
@@ -359,18 +375,41 @@ record InteractionHead : Type₀ where
   bindingMechanics' Γ (bindingS x) = record Γ { entries =  bindingMechanics x } 
   bindingMechanics' Γ (nonBindingS x) = Γ
 
--- PrivateSymbolOf' : ∀ {ih} → (r : InteractionHead.Context ih)
---                      (p : InteractionHead.ParticipantId ih) →
+
+ParticipantId' : InteractionHead → Type₀
+ParticipantId' ie = Σ IdentifierTy λ n → ⟨ MemberBy IdentifierTyTest (ie .InteractionHead.participants) n ⟩
+
+ParticipantId'-Iso : ∀ ih → Iso (ParticipantId' ih) (InteractionHead.ParticipantId ih)
+Iso.fun (ParticipantId'-Iso ih) x = InteractionHead.pId (fst x) {snd x}
+Iso.inv (ParticipantId'-Iso ih) x = InteractionHead.name x , InteractionHead.isIn x
+Iso.rightInv (ParticipantId'-Iso ih) b = refl
+Iso.leftInv (ParticipantId'-Iso ih) a = refl
+
+ContextEntry' : InteractionHead → Type₀
+ContextEntry' ie = (Maybe (ParticipantId' ie) )
+                   × IdentifierTy × GType
+
+-- ContextEntry'-Iso : ∀ ih → Iso (ContextEntry' ih) (InteractionHead.ContextEntry ih)
+-- Iso.fun (ContextEntry'-Iso ih) x = InteractionHead.ice {!cong-Maybe ? proj₁ x!} {!!} {!!}
+-- Iso.inv (ContextEntry'-Iso ih) = {!!}
+-- Iso.rightInv (ContextEntry'-Iso ih) = {!!}
+-- Iso.leftInv (ContextEntry'-Iso ih) = {!!}
+
+
+
+-- PrivateSymbolOf' : ∀ {ih} → (defs : List (ContextEntry' ih))
+--                      (p : ParticipantId' ih) →
 --                      Type
--- PrivateSymbolOf' {ih} r p =
---   Σ IdentifierTy {!λ x → Bool→Type' (
+-- PrivateSymbolOf' {ih} defs p =
+--   Σ IdentifierTy λ x → fst (Bool→Type' (
 --       recMaybe
 --          false
---          (λ y → recMaybe false (λ p' → IdentifierTyTest (name p) (name p')) (InteractionHead.scope y))
---          (findBy (IdentifierTyTest x ∘ name) entries)) !} 
+--          (λ y → recMaybe false (λ p' → IdentifierTyTest (fst p) (fst p')) (proj₁ y))
+--          (findBy (IdentifierTyTest x ∘ proj₁ ∘ proj₂ ) defs)))  
 
-PrivateSymbolOf'= : ∀ {ih} → InteractionHead.PrivateSymbolOf {ih} ≡ {!!}
-PrivateSymbolOf'= = {!!}
+-- PrivateSymbolOf'= : ∀ {ih} → InteractionHead.PrivateSymbolOf {ih} ≡ {!PrivateSymbolOf' {ih}!}
+-- PrivateSymbolOf'= = {!!}
+
 
 record Interaction : Type₀ where
   pattern
@@ -646,20 +685,61 @@ module paramsSubst where
         cong (λ q → con q _) (map-List-∘ _ _ _ ∙ cong (λ a → map-List a (Γ .entries)) (funExt qqq) ∙ (sym (map-List-∘ _ _ _))   )
         where
           qqq : _
-          qqq = {!!}
-          -- qqq (ice (just x) name₁ type₁) = {!!}
- 
-        -- where
-        --   hh' : (x : BStmnt ih Γ) →
-        --        map-List
-        --        (λ x₁ →
-        --           Interaction.ice (map-Maybe (λ x₂ → x₂) (x₁ .scope)) (x₁ .name)
-        --           (x₁ .type))
-        --        (bindingMechanics' ih Γ (Interaction.bindingS x) .entries)
-        --        ≡ {!!}
+          qqq (ice nothing name₁ type₁) =
+            subst (λ bb →
+                            _≡_ {ℓ-zero}
+                      {ContextEntry (interactionHead (participants ih) [] {tt*})}
+                      (ice
+                       (map-Maybe {ℓ-zero} {ParticipantId ih} {ℓ-zero}
+                        {ParticipantId (interactionHead (participants ih) [] {tt*})}
+                        (λ x₁ → pId (name x₁))
+                        (if_then_else_ {ℓ-zero} {ContextEntry ih}
+                         bb
+                         (record { scope = nothing ; name = name₁ ; type = type₁ })
+                         (ice nothing name₁ type₁) .scope))
+                       (if_then_else_ {ℓ-zero} {ContextEntry ih}
+                        bb
+                        (record { scope = nothing ; name = name₁ ; type = type₁ })
+                        (ice nothing name₁ type₁) .name)
+                       (if_then_else_ {ℓ-zero} {ContextEntry ih}
+                        bb
+                        (record { scope = nothing ; name = name₁ ; type = type₁ })
+                        (ice nothing name₁ type₁) .type))
+                      (if_then_else_ {ℓ-zero}
+                       {ContextEntry (interactionHead (participants ih) [] {tt*})}
+                       bb -- (false and primStringEquality name₁ (x .name))
+                       (record { scope = nothing ; name = name₁ ; type = type₁ })
+                       (ice nothing name₁ type₁)))
+                  
+                  (sym (F-and _))
+                  refl
+          
+          qqq (ice (just xx) name₁ type₁) = 
+            𝟚-elim {A = λ bb →              
+                      _≡_ {ℓ-zero}
+                         {ContextEntry (interactionHead (participants ih) [] {tt*})}
+                         (ice
+                          (map-Maybe {ℓ-zero} {ParticipantId ih} {ℓ-zero}
+                           {ParticipantId (interactionHead (participants ih) [] {tt*})}
+                           (λ x₁ → pId (name x₁))
+                           (if_then_else_ {ℓ-zero} {ContextEntry ih} bb
+                            (record { scope = nothing ; name = name₁ ; type = type₁ })
+                            (ice (just xx) name₁ type₁) .scope))
+                          (if_then_else_ {ℓ-zero} {ContextEntry ih} bb
+                           (record { scope = nothing ; name = name₁ ; type = type₁ })
+                           (ice (just xx) name₁ type₁) .name)
+                          (if_then_else_ {ℓ-zero} {ContextEntry ih} bb
+                           (record { scope = nothing ; name = name₁ ; type = type₁ })
+                           (ice (just xx) name₁ type₁) .type))
+                         (if_then_else_ {ℓ-zero}
+                          {ContextEntry (interactionHead (participants ih) [] {tt*})} bb
+                          (record { scope = nothing ; name = name₁ ; type = type₁ })
+                          (ice (just (pId (name xx))) name₁ type₁))}
+               refl
+               refl
+               (primStringEquality (name p) (name xx) and
+                             primStringEquality name₁ (name x))
 
-        --   hh' (BS-let ce x) = {!!}
-        --   hh' (BS-publish! p x) = {!!}
       hh {x = nonBindingS x} = refl
 
   wwww {ih} = map-Linked'-map-fold (stripParamsCtx {ih}) _ _ 
