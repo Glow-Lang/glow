@@ -137,3 +137,4 @@ map-Linked'-map-fold {fld = fld} {fld' = fld'} g f e {c} (h ∷L l) =
 -- -- -- Iso.rightInv (Iso-Linked-Linked' fld c) = {!!}
 -- -- -- Iso.leftInv (Iso-Linked-Linked' fld c) = {!!}
 
+
