@@ -28,7 +28,7 @@
 <script>
 const axios = require("axios");
 export default {
-    props: ["dapp", "assets", "my_role", "participants", "params"],
+    props: ["dapp", "assets", "inputs", "my_role", "participants", "params"],
     data() {
         return {
             txid: null,
@@ -52,6 +52,7 @@ export default {
                     my_role: this.my_role,
                     participants: this.participants,
                     params: this.params,
+                    input: Object.values(this.inputs).join(''), // FIXME
                 }
             }).then(this.transactionStarted);
             false

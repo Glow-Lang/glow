@@ -89,6 +89,7 @@
                            my_role: my_role,
                            participants: participants,
                            params: params,
+                           inputs: inputs,
                        }
                    }">Run {{ dapp }}</q-btn>
           </q-card-section>

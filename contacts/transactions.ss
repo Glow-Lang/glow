@@ -176,7 +176,10 @@
                                                        (hash-keys participants))
                                                   string<?)))
                            "nc -l 3141"
-                           "nc localhost 3141")))
+                           "nc localhost 3141"))
+            (input (hash-ref args 'input)))
+       (when (string? input)
+         (setenv "INPUT" input))
        `("glow" "start-interaction"
          "--max-initial-block" "%10000"
          "--timeout-in-blocks" "1000"
