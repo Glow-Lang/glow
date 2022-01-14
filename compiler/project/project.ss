@@ -66,8 +66,8 @@
                    (else []))))
     ((publish! . _) (project-publish stx cpit this-p))
     ((deposit! . _) (project-deposit stx cpit this-p))
-    ((withdraw! p e) (project-withdraw stx cpit this-p))
-    ((require! v) (project-require stx cpit this-p))
+    ((withdraw! _ p e) (project-withdraw stx cpit this-p))
+    ((require! _ v) (project-require stx cpit this-p))
     ((assert! v) (project-assert stx cpit this-p))
     ((switch c cases ...) (project-switch stx cpit this-p))
     ((def v e) (retail-stx stx [#'v (project-expr #'e cpit this-p)]))
@@ -86,28 +86,28 @@
 ;; project-publish : StmtStx CpiTable MPart -> [Listof StmtStx]
 (def (project-publish stx cpit this-p)
   (syntax-case stx ()
-    ((_ p x)
+    ((_ lbl p x)
      (append (project-set-participant #'p cpit this-p)
              (cond
-               ((eq? (stx-e #'p) this-p) [#'(add-to-publish 'x x)])
-               (else [#'(def x (expect-published 'x))]))))))
+               ((eq? (stx-e #'p) this-p) [#'(add-to-publish lbl 'x x)])
+               (else [#'(def x (expect-published lbl 'x))]))))))
 
 ;; project-deposit : StmtStx CpiTable MPart -> [Listof StmtStx]
 (def (project-deposit stx cpit this-p)
   (syntax-case stx ()
-    ((_ p n)
+    ((_ l p n)
      (append (project-set-participant #'p cpit this-p)
              (cond
-               ((eq? (stx-e #'p) this-p) [#'(add-to-deposit n)])
-               (else [#'(expect-deposited n)]))))))
+               ((eq? (stx-e #'p) this-p) [#'(add-to-deposit l n)])
+               (else [#'(expect-deposited l n)]))))))
 
 ;; project-withdraw : StmtStx CpiTable MPart -> [Listof StmtStx]
 (def (project-withdraw stx cpit this-p)
   (syntax-case stx ()
-    ((_ p n)
+    ((_ l p n)
      (cond
-       (this-p [#'(participant:withdraw p n)])
-       (else [#'(consensus:withdraw p n)])))))
+       (this-p [#'(participant:withdraw l p n)])
+       (else [#'(consensus:withdraw l p n)])))))
 
 ;; project-require : StmtStx CpiTable MPart -> [Listof StmtStx]
 (def (project-require stx cpit this-p)
@@ -115,7 +115,7 @@
     ;; TODO: use exceptions that enable the backtracking on failure
     ;; TODO: provide compile-time srclocs for runtime handler
     ;; TODO: add participant and project-set-participant
-    ((require! x) [stx])))
+    ((require! lbl x) [stx])))
 
 ;; project-assert : StmtStx CpiTable MPart -> [Listof StmtStx]
 (def (project-assert stx cpit this-p)

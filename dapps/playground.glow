@@ -1,0 +1,12 @@
+#lang glow
+
+@interaction([A, B])
+let publishHello = () => {
+    @A let ha = "Hello, B, I am A. How do you do?";
+    publish! A -> ha;
+
+    let xx = 3;
+
+    @B let hb = "Hello, A. I am B. How do YOU do?";
+    publish! B -> hb;
+};

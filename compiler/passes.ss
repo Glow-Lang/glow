@@ -20,6 +20,7 @@
   :mukn/glow/compiler/checkpointify/checkpoint-info-table
   :mukn/glow/compiler/liveness/checkpoint-liveness
   :mukn/glow/compiler/project/project
+  :mukn/glow/compiler/verification/verification
   )
 
 ;;; Layers, passes and strategies
@@ -40,6 +41,10 @@
 
 ;; With `@debug-label`s added
 (define-layer dlb.sexp read-sexp-module write-sexp-module stx-sexpr=?)
+
+;; List of labels of labelled statements/expressions 
+(define-layer stmnts-labels read-sexp-module write-sexp-module stx-sexpr=?)
+
 
 ;; Alpha-converted Glow programs, and the Unused table and AlphaBackTable
 (define-layer alpha.sexp read-sexp-module write-sexp-module stx-sexpr=?)
@@ -93,6 +98,9 @@
 ;; Port → ModuleStx
 (define-pass parse (glow) (sexp))
 
+(define-pass scan-for-labels (sexp) (stmnts-labels))
+
+
 ;; ModuleStx -> ModuleStx
 (define-pass debug-label (sexp) (dlb.sexp))
 
@@ -102,7 +110,7 @@
 ;; TODO: the user-visible identifiers should stay the same (i.e. (export #f) by default?)
 ;; TODO: in some future, intersperse alpha-conversion, macro-expansion and type-inference passes?
 ;; ModuleStx → (values ModuleStx Unused AlphaEnv)
-(define-pass alpha-convert (dlb.sexp) (alpha.sexp Unused albatable.sexp DebugLabelTable AlphaEnv))
+(define-pass alpha-convert (dlb.sexp stmnts-labels) (alpha.sexp Unused albatable.sexp DebugLabelTable AlphaEnv))
 
 ;; *Desugaring*: expand away some more complex syntax into simpler one.
 ;; NB: Unused is used as a side-effect instead of passed in a pure monadic style
@@ -113,7 +121,7 @@
 ;; with an inferred (or explicitly specified) type
 ;; NB: the Unused table is modified in this pass
 ;; ModuleStx Unused → TypeEnv
-(define-pass typecheck (desugar.sexp Unused) (typedecl.sexp TypeInfoTable))
+(define-pass typecheck (desugar.sexp stmnts-labels Unused) (typedecl.sexp TypeInfoTable))
 
 ;; *Method-resolve*: handle type methods, attached in `defdata with:` and accessed in `type.method`
 (define-pass method-resolve (desugar.sexp Unused) (mere.sexp typetable.sexp tymetable.sexp mebatable.sexp))
@@ -146,6 +154,8 @@
 ;; *Projection*: contract and participants in a single file
 (define-pass project (checkpointify.sexp Unused cpitable2.sexp) (project.sexp))
 
+(define-pass verification (project.sexp stmnts-labels typetable.sexp) ())
+
 ;; *Contract Projection*: extract a contract for every interaction
 ;;(define-pass contract-projection ".message.sexp" ".contract.sexp")
 
@@ -167,7 +177,8 @@
 ;;(define-pass javascript-extraction ".client.sexp" ".js")
 
 (define-strategy ethereum-direct-style
-  parse debug-label alpha-convert desugar typecheck method-resolve anf checkpointify checkpoint-liveness project) ;; ...
+  parse scan-for-labels
+    debug-label alpha-convert desugar typecheck method-resolve anf checkpointify checkpoint-liveness project verification) ;; ...
 
 ;; Different layers and passes for State-Channel style:
 ;; the previous contract is virtualized, so that

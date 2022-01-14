@@ -177,16 +177,16 @@
     (else ; nothing was never anywhere
      (void))))
 
-;; participant:withdraw : Address Nat -> Void
-(def (participant:withdraw p n)
+;; participant:withdraw : Label Address Nat -> Void
+(def (participant:withdraw l p n)
   (def prg (current-in-progress-message))
   (cond
-    (prg (add-to-withdraw p n))
-    (else (expect-withdrawn p n))))
+    (prg (add-to-withdraw l p n))
+    (else (expect-withdrawn l p n))))
 
-;; consensus:withdraw : Address Nat -> Void
-(def (consensus:withdraw p n)
-  (expect-withdrawn p n))
+;; consensus:withdraw : Label Address Nat -> Void
+(def (consensus:withdraw l p n)
+  (expect-withdrawn l p n))
 
 ;; --------------------------------------------------------
 
@@ -267,8 +267,8 @@
   ;; ignore x, by order not by name
   (unmarshal t (message-published (current-receiving-message))))
 
-;; add-to-deposit : Nat -> Void
-(def (add-to-deposit n)
+;; add-to-deposit : Label Nat -> Void
+(def (add-to-deposit l n)
   (def msg (current-in-progress-message))
   (def p (message-sender msg))
   (def mat (message-asset-transfers msg))
@@ -276,8 +276,8 @@
   (def mat3 (assq-update mat2 #f (cut + <> n) 0))
   (set! (message-asset-transfers msg) mat3))
 
-;; expect-deposited : Nat -> Void
-(def (expect-deposited n)
+;; expect-deposited : Label Nat -> Void
+(def (expect-deposited l n)
   (def msg (current-receiving-message))
   (def p (message-sender msg))
   (def mat (message-asset-transfers msg))
@@ -285,16 +285,16 @@
   (def mat3 (assq-update mat2 #f (cut - <> n) 0))
   (set! (message-asset-transfers msg) mat3))
 
-;; add-to-withdraw : Address Nat -> Void
-(def (add-to-withdraw p n)
+;; add-to-withdraw : Label Address Nat -> Void
+(def (add-to-withdraw l p n)
   (define msg (current-in-progress-message))
   (def mat (message-asset-transfers msg))
   (def mat2 (assq-update mat p  (cut + <> n) 0))
   (def mat3 (assq-update mat2 #f (cut - <> n) 0))
   (set! (message-asset-transfers msg) mat3))
 
-;; expect-withdrawn : Address Nat -> Void
-(def (expect-withdrawn p n)
+;; expect-withdrawn : Label Address Nat -> Void
+(def (expect-withdrawn l p n)
   (define msg (current-receiving-message))
   (def mat (message-asset-transfers msg))
   (def mat2 (assq-update mat p  (cut - <> n) 0))

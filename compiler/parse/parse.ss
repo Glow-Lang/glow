@@ -36,6 +36,12 @@
     ("&&" 'and)
     ("||" 'or)
     ("!" 'not)
+
+    ("OR" 'propOr)
+    ("AND" 'propAnd)
+    ("~>" 'propImpl)
+    ("NOT" 'propNot)
+    
     ("|||" 'bitwise-or)
     ("&&&" 'bitwise-and)
     ("^^^" 'bitwise-xor)
@@ -78,10 +84,10 @@
        (if (and (symbol? f) (memq f keyword-syms))
            `(,f ,@(map expr->sexpr args))
            `(@app ,f ,@(map expr->sexpr args)))))
-    ((require-expression exp) `(require! ,(expr->sexpr exp)))
+    ((require-expression lbl exp) `(require! ,(and lbl (id->sexpr lbl)) ,(expr->sexpr exp)))
     ((assert-expression exp) `(assert! ,(expr->sexpr exp)))
-    ((deposit-expression id exp) `(deposit! ,(id->sexpr id) ,(expr->sexpr exp)))
-    ((withdraw-expression id exp) `(withdraw! ,(id->sexpr id) ,(expr->sexpr exp)))
+    ((deposit-expression lbl id exp) `(deposit! ,(and lbl (id->sexpr lbl)) ,(id->sexpr id) ,(expr->sexpr exp)))
+    ((withdraw-expression lbl id exp) `(withdraw! ,(and lbl (id->sexpr lbl)) ,(id->sexpr id) ,(expr->sexpr exp)))
     ((expression-with-attribute attr expr) `(@ ,(attr->sexpr attr) ,(expr->sexpr expr)))
     ((dot-expression expr id) `(@dot ,(expr->sexpr expr) ,(id->sexpr id)))
     ((type-annotation-expression expr typ) `(ann ,(expr->sexpr expr) ,(type->sexpr typ)))
@@ -107,7 +113,7 @@
 ;; stat->sexpr : Statement -> SExpr
 (def (stat->sexpr s)
   (match s
-    ((publish-statement p-id x-ids) `(publish! ,(id->sexpr p-id) ,@(map id->sexpr x-ids)))
+    ((publish-statement lbl p-id x-ids) `(publish! ,(and lbl (id->sexpr lbl)) ,(id->sexpr p-id) ,@(map id->sexpr x-ids)))
     ((verify-statement ids)       `(verify! ,@(map id->sexpr ids)))
     ((type-alias-declaration id typarams typ)
      (cond

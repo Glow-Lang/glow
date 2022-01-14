@@ -1,0 +1,36 @@
+#lang glow
+// TODO: insert escrow in a compiler pass
+@interaction([A, B])
+let coinFlip = (x : Nat, flag : Bool) => {
+
+   depositLabel : deposit! A -> x;
+   deposit! B -> x;
+
+  
+
+   @B let bBB = input(Bool, "Enter B's second parameter:");
+
+   
+   let a1 = true;   
+   require! a1;
+
+   let a2 = true;   
+   requireLabel : require! a2;
+
+   @B let bB = input(Bool, "Enter B's parameter:");
+   publishLabel : publish! B -> bB;
+
+
+   @A let bA = input(Bool, "Enter A's parameter:");
+   publish! A -> bA;
+
+   
+
+   publish! B -> bBB;
+
+    if (bA == bB) {
+        withdrawLabel : withdraw! A <- 2*x;
+    } else {
+        withdraw! B <- 2*x;
+    }
+};

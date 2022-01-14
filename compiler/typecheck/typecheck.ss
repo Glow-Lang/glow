@@ -11,6 +11,7 @@
 (import :gerbil/gambit/exact
         :gerbil/gambit/bytes
         :gerbil/gambit/exceptions
+        :gerbil/gambit/misc
         <expander-runtime>
         :std/format
         :std/iter
@@ -665,7 +666,18 @@
    ('Digest (entry:type #f [] type:Digest))
    ('Assets (entry:type #f [] type:Assets))
    ('Signature (entry:type #f [] type:Signature))
+   ('Label (entry:type #f [] type:Label))
+   ('Proposition (entry:type #f [] type:Proposition))
    ('not (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Bool] type:Bool))))
+   
+   ('canReach (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Label] type:Proposition))))
+   ('isTrue (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Bool] type:Proposition))))
+   ('propImpl (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Proposition type:Proposition] type:Proposition))))
+   ('propAnd (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Proposition type:Proposition] type:Proposition))))
+   ('propOr (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Proposition type:Proposition] type:Proposition))))
+   ('propNot (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Proposition] type:Proposition))))
+   
+   
    ('<= (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Int type:Int] type:Bool))))
    ('< (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Int type:Int] type:Bool))))
    ('> (entry:known #f (typing-scheme empty-symdict (type:arrow [type:Int type:Int] type:Bool))))
@@ -689,17 +701,24 @@
 ;; typecheck : ModuleStx UnusedTable → (values Env TypeInfoTable)
 ;; Input unused-table is mutated.
 ;; Output env has types of top-level identifiers.
-(def (typecheck module unused-table)
+(def (typecheck module stmnts-labels unused-table)
   (def type-info-tbl (copy-current-type-info-table))
   (parameterize ((current-unused-table unused-table)
                  (current-type-info-table type-info-tbl)
                  (current-symbol-ntype-table (make-symbol-ntype-table)))
-    (syntax-case module (@module)
+    (let (env-with-labels
+          init-env)
+      (map
+       (lambda (lbl-sym)
+         (set! env-with-labels (symdict-put env-with-labels lbl-sym (entry:known #f (typing-scheme empty-symdict type:Label)))))
+       stmnts-labels)
+
+      (syntax-case module (@module)
       ((@module stmts ...)
-       (let-values (((penv nenv) (tc-stmts #f init-env (syntax->list #'(stmts ...)))))
+       (let-values (((penv nenv) (tc-stmts #f env-with-labels (syntax->list #'(stmts ...)))))
          (unless (symdict-empty? nenv)
            (error 'typecheck "non-empty D⁻ for free lambda-bound vars at top level"))
-         (values penv type-info-tbl))))))
+         (values penv type-info-tbl)))))))
 
 ;; tc-stmts : MPart Env [Listof StmtStx] -> (values Env MonoEnv)
 ;; the env result contains only the new entries introduced by the statements
@@ -740,7 +759,7 @@
     ((deftype . _) (tc-stmt-deftype part env stx))
     ((defdata . _) (tc-stmt-defdata part env stx))
     ((def . _) (tc-stmt-def part env stx))
-    ((publish! participant v) (and (identifier? #'participant) (identifier? #'v))
+    ((publish! _ participant v) (and (identifier? #'participant) (identifier? #'v))
      (tc-stmt-publish part env stx))
     (expr
      (with (((typing-scheme menv _) (tc-expr part env #'expr)))
@@ -957,7 +976,7 @@
 ;; tc-stmt-publish : MPart Env StmtStx -> (values Env MonoEnv)
 (def (tc-stmt-publish part env stx)
   (syntax-case stx (publish!)
-    ((publish! participant v) (and (identifier? #'participant) (identifier? #'v))
+    ((publish! _ participant v) (and (identifier? #'participant) (identifier? #'v))
      (if part (error 'publish! "only allowed in the consensus")
          (let (pt (tc-expr/check part env #'participant type:Participant))
            ;; TODO LATER: check that v is a variable with a *data* type.
@@ -986,6 +1005,7 @@
   (def (tce e) (tc-expr part env e))
   ;; tce/bool : ExprStx -> TypingScheme
   (def (tce/bool e) (tc-expr/check part env e type:Bool))
+  (def (tce/proposition e) (tc-expr/check part env e type:Proposition))
   (syntax-case stx (: ann @dot @dot/type @tuple @record @list @app-ctor @app and or if block splice == sign λ @make-interaction switch input digest require! assert! deposit! withdraw!)
     ((ann expr type)
      (tc-expr/check part env #'expr (parse-type part env covariant empty-symdict #'type)))
@@ -1039,15 +1059,15 @@
        ;;       can be computed for
        (typing-scheme (menvs-meet (map typing-scheme-menv ts))
                       type:Digest)))
-    ((require! e)
+    ((require! _ e)
      (let ((et (tce/bool #'e)))
        (typing-scheme (typing-scheme-menv et) type:Unit)))
     ((assert! e)
-     (let ((et (tce/bool #'e)))
+     (let ((et (tce/proposition #'e)))
        (typing-scheme (typing-scheme-menv et) type:Unit)))
-    ((deposit! x e) (identifier? #'x)
+    ((deposit! _ x e) (identifier? #'x)
      (tc-deposit-withdraw part env stx))
-    ((withdraw! x e) (identifier? #'x)
+    ((withdraw! _ x e) (identifier? #'x)
      (tc-deposit-withdraw part env stx))
     ((@app-ctor f a ...) (tc-expr-app part env stx))
     ((@app f a ...) (tc-expr-app part env stx))
@@ -1174,7 +1194,7 @@
 ;; tc-deposit-withdraw : MPart Env ExprStx -> TypingScheme
 (def (tc-deposit-withdraw part env stx)
   (syntax-case stx (@record)
-    ((dw participant (@record (asset amount)))
+    ((_ dw participant (@record (asset amount)))
      (let ()
        (when part (error (stx-e #'dw) "only allowed in the consensus"))
        (def pt (tc-expr/check part env #'participant type:Participant))

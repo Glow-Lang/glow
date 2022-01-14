@@ -1,8 +1,13 @@
 #lang glow
 // TODO: insert escrow in a compiler pass
+// (@debug-label dlb10)
+// (@debug-label dlb11)
+
+
 @interaction([A, B])
 let coinFlip = (wagerAmount, escrowAmount) => {
-    //@A assert! canReach(A_wins);
+    //assert! canReach(dlb10);
+    //assert! canReach(dlb11);
     @A let randA = randomUInt256();
     @verifiably!(A) let commitment = digest(randA);
     publish! A -> commitment; deposit! A -> wagerAmount + escrowAmount;

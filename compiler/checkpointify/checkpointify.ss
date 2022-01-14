@@ -304,18 +304,18 @@
     ((defdata . _) (simple [] []))
     ((deftype . _) (simple [] []))
     ;; NB: after ANF, p e v below are guaranteed identifiers
-    ((withdraw! p (@record (_ e) ...)) (simple [stx] (used<-args #'(p e ...))))
-    ((require! v) (simple [] (used<-arg #'v)))
+    ((withdraw! lbl p (@record (_ e) ...)) (simple [stx] (used<-args #'(p e ...))))
+    ((require! lvl v) (simple [] (used<-arg #'v)))
     ((assert! v) (simple [] (used<-arg #'v)))))
 
 (def (checkpointify-publish stx)
   (syntax-case stx ()
-    ((_ p v)
+    ((_ lbl p v)
      (values stx (make-ssi (stx-e #'p) [stx] (used<-arg #'v) (cons (syntax->datum #'(v . p)) (used<-arg #'p)))))))
 
 (def (checkpointify-deposit stx)
   (syntax-case stx (@record)
-    ((_ p (@record (_ v) ...))
+    ((_ _ p (@record (_ v) ...))
      (values stx (make-ssi (stx-e #'p) [stx] [] (used<-args #'(p v ...)))))))
 
 (def (checkpointify-body stx prefix body ti acc)

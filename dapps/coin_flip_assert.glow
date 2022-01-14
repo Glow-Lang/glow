@@ -2,7 +2,9 @@
 // TODO: insert escrow in a compiler pass
 @interaction([A, B])
 let coinFlip = (wagerAmount, escrowAmount) => {
-    //@A assert! canReach(A_wins);
+    let valTrue = true;
+    
+    @A assert! (canReach(A_wins) AND ((NOT isTrue(valTrue)) ~> canReach(B_wins)) );
     @A let randA = randomUInt256();
     @verifiably!(A) let commitment = digest(randA);
     publish! A -> commitment; deposit! A -> wagerAmount + escrowAmount;
@@ -12,11 +14,9 @@ let coinFlip = (wagerAmount, escrowAmount) => {
     publish! A -> randA;
     verify! commitment;
     if (((randA ^^^ randB) &&& 1) == 0) {
-        //A_wins:
-        withdraw! A <- 2*wagerAmount + escrowAmount
+        A_wins : withdraw! A <- 2*wagerAmount + escrowAmount
     } else {
-        //B_wins:
-        withdraw! B <- 2*wagerAmount;
+        B_wins : withdraw! B <- 2*wagerAmount;
         withdraw! A <- escrowAmount
     }
 };

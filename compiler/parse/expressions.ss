@@ -33,10 +33,10 @@
 ;;  - (list-expression (Listof Expression))
 ;;  - (record-expression (Assocof Identifier Expression))
 ;;  - (call-expression Expression Arguments)
-;;  - (require-expression Expression)
+;;  - (require-expression Label Expression)
 ;;  - (assert-expression Expression)
-;;  - (deposit-expression Identifier Expression)
-;;  - (withdraw-expression Identifier Expression)
+;;  - (deposit-expression Label Identifier Expression)
+;;  - (withdraw-expression Label Identifier Expression)
 ;;  - (dot-expression Expression Identifier)
 ;;  - (type-annotation-expression Expression Type)
 ;;  - (body-expression (Listof Statement) Expression)
@@ -60,7 +60,7 @@
 ;; runs the body expression if the pattern matches the dispatch value
 
 ;; A Statement is one of:
-;;  - (publish-statement Identifier (Listof Identifier))
+;;  - (publish-statement Label Identifier (Listof Identifier))
 ;;  - (verify-statement (Listof Identifier))
 ;;  - (type-alias-declaration Identifier (OrFalse (Listof Identifier)) Type)
 ;;  - (data-type-declaration Identifier (OrFalse (Listof Variant)))
@@ -174,7 +174,7 @@
 
 (defstruct (unary-expression expression) (op expression) transparent: #t)
 (def UnaryExpression
-    (.let* ((op (.or (member-token-value? ["+" "-" "~~~" "!"]) #f))
+    (.let* ((op (.or (member-token-value? ["+" "-" "~~~" "!" "NOT"]) #f))
             (exp TypeAnnotationPrimaryExpression))
               (if op  (return (unary-expression op exp)) exp)))
 
@@ -235,7 +235,27 @@
 (def LogicalORExpression
   (Operator logical-or-expression LogicalANDExpression "||"))
 
-(def ConditionalExpression (.begin #t LogicalORExpression))
+
+
+(defstruct (propositional-and-expression binary-expression) () transparent: #t)
+(def PropositionalANDExpression
+  (Operator propositional-and-expression LogicalORExpression "AND"))
+
+(defstruct (propositional-or-expression binary-expression) () transparent: #t)
+(def PropositionalORExpression
+  (Operator propositional-or-expression PropositionalANDExpression "OR"))
+
+
+(defstruct (propositional-implication-expression binary-expression) () transparent: #t)
+(def PropositionalImplicationExpression
+  (Operator propositional-implication-expression PropositionalORExpression "~>"))
+
+(def ConditionalExpression (.begin #t PropositionalImplicationExpression))
+
+
+;; (def PropositionExpression (.begin #t ConditionalExpression))
+                                   
+
 (def ArithmeticExpression (.begin #t ConditionalExpression))
 
 
@@ -252,27 +272,67 @@
 
 (defstruct (call-expression expression) (function arguments)  transparent: #t)
 
-(defstruct (require-expression expression) (exp) transparent: #t)
+(defstruct (require-expression expression) (lbl exp) transparent: #t)
 (def RequireExpression
     (.let* ((exp ConditionalExpression))
-          (return (require-expression exp))))
+          (return (require-expression #f exp))))
+
+
+(def LabelledRequireExpression
+    (.let* ((lbl Identifier)
+            (_(equal-token-value?  #\:))
+            (_(equal-token-value? "require!"))
+            (rexp RequireExpression)
+            )
+           (return (require-expression
+                    lbl
+                    (require-expression-exp rexp)
+                    ))))
+
 
 (defstruct (assert-expression expression) (exp) transparent: #t)
 (def AssertExpression
     (.let* ((exp ConditionalExpression))
           (return (assert-expression exp))))
 
-(defstruct (deposit-expression expression) (id exp) transparent: #t)
+(defstruct (deposit-expression expression) (lbl id exp) transparent: #t)
 (def DepositExpression
     (.let* ((id Identifier) (_(equal-token-value? "->")) (exp Expression))
-          (return (deposit-expression id exp))))
+          (return (deposit-expression #f id exp))))
 
-(defstruct (withdraw-expression expression) (id exp) transparent: #t)
+(defstruct (withdraw-expression expression) (lbl id exp) transparent: #t)
 (def WithdrawExpression
     (.let* ((id Identifier)
             (_(equal-token-value? "<-"))
             (exp ArithmeticExpression))
-          (return (withdraw-expression id exp))))
+          (return (withdraw-expression #f id exp))))
+
+(def LabelledWithdrawExpression
+    (.let* ((lbl Identifier)
+            (_(equal-token-value?  #\:))
+            (_(equal-token-value? "withdraw!"))
+            (wexp WithdrawExpression)
+            )
+           (return (withdraw-expression
+                    lbl
+                    (withdraw-expression-id wexp)
+                    (withdraw-expression-exp wexp)
+                    ))))
+
+(def LabelledDepositExpression
+    (.let* ((lbl Identifier)
+            (_(equal-token-value?  #\:))
+            (_(equal-token-value? "deposit!"))
+            (dexp DepositExpression)
+            )
+           (return (deposit-expression
+                    lbl
+                    (deposit-expression-id dexp)
+                    (deposit-expression-exp dexp)
+                    ))))
+
+
+
 
 (defstruct (expression-with-attribute expression) (attr  expr) transparent: #t)
 (def ExpressionWithAttribute
@@ -465,7 +525,11 @@
 
 
 (def Expression
-  (.begin (.or ExpressionWithAttribute IfExpression SwitchExpression
+     (.begin (.or ExpressionWithAttribute IfExpression SwitchExpression
+                  LabelledWithdrawExpression
+                  LabelledDepositExpression
+                  LabelledRequireExpression
+                  
     (.begin (peek (member-token-value? ["deposit!" "withdraw!" "assert!" "require!"]))
       (.let* (t (item))
         (cond
@@ -475,10 +539,23 @@
           ((string=? (get-token-value t) "require!") RequireExpression))))
     ArithmeticExpression)))
 
-(defstruct (publish-statement statement) (id expr) transparent: #t)
+(defstruct (publish-statement statement) (lbl id expr) transparent: #t)
 (def PublishStatement
     (.let* ( (p-id Identifier) (_(equal-token-value? "->")) (x-ids (sepby1 Identifier (equal-token-value? #\,))) )
-      (return (publish-statement p-id x-ids))))
+      (return (publish-statement #f p-id x-ids))))
+
+(def LabelledPublishStatement
+    (.let* ((lbl Identifier)
+            (_(equal-token-value?  #\:))
+            (_(equal-token-value? "publish!"))
+            (pstmnt PublishStatement)
+            )
+           (return (publish-statement
+                    lbl
+                    (publish-statement-id pstmnt)
+                    (publish-statement-expr pstmnt)
+                    ))))
+
 
 (defstruct (verify-statement statement) (id) transparent: #t)
 (def VerifyStatement
@@ -504,13 +581,15 @@
         (return (data-type-declaration name typarams variants))))
 
 (def SubStatement
+     (.begin (.or LabelledPublishStatement
+              
   (.begin (peek (member-token-value? ["verify!" "publish!" "data" "type"]))
     (.let* (t (item))
       (cond
         ((string=? (get-token-value t) "verify!") VerifyStatement)
         ((string=? (get-token-value t) "publish!") PublishStatement)
         ((string=? (get-token-value t) "type") TypeAliasDeclaration)
-        ((string=? (get-token-value t) "data") DataTypeDeclaration)))))
+        ((string=? (get-token-value t) "data") DataTypeDeclaration)))))))
 
 (defstruct (expression-statement statement) (expr) transparent: #t)
 (def ExpressionStatement (.let* ((exp Expression) )

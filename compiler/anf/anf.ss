@@ -145,7 +145,8 @@
 ;; Simplify an expression with a known head constructor
 ;; anf-multiarg-expr : ExprStx [Listof StmtStx] -> (values ExprStx [Listof StmtStx])
 (def (anf-multiarg-expr stx acc)
-  (syntax-case stx ()
+     (syntax-case stx ()
+       ((assert! . _) (values stx acc)) ;; TODO : make sure that this is good idea!!
     ((hd args ...)
      (let-values (((xs acc2) (anf-arg-exprs (syntax->list #'(args ...)) acc)))
        (values (restx stx [#'hd . xs]) acc2)))))
@@ -212,11 +213,11 @@
 
 (def (anf-k-deposit-withdraw k stx acc)
   (syntax-case stx (@record)
-    ((_ p (@record (x e) ...))
+    ((_ lbl p (@record (x e) ...))
      (let-values (((rs acc2) (anf-arg-exprs (syntax->list #'(e ...)) acc)))
        (anf-kontinue-stmt k
          (cons
-           (retail-stx stx [#'p (cons '@record (stx-map list #'(x ...) rs))])
+           (retail-stx stx [#'lbl #'p (cons '@record (stx-map list #'(x ...) rs))])
            acc2))))))
 
 ;; anf-body : KontStx StmtsStx [Listof StmtStx] -> [Listof StmtStx]
