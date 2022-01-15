@@ -86,8 +86,29 @@ map-Linked'-map-fold : {C C' : Type₀} { A : C → Type₀} {A' : C' → Type�
                     → (l : Linked' fld c) → g (foldLinked' l) ≡  foldLinked' {C'} {A'} {fld'} (map-Linked'-map g f e l) 
 map-Linked'-map-fold g f e []L = refl
 map-Linked'-map-fold {fld = fld} {fld' = fld'} g f e {c} (h ∷L l) =
-  map-Linked'-map-fold {fld' = fld'} g f e l ∙
+  map-Linked'-map-fold {fld' = fld'} g f e l ∙   
+        -- {!!}
       λ i → foldLinked' (transp (λ i₁ → Linked' fld' (e {c } {h} (i ∧ i₁ ))) (~ i) (map-Linked'-map g f e l)) --λ i → {!!}
+
+
+-- remove unsafe pragma by stratifying on lengths
+{-# TERMINATING #-}
+map-Linked'-map-bck : {C C' : Type₀} { A : C → Type₀} {A' : C' → Type₀} {fld : ∀ c → A c → C} {fld' : ∀ c → A' c → C'}
+                   (g : C' → C) → (f :  ∀ {c'} → A (g c') → A' c' ) → (∀ {c'} → {x : A (g c')} → (fld _ x) ≡ g (fld' _ (f x)) )
+                    → {c' : C'} → Linked' fld (g c') → Linked' fld' c' 
+map-Linked'-map-bck g f e []L = []L
+map-Linked'-map-bck {C = C} {C' = C'} {fld = fld} {fld' = fld'} g f e {c} (h ∷L x) = 
+  f h ∷L map-Linked'-map-bck {C = C} {C' = C'} {fld = fld} {fld' = fld'} g f e ( subst (Linked' fld) e x) 
+
+{-# TERMINATING #-}
+map-Linked'-map-fold-bck : {C C' : Type₀} { A : C → Type₀} {A' : C' → Type₀} {fld : ∀ c → A c → C} {fld' : ∀ c → A' c → C'}
+                     (g : C' → C) → (f :  ∀ {c'} → A (g c') → A' c' ) → (e : ∀ {c'} → {x : A (g c')} → (fld _ x) ≡ g (fld' _ (f x)) )
+                    → {c' : C'} → (l : Linked' fld (g c')) → foldLinked' l ≡  g (foldLinked' {C'} {A'} {fld'} (map-Linked'-map-bck g f e l)) 
+map-Linked'-map-fold-bck g f e []L = refl
+map-Linked'-map-fold-bck {C} {C'} {A} {A'} {fld = fld} {fld' = fld'} g f e {c} (h ∷L l) =
+  let z = map-Linked'-map-fold-bck {fld = fld} {fld' = fld'} g f e ( subst (Linked' fld) e l)
+  in  (λ i → foldLinked' (subst-filler (Linked' fld) e l i)) ∙ z
+
 
 -- -- TODO : remove unsafe pragma by stratifing on lengths
 -- module _ {C : Type₀} {A : C → Type₀} (fld : ∀ c → A c → C) where

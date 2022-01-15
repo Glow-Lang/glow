@@ -59,10 +59,7 @@ module alwaysCanPrepend (ptps : List IdentifierTy) where
   preppend-narrow-comm : (Γ : Context) → (ce : ContextEntry) → ∀ scp → ∀ narrowOk → ∀  narrowOk' → 
                                    prependContext ce (narrow Γ scp narrowOk) ≡
                                         narrow (prependContext ce Γ) scp narrowOk'
-  preppend-narrow-comm (InteractionHead.con entries₁ nothing) (InteractionHead.ice nothing name₁ type₁) scp narrowOk narrowOk' = refl
-  preppend-narrow-comm (InteractionHead.con entries₁ nothing) (InteractionHead.ice (just x) name₁ type₁) scp narrowOk narrowOk' = refl
-  preppend-narrow-comm (InteractionHead.con entries₁ (just x)) (InteractionHead.ice nothing name₁ type₁) scp narrowOk narrowOk' = refl
-  preppend-narrow-comm (InteractionHead.con entries₁ (just x)) (InteractionHead.ice (just x₁) name₁ type₁) scp narrowOk narrowOk' = refl
+  preppend-narrow-comm Γ ce scp narrowOk narrowOk' = refl
 
 
   {-# TERMINATING #-}
@@ -132,18 +129,8 @@ module alwaysCanPrepend (ptps : List IdentifierTy) where
   
   prependContextNBStmnt ce {Γ} (exprNBS x) = exprNBS (prependContextExpr ce {Γ} _ x)
 
-  prependContextBStmnt ce {Γ} (BS-let ce₁ {asn} x) =
-                               let (asn' , x') = maybe-elim
-                                           {B = λ scope* →
-                                                Σ ⟨ AllowedScopeNarrowing Γ scope* ⟩ (λ asn → Expr (narrow Γ scope* asn) (type ce₁))
-                                                      → Σ ⟨ AllowedScopeNarrowing (prependContext ce Γ) scope* ⟩
-                                                             (λ asn → Expr (narrow (prependContext ce Γ) scope* asn) (type ce₁))}
-                                           (λ x → tt* , subst (λ y → Expr y (type ce₁)) (preppend-narrow-comm Γ _ _ _ _) (prependContextExpr ce _ (snd x)))
-                                           (λ _ x → fst x , subst (λ y → Expr y (type ce₁)) (preppend-narrow-comm Γ _ _ (fst x) (fst x)) (prependContextExpr ce _ (snd x)) )
-                                           (ce₁ .scope) (asn , x)
-                               in BS-let ce₁ {asn'} x'
-  prependContextBStmnt ce {Γ} (BS-publish! p x {y}) =
-                               BS-publish! p (prependContextPrivateSymbolOf ce p x ) {y}
+  prependContextBStmnt ce {Γ} (BS-let ce₁ {asn} x) = BS-let ce₁ {asn} (prependContextExpr ce _ x)
+  prependContextBStmnt ce {Γ} (BS-publish! p x {y}) = BS-publish! p (prependContextPrivateSymbolOf ce p x ) {y}
 
   prependContextExpr ce {Γ} Τ (var x) = var (dsot (x .name) {prependContextIsDefinedSymbolOfTy ce {Γ} {Τ} (x .name) (x .isDefinedSymbolOfTy)})
   prependContextExpr ce {Γ} Τ (stmnts₁ ;b expr₁) =
@@ -200,95 +187,7 @@ module alwaysCanPrepend (ptps : List IdentifierTy) where
 
 
 
--- module ExprEval  (ptps : List IdentifierTy) where
-
---   ih = interactionHead ptps [] 
-
---   open InteractionHead ih
-
-  
-
-
-
---   {-# TERMINATING #-}
---   sbstVarStmnts : (Γ : Context) → (ce : ContextEntry) → AType ce →
---                              Statements (addToContext Γ ce) → Statements Γ
-
---   sbstVarStmnt : (ce : ContextEntry) → AType ce → {Γ : Context}  →
---                              Stmnt (addToContext Γ ce) → Stmnt Γ
-
---   sbstVarNBStmnt : (ce : ContextEntry) → AType ce → {Γ : Context}  →
---                              NBStmnt+Expr (addToContext Γ ce) → NBStmnt+Expr Γ
-
---   sbstVarBStmnt : (ce : ContextEntry) → AType ce → {Γ : Context}  →
---                              BStmnt (addToContext Γ ce) → BStmnt Γ
-
---   sbstVarExpr : (ce : ContextEntry) → AType ce → {Γ : Context}  → ∀ Τ → 
---                               Expr (addToContext Γ ce) Τ → Expr Γ Τ
-
---   sbstVarPrivateSymbolOf : (ce : ContextEntry) → AType ce → {Γ : Context}  → ∀ p → 
---                               PrivateSymbolOf (addToContext Γ ce) p → PrivateSymbolOf Γ p
-
---   sbstVarIsDefinedSymbolOfTy : (ce : ContextEntry) → AType ce → {Γ : Context}  → ∀ {Τ} → ∀ s → 
---                               ⟨ IsDefinedSymbolOfTy (addToContext Γ ce) Τ s ⟩ → ⟨ IsDefinedSymbolOfTy Γ Τ s ⟩ 
-
-
---   sbstVarStmnt-coh : (ce : ContextEntry) → (vv : AType ce) → {Γ : Context} {x : Stmnt (addToContext Γ ce)} →
---                             addToContext (bindingMechanics'  (addToContext Γ ce) x) ce
---                             ≡
---                             bindingMechanics' Γ (sbstVarStmnt ce vv x)
-
-
---   sbstVarStmnts-coh : (ce : ContextEntry) → (vv : AType ce) → {Γ : Context} (x : Statements (addToContext Γ ce)) →
---                             addToContext (foldLinked' x) ce
---                             ≡
---                             foldLinked' (sbstVarStmnts Γ ce vv x)
-
-
---   sbstVarStmnt ce vv {Γ} (bindingS x) = bindingS (sbstVarBStmnt ce vv {Γ} x)
---   sbstVarStmnt ce vv {Γ} (nonBindingS x) = nonBindingS (sbstVarNBStmnt ce vv {Γ} x)
-
---   sbstVarPrivateSymbolOf ce vv {con ents scope''} p x = {!!}
-    
-
---   sbstVarIsDefinedSymbolOfTy ce vv {con ents scope''} {Τ} s x = {!!}
-
---   sbstVarStmnts Γ ce vv =
---      map-Linked'-map
---         {!!}
---         {!!}  {!!} --(sbstVarStmnt ce vv) (sbstVarStmnt-coh ce vv)
-
-
---   sbstVarNBStmnt ce vv {Γ} (stmntNBS (NBS-require! x)) =  stmntNBS (NBS-require! (sbstVarExpr ce vv {Γ} _ x))
---   sbstVarNBStmnt ce vv {Γ} (stmntNBS (NBS-deposit! x {y} x₁)) = stmntNBS (NBS-deposit! x {y} (sbstVarExpr ce vv {Γ} _ x₁))
---   sbstVarNBStmnt ce vv {Γ} (stmntNBS (NBS-withdraw! x {y} x₁)) = stmntNBS (NBS-withdraw! x {y} (sbstVarExpr ce vv {Γ} _ x₁))
-  
---   sbstVarNBStmnt ce vv {Γ} (exprNBS x) = exprNBS (sbstVarExpr ce vv {Γ} _ x)
-
---   sbstVarBStmnt ce vv {Γ} (BS-let ce₁ {asn} x) = {!!} 
---                                -- let (asn' , x') = ?
---                                -- in BS-let ce₁ {asn'} x'
---   sbstVarBStmnt ce vv {Γ} (BS-publish! p x {y}) =
---                                BS-publish! p (sbstVarPrivateSymbolOf ce vv p x ) {y}
-
---   sbstVarExpr ce vv {Γ} Τ (var x) = var (dsot (x .name) {sbstVarIsDefinedSymbolOfTy ce vv {Γ} {Τ} (x .name) (x .isDefinedSymbolOfTy)})
---   sbstVarExpr ce vv {Γ} Τ (stmnts₁ ;b expr₁) = {!!}
---       -- let expr* = sbstVarExpr ce vv Τ expr₁
---       -- in sbstVarStmnts Γ ce stmnts₁ ;b
---       --      subst (λ y → Expr y Τ) (sbstVarStmnts-coh ce stmnts₁) expr*
-         
---   sbstVarExpr ce vv {Γ} Τ (lit x) = lit x
-
-
---   sbstVarStmnt-coh = {!!}
-
---   sbstVarStmnts-coh ce vv = map-Linked'-map-fold _ _ _
-
-
-
-
-
-module EvalFwd (ptps : List IdentifierTy) where
+module ExprEval  (ptps : List IdentifierTy) where
 
   ih = interactionHead ptps [] 
 
@@ -296,100 +195,187 @@ module EvalFwd (ptps : List IdentifierTy) where
 
   
 
-  preppend-narrow-comm : (Γ : Context) → (ce : ContextEntry) → ∀ scp → ∀ narrowOk → ∀  narrowOk' → 
-                                   prependContext ce (narrow Γ scp narrowOk) ≡
-                                        narrow (prependContext ce Γ) scp narrowOk'
-  preppend-narrow-comm = {!!}
+
 
   {-# TERMINATING #-}
-  prependContextStmnts : (Γ : Context) → (ce : ContextEntry) →
-                             Statements Γ → Statements (prependContext ce Γ)
+  sbstVarStmnts : (Γ : Context) → (ce : ContextEntry) → AType ce →
+                             Statements (addToContext Γ ce) → Statements Γ
 
-  prependContextStmnt : (ce : ContextEntry) → {Γ : Context}  →
-                             Stmnt Γ → Stmnt (prependContext ce Γ)
+  sbstVarStmnt : (ce : ContextEntry) → AType ce → {Γ : Context}  →
+                             Stmnt (addToContext Γ ce) → Stmnt Γ
 
-  prependContextNBStmnt : (ce : ContextEntry) → {Γ : Context}  →
-                             NBStmnt+Expr Γ → NBStmnt+Expr (prependContext ce Γ)
+  sbstVarNBStmnt : (ce : ContextEntry) → AType ce → {Γ : Context}  →
+                             NBStmnt+Expr (addToContext Γ ce) → NBStmnt+Expr Γ
 
-  prependContextBStmnt : (ce : ContextEntry) → {Γ : Context}  →
-                             BStmnt Γ → BStmnt (prependContext ce Γ)
+  sbstVarBStmnt : (ce : ContextEntry) → AType ce → {Γ : Context}  →
+                             BStmnt (addToContext Γ ce) → BStmnt Γ
 
-  prependContextExpr : (ce : ContextEntry) → {Γ : Context}  → ∀ Τ → 
-                              Expr Γ Τ → Expr (prependContext ce Γ) Τ
-
-  prependContextPrivateSymbolOf : (ce : ContextEntry) → {Γ : Context}  → ∀ p → 
-                              PrivateSymbolOf Γ p → PrivateSymbolOf (prependContext ce Γ) p
-
-  prependContextIsDefinedSymbolOfTy : (ce : ContextEntry) → {Γ : Context}  → ∀ {Τ} → ∀ s → 
-                              ⟨ IsDefinedSymbolOfTy Γ Τ s ⟩ → ⟨ IsDefinedSymbolOfTy (prependContext ce Γ) Τ s ⟩ 
+  sbstVarExpr : (ce : ContextEntry) → AType ce → {Γ : Context}  → ∀ Τ → 
+                              Expr (addToContext Γ ce) Τ → Expr Γ Τ
 
 
-  postulate prependContextStmnt-coh : (ce : ContextEntry) {Γ : Context} {x : Stmnt Γ} →
-                            prependContext ce (bindingMechanics'  Γ x)
+  sbstVarStmnt-coh : (ce : ContextEntry) → (vv : AType ce) → {Γ : Context} {x : Stmnt (addToContext Γ ce)} →
+                            bindingMechanics' (addToContext Γ ce) x
+                            ≡ addToContext (bindingMechanics'  Γ (sbstVarStmnt ce vv x)) ce
+
+
+  sbstVarStmnts-coh : (ce : ContextEntry) → (vv : AType ce) → {Γ : Context} (x : Statements (addToContext Γ ce)) →
+                            foldLinked' x
                             ≡
-                            bindingMechanics' (prependContext ce Γ) (prependContextStmnt ce x)
+                            addToContext (foldLinked' (sbstVarStmnts Γ ce vv x)) ce
 
 
-  prependContextStmnts-coh : (ce : ContextEntry) {Γ : Context} (x : Statements Γ) →
-                            prependContext ce (foldLinked' x)
-                            ≡
-                            foldLinked' (prependContextStmnts Γ ce x)
+  sbstVarStmnt ce vv {Γ} (bindingS x) = bindingS (sbstVarBStmnt ce vv {Γ} x)
+  sbstVarStmnt ce vv {Γ} (nonBindingS x) = nonBindingS (sbstVarNBStmnt ce vv {Γ} x)
+    
 
-
-  prependContextStmnt ce {Γ} (bindingS x) = bindingS (prependContextBStmnt ce {Γ} x)
-  prependContextStmnt ce {Γ} (nonBindingS x) = nonBindingS (prependContextNBStmnt ce {Γ} x)
-
-  prependContextPrivateSymbolOf ce {con ents scope''} p x =
-    psof (x .name) {  subst (λ fbe → fst
-                              (Bool→Type'
-                               (recMaybe false
-                                (λ y →
-                                   recMaybe false (λ p' → primStringEquality (name p) (name p'))
-                                   (scope y))
-                                fbe ))) (findBy-preppend  _ ents ce ((lemma-mb-rec _ (x .isDefinedSymbolOf)))) (x .isDefinedSymbolOf)}
-
-  prependContextIsDefinedSymbolOfTy ce {con ents scope''} {Τ} s x =
-    subst (λ v → fst (Bool→Type'
-       (recMaybe false
-        (λ y →
-           (con ents scope'' InteractionHead.canAccessTest scope'') (scope y)
-           and GTy== (type y) Τ)
-        v))) (findBy-preppend  _ ents ce ((lemma-mb-rec _ x))) x
-
-  prependContextStmnts Γ ce =
-     map-Linked'-map
-        (prependContext ce)
-        (prependContextStmnt ce) (prependContextStmnt-coh ce)
-
-
-  prependContextNBStmnt ce {Γ} (stmntNBS (NBS-require! x)) =  stmntNBS (NBS-require! (prependContextExpr ce {Γ} _ x))
-  prependContextNBStmnt ce {Γ} (stmntNBS (NBS-deposit! x {y} x₁)) = stmntNBS (NBS-deposit! x {y} (prependContextExpr ce {Γ} _ x₁))
-  prependContextNBStmnt ce {Γ} (stmntNBS (NBS-withdraw! x {y} x₁)) = stmntNBS (NBS-withdraw! x {y} (prependContextExpr ce {Γ} _ x₁))
   
-  prependContextNBStmnt ce {Γ} (exprNBS x) = exprNBS (prependContextExpr ce {Γ} _ x)
+  sbstVarStmnts Γ ce vv = 
+     map-Linked'-map-bck
+        (λ x → addToContext x ce)
+        (sbstVarStmnt ce vv) (sbstVarStmnt-coh ce vv)
 
-  prependContextBStmnt ce {Γ} (BS-let ce₁ {asn} x) =
-                               let (asn' , x') = maybe-elim
-                                           {B = λ scope* →
-                                                Σ ⟨ AllowedScopeNarrowing Γ scope* ⟩ (λ asn → Expr (narrow Γ scope* asn) (type ce₁))
-                                                      → Σ ⟨ AllowedScopeNarrowing (prependContext ce Γ) scope* ⟩
-                                                             (λ asn → Expr (narrow (prependContext ce Γ) scope* asn) (type ce₁))}
-                                           (λ x → tt* , subst (λ y → Expr y (type ce₁)) (preppend-narrow-comm Γ _ _ _ _) (prependContextExpr ce _ (snd x)))
-                                           (λ _ x → fst x , subst (λ y → Expr y (type ce₁)) (preppend-narrow-comm Γ _ _ (fst x) (fst x)) (prependContextExpr ce _ (snd x)) )
-                                           (ce₁ .scope) (asn , x)
-                               in BS-let ce₁ {asn'} x'
-  prependContextBStmnt ce {Γ} (BS-publish! p x {y}) =
-                               BS-publish! p (prependContextPrivateSymbolOf ce p x ) {y}
 
-  prependContextExpr ce {Γ} Τ (var x) = var (dsot (x .name) {prependContextIsDefinedSymbolOfTy ce {Γ} {Τ} (x .name) (x .isDefinedSymbolOfTy)})
-  prependContextExpr ce {Γ} Τ (stmnts₁ ;b expr₁) =
-      let expr* = prependContextExpr ce Τ expr₁
-      in prependContextStmnts Γ ce stmnts₁ ;b
-           subst (λ y → Expr y Τ) (prependContextStmnts-coh ce stmnts₁) expr*
+  sbstVarNBStmnt ce vv {Γ} (stmntNBS (NBS-require! x)) =  stmntNBS (NBS-require! (sbstVarExpr ce vv {Γ} _ x))
+  sbstVarNBStmnt ce vv {Γ} (stmntNBS (NBS-deposit! x {y} x₁)) = stmntNBS (NBS-deposit! x {y} (sbstVarExpr ce vv {Γ} _ x₁))
+  sbstVarNBStmnt ce vv {Γ} (stmntNBS (NBS-withdraw! x {y} x₁)) = stmntNBS (NBS-withdraw! x {y} (sbstVarExpr ce vv {Γ} _ x₁))
+  
+  sbstVarNBStmnt ce vv {Γ} (exprNBS x) = exprNBS (sbstVarExpr ce vv {Γ} _ x)
+
+  sbstVarBStmnt ce vv {Γ} (BS-let ce₁ {asn} x) = BS-let ce₁ {asn} (sbstVarExpr ce vv _ x) 
+  sbstVarBStmnt ce vv {Γ} (BS-publish! p (psof name₁ {z}) {y}) = {!!}
+                               -- BS-publish! p (sbstVarPrivateSymbolOf ce vv p x ) {y}
+
+  sbstVarExpr ce vv {Γ} Τ (var x) = {!!}
+  
+  sbstVarExpr ce vv {Γ} Τ (stmnts₁ ;b expr₁) = 
+      sbstVarStmnts Γ ce vv stmnts₁
+            ;b sbstVarExpr ce vv Τ (subst (λ x → Expr x Τ) (sbstVarStmnts-coh ce vv stmnts₁) expr₁) 
          
-  prependContextExpr ce {Γ} Τ (lit x) = lit x
+         
+  sbstVarExpr ce vv {Γ} Τ (lit x) = lit x
 
 
-  -- prependContextStmnt-coh = {!!}
+  sbstVarStmnt-coh ce vv {x = bindingS (BS-let ce₁ x)} = {!refl!}
+  sbstVarStmnt-coh ce vv {x = bindingS (BS-publish! p x)} = {!!}
+  sbstVarStmnt-coh ce vv {x = nonBindingS x} = refl
 
-  prependContextStmnts-coh ce = map-Linked'-map-fold _ _ _
+  sbstVarStmnts-coh ce vv =
+    map-Linked'-map-fold-bck
+        (λ x → addToContext x ce)
+        (sbstVarStmnt ce vv) (sbstVarStmnt-coh ce vv)
+
+
+
+
+
+
+
+
+
+
+-- module EvalFwd (ptps : List IdentifierTy) where
+
+--   ih = interactionHead ptps [] 
+
+--   open InteractionHead ih
+
+   
+
+--   preppend-narrow-comm : (Γ : Context) → (ce : ContextEntry) → ∀ scp → ∀ narrowOk → ∀  narrowOk' → 
+--                                    prependContext ce (narrow Γ scp narrowOk) ≡
+--                                         narrow (prependContext ce Γ) scp narrowOk'
+--   preppend-narrow-comm = {!!}
+
+--   {-# TERMINATING #-}
+--   prependContextStmnts : (Γ : Context) → (ce : ContextEntry) →
+--                              Statements Γ → Statements (prependContext ce Γ)
+
+--   prependContextStmnt : (ce : ContextEntry) → {Γ : Context}  →
+--                              Stmnt Γ → Stmnt (prependContext ce Γ)
+
+--   prependContextNBStmnt : (ce : ContextEntry) → {Γ : Context}  →
+--                              NBStmnt+Expr Γ → NBStmnt+Expr (prependContext ce Γ)
+
+--   prependContextBStmnt : (ce : ContextEntry) → {Γ : Context}  →
+--                              BStmnt Γ → BStmnt (prependContext ce Γ)
+
+--   prependContextExpr : (ce : ContextEntry) → {Γ : Context}  → ∀ Τ → 
+--                               Expr Γ Τ → Expr (prependContext ce Γ) Τ
+
+--   prependContextPrivateSymbolOf : (ce : ContextEntry) → {Γ : Context}  → ∀ p → 
+--                               PrivateSymbolOf Γ p → PrivateSymbolOf (prependContext ce Γ) p
+
+--   prependContextIsDefinedSymbolOfTy : (ce : ContextEntry) → {Γ : Context}  → ∀ {Τ} → ∀ s → 
+--                               ⟨ IsDefinedSymbolOfTy Γ Τ s ⟩ → ⟨ IsDefinedSymbolOfTy (prependContext ce Γ) Τ s ⟩ 
+
+
+--   postulate prependContextStmnt-coh : (ce : ContextEntry) {Γ : Context} {x : Stmnt Γ} →
+--                             prependContext ce (bindingMechanics'  Γ x)
+--                             ≡
+--                             bindingMechanics' (prependContext ce Γ) (prependContextStmnt ce x)
+
+
+--   prependContextStmnts-coh : (ce : ContextEntry) {Γ : Context} (x : Statements Γ) →
+--                             prependContext ce (foldLinked' x)
+--                             ≡
+--                             foldLinked' (prependContextStmnts Γ ce x)
+
+
+--   prependContextStmnt ce {Γ} (bindingS x) = bindingS (prependContextBStmnt ce {Γ} x)
+--   prependContextStmnt ce {Γ} (nonBindingS x) = nonBindingS (prependContextNBStmnt ce {Γ} x)
+
+--   prependContextPrivateSymbolOf ce {con ents scope''} p x =
+--     psof (x .name) {  subst (λ fbe → fst
+--                               (Bool→Type'
+--                                (recMaybe false
+--                                 (λ y →
+--                                    recMaybe false (λ p' → primStringEquality (name p) (name p'))
+--                                    (scope y))
+--                                 fbe ))) (findBy-preppend  _ ents ce ((lemma-mb-rec _ (x .isDefinedSymbolOf)))) (x .isDefinedSymbolOf)}
+
+--   prependContextIsDefinedSymbolOfTy ce {con ents scope''} {Τ} s x =
+--     subst (λ v → fst (Bool→Type'
+--        (recMaybe false
+--         (λ y →
+--            (con ents scope'' InteractionHead.canAccessTest scope'') (scope y)
+--            and GTy== (type y) Τ)
+--         v))) (findBy-preppend  _ ents ce ((lemma-mb-rec _ x))) x
+
+--   prependContextStmnts Γ ce =
+--      map-Linked'-map
+--         (prependContext ce)
+--         (prependContextStmnt ce) (prependContextStmnt-coh ce)
+
+
+--   prependContextNBStmnt ce {Γ} (stmntNBS (NBS-require! x)) =  stmntNBS (NBS-require! (prependContextExpr ce {Γ} _ x))
+--   prependContextNBStmnt ce {Γ} (stmntNBS (NBS-deposit! x {y} x₁)) = stmntNBS (NBS-deposit! x {y} (prependContextExpr ce {Γ} _ x₁))
+--   prependContextNBStmnt ce {Γ} (stmntNBS (NBS-withdraw! x {y} x₁)) = stmntNBS (NBS-withdraw! x {y} (prependContextExpr ce {Γ} _ x₁))
+  
+--   prependContextNBStmnt ce {Γ} (exprNBS x) = exprNBS (prependContextExpr ce {Γ} _ x)
+
+--   prependContextBStmnt ce {Γ} (BS-let ce₁ {asn} x) =
+--                                let (asn' , x') = maybe-elim
+--                                            {B = λ scope* →
+--                                                 Σ ⟨ AllowedScopeNarrowing Γ scope* ⟩ (λ asn → Expr (narrow Γ scope* asn) (type ce₁))
+--                                                       → Σ ⟨ AllowedScopeNarrowing (prependContext ce Γ) scope* ⟩
+--                                                              (λ asn → Expr (narrow (prependContext ce Γ) scope* asn) (type ce₁))}
+--                                            (λ x → tt* , subst (λ y → Expr y (type ce₁)) (preppend-narrow-comm Γ _ _ _ _) (prependContextExpr ce _ (snd x)))
+--                                            (λ _ x → fst x , subst (λ y → Expr y (type ce₁)) (preppend-narrow-comm Γ _ _ (fst x) (fst x)) (prependContextExpr ce _ (snd x)) )
+--                                            (ce₁ .scope) (asn , x)
+--                                in BS-let ce₁ {asn'} x'
+--   prependContextBStmnt ce {Γ} (BS-publish! p x {y}) =
+--                                BS-publish! p (prependContextPrivateSymbolOf ce p x ) {y}
+
+--   prependContextExpr ce {Γ} Τ (var x) = var (dsot (x .name) {prependContextIsDefinedSymbolOfTy ce {Γ} {Τ} (x .name) (x .isDefinedSymbolOfTy)})
+--   prependContextExpr ce {Γ} Τ (stmnts₁ ;b expr₁) =
+--       let expr* = prependContextExpr ce Τ expr₁
+--       in prependContextStmnts Γ ce stmnts₁ ;b
+--            subst (λ y → Expr y Τ) (prependContextStmnts-coh ce stmnts₁) expr*
+         
+--   prependContextExpr ce {Γ} Τ (lit x) = lit x
+
+
+--   -- prependContextStmnt-coh = {!!}
+
+--   prependContextStmnts-coh ce = map-Linked'-map-fold _ _ _

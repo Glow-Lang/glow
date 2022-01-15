@@ -32,6 +32,14 @@ open import Glow.Linked
 -- In the future we can intorduce it, or maybe on next level
 
 
+isProp-lemma : ∀ {ℓ} → {A B : hProp ℓ} → (a : ⟨ A ⟩ ) → (b : ⟨ B ⟩)
+                    →  ⟨ A ⟩ ≡ ⟨ B ⟩
+isProp-lemma {A = A} {B} a b = isoToPath (iso (λ _ → b) (λ _ → a) (λ _ → snd B _ _) (λ _ → snd A _ _))
+
+isProp-lemma' :  ∀ {ℓ} → {A B : hProp ℓ} → (a : ⟨ A ⟩ ) → (b : ⟨ B ⟩)
+                    → PathP (λ x → ((isProp-lemma {A = A} {B} a b) ∙ refl) x ) a b
+isProp-lemma' {A = A} {B = B} a b = compPathP (transport-filler (isProp-lemma {A = A} {B} a b) a ) (snd B _ _)
+
 and-comm  : ∀ x y → x and y ≡ y and x
 and-comm false false = refl
 and-comm false true = refl
@@ -414,13 +422,6 @@ record InteractionHead : Type₀ where
 
     open PrivateSymbolOf public
 
-    AllowedScopeNarrowingTest : Scope → 𝟚
-    AllowedScopeNarrowingTest nothing = true
-    AllowedScopeNarrowingTest (just x) = caseMaybe true false scope'
-
-    AllowedScopeNarrowing : Scope → hProp ℓ-zero
-    AllowedScopeNarrowing =  Bool→Type' ∘ AllowedScopeNarrowingTest  
-
     IsConsensus : hProp ℓ-zero
     IsConsensus = caseMaybe ⊤ ⊥ scope'
 
@@ -445,10 +446,17 @@ record InteractionHead : Type₀ where
   popType : Context → Type₀ 
   popType Γ = recMaybe Unit AType (proj₁ (popFromCtxt Γ))
 
-  narrowScope : (Γ : Context) → (s : Scope)  → (⟨ AllowedScopeNarrowing Γ s ⟩) → Scope
-  narrowScope (con y nothing) a _ = a
-  narrowScope a@(con _ (just x)) _ _ = scope' a
+  AllowedScopeNarrowingTest : Scope → Scope → 𝟚
+  AllowedScopeNarrowingTest s nothing = true
+  AllowedScopeNarrowingTest s (just x) = caseMaybe true false s
 
+  AllowedScopeNarrowing : (Γ : Context) → Scope → hProp ℓ-zero
+  AllowedScopeNarrowing Γ =  Bool→Type' ∘ AllowedScopeNarrowingTest (scope' Γ) 
+
+
+  narrowScope : (Γ : Context) → (s : Scope)  → (⟨ AllowedScopeNarrowing Γ s ⟩) → Scope
+  narrowScope Γ s _ = caseMaybe s (scope' Γ) (Γ .scope') 
+  
   narrow : (Γ : Context) → (s : Scope)  → (⟨ AllowedScopeNarrowing Γ s ⟩) → Context
   narrow Γ a x = record Γ { scope' = narrowScope Γ a x }
 
