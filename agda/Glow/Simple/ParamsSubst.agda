@@ -53,17 +53,10 @@ module ParamsSubst {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete I
   stripParamsCtx : ∀ {ih : _} → Context ih → Context (stripParamsHead ih)
   stripParamsCtx Γ = con (Γ .entries) (Γ .scope')
 
-
+  -- TODO : remove unsafe pragma by stratification on nesting depth
   {-# TERMINATING #-}
   paramSubst : ∀ {ih : _} → ParametersValue (parameters ih) → 
                    ∀ {Γ : _} →  Statements _ Γ → Statements _ (stripParamsCtx Γ) 
-
-  wwww : ∀ {ih} {vv : ParametersValue (parameters ih)}
-           {Γ : Context ih} 
-           (stmnts₁  : Linked' (bindingMechanics' ih) Γ)
-            →
-         stripParamsCtx (foldLinked' stmnts₁) ≡
-         foldLinked' (paramSubst vv stmnts₁)
 
 
 
@@ -79,16 +72,14 @@ module ParamsSubst {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete I
              → (b : Expr ih Γ Τ) → Expr _ (stripParamsCtx Γ) Τ
 
 
-
       h  (bindingS x) = bindingS (BS-lemma x)
          where
               BS-lemma : {Γ : Context ih} →  BStmnt ih Γ -> BStmnt _ (stripParamsCtx Γ)
-              BS-lemma {Γ} (BS-let x {asn} y) = (BS-let x {asn} (h-expr y))  
-              BS-lemma {Γ} (BS-publish! p (psof name₁ {w}) {y}) = (BS-publish! p (psof name₁ {w}) {y})
-                 -- 
+              BS-lemma (BS-let x {asn} y) = (BS-let x {asn} (h-expr y))  
+              BS-lemma (BS-publish! p (psof name₁ {w}) {y}) = (BS-publish! p (psof name₁ {w}) {y})
 
 
-      h {Γ} (nonBindingS x) = nonBindingS (z x)
+      h (nonBindingS x) = nonBindingS (z x)
          where
 
            zz : NBStmnt _ _ → NBStmnt _ _ 
@@ -100,69 +91,90 @@ module ParamsSubst {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete I
            z (stmntNBS x) =  stmntNBS (zz x)
            z (exprNBS x) = exprNBS (h-expr x)
 
-
-
-
-      h-expr {Γ} {Τ} (var (dsot x {y})) =
+      h-expr (var (dsot x {y})) =
          sum-elim
            (λ a → var (dsot x {fromWitness (inl a)}))
-           (lit ∘ (lookup-ParametersValue (ih .parameters) vv (iwt x Τ)) ∘ proj₂)
+           (lit ∘ (lookup-ParametersValue (ih .parameters) vv (iwt x _)) ∘ proj₂)
             (toWitness y)
         
-              
-      h-expr (stmnts₁ ;b x) =  paramSubst vv stmnts₁ ;b subst (λ x₁ → Expr _ x₁ _) (wwww stmnts₁ ) (h-expr x)
+
+      h-expr (stmnts₁ ;b x) =
+         paramSubst vv stmnts₁ ;b subst (λ x₁ → Expr _ x₁ _)
+             -- TODO : improve evaluation performance by introducing specialized "subst"
+             -- specialisation should be not pnly on Expr, but also on map-Linked'-map-fold
+        (map-Linked'-map-fold (stripParamsCtx {ih}) _ _ stmnts₁ ) (h-expr x)
       h-expr (lit x) = lit x
 
-      hh : (Γ : Context ih) (x : Stmnt ih Γ) →
-         stripParamsCtx (bindingMechanics' ih Γ x) ≡
+      hh : (Γ : Context ih) (x : Stmnt _ Γ) →
+         stripParamsCtx (bindingMechanics' _ Γ x) ≡
          bindingMechanics' (interactionHead (participants ih) [])
          (stripParamsCtx Γ) (h x)
-      hh Γ (bindingS (BS-let ce x)) = refl 
-      hh Γ (bindingS (BS-publish! p x)) =  refl 
-      hh Γ (nonBindingS x) = refl
-
-  wwww {ih} = map-Linked'-map-fold (stripParamsCtx {ih}) _ _ 
+      hh _ (bindingS (BS-let _ _)) = refl 
+      hh _ (bindingS (BS-publish! _ _)) =  refl 
+      hh _ (nonBindingS _) = refl
 
 
--- module Test-String where
---   open AST String {{String-Discrete-postulated}}
---   open InteractionHead
---   -- open ParamsSubst String {{String-Discrete-postulated}}
+module Test-String where
+  open AST String {{String-Discrete-postulated}}
 
---   module ParamsSubstS = ParamsSubst {{String-Discrete-postulated}}
+  module ParamsSubstS = ParamsSubst {{String-Discrete-postulated}}
 
---   someInteraction : Interaction
---   someInteraction =  
---      interaction⟨   "A" ∷ "B" ∷ [] ,  "pI1" ∶ Nat ∷ "b2" ∶ Bool ∷ "b1" ∶ Bool ∷ [] ⟩ (
---           set "x" ∶ Bool ≔ < true > ;
---           at "B" set "y" ∶ Bool ≔ v "b1" ;
---           at "A" set "xx" ∶ Bool ≔ (
---               require! v "b2" ;'
---               -- publish! "B" ⟶ "y" ;
---               -- withdraw! "B" ⟵ < 3 > ;
---               -- deposit! "B" ⟶ < 2 > ;
---               set "z" ∶ Bool ≔ < false > ;b
---               < true >
---               );
---           deposit! "B" ⟶ < 2 > ;
---           withdraw! "B" ⟵ < 3 > ;
---           publish! "B" ⟶ "y" ;'        
---           set "yy" ∶ Bool ≔ v "y" )
+  someInteraction : Interaction
+  someInteraction =  
+     interaction⟨   "A" ∷ "B" ∷ [] ,  "pI1" ∶ Nat ∷ "b2" ∶ Bool ∷ "b1" ∶ Bool ∷ [] ⟩ (
+          set "x" ∶ Bool ≔ < true > ;
+          at "B" set "y" ∶ Bool ≔ v "b1" ;
+          at "A" set "xx" ∶ Bool ≔ (
+              require! v "b2" ;'
+              -- publish! "B" ⟶ "y" ;
+              -- withdraw! "B" ⟵ < 3 > ;
+              -- deposit! "B" ⟶ < 2 > ;
+              set "z" ∶ Bool ≔ < false > ;b
+              < true >
+              );
+          deposit! "B" ⟶ < 2 > ;
+          withdraw! "B" ⟵ < 3 > ;
+          publish! "B" ⟶ "y" ;'        
+          set "yy" ∶ Bool ≔ v "y" )
 
 
---   param-sub-test : ℕ × 𝟚 × 𝟚 × Unit → Linked'
---                                         (bindingMechanics'
---                                          (ParamsSubstS.stripParamsHead
---                                           (interactionHead ("A" ∷ "B" ∷ [])
---                                            ("pI1" ∶ Nat ∷ "b2" ∶ Bool ∷ "b1" ∶ Bool ∷ []))))
---                                         (ParamsSubstS.stripParamsCtx (Interaction.emptyContext someInteraction))
---   param-sub-test vv@(x , (x₁ , (x₂ , x₃)))  = ParamsSubstS.paramSubst vv (Interaction.code someInteraction)
+  param-sub-test : ℕ × 𝟚 × 𝟚 × Unit → Linked'
+                                        (bindingMechanics'
+                                         (ParamsSubstS.stripParamsHead
+                                          (interactionHead ("A" ∷ "B" ∷ [])
+                                           ("pI1" ∶ Nat ∷ "b2" ∶ Bool ∷ "b1" ∶ Bool ∷ []))))
+                                        (ParamsSubstS.stripParamsCtx (Interaction.emptyContext someInteraction))
+  param-sub-test vv = ParamsSubstS.paramSubst vv (Interaction.code someInteraction)
+
+
+  zzz :
+    let q : ℕ × 𝟚 × 𝟚 × Unit
+        q = 3 , false , true , _
+        bT : Statements _ _
+        bT = (
+          set "x" ∶ Bool ≔ < true > ;
+          at "B" set "y" ∶ Bool ≔ < true > ;
+          at "A" set "xx" ∶ Bool ≔ (
+              require! < false > ;'
+              -- publish! "B" ⟶ "y" ;
+              -- withdraw! "B" ⟵ < 3 > ;
+              -- deposit! "B" ⟶ < 2 > ;
+              set "z" ∶ Bool ≔ < false > ;b
+              < true >
+              );
+          deposit! "B" ⟶ < 2 > ;
+          withdraw! "B" ⟵ < 3 > ;
+          publish! "B" ⟶ "y" ;'        
+          set "yy" ∶ Bool ≔ v "y"
+          )
+    in bT ≡ param-sub-test q 
+
+  zzz = refl
+
 
 
 -- module Test-ℕ where
 --   open AST ℕ 
---   -- open InteractionHead
---   -- open ParamsSubst String {{String-Discrete-postulated}}
 
 --   module ParamsSubstS = ParamsSubst {ℕ}
 
@@ -193,8 +205,7 @@ module ParamsSubst {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete I
 --                                         (ParamsSubstS.stripParamsCtx (Interaction.emptyContext someInteraction))
 --   param-sub-test vv = ParamsSubstS.paramSubst vv (Interaction.code someInteraction)
 
---   zzz : Type₀
---   zzz =
+--   zzz :
 --     let q : ℕ × 𝟚 × 𝟚 × Unit
 --         q = 3 , false , true , _
 --     in (
@@ -213,9 +224,7 @@ module ParamsSubst {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete I
 --           publish! 2 ⟶ 7 ;'        
 --           set 10 ∶ Bool ≔ v 7 ) ≡ param-sub-test q 
 
---   zzz' : zzz
---   zzz' = refl
-
+--   zzz = refl
 
 
 --   -- zzz2 : Type₀

@@ -429,10 +429,10 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
     AllowedScopeNarrowing Γ = AllowedScopeNarrowing' (scope' Γ) 
 
 
-    narrowScope : (Γ : Context) → (s : Scope)  → (⟨ AllowedScopeNarrowing Γ s ⟩) → Scope
+    narrowScope : (Γ : Context) → (s : Scope)  → True (snd ( AllowedScopeNarrowing Γ s)) → Scope
     narrowScope Γ s _ = caseMaybe s (scope' Γ) (Γ .scope') 
 
-    narrow : (Γ : Context) → (s : Scope)  → (⟨ AllowedScopeNarrowing Γ s ⟩) → Context
+    narrow : (Γ : Context) → (s : Scope)  → (True (snd (AllowedScopeNarrowing Γ s) )) → Context
     narrow Γ a x = record Γ { scope' = narrowScope Γ a x }
 
 
@@ -480,7 +480,7 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
                     -- warning: scope in "ce" is interpreted in unusual way!
                     -- (TODO : consider speical type here)
       BS-let : (ce : ContextEntry) → {asn : True (snd (AllowedScopeNarrowing Γ (scope ce)) )}
-                  → Expr (narrow Γ (scope ce) (toWitness asn)) (type ce) → BStmnt Γ    
+                  → Expr (narrow Γ (scope ce) asn) (type ce) → BStmnt Γ    
       BS-publish! : (p : ParticipantId) → (PrivateSymbolOf Γ p)
                              → {_ : True (snd( IsConsensus Γ )) }→  BStmnt Γ
       -- verify! ‹ids›
