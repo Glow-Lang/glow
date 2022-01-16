@@ -214,6 +214,32 @@ instance
                                         → Dec (ExistFirstBy B WitchIsAlso B' l)
   Dec-ExistFirstBy_WitchIsAlso  ⦃ Dec-Pred-B ⦄ {l} = Pred-app 
 
+
+-- postulate ExistFirstBy-WitchIsAlso-preppend-lemma : ∀ {ℓ ℓ' ℓ''} → {A : Type ℓ} → {B : A → Type ℓ'} → {B' : A → Type ℓ''} →
+--                                                  (l : List A) → (l' : List A) →
+--                                                   ExistFirstBy B WitchIsAlso B' l →
+--                                                  (ExistFirstBy B WitchIsAlso B' l ≡ ExistFirstBy B WitchIsAlso B' (l ++ l'))
+-- -- ExistFirstBy-WitchIsAlso-preppend-lemma (x₁ ∷ l) l' (inl x) = {!!}
+-- -- ExistFirstBy-WitchIsAlso-preppend-lemma (x₁ ∷ l) l' (inr x) = {!!}
+--  --cong (_ ⊎_) (cong (_ ×_) ((ExistFirstBy-WitchIsAlso-preppend-lemma l l' {!!})))
+
+
+ExistFirstBy-WitchIsAlso-preppend-lemma : ∀ {ℓ ℓ' ℓ''} → {A : Type ℓ} → {B : A → Type ℓ'} → {B' : A → Type ℓ''} →
+                                                 (l : List A) → (l' : List A) →
+                                                  ExistFirstBy B WitchIsAlso B' l →
+                                                 (ExistFirstBy B WitchIsAlso B' (l ++ l'))
+ExistFirstBy-WitchIsAlso-preppend-lemma (x₁ ∷ l) l' (inl x) = inl x
+ExistFirstBy-WitchIsAlso-preppend-lemma (x₁ ∷ l) l' (inr x) =
+  inr ((proj₁ x) , (ExistFirstBy-WitchIsAlso-preppend-lemma l l' (proj₂ x)))
+
+-- ExistFirstBy-WitchIsAlso-preppend-lemma' : ∀ {ℓ ℓ' ℓ''} → {A : Type ℓ} → {B : A → Type ℓ'} → {B' : A → Type ℓ''} →
+--                                                  (l : List A) → (l' : List A) →
+--                                                   ExistFirstBy B WitchIsAlso B' l →
+--                                                  (ExistFirstBy B WitchIsAlso B' (l ++ l'))
+-- ExistFirstBy-WitchIsAlso-preppend-lemma' (x₁ ∷ l) l' = {!!}
+
+
+
 map-ExistingFirstBy_WitchIsAlso : ∀ {ℓ ℓ' ℓ''} → {A : Type ℓ} → (B : A → Type ℓ') → (B' : A → Type ℓ'')
                                           → (l : List A)  → ExistFirstBy B WitchIsAlso B' l → (∀ x → B x → B' x → A) → List A
 map-ExistingFirstBy B WitchIsAlso B' (x₂ ∷ l) (inl x₁) f = f x₂ (proj₁ x₁) (proj₂ x₁) ∷ l
@@ -278,12 +304,18 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
       ExistMemberAs (name ≡_) participants
         , ?? _
 
+  data ParticipantId' {participants : List Identifier} : Type₀ where
+    pId : (name : Identifier) → .{isIn :  True (snd (IsParticipantId {participants} name))} → ParticipantId'
 
-  record ParticipantId' {participants : List Identifier} : Type₀ where
-    constructor pId
-    field
-      name : Identifier
-      {isIn} : True (snd (IsParticipantId {participants} name))
+  pId-name : ∀ {ptps} → ParticipantId' {ptps} → Identifier
+  pId-name (pId name₁) = name₁
+
+  -- record ParticipantId' {participants : List Identifier} : Type₀ where
+  --   constructor pId
+    
+  --   field
+  --     name : Identifier
+  --     .{isIn} : True (snd (IsParticipantId {participants} name))
 
   open ParticipantId' public
 
@@ -293,7 +325,7 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
 
   _CanAccess_ : ∀ {ps} → Scope' {ps} → Scope' {ps} → Σ _ Dec
   _ CanAccess nothing = Unit , ?? _
-  just x CanAccess just x₁ = ((name x) ≡ (name x₁)) , ?? _
+  just x CanAccess just x₁ = ((pId-name x) ≡ (pId-name x₁)) , ?? _
   nothing CanAccess just x₁ = Empty , ?? _
 
   AllowedScopeNarrowing' : ∀ {ps} → Scope' {ps} → Scope' {ps} → Σ _ Dec
@@ -326,7 +358,7 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
     field
       participants : List Identifier
       parameters : List IdentifierWithType
-      {uniqueParams} : True (UniqueByDec≡ name parameters)
+      .{uniqueParams} : True (UniqueByDec≡ name parameters)
 
 
 
@@ -375,11 +407,8 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
           ⊎-Dec {{snd (IsDefinedVariableOfTy ty x) }}
 
 
-      record DefinedSymbolOfTy (Τ : GType) : Type ℓ-zero where
-        constructor dsot
-        field
-          name : Identifier
-          {isDefinedSymbolOfTy} : True (snd( IsDefinedSymbolOfTy Τ name))
+      data DefinedSymbolOfTy (Τ : GType) : Type ℓ-zero where
+        dsot : (name : Identifier) → .{isDefinedSymbolOfTy : True (snd( IsDefinedSymbolOfTy Τ name))} → DefinedSymbolOfTy Τ
 
       open DefinedSymbolOfTy public
 
@@ -387,18 +416,22 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
       IsPrivateSymbolOf : ParticipantId → Identifier → Σ _ Dec
       IsPrivateSymbolOf p x =
          ExistFirstBy ((x ≡_) ∘ name)
-            WitchIsAlso (λ y → recMaybe Empty (λ p' → (name p) ≡ (name p')) (scope y)) entries
+            WitchIsAlso (λ y → recMaybe Empty (λ p' → (pId-name p) ≡ (pId-name p')) (scope y)) entries
            , Dec-ExistFirstBy_WitchIsAlso {{Dec-Pred-B' = Dec-Pred-Maybe {f = scope}}} 
 
 
-      record PrivateSymbolOf (p : ParticipantId) : Type ℓ-zero where
-        pattern
-        constructor psof
-        field
-          name : Identifier
-          {isDefinedSymbolOf} : True ( snd ( IsPrivateSymbolOf p name ))
+      data PrivateSymbolOf (p : ParticipantId) : Type ℓ-zero where
+        psof : (name : Identifier) → .{isDefinedSymbolOf : True ( snd ( IsPrivateSymbolOf p name ))} → PrivateSymbolOf p 
+
+      psof-name : ∀ {p} → PrivateSymbolOf p → Identifier
+      psof-name (psof x) = x 
+
+      recompute-isDefinedSymbolOf : ∀ {p} → (pso : PrivateSymbolOf p) → True ( snd ( IsPrivateSymbolOf p (psof-name pso) )) 
+      recompute-isDefinedSymbolOf (psof name₁ {y}) = recompute y
 
       open PrivateSymbolOf public
+
+
 
       IsConsensus : Σ _ Dec
       IsConsensus = caseMaybe (Unit , yes _) (Empty , no (idfun _)) scope'
@@ -429,10 +462,10 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
     AllowedScopeNarrowing Γ = AllowedScopeNarrowing' (scope' Γ) 
 
 
-    narrowScope : (Γ : Context) → (s : Scope)  → True (snd ( AllowedScopeNarrowing Γ s)) → Scope
+    narrowScope : (Γ : Context) → (s : Scope)  → .(True (snd ( AllowedScopeNarrowing Γ s))) → Scope
     narrowScope Γ s _ = caseMaybe s (scope' Γ) (Γ .scope') 
 
-    narrow : (Γ : Context) → (s : Scope)  → (True (snd (AllowedScopeNarrowing Γ s) )) → Context
+    narrow : (Γ : Context) → (s : Scope)  → .(True (snd (AllowedScopeNarrowing Γ s) )) → Context
     narrow Γ a x = record Γ { scope' = narrowScope Γ a x }
 
 
@@ -479,16 +512,16 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
     data BStmnt Γ where
                     -- warning: scope in "ce" is interpreted in unusual way!
                     -- (TODO : consider speical type here)
-      BS-let : (ce : ContextEntry) → {asn : True (snd (AllowedScopeNarrowing Γ (scope ce)) )}
+      BS-let : (ce : ContextEntry) → .{asn : True (snd (AllowedScopeNarrowing Γ (scope ce)) )}
                   → Expr (narrow Γ (scope ce) asn) (type ce) → BStmnt Γ    
       BS-publish! : (p : ParticipantId) → (PrivateSymbolOf Γ p)
-                             → {_ : True (snd( IsConsensus Γ )) }→  BStmnt Γ
+                             → .{_ : True (snd( IsConsensus Γ )) }→  BStmnt Γ
       -- verify! ‹ids›
 
     data NBStmnt Γ where
       NBS-require! : Expr Γ Bool → NBStmnt Γ
-      NBS-deposit! : ParticipantId → {_ : True (snd( IsConsensus Γ )) } → Expr Γ Nat → NBStmnt Γ
-      NBS-withdraw! : ParticipantId → {_ : True (snd( IsConsensus Γ )) } → Expr Γ Nat → NBStmnt Γ
+      NBS-deposit! : ParticipantId → .{_ : True (snd( IsConsensus Γ )) } → Expr Γ Nat → NBStmnt Γ
+      NBS-withdraw! : ParticipantId → .{_ : True (snd( IsConsensus Γ )) } → Expr Γ Nat → NBStmnt Γ
 
 
     data NBStmnt+Expr Γ where
@@ -497,7 +530,7 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
 
     bindingMechanics {Γ} (BS-let ce _) = ce ∷ Γ .entries
     bindingMechanics {Γ} (BS-publish! p x) = 
-      map-ExistingFirstBy _ WitchIsAlso _ (Γ .entries) (toWitness (isDefinedSymbolOf x))
+      map-ExistingFirstBy _ WitchIsAlso _ (Γ .entries) (toWitness (recompute-isDefinedSymbolOf _ x))
          λ e _ _ → record e { scope = nothing }  
 
     bindingMechanics' Γ (bindingS x) = record Γ { entries =  bindingMechanics x } 

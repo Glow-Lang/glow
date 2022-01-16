@@ -27,11 +27,19 @@ open import Cubical.HITs.SetQuotients
 
 infix 20 ??_ 
 
+Empty-elim-dot : ∀ {w} {Whatever : Type w} → .⊥ → Whatever
+Empty-elim-dot ()
 
+recompute : ∀ {a} {A : Type a} → {{Dec A}} → .A → A
+recompute {{yes x}} _ = x
+recompute {{no ¬p}} x = Empty-elim-dot (¬p x)
 
 fromWitness : ∀ {ℓ} {A : Type ℓ} {Q : Dec A} → A → True Q 
 fromWitness {Q = yes p} x = _
 fromWitness {Q = no ¬p} x = ¬p x
+
+toWitness' : ∀ {ℓ} {A : Type ℓ} {Q : Dec A} → .(True Q) → A
+toWitness' {Q = yes p} _ = p
 
 
 ??_ :  ∀ {ℓ} (A : Type ℓ) → {{Dec-A : Dec A}} → Dec A   
