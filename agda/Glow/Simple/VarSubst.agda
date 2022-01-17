@@ -50,7 +50,7 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
 
 
 
-    prependCtxStmnts = map-Linked'-map _ h hh
+    prependCtxStmnts = map-Linked'-map _ h  hh
       where
 
 
@@ -99,13 +99,13 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
         h-expr (input msg {y}) = input msg {y}
         h-expr (if b then t else f) = if (h-expr b) then (h-expr t) else (h-expr f)
 
-        hh : (Γ : Context) (x : Stmnt Γ) →
+        postulate hh : (Γ : Context) (x : Stmnt Γ) →
                            prependContext ce (bindingMechanics' Γ x) ≡
                            bindingMechanics'
                            (prependContext ce Γ) (h x)
-        hh _ (bindingS (BS-let _ _)) = refl 
-        hh _ (AST.bindingS (AST.BS-publish! _ _)) = {!!}
-        hh _ (nonBindingS _) = refl
+        -- hh _ (bindingS (BS-let _ _)) = refl 
+        -- hh _ (AST.bindingS (AST.BS-publish! _ _)) = {!!}
+        -- hh _ (nonBindingS _) = refl
 
 
   -- TODO : provide alternative implementation, substituting multiple variables in one pass, compare performance
@@ -218,8 +218,24 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
     substOneExpr r (AST.input x {y}) = (AST.input x {y})
     substOneExpr r (AST.if x then x₁ else x₂) = (AST.if (substOneExpr r x) then (substOneExpr r x₁) else (substOneExpr r x₂))
 
+
+    publish-subst-lemma : ∀ {Γ} → (r : Subst Γ) → ∀ p → ∀ nm → ∀ w → ∀ q → 
+                           remSubst
+                               (fst
+                                (bindingMechanics'* (Γ , r)
+                                 (bindingS (BS-publish! p (psof nm {w}) {q}))))
+                               (snd
+                                (bindingMechanics'* (Γ , r)
+                                 (bindingS (BS-publish! p (psof nm {w}) {q}))))
+                               ≡
+                               bindingMechanics' (remSubst Γ r)
+                               (substOneStmnt r (bindingS (BS-publish! p (psof nm {w}) {q})))
+    publish-subst-lemma {AST.con entries₁ scope''} r p nm w q with (ExistFirstBy-WitchIsAlso-remSubs-lemm {p = p} (entries₁) r w) 
+    ... | inl x₁ = cong (λ xx → con xx scope'') {!!}
+    ... | inr x₁ = cong (λ xx → con xx scope'') {!!}
+    
     substOneStmnts-coh Γ r (AST.bindingS (AST.BS-let ce x)) = refl
-    substOneStmnts-coh (AST.con (x ∷ entries₁) scope'') r (AST.bindingS (AST.BS-publish! p (AST.psof name {w}))) = {!!}
+    substOneStmnts-coh Γ r (AST.bindingS (AST.BS-publish! p (AST.psof name {w}) {q})) = publish-subst-lemma {Γ} r p name w q
     substOneStmnts-coh Γ r (AST.nonBindingS (AST.stmntNBS (AST.NBS-require! x))) = refl
     substOneStmnts-coh Γ r (AST.nonBindingS (AST.stmntNBS (AST.NBS-deposit! x x₁))) = refl
     substOneStmnts-coh Γ r (AST.nonBindingS (AST.stmntNBS (AST.NBS-withdraw! x x₁))) = refl
