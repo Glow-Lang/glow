@@ -10,8 +10,8 @@ open import Cubical.Foundations.Everything
 
 open import Cubical.Data.Nat
 open import Cubical.Data.Int
-open import Cubical.Data.Prod
-open import Cubical.Data.Sum renaming (elim to sum-elim)
+open import Cubical.Data.Prod renaming (map to map-prod)
+open import Cubical.Data.Sum renaming (elim to sum-elim ; map to map-sum)
 open import Cubical.Data.List renaming (map to map-List)
 
 
@@ -245,7 +245,7 @@ ExistFirstBy-WitchIsAlso-preppend-lemma (x₁ ∷ l) l' (inr x) =
 map-ExistingFirstBy_WitchIsAlso : ∀ {ℓ ℓ' ℓ''} → {A : Type ℓ} → (B : A → Type ℓ') → (B' : A → Type ℓ'')
                                           → (l : List A)  → ExistFirstBy B WitchIsAlso B' l → (∀ x → B x → B' x → A) → List A
 map-ExistingFirstBy B WitchIsAlso B' (x₂ ∷ l) (inl x₁) f = f x₂ (proj₁ x₁) (proj₂ x₁) ∷ l
-map-ExistingFirstBy B WitchIsAlso B' (x₂ ∷ l) (inr x₁) f = map-ExistingFirstBy B WitchIsAlso B' l (proj₂ x₁) f
+map-ExistingFirstBy B WitchIsAlso B' (x₂ ∷ l) (inr x₁) f = x₂ ∷ map-ExistingFirstBy B WitchIsAlso B' l (proj₂ x₁) f
 
 
 UniqueBy : ∀ {ℓ ℓ'} → {A : Type ℓ} → (A → A → Type ℓ') → List A → Type ℓ' 
@@ -265,6 +265,17 @@ FilterOut B ⦃ Dec-Pred-B = Dec-Pred-B ⦄ (x ∷ x₁) =
         (λ _ → q) λ y → x ∷ fst q , sum-elim y (snd q)
 
 
+ExistFirstBy-WitchIsAlso-FilterOut-lemma : ∀ {ℓ ℓ' ℓ'' ℓ*} → {A : Type ℓ} → {B : A → Type ℓ'} → {B' : A → Type ℓ''} →
+                                             {B* : A → Type ℓ*} {{Dec-Pred-B : Dec-Pred B*}} → 
+                                                 (l : List A) → (∀ a → B a → IsEmpty (B* a)) →
+                                                  ExistFirstBy B WitchIsAlso B' l →
+                                                 (ExistFirstBy B WitchIsAlso B' (fst (FilterOut B* l)))
+ExistFirstBy-WitchIsAlso-FilterOut-lemma ⦃ Dec-Pred-B = Dec-Pred-B ⦄ (x₂ ∷ l) f  x with x | Dec-Pred.decide Dec-Pred-B x₂
+... | inl x₁ | yes p = empty-rec (f _ (proj₁ x₁) p)
+... | inr x₁ | yes p = ExistFirstBy-WitchIsAlso-FilterOut-lemma _ f (proj₂ x₁)
+... | inl x₁ | no ¬p = inl x₁
+... | inr x₁ | no ¬p = map-sum (idfun _) (map-prod (idfun _) (ExistFirstBy-WitchIsAlso-FilterOut-lemma _ f)) x
+
 -- TODD : decision procedure
 
 
@@ -272,10 +283,10 @@ Empty⊎ : ∀ {ℓ ℓ'} → {A : Type ℓ} → {B : Type ℓ'} → (IsEmpty A)
 Empty⊎ x (inl x₁) = empty-elim (x x₁)
 Empty⊎ x (inr x₁) = x₁
 
-module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}} where 
+module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}}  (prop-mode : 𝟚) where 
 
 
-
+  open PropMode prop-mode
  
 
   record IdentifierWithType : Type₀ where
@@ -314,7 +325,7 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
         , ?? _
 
   data ParticipantId' {participants : List Identifier} : Type₀ where
-    pId : (name : Identifier) → {isIn :  True (snd (IsParticipantId {participants} name))} → ParticipantId'
+    pId : (name : Identifier) → {isIn :  PM ( IsParticipantId {participants} name ) } → ParticipantId'
 
   pId-name : ∀ {ptps} → ParticipantId' {ptps} → Identifier
   pId-name (pId name₁) = name₁
@@ -365,7 +376,7 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
     field
       participants : List Identifier
       parameters : List IdentifierWithType
-      {uniqueParams} : True (UniqueByDec≡ name parameters)
+      {uniqueParams} : PM (_ , UniqueByDec≡ name parameters)
 
 
 
@@ -385,6 +396,9 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
 
     ce-name : ContextEntry → Identifier
     ce-name = ContextEntry'.name
+
+    ce-scope : ContextEntry → Scope 
+    ce-scope = ContextEntry'.scope
 
     record Context : Type₀ where
       pattern
@@ -418,7 +432,7 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
 
 
       data DefinedSymbolOfTy (Τ : GType) : Type ℓ-zero where
-        dsot : (name : Identifier) → {isDefinedSymbolOfTy : True (snd( IsDefinedSymbolOfTy Τ name))} → DefinedSymbolOfTy Τ
+        dsot : (name : Identifier) → {isDefinedSymbolOfTy : PM ( IsDefinedSymbolOfTy Τ name ) } → DefinedSymbolOfTy Τ
 
       open DefinedSymbolOfTy public
 
@@ -431,12 +445,12 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
 
 
       data PrivateSymbolOf (p : ParticipantId) : Type ℓ-zero where
-        psof : (name : Identifier) → {isDefinedSymbolOf : True ( snd ( IsPrivateSymbolOf p name ))} → PrivateSymbolOf p 
+        psof : (name : Identifier) → {isDefinedSymbolOf : PM ( IsPrivateSymbolOf p name ) } → PrivateSymbolOf p 
 
       psof-name : ∀ {p} → PrivateSymbolOf p → Identifier
       psof-name (psof x) = x 
 
-      psof-proof : ∀ {p} → (pso : PrivateSymbolOf p) → True ( snd ( IsPrivateSymbolOf p (psof-name pso) ))
+      psof-proof : ∀ {p} → (pso : PrivateSymbolOf p) → PM ( IsPrivateSymbolOf p (psof-name pso) )
       psof-proof (psof x {y}) = y 
 
 
@@ -479,10 +493,10 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
     AllowedScopeNarrowing Γ = AllowedScopeNarrowing' (scope' Γ) 
 
 
-    narrowScope : (Γ : Context) → (s : Scope)  → .(True (snd ( AllowedScopeNarrowing Γ s))) → Scope
+    narrowScope : (Γ : Context) → (s : Scope)  → PM (AllowedScopeNarrowing Γ s) → Scope
     narrowScope Γ s _ = caseMaybe s (scope' Γ) (Γ .scope') 
 
-    narrow : (Γ : Context) → (s : Scope)  → .(True (snd (AllowedScopeNarrowing Γ s) )) → Context
+    narrow : (Γ : Context) → (s : Scope)  → (PM  (AllowedScopeNarrowing Γ s) ) → Context
     narrow Γ a x = record Γ { scope' = narrowScope Γ a x }
 
 
@@ -521,7 +535,7 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
       var : DefinedSymbolOfTy Γ Τ → Expr Γ Τ
       body : Body Γ Τ → Expr Γ Τ
       lit : GTypeAgdaRep Τ → Expr Γ Τ
-      input : String → {_ : True (snd (IsNotConsensus Γ)) } → Expr Γ Τ
+      input : String → {_ : PM (IsNotConsensus Γ) } → Expr Γ Τ
       if_then_else_ : Expr Γ Bool → Expr Γ Τ → Expr Γ Τ → Expr Γ Τ
 
     data Stmnt Γ where
@@ -532,16 +546,16 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
     data BStmnt Γ where
                     -- warning: scope in "ce" is interpreted in unusual way!
                     -- (TODO : consider speical type here)
-      BS-let : (ce : ContextEntry) → {asn : True (snd (AllowedScopeNarrowing Γ (scope ce)) )}
+      BS-let : (ce : ContextEntry) → {asn : PM  (AllowedScopeNarrowing Γ (scope ce) )}
                   → Expr (narrow Γ (scope ce) asn) (type ce) → BStmnt Γ    
       BS-publish! : (p : ParticipantId) → (PrivateSymbolOf Γ p)
-                             → {_ : True (snd( IsConsensus Γ )) }→  BStmnt Γ
+                             → {_ : PM ( IsConsensus Γ ) }→  BStmnt Γ
       -- verify! ‹ids›
 
     data NBStmnt Γ where
       NBS-require! : Expr Γ Bool → NBStmnt Γ
-      NBS-deposit! : ParticipantId → {_ : True (snd( IsConsensus Γ )) } → Expr Γ Nat → NBStmnt Γ
-      NBS-withdraw! : ParticipantId → {_ : True (snd( IsConsensus Γ )) } → Expr Γ Nat → NBStmnt Γ
+      NBS-deposit! : ParticipantId → {_ : PM ( IsConsensus Γ ) } → Expr Γ Nat → NBStmnt Γ
+      NBS-withdraw! : ParticipantId → {_ : PM ( IsConsensus Γ ) } → Expr Γ Nat → NBStmnt Γ
 
 
     data NBStmnt+Expr Γ where
@@ -550,7 +564,7 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
 
     bindingMechanics {Γ} (BS-let ce _) = ce ∷ Γ .entries
     bindingMechanics {Γ} (BS-publish! p x) = 
-      map-ExistingFirstBy _ WitchIsAlso _ (Γ .entries) (toWitness (psof-proof _ x)) 
+      map-ExistingFirstBy _ WitchIsAlso _ (Γ .entries) (toWitness' (psof-proof _ x)) 
          λ e _ _ → record e { scope = nothing }  
 
     bindingMechanics' Γ (bindingS x) = record Γ { entries =  bindingMechanics x } 
@@ -574,6 +588,9 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
     -- Expr-eq? Γ Τ (lit x) (var x₁) = {!!}
     -- Expr-eq? Γ Τ (lit x) (body x₁) = {!!}
     -- Expr-eq? Γ Τ (lit x) (lit x₁) = {!!}
+
+    blankStmnt : ∀ {Γ} → Stmnt Γ
+    blankStmnt = nonBindingS (stmntNBS (NBS-require! (lit true)))
 
 
 
@@ -650,32 +667,35 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
 
   pattern v_ x = var (dsot x)
 
--- open AST String {{String-Discrete-postulated}}
 
--- someInteraction : Interaction
--- someInteraction =  
---    interaction⟨   "A" ∷ "B" ∷ [] ,  "pI1" ∶ Nat ∷ "b2" ∶ Bool ∷ "b1" ∶ Bool ∷ [] ⟩ (
---         set "x" ∶ Bool ≔ < true > ;
---         at "B" set "y" ∶ Bool ≔ v "b1" ;
---         at "A" set "xx" ∶ Bool ≔
---          ( if v "b1"
---            then
---               (
---               set "z" ∶ Bool ≔ input "enter choice 1" ;₁ ;b
---               v "z"
---             )
---            else (
---             require! v "b2" ;'
---             -- publish! "B" ⟶ "y" ;
---             -- withdraw! "B" ⟵ < 3 > ;
---             -- deposit! "B" ⟶ < 2 > ;
---             set "z" ∶ Bool ≔ < false > ;b
---             < true >
---             )) ;
---         deposit! "B" ⟶ < 2 > ;
---         at "A" set "yq" ∶ Bool ≔ input "enter choice 2" ;
---         withdraw! "B" ⟵ < 3 > ;
---         publish! "A" ⟶ "xx" ;        
 
---         publish! "B" ⟶ "y" ;'        
---         set "yy" ∶ Bool ≔ v "y" )
+
+open AST String {{String-Discrete-postulated}} false
+
+someInteraction : Interaction
+someInteraction =  
+   interaction⟨   "A" ∷ "B" ∷ [] ,  "pI1" ∶ Nat ∷ "b2" ∶ Bool ∷ "b1" ∶ Bool ∷ [] ⟩ (
+        set "x" ∶ Bool ≔ < true > ;
+        at "B" set "y" ∶ Bool ≔ v "b1" ;
+        at "A" set "xx" ∶ Bool ≔
+         ( if v "b1"
+           then
+              (
+              set "z" ∶ Bool ≔ input "enter choice 1" ;₁ ;b
+              v "z"
+            )
+           else (
+            require! v "b2" ;'
+            -- publish! "B" ⟶ "y" ;
+            -- withdraw! "B" ⟵ < 3 > ;
+            -- deposit! "B" ⟶ < 2 > ;
+            set "z" ∶ Bool ≔ < false > ;b
+            < true >
+            )) ;
+        deposit! "B" ⟶ < 2 > ;
+        at "A" set "yq" ∶ Bool ≔ input "enter choice 2" ;
+        withdraw! "B" ⟵ < 3 > ;
+        publish! "A" ⟶ "xx" ;        
+
+        publish! "B" ⟶ "y" ;'        
+        set "yy" ∶ Bool ≔ v "y" )

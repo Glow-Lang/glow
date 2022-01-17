@@ -36,8 +36,11 @@ open import Glow.DecEqMore
 
 module ParamsSubst {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}} where
 
+  prop-mode = true
+  
+  open AST Identifier prop-mode
 
-  open AST Identifier
+  open PropMode prop-mode 
 
   -- open InteractionHead
 
@@ -88,9 +91,9 @@ module ParamsSubst {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete I
 
       h-expr (var (dsot x {y})) =
          sum-elim
-           (λ a → var (dsot x {fromWitness (inl a)}))
+           (λ a → var (dsot x {inl a}))
            (lit ∘ (lookup-ParametersValue (ih .parameters) vv (iwt x _)) ∘ proj₂)
-            (toWitness' y)
+            y
         
 
       h-expr (stmnts₁ ;b x) =

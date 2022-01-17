@@ -34,12 +34,13 @@ Empty-elim-dot ()
 -- recompute {{yes x}} _ = x
 -- recompute {{no ¬p}} x = Empty-elim-dot (¬p x)
 
+fromDec : ∀ {ℓ} {A : Type ℓ} (Q : Dec A) → Type ℓ 
+fromDec {A = A} _ = A
+
 fromWitness : ∀ {ℓ} {A : Type ℓ} {Q : Dec A} → A → True Q 
 fromWitness {Q = yes p} x = _
 fromWitness {Q = no ¬p} x = ¬p x
 
-toWitness' : ∀ {ℓ} {A : Type ℓ} {Q : Dec A} → .(True Q) → A
-toWitness' {Q = yes p} _ = p
 
 
 ??_ :  ∀ {ℓ} (A : Type ℓ) → {{Dec-A : Dec A}} → Dec A   
@@ -290,3 +291,32 @@ Id-Dec-hlp-mid' ⦃ Dec-A = no ¬p ⦄ ⦃ no ¬p₁ ⦄ _ n _ g = g ¬p
 Id-Dec-hlp : ∀ {ℓ ℓ2 ℓ' ℓ''} {A : Type ℓ} {A2 : Type ℓ2} {A' : Type ℓ'} {A'' : Type ℓ'}  {B' : Type ℓ''} {B'' : Type ℓ''} {{Dec-A : Dec A}} {{Dec-A2 : Dec A2}} →
                    (A → A2) → (A2 → A) → (A → A' → B') → (IsEmpty A → A'' → B'') → (A × A') ⊎ (IsEmpty A × A'') → (A2 × B') ⊎ (IsEmpty A2 × B'') 
 Id-Dec-hlp y n f g x = Id-Dec-hlp→ (Id-Dec-hlp-mid' y n f g (Id-Dec-hlp← x))
+
+
+
+module PropMode (b : Bool) where
+
+  PM-h : Bool → Σ _ Dec → Type₀
+  PM-h false = True ∘ snd
+  PM-h true = fst
+
+  
+  PM : Σ _ Dec → Type₀
+  PM = PM-h b 
+    
+
+  toWitness'-h : ∀ {A} → ∀ b → PM-h b A → fst A
+  toWitness'-h {A} false x = toWitness x
+  toWitness'-h true x = x
+
+  fromWitness'-h : ∀ {A} → ∀ b → fst A → PM-h b A
+  fromWitness'-h {fst₁ , _} false x = fromWitness x
+  fromWitness'-h true x = x
+
+
+  toWitness' : ∀ {A} → PM A → fst A
+  toWitness' = toWitness'-h b
+
+  fromWitness' : ∀ {A} → fst A → PM A
+  fromWitness' = fromWitness'-h b
+

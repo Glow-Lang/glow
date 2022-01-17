@@ -10,8 +10,8 @@ open import Cubical.Foundations.Everything
 
 open import Cubical.Data.Nat
 open import Cubical.Data.Int
-open import Cubical.Data.Prod
-open import Cubical.Data.Sum renaming (elim to sum-elim)
+open import Cubical.Data.Prod renaming (map to map-prod)
+open import Cubical.Data.Sum renaming (elim to sum-elim ; map to map-sum)
 open import Cubical.Data.List renaming (map to map-List)
 
 
@@ -32,14 +32,21 @@ open import Glow.DecEqMore
 
 open import Glow.Simple.AST
 
+
+
 module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}} where
 
+  prop-mode = true
+  
+  -- open AST Identifier prop-mode
+
+  open PropMode prop-mode 
 
   -- open AST Identifier
 
   module _ {ptps : List Identifier} where
   
-    open AST.InteractionHead (AST.interactionHead ptps [])
+    open AST.InteractionHead {prop-mode = prop-mode} (AST.interactionHead ptps []) 
 
     {-# TERMINATING #-}
     Subst' : List ContextEntry → Type₀
@@ -80,11 +87,36 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
     -- toConsensusCodeStmnt {just x₁} (AST.nonBindingS (AST.stmntNBS (AST.NBS-require! x))) = (AST.nonBindingS (AST.stmntNBS (AST.NBS-require! {!!})))
     -- toConsensusCodeStmnt {just x₁} (AST.nonBindingS (AST.exprNBS x)) = {!!}
 
+    map-ExistingFirstBy-lemma : {cs : List ContextEntry}
+                       (B : ContextEntry → Type₀) (B' : ContextEntry → Type₀)
+                       
+                       (z : ExistFirstBy B WitchIsAlso B' cs) →
+                       (f : ContextEntry → Scope)
+                       (r : Subst' cs) → Subst' (map-ExistingFirstBy B WitchIsAlso B' cs z λ x x₁ x₂ → record x { scope = f x })
+    map-ExistingFirstBy-lemma {x ∷ cs} B B' (inl x₁) f = idfun _
+    map-ExistingFirstBy-lemma {x ∷ cs} B B' (inr x₁) f = map-sum (idfun _) (map-ExistingFirstBy-lemma {cs} B B' (proj₂ x₁) f)
+
 
     publish-substlemma : {c : Context} (r : Subst c)
                        (p : AST.ParticipantId (AST.interactionHead ptps parameters))
                        (x : AST.PrivateSymbolOf c p)
-                       {z : True (snd (AST.IsConsensus c))} →
+                       (z : ⟨ AST.IsConsensus c ⟩) →
                      Subst (bindingMechanics' c (bindingS (BS-publish! p x {z})))
-    publish-substlemma {AST.con (AST.ice nothing name₁ type ∷ entries₁) nothing} r p (AST.psof name {q}) with toWitness
-    publish-substlemma {AST.con (AST.ice (just x) name₁ type ∷ entries₁) nothing} r p (AST.psof name {q}) = {!!}
+    publish-substlemma r p x _ = map-ExistingFirstBy-lemma (λ x₁ → psof-name _ x ≡ AST.name x₁) (λ y →
+                                                                                                  recMaybe Empty (λ p' → AST.pId-name _ _ p ≡ AST.pId-name _ _ p')
+                                                                                                  (AST.scope y))  (psof-proof _ x) (λ _ → nothing) r
+
+
+    ExistFirstBy-WitchIsAlso-remSubs-lemm : {nm : Identifier} {p : ParticipantId} (l : List ContextEntry) → (r : Subst' l)  →
+                                                      ExistFirstBy ((nm ≡_) ∘ ce-name) WitchIsAlso
+                                                        ((λ y → recMaybe Empty (λ p' → (AST.pId-name _ _ p) ≡ (AST.pId-name _ _ p')) (ce-scope y))) l →
+                                                      ((ExistFirstBy ((nm ≡_) ∘ ce-name) WitchIsAlso
+                                                         ((λ y → recMaybe Empty (λ p' → (AST.pId-name _ _ p) ≡ (AST.pId-name _ _ p')) (ce-scope y)))
+                                                         (remSubst' l r)) ⊎ Unit)
+    ExistFirstBy-WitchIsAlso-remSubs-lemm (x₁ ∷ l) (inl x) (inl x₂) = inr tt
+    ExistFirstBy-WitchIsAlso-remSubs-lemm (x₁ ∷ l) (inl x) (inr x₂) = inl (ExistFirstBy-WitchIsAlso-FilterOut-lemma _ (λ a x₃ y → proj₁ x₂ (x₃ ∙ sym y)) (proj₂ x₂))
+    ExistFirstBy-WitchIsAlso-remSubs-lemm (x₁ ∷ l) (inr x) (inl x₂) = inl (inl x₂)
+    ExistFirstBy-WitchIsAlso-remSubs-lemm {nm} {p} (x₁ ∷ l) (inr x) (inr x₂) = map-sum
+          (inr ∘ (proj₁ x₂ ,_))
+          (λ _ → tt)
+          (ExistFirstBy-WitchIsAlso-remSubs-lemm {nm} {p} l x (proj₂ x₂))
