@@ -16,7 +16,7 @@ open import Cubical.Data.List renaming (map to map-List)
 
 
 open import Cubical.Data.Maybe renaming (rec to recMaybe )
-open import Cubical.Data.Bool renaming (Bool to 𝟚 ; _≟_ to _≟B_)
+open import Cubical.Data.Bool hiding (if_then_else_) renaming (Bool to 𝟚 ; _≟_ to _≟B_)
 
 open import Cubical.Data.Empty renaming (elim to empty-elim ; rec to empty-rec ;  ⊥ to Empty )
 
@@ -88,6 +88,9 @@ tail (_ ∷ xs) = xs
 map-List-∘ : ∀ {ℓ} → {A B C : Type ℓ} → (f : A → B) → (g : B → C) → (l : List A) →  map-List g (map-List f l) ≡ map-List (g ∘ f) l 
 map-List-∘ f g [] = refl
 map-List-∘ f g (x ∷ l) = cong ((g (f x)) ∷_) (map-List-∘ f g l)
+
+-- -- usefull for stratification
+-- list-< : \al
 
 
 data GType : Type₀ where
@@ -192,7 +195,6 @@ instance
 IsMemberOf : ∀ {ℓ} → {A : Type ℓ} → A → List A → Type ℓ
 IsMemberOf a l = ExistMemberAs (a ≡_) l 
 
-
 ExistFirstBy_WitchIsAlso : ∀ {ℓ ℓ' ℓ''} → {A : Type ℓ} → (B : A → Type ℓ') → (B' : A → Type ℓ'')  → List A → Type (ℓ-max ℓ' ℓ'') 
 ExistFirstBy_WitchIsAlso B B' [] = Lift Empty
 ExistFirstBy_WitchIsAlso B B' (x ∷ xs) = (B x × B' x) ⊎ ((IsEmpty (B x) × ExistFirstBy_WitchIsAlso B B' xs))
@@ -254,6 +256,13 @@ UniqueByDec≡  : ∀ {ℓ ℓ'} → {A : Type ℓ} → {A' : Type ℓ'} → (f 
 UniqueByDec≡ _ [] = yes _
 UniqueByDec≡ _ (x ∷ xs) = ×-Dec {{Dec-B = UniqueByDec≡ _ xs }}
 
+FilterOut : ∀ {ℓ ℓ'} → {A : Type ℓ} (B : A → Type ℓ') {{Dec-Pred-B : Dec-Pred B}}
+                → List A → Σ (List A) λ l → IsEmpty (ExistMemberAs B l)
+FilterOut _ ⦃ Dec-Pred-B = Dec-Pred-B ⦄ [] = [] , lower
+FilterOut B ⦃ Dec-Pred-B = Dec-Pred-B ⦄ (x ∷ x₁) =
+   let q = FilterOut B x₁
+   in dec-rec _ {{Dec-Pred.decide Dec-Pred-B x}}
+        (λ _ → q) λ y → x ∷ fst q , sum-elim y (snd q)
 
 
 -- TODD : decision procedure
@@ -305,7 +314,7 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
         , ?? _
 
   data ParticipantId' {participants : List Identifier} : Type₀ where
-    pId : (name : Identifier) → .{isIn :  True (snd (IsParticipantId {participants} name))} → ParticipantId'
+    pId : (name : Identifier) → {isIn :  True (snd (IsParticipantId {participants} name))} → ParticipantId'
 
   pId-name : ∀ {ptps} → ParticipantId' {ptps} → Identifier
   pId-name (pId name₁) = name₁
@@ -315,7 +324,7 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
     
   --   field
   --     name : Identifier
-  --     .{isIn} : True (snd (IsParticipantId {participants} name))
+  --     {isIn} : True (snd (IsParticipantId {participants} name))
 
   open ParticipantId' public
 
@@ -347,8 +356,6 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
 
   open ContextEntry' public
 
-  AType : ∀ {ps} →  ContextEntry' {ps} → Type₀
-  AType ce = GTypeAgdaRep (ce .type)
 
 
   record InteractionHead : Type₀ where
@@ -358,7 +365,7 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
     field
       participants : List Identifier
       parameters : List IdentifierWithType
-      .{uniqueParams} : True (UniqueByDec≡ name parameters)
+      {uniqueParams} : True (UniqueByDec≡ name parameters)
 
 
 
@@ -373,8 +380,11 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
 
     ContextEntry = ContextEntry' {participants}
 
+    AType : ContextEntry → Type₀
+    AType ce = GTypeAgdaRep (ce .type)
 
-
+    ce-name : ContextEntry → Identifier
+    ce-name = ContextEntry'.name
 
     record Context : Type₀ where
       pattern
@@ -394,7 +404,7 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
         ExistFirstBy ((x ≡_) ∘ name) 
            WitchIsAlso (λ y → ⟨ scope' CanAccess (scope y) ⟩ × (ty ≡ type y) ) entries
          , Dec-ExistFirstBy_WitchIsAlso {{Dec-Pred-B' = dec-pred λ y → ×-Dec {{snd (scope' CanAccess (scope y))}}}}
-         
+
       IsNotShadowedParamOfTy : GType → Identifier → Type ℓ-zero
       IsNotShadowedParamOfTy ty x =
          IsEmpty (ExistMemberAs ((x ≡_) ∘ name) entries)
@@ -408,7 +418,7 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
 
 
       data DefinedSymbolOfTy (Τ : GType) : Type ℓ-zero where
-        dsot : (name : Identifier) → .{isDefinedSymbolOfTy : True (snd( IsDefinedSymbolOfTy Τ name))} → DefinedSymbolOfTy Τ
+        dsot : (name : Identifier) → {isDefinedSymbolOfTy : True (snd( IsDefinedSymbolOfTy Τ name))} → DefinedSymbolOfTy Τ
 
       open DefinedSymbolOfTy public
 
@@ -421,13 +431,15 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
 
 
       data PrivateSymbolOf (p : ParticipantId) : Type ℓ-zero where
-        psof : (name : Identifier) → .{isDefinedSymbolOf : True ( snd ( IsPrivateSymbolOf p name ))} → PrivateSymbolOf p 
+        psof : (name : Identifier) → {isDefinedSymbolOf : True ( snd ( IsPrivateSymbolOf p name ))} → PrivateSymbolOf p 
 
       psof-name : ∀ {p} → PrivateSymbolOf p → Identifier
       psof-name (psof x) = x 
 
-      recompute-isDefinedSymbolOf : ∀ {p} → (pso : PrivateSymbolOf p) → True ( snd ( IsPrivateSymbolOf p (psof-name pso) )) 
-      recompute-isDefinedSymbolOf (psof name₁ {y}) = recompute y
+      psof-proof : ∀ {p} → (pso : PrivateSymbolOf p) → True ( snd ( IsPrivateSymbolOf p (psof-name pso) ))
+      psof-proof (psof x {y}) = y 
+
+
 
       open PrivateSymbolOf public
 
@@ -436,8 +448,14 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
       IsConsensus : Σ _ Dec
       IsConsensus = caseMaybe (Unit , yes _) (Empty , no (idfun _)) scope'
 
+      IsNotConsensus : Σ _ Dec
+      IsNotConsensus = caseMaybe (Empty , no (idfun _)) (Unit , yes _)  scope'
+
 
     open Context public
+
+    -- context-< : Context → ℕ → Type₀ 
+    -- context-< x x₁ = {!!}
 
     emptyContext : Context
     emptyContext = con [] nothing
@@ -448,14 +466,13 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
     addToContext : Context → ContextEntry → Context
     addToContext Γ x = record Γ { entries =  x ∷ Γ .entries } 
 
-    popFromCtxt : Context → Maybe ContextEntry × Context
-    popFromCtxt Γ = (pop (Γ .entries)) , record Γ { entries = tail (Γ .entries) }
 
-    removeFromContext : Context → Context
-    removeFromContext = proj₂ ∘ popFromCtxt
+    removeFromContext' : ∀ (Γ : _) → ∀ s → ∀ Τ → ⟨ IsDefinedVariableOfTy Γ Τ s ⟩ → List ContextEntry
+    removeFromContext' (con (x₁ ∷ entries₁) scope'') s Τ (inl x) = entries₁
+    removeFromContext' (con (x₁ ∷ entries₁) scope'') s Τ (inr x) =  (x₁ ∷ removeFromContext' (con (entries₁) scope'') s Τ (proj₂ x) )
 
-    popType : Context → Type₀ 
-    popType Γ = recMaybe Unit AType (proj₁ (popFromCtxt Γ))
+    removeFromContext : ∀ (Γ : _) → ∀ s → ∀ Τ → ⟨ IsDefinedVariableOfTy Γ Τ s ⟩ → Context
+    removeFromContext Γ s Τ x = record Γ { entries =  removeFromContext' Γ s Τ x } 
 
 
     AllowedScopeNarrowing : (Γ : Context) → Scope → Σ _ Dec
@@ -467,6 +484,7 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
 
     narrow : (Γ : Context) → (s : Scope)  → .(True (snd (AllowedScopeNarrowing Γ s) )) → Context
     narrow Γ a x = record Γ { scope' = narrowScope Γ a x }
+
 
 
 
@@ -503,6 +521,8 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
       var : DefinedSymbolOfTy Γ Τ → Expr Γ Τ
       body : Body Γ Τ → Expr Γ Τ
       lit : GTypeAgdaRep Τ → Expr Γ Τ
+      input : String → {_ : True (snd (IsNotConsensus Γ)) } → Expr Γ Τ
+      if_then_else_ : Expr Γ Bool → Expr Γ Τ → Expr Γ Τ → Expr Γ Τ
 
     data Stmnt Γ where
       -- not necessary binding, but rather context changing
@@ -512,16 +532,16 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
     data BStmnt Γ where
                     -- warning: scope in "ce" is interpreted in unusual way!
                     -- (TODO : consider speical type here)
-      BS-let : (ce : ContextEntry) → .{asn : True (snd (AllowedScopeNarrowing Γ (scope ce)) )}
+      BS-let : (ce : ContextEntry) → {asn : True (snd (AllowedScopeNarrowing Γ (scope ce)) )}
                   → Expr (narrow Γ (scope ce) asn) (type ce) → BStmnt Γ    
       BS-publish! : (p : ParticipantId) → (PrivateSymbolOf Γ p)
-                             → .{_ : True (snd( IsConsensus Γ )) }→  BStmnt Γ
+                             → {_ : True (snd( IsConsensus Γ )) }→  BStmnt Γ
       -- verify! ‹ids›
 
     data NBStmnt Γ where
       NBS-require! : Expr Γ Bool → NBStmnt Γ
-      NBS-deposit! : ParticipantId → .{_ : True (snd( IsConsensus Γ )) } → Expr Γ Nat → NBStmnt Γ
-      NBS-withdraw! : ParticipantId → .{_ : True (snd( IsConsensus Γ )) } → Expr Γ Nat → NBStmnt Γ
+      NBS-deposit! : ParticipantId → {_ : True (snd( IsConsensus Γ )) } → Expr Γ Nat → NBStmnt Γ
+      NBS-withdraw! : ParticipantId → {_ : True (snd( IsConsensus Γ )) } → Expr Γ Nat → NBStmnt Γ
 
 
     data NBStmnt+Expr Γ where
@@ -530,7 +550,7 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
 
     bindingMechanics {Γ} (BS-let ce _) = ce ∷ Γ .entries
     bindingMechanics {Γ} (BS-publish! p x) = 
-      map-ExistingFirstBy _ WitchIsAlso _ (Γ .entries) (toWitness (recompute-isDefinedSymbolOf _ x))
+      map-ExistingFirstBy _ WitchIsAlso _ (Γ .entries) (toWitness (psof-proof _ x)) 
          λ e _ _ → record e { scope = nothing }  
 
     bindingMechanics' Γ (bindingS x) = record Γ { entries =  bindingMechanics x } 
@@ -539,6 +559,24 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
     Statements : Context → Type₀
     Statements Γ = Linked' bindingMechanics' Γ
 
+    -- Expr-eq? : ∀ Γ Τ → (x y : Expr Γ Τ) → Dec (x ≡ y) 
+    -- Expr-eq? Γ Τ (var (dsot x {x'})) (var (dsot y {y'})) = 
+    --   dec-rec (x ≡ y)
+    --     (λ p →   let q = True-Pa {A = λ i₁ → (fst (IsDefinedSymbolOfTy Γ Τ (p i₁)))} {(λ i₁ → (snd (IsDefinedSymbolOfTy Γ Τ (p i₁))))} {x'} {y'}
+    --              in yes λ i → (var (dsot (p i) {{!!}})))
+    --     {!!} 
+
+    -- Expr-eq? Γ Τ (var x) (body x₁) = {!!}
+    -- Expr-eq? Γ Τ (var x) (lit x₁) = {!!}
+    -- Expr-eq? Γ Τ (body x) (var x₁) = {!!}
+    -- Expr-eq? Γ Τ (body x) (body x₁) = {!!}
+    -- Expr-eq? Γ Τ (body x) (lit x₁) = {!!}
+    -- Expr-eq? Γ Τ (lit x) (var x₁) = {!!}
+    -- Expr-eq? Γ Τ (lit x) (body x₁) = {!!}
+    -- Expr-eq? Γ Τ (lit x) (lit x₁) = {!!}
+
+
+
   toParamValue : ∀ (l : List IdentifierWithType)  → ParametersValue l →
                  ∀ Τ s → 
                  IsMemberOf (iwt s Τ) l →
@@ -546,7 +584,6 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
   toParamValue (x₂ ∷ l) (x , xs) Τ s (inl p) = subst (GTypeAgdaRep) (cong type (sym p)) x
   toParamValue (x₂ ∷ l) (x , xs) Τ s (inr x₁) = (toParamValue l xs Τ s x₁)
 
-  
 
 
   record Interaction : Type₀ where
@@ -620,15 +657,25 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
 --    interaction⟨   "A" ∷ "B" ∷ [] ,  "pI1" ∶ Nat ∷ "b2" ∶ Bool ∷ "b1" ∶ Bool ∷ [] ⟩ (
 --         set "x" ∶ Bool ≔ < true > ;
 --         at "B" set "y" ∶ Bool ≔ v "b1" ;
---         at "A" set "xx" ∶ Bool ≔ (
+--         at "A" set "xx" ∶ Bool ≔
+--          ( if v "b1"
+--            then
+--               (
+--               set "z" ∶ Bool ≔ input "enter choice 1" ;₁ ;b
+--               v "z"
+--             )
+--            else (
 --             require! v "b2" ;'
 --             -- publish! "B" ⟶ "y" ;
 --             -- withdraw! "B" ⟵ < 3 > ;
 --             -- deposit! "B" ⟶ < 2 > ;
 --             set "z" ∶ Bool ≔ < false > ;b
 --             < true >
---             );
+--             )) ;
 --         deposit! "B" ⟶ < 2 > ;
+--         at "A" set "yq" ∶ Bool ≔ input "enter choice 2" ;
 --         withdraw! "B" ⟵ < 3 > ;
+--         publish! "A" ⟶ "xx" ;        
+
 --         publish! "B" ⟶ "y" ;'        
 --         set "yy" ∶ Bool ≔ v "y" )

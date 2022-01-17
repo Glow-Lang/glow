@@ -13,7 +13,7 @@ open import Cubical.Data.Int
 open import Cubical.Data.Prod
 open import Cubical.Data.Sum
 open import Cubical.Data.List
-open import Cubical.Data.Empty renaming (elim to empty-elim)
+open import Cubical.Data.Empty renaming (elim to empty-elim ; rec to empty-rec)
 
 
 open import Cubical.Data.Maybe renaming (rec to recMaybe)
@@ -30,9 +30,9 @@ infix 20 ??_
 Empty-elim-dot : ∀ {w} {Whatever : Type w} → .⊥ → Whatever
 Empty-elim-dot ()
 
-recompute : ∀ {a} {A : Type a} → {{Dec A}} → .A → A
-recompute {{yes x}} _ = x
-recompute {{no ¬p}} x = Empty-elim-dot (¬p x)
+-- recompute : ∀ {a} {A : Type a} → {{Dec A}} → .A → A
+-- recompute {{yes x}} _ = x
+-- recompute {{no ¬p}} x = Empty-elim-dot (¬p x)
 
 fromWitness : ∀ {ℓ} {A : Type ℓ} {Q : Dec A} → A → True Q 
 fromWitness {Q = yes p} x = _
@@ -54,6 +54,29 @@ dec-rec A x x₁ with ?? A
 
 
 
+Dec-≡ : ∀ {ℓ} {A : Type ℓ} {B : Type ℓ} → {{Dec-A : Dec A}} → {{Dec-B : Dec B}} →
+          (p : A ≡ B) → True (Dec-A) ≡ True (Dec-B)  
+Dec-≡ ⦃ Dec-A = yes p₁ ⦄ ⦃ yes p₂ ⦄ p = refl
+Dec-≡ ⦃ Dec-A = yes p₁ ⦄ ⦃ no ¬p ⦄ p = empty-rec (¬p (transport p p₁))
+Dec-≡ ⦃ Dec-A = no ¬p ⦄ ⦃ yes p₁ ⦄ p = empty-rec (¬p (transport⁻ p p₁))
+Dec-≡ ⦃ Dec-A = no ¬p ⦄ ⦃ no ¬p₁ ⦄ p = refl
+
+True-≡ : ∀ {ℓ} {A : Type ℓ} {B : Type ℓ} → {{Dec-A : Dec A}} → {{Dec-B : Dec B}} →
+          (p : A ≡ B) → {x : True Dec-A} {y : True Dec-B} → PathP (λ i → Dec-≡ p i ) x y  
+True-≡ ⦃ Dec-A = yes p₁ ⦄ ⦃ yes p₂ ⦄ p = refl
+
+-- postulate True-Pa' : ∀ {ℓ} {A : I → Type ℓ} {Dec-A : ∀ i → Dec (A i)} →
+--                       {x : True (Dec-A i0)} {y : True (Dec-A i1)}
+--                       → Dec (A i0) → Dec (A i1) → PathP (λ i → True (Dec-A i)) x y  
+-- -- True-Pa' {Dec-A = Dec-A} p {x} {y} (yes p₁) (yes p₂) = {!!}
+-- -- True-Pa' {Dec-A = Dec-A} p {x} {y} (yes p₁) (no ¬p) = {!!}
+-- -- True-Pa' {Dec-A = Dec-A} p {x} {y} (no ¬p) (yes p₁) = {!!}
+-- -- True-Pa' {Dec-A = Dec-A} p {x} {y} (no ¬p) (no ¬p₁) = {!!}
+
+-- True-Pa : ∀ {ℓ} {A : I → Type ℓ} {Dec-A : ∀ i → Dec (A i)} →
+--           .{x : True (Dec-A i0)} .{y : True (Dec-A i1)}
+--            → .(PathP (λ i → True (Dec-A i)) x y)  
+-- True-Pa {Dec-A = Dec-A} = ? --True-Pa' {Dec-A = Dec-A} (Dec-A i0) (Dec-A i1)
 
 record IsDiscrete {ℓ} (A : Type ℓ) : Type ℓ where
   field
