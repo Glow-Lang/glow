@@ -141,16 +141,6 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
     fold*-lemma []L r = refl
     fold*-lemma (h ∷L stmnts₁) x = fold*-lemma  (stmnts₁) (bindingMechanics'-Subst x h) 
 
-    -- fold*-lemma' : ∀ {Γ : Context}
-    --                 (stmnts₁ : Statements Γ) → ∀ (r) →
-    --                  PathP (λ x → Subst (fold*-lemma stmnts₁ r x)) 
-    --                  (snd (foldLinked' (mkStatements* {_} {r} stmnts₁)))
-    --                  (
-    --                 (subst (Subst) (fold*-lemma stmnts₁ r)
-    --                            (snd (foldLinked' (mkStatements* stmnts₁)))))
-    -- fold*-lemma' {AST.con (AST.ice scope name type ∷ entries₁) scope''} []L r = {!subst-filler _ _ _!}
-    -- fold*-lemma' (h ∷L stmnts₁) r = {!!}
-
 
     -- TODO : remove unsafe pragma by stratification on nesting depth
     {-# TERMINATING #-}
@@ -165,7 +155,7 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
                                                       (snd (bindingMechanics'* (Γ , r) x))
                                                       ≡ bindingMechanics' (remSubst Γ r) (substOneStmnt r x)
 
--- lit (subst GTypeAgdaRep {!proj₂ x!} x₂)
+
     evalVar' : ∀ (Γ) → ∀ {Τ} → ∀ nm → ⟨ IsDefinedSymbolOfTy Γ Τ nm ⟩ → (r : Subst Γ) → ⟨ IsDefinedSymbolOfTy (remSubst Γ r) Τ nm ⟩ ⊎ GTypeAgdaRep Τ 
     evalVar' (AST.con (x₁ ∷ entries₁) scope'') nm (inl (inl x)) (inl x₂) = inr (subst⁻ GTypeAgdaRep (proj₂ (proj₂ x)) x₂)
     evalVar' (AST.con (x₁ ∷ entries₁) scope'') nm (inl (inr x)) (inl x₂) =
