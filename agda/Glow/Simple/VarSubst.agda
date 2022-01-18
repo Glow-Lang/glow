@@ -271,3 +271,11 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
 
 
 
+module Test where
+
+  open SubstOne {String} {{String-Discrete-postulated}} {"A" ∷ "B" ∷ []}
+
+  -- open AST.InteractionHead  {prop-mode = true} (AST.interactionHead ptps [])
+
+  -- test-stmnts : {!Statements ?!}
+  -- test-stmnts = {!!}
