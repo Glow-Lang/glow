@@ -192,6 +192,34 @@ instance
 
 -- Dec-Pred-Dec {{Dec-Pred-ExistMemberAs {{record { predicateDecision = λ _ → ?? _ }}}}}
 
+
+FirstIs∙ : ∀ {ℓ ℓ'} → {A : Type ℓ} → (B : A → Type ℓ') → List A → Type ℓ' 
+FirstIs∙ B [] = Lift Empty
+FirstIs∙ B (x ∷ _) = B x
+
+record FirstIs {ℓ ℓ'} {A : Type ℓ} (B : A → Type ℓ') (l : List A) : Type ℓ' where
+  constructor firstIs
+  field
+    proof : FirstIs∙ B l
+
+
+instance
+  Dec-Pred-FirstIs : ∀ {ℓ ℓ'} → {A : Type ℓ} {B : A → Type ℓ'} 
+                                        {{Dec-Pred-B : Dec-Pred B}}
+                                        → Dec-Pred (FirstIs B)
+  Dec-Pred-FirstIs {{Dec-Pred-B}} = record { decide = h}
+     where      
+       h : (l : List _) → Dec (FirstIs _ l)
+       h [] = no (lower ∘ FirstIs.proof)
+       h (x ∷ _) = mapDec firstIs (_∘ FirstIs.proof) (Pred-app)
+
+instance
+  Dec-FirstIs : ∀ {ℓ ℓ'} → {A : Type ℓ} {B : A → Type ℓ'} 
+                                        {{Dec-Pred-B : Dec-Pred B}} {l : List A}
+                                        → Dec (FirstIs B l)
+  Dec-FirstIs  ⦃ Dec-Pred-B ⦄ {l} = Pred-app' l 
+
+
 IsMemberOf : ∀ {ℓ} → {A : Type ℓ} → A → List A → Type ℓ
 IsMemberOf a l = ExistMemberAs (a ≡_) l 
 

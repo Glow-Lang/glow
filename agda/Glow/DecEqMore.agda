@@ -237,6 +237,10 @@ record Dec-Pred  {ℓ ℓ'} {A : Type ℓ} (B : A → Type ℓ') : Type (ℓ-max
 Pred-app : ∀ {ℓ ℓ'} {A : Type ℓ} {B : A → Type ℓ'} {{Dec-Pred-B : Dec-Pred B}} {a : A} → Dec (B a)
 Pred-app {ℓ} {ℓ'} {A} {B} ⦃ Dec-Pred-B ⦄ {a} = Dec-Pred.decide Dec-Pred-B a
 
+Pred-app' : ∀ {ℓ ℓ'} {A : Type ℓ} {B : A → Type ℓ'} {{Dec-Pred-B : Dec-Pred B}} (a : A) → Dec (B a)
+Pred-app' {ℓ} {ℓ'} {A} {B} ⦃ Dec-Pred-B ⦄ a = Dec-Pred.decide Dec-Pred-B a
+
+
 instance
   Dec-Pred-Disc : ∀ {ℓ ℓ'} {A : Type ℓ} {A' : Type ℓ'} {f : A → A'} {{IsDiscrete-A : IsDiscrete A'}} {a' : A'} → Dec-Pred ((a' ≡_) ∘ f)
   Dec-Pred.decide Dec-Pred-Disc a = ?? _

@@ -183,7 +183,7 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
 
     substOneStmnt r (AST.bindingS (AST.BS-publish! p (AST.psof name {w}) {y})) =
       sum-elim
-         (λ w → (AST.bindingS (AST.BS-publish! p (AST.psof name {w}) {y})))
+         (λ w → (AST.bindingS (AST.BS-publish! p (AST.psof name {proj₂ w}) {y})))
          (λ _ → blankStmnt)
         (ExistFirstBy-WitchIsAlso-remSubs-lemm {p = p} _ r w) 
 
@@ -232,7 +232,7 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
                                (substOneStmnt r (bindingS (BS-publish! p (psof nm {w}) {q})))
     publish-subst-lemma {AST.con entries₁ scope''} r p nm w q with (ExistFirstBy-WitchIsAlso-remSubs-lemm {p = p} (entries₁) r w) 
     ... | inl x₁ = cong (λ xx → con xx scope'') {!!}
-    ... | inr x₁ = cong (λ xx → con xx scope'') {!!}
+    ... | inr x₁ = cong (λ xx → con xx scope'') (map-ExistingFirstBy-lemma2 {cs = entries₁} _ _ _ _ (proj₁ x₁))
     
     substOneStmnts-coh Γ r (AST.bindingS (AST.BS-let ce x)) = refl
     substOneStmnts-coh Γ r (AST.bindingS (AST.BS-publish! p (AST.psof name {w}) {q})) = publish-subst-lemma {Γ} r p name w q
