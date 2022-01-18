@@ -24,7 +24,7 @@ open import Cubical.Data.Empty renaming (elim to empty-elim ; rec to empty-rec ;
 open import Cubical.Data.Nat.Order.Recursive
 -- open import Cubical.Functions.Logic
 
-open import Cubical.Relation.Nullary.Base renaming (¬_ to IsEmpty)
+open import Cubical.Relation.Nullary renaming (¬_ to IsEmpty)
 
 open import Glow.Linked
 
@@ -150,7 +150,6 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
 
     map-ExistingFirstBy-lemma2 : {cs : List ContextEntry} {nm : Identifier} 
                        (B' : ContextEntry → Type₀)
-                       
                        (z : ExistFirstBy ((nm ≡_) ∘ ce-name) WitchIsAlso B' cs) →
                        (f : ContextEntry → Scope)
                        (r : Subst' cs) →
@@ -160,3 +159,109 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
     map-ExistingFirstBy-lemma2 {x₁ ∷ cs} B' (inr x) f (inr x₂) (x₃) = cong (x₁ ∷_) (map-ExistingFirstBy-lemma2 {cs} _ _ _ _ x₃)
 
 
+    -- TODO : turn into more general version, with assumption of propositionality of predicates
+    ExistFirstBy-WitchIsAlso-FilterOut-lemma2 : ∀ {ℓ ℓ' ℓ'' ℓ*} → {A : Type ℓ} → {B : A → Type ℓ'} → {B' : A → Type ℓ''}
+                                                   -- → { ∀ x → isProp (B x)} → { ∀ x → isProp (B' x)}
+                                                 → {B* : A → Type ℓ*} →  
+                                                  {{Dec-Pred-B : Dec-Pred B}} {{Dec-Pred-B* : Dec-Pred B*}}  → 
+                                                     (l : List A) → (f : (x : A) → A) → -- (f : (x : A) → B x → B' x → A) →
+                                                      ((∀ a → B a → IsEmpty (B* a)))
+                                                     → (∀ x → B* (f x) → B* x)
+                                                     → (z : ExistFirstBy B WitchIsAlso B' l)
+                                                     → (z' : ExistFirstBy B WitchIsAlso B' (fst (FilterOut B* l))) → 
+
+                                                     (fst (FilterOut B*
+                                                        (map-ExistingFirstBy B WitchIsAlso B'
+                                                           l
+                                                             z λ x x₁ x₂ → f x)))
+                                                       ≡
+                                                      (map-ExistingFirstBy B WitchIsAlso B'
+                                                         (fst (FilterOut B* l)) z' λ x x₁ x₂ → f x)                                                         
+    ExistFirstBy-WitchIsAlso-FilterOut-lemma2 {B = B} {B' = B'} {B* = B*}  {{Dec-Pred-B* = Dec-Pred-B* }}  (x₁ ∷ l) f x g (inl x₂) with (Dec-Pred.decide Dec-Pred-B* (f x₁)) | (Dec-Pred.decide Dec-Pred-B* x₁)
+    ... | _ | yes p₁ = empty-elim (x _ (proj₁ x₂) p₁)
+    ... | yes p | no ¬p = empty-rec (¬p (g x₁ p)) 
+    ... | no ¬p | no ¬p₁ =
+       sum-elim {C = λ (z'
+               : (B x₁ × B' x₁) ⊎
+                 ((B x₁ → Empty) ×
+                  ExistFirstBy B WitchIsAlso B' (fst (FilterOut B* l)))) →
+              f x₁  ∷ fst (FilterOut B* l) ≡
+              map-ExistingFirstBy B WitchIsAlso B' (x₁ ∷ fst (FilterOut B* l)) z'
+              λ x₃ x₄ x₅ → f x₃} (λ a → refl)
+                --(λ a → cong (_∷ fst (FilterOut B* l)) λ i → f x₁ (B-prop x₁ (proj₁ x₂) (proj₁ a) i) (B'-prop x₁ (proj₂ x₂) (proj₂ a)  i))
+                λ b → empty-rec (proj₁ b (proj₁ x₂)) 
+
+
+
+    ExistFirstBy-WitchIsAlso-FilterOut-lemma2 {B = B} {B' = B'} {B* = B*} ⦃ Dec-Pred-B* = Dec-Pred-B* ⦄ (x₁ ∷ l) f x g (inr x₂) = 
+      
+      dec-elim
+        (λ xx →
+             (z'
+                    : ExistFirstBy B WitchIsAlso B'
+                      (fst
+                       (dec-rec' (B* x₁) (λ _ → FilterOut B* l)
+                        (λ y →
+                           x₁ ∷ fst (FilterOut B* l) , sum-elim y (snd (FilterOut B* l)))
+                        xx))) →
+                   fst
+                   (dec-rec' (B* x₁)
+                    (λ _ →
+                       FilterOut B* (map-ExistingFirstBy B WitchIsAlso B' l (proj₂ x₂) λ v v₁ v₂ → f v))
+                    (λ y →
+                       x₁ ∷
+                       fst
+                       (FilterOut B*
+                        (map-ExistingFirstBy B WitchIsAlso B' l (proj₂ x₂) λ v v₁ v₂ → f v))
+                       ,
+                       sum-elim y
+                       (snd
+                        (FilterOut B*
+                         (map-ExistingFirstBy B WitchIsAlso B' l (proj₂ x₂) λ v v₁ v₂ → f v))))
+                    xx)
+                   ≡
+                   map-ExistingFirstBy B WitchIsAlso B'
+                   (fst
+                    (dec-rec' (B* x₁) (λ _ → FilterOut B* l)
+                     (λ y →
+                        x₁ ∷ fst (FilterOut B* l) , sum-elim y (snd (FilterOut B* l)))
+                     xx))
+                   z' λ v v₁ v₂ → f v
+             )
+         (λ x₃ → ExistFirstBy-WitchIsAlso-FilterOut-lemma2 {B = B} {B' = B'} l f x g (proj₂ x₂))
+         (λ x₃ → sum-elim
+            {C = λ z* → x₁ ∷
+                       fst
+                       (FilterOut B*
+                        (map-ExistingFirstBy B WitchIsAlso B' l (proj₂ x₂) λ v v₁ v₂ → f v))
+                       ≡
+                       map-ExistingFirstBy B WitchIsAlso B' (x₁ ∷ fst (FilterOut B* l)) z*
+                       λ v v₁ v₂ → f v}
+             (λ a → empty-rec (proj₁ x₂ (proj₁ a)))
+             λ b → cong (x₁ ∷_) (ExistFirstBy-WitchIsAlso-FilterOut-lemma2 {B = B} {B' = B'} l f x g (proj₂ x₂) (proj₂ b)))
+         ((Dec-Pred.decide Dec-Pred-B* x₁)) 
+
+
+    map-ExistingFirstBy-lemma3 : {cs : List ContextEntry} {nm : Identifier} 
+                       (B' : ContextEntry → Type₀) -- → (B'-prop : ∀ x → isProp)
+                       (z : ExistFirstBy ((nm ≡_) ∘ ce-name) WitchIsAlso B' cs) →
+                       (f : ContextEntry → Scope)
+                       (r : Subst' cs) →                       
+                       (SubstNotMathEntry _ _ _ r z) →
+                       (ex' : ExistFirstBy ((nm ≡_) ∘ ce-name) WitchIsAlso B' (remSubst' cs r)) → 
+                       remSubst' _ (map-ExistingFirstBy-lemma ((nm ≡_) ∘ ce-name) B' z f r) ≡
+                           map-ExistingFirstBy ((nm ≡_) ∘ ce-name) WitchIsAlso B' (remSubst' cs r)
+                             ex' λ x x₁ x₂ → record x { scope = f x }
+    map-ExistingFirstBy-lemma3 {x₁ ∷ cs} B' (inl x₂) f (inr x₃) x (inl x₄) = refl
+    map-ExistingFirstBy-lemma3 {x₁ ∷ cs} B' (inl x₂) f (inr x₃) x (inr x₄) = empty-rec (proj₁ x₄ (proj₁ x₂))
+    map-ExistingFirstBy-lemma3 {x₁ ∷ cs} {nm} B' (inr x₂) f (inl x₃) x =
+       ExistFirstBy-WitchIsAlso-FilterOut-lemma2 {B = λ v → (_≡_ nm ∘ ce-name) v} {_}
+         -- {λ x₄ → Discrete→isSet (IsDiscrete.eqTest IsDiscrete-Identifier) _ _}
+         -- {λ x₄ → {!!}}
+          {B* = _≡_ (ce-name x₁) ∘ ce-name}
+             {{Dec-Pred-Disc {{IsDiscrete-Identifier}}}} {{Dec-Pred-Disc {{IsDiscrete-Identifier}}}}
+                   (cs) (λ x₄ → record x₄ { scope = f x₄ }) (λ a x₄ x₅ → proj₁ x₂ (x₄ ∙ (sym x₅))) (λ x₄ x₅ → x₅) (proj₂ x₂) 
+      
+    map-ExistingFirstBy-lemma3 {x₁ ∷ cs} B' (inr x₂) f (inr x₃) x (inl x₄) = empty-rec (proj₁ x₂ (proj₁ x₄))
+    map-ExistingFirstBy-lemma3 {x₁ ∷ cs} B' (inr x₂) f (inr x₃) x (inr x₄) = 
+      cong (x₁ ∷_) (map-ExistingFirstBy-lemma3 B' (proj₂ x₂) f (x₃) x (proj₂ x₄))

@@ -34,6 +34,8 @@ open import Glow.DecEqMore
 
 open import Glow.Simple.ContextMore
 
+
+
 module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}} where
 
 
@@ -112,6 +114,9 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
   module SubstOne {ptps : List Identifier} where
 
     open AST.InteractionHead  {prop-mode = true} (AST.interactionHead ptps [])
+
+
+
 
     bindingMechanics'* : (c : Σ Context Subst) → Statement* c → Σ Context Subst
 
@@ -231,7 +236,7 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
                                bindingMechanics' (remSubst Γ r)
                                (substOneStmnt r (bindingS (BS-publish! p (psof nm {w}) {q})))
     publish-subst-lemma {AST.con entries₁ scope''} r p nm w q with (ExistFirstBy-WitchIsAlso-remSubs-lemm {p = p} (entries₁) r w) 
-    ... | inl x₁ = cong (λ xx → con xx scope'') {!!}
+    ... | inl x₁ = cong (λ xx → con xx scope'') (map-ExistingFirstBy-lemma3 {cs = entries₁} _ _ _ _ (proj₁ x₁) (proj₂ x₁))
     ... | inr x₁ = cong (λ xx → con xx scope'') (map-ExistingFirstBy-lemma2 {cs = entries₁} _ _ _ _ (proj₁ x₁))
     
     substOneStmnts-coh Γ r (AST.bindingS (AST.BS-let ce x)) = refl

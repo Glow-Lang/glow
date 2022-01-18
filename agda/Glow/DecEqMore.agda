@@ -53,6 +53,26 @@ dec-rec A x x₁ with ?? A
 ... | yes p = x p
 ... | no ¬p = x₁ ¬p
 
+dec-rec' : ∀ {ℓ ℓ'} (A : Type ℓ) {B : Type ℓ'} →
+             (A → B) → (IsEmpty A → B) → Dec A → B 
+dec-rec' A x x₁ (yes p) = x p
+dec-rec' A x x₁ (no ¬p) = x₁ ¬p
+
+dec-elim : ∀ {ℓ ℓ'} {A : Type ℓ} (B : Dec A → Type ℓ') →
+             (∀ x → B (yes x)) → (∀ x → B (no x)) → ∀ x → B x 
+dec-elim B x x₁ (yes p) = x p
+dec-elim B x x₁ (no ¬p) = x₁ ¬p
+
+dec-elim2 : ∀ {ℓ ℓ'} {A A' : Type ℓ} (B : Dec A → Dec A' → Type ℓ') 
+             → (∀ x x' → B (yes x) (yes x'))
+             → (∀ x x' → B (yes x) (no x'))
+            → (∀ x x' → B (no x) (yes x'))
+             → (∀ x x' → B (no x) (no x'))
+             → ∀ x x' → B x x' 
+dec-elim2 B x x₁ x₂ x₃ (yes p) (yes p₁) = x p p₁
+dec-elim2 B x x₁ x₂ x₃ (yes p) (no ¬p) = x₁ p ¬p
+dec-elim2 B x x₁ x₂ x₃ (no ¬p) (yes p) = x₂ ¬p p
+dec-elim2 B x x₁ x₂ x₃ (no ¬p) (no ¬p₁) = x₃ ¬p ¬p₁
 
 
 Dec-≡ : ∀ {ℓ} {A : Type ℓ} {B : Type ℓ} → {{Dec-A : Dec A}} → {{Dec-B : Dec B}} →

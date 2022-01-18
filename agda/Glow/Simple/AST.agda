@@ -289,8 +289,11 @@ FilterOut : ∀ {ℓ ℓ'} → {A : Type ℓ} (B : A → Type ℓ') {{Dec-Pred-B
 FilterOut _ ⦃ Dec-Pred-B = Dec-Pred-B ⦄ [] = [] , lower
 FilterOut B ⦃ Dec-Pred-B = Dec-Pred-B ⦄ (x ∷ x₁) =
    let q = FilterOut B x₁
-   in dec-rec _ {{Dec-Pred.decide Dec-Pred-B x}}
-        (λ _ → q) λ y → x ∷ fst q , sum-elim y (snd q)
+   in dec-rec' _ 
+        (λ _ → q)
+         (λ y → x ∷ fst q , sum-elim y (snd q))
+         (Dec-Pred.decide Dec-Pred-B x)
+-- TODD : decision procedure
 
 
 ExistFirstBy-WitchIsAlso-FilterOut-lemma : ∀ {ℓ ℓ' ℓ'' ℓ*} → {A : Type ℓ} → {B : A → Type ℓ'} → {B' : A → Type ℓ''} →
@@ -304,7 +307,134 @@ ExistFirstBy-WitchIsAlso-FilterOut-lemma ⦃ Dec-Pred-B = Dec-Pred-B ⦄ (x₂ �
 ... | inl x₁ | no ¬p = inl x₁
 ... | inr x₁ | no ¬p = map-sum (idfun _) (map-prod (idfun _) (ExistFirstBy-WitchIsAlso-FilterOut-lemma _ f)) x
 
--- TODD : decision procedure
+ExistFirstBy-WitchIsAlso-FilterOut-lemma2' : ∀ {ℓ ℓ' ℓ''} → {A : Type ℓ} → {B : A → Type ℓ'} → {B' : A → Type ℓ''} →
+                                              {{Dec-Pred-B : Dec-Pred B}}  → 
+                                                 (l : List A) → (f : (x : A) → B x → B' x → A)
+                                                 → IsEmpty (ExistFirstBy B WitchIsAlso B' (fst (FilterOut B l)))
+ExistFirstBy-WitchIsAlso-FilterOut-lemma2' {B = B} {B' = B'} {{Dec-Pred-B}} (x₂ ∷ l) f  = 
+  dec-elim
+    (λ q → ExistFirstBy B WitchIsAlso B'
+      (fst
+       (dec-rec' (B x₂) (λ _ → FilterOut B l)
+        (λ y → x₂ ∷ fst (FilterOut B l) , sum-elim y (snd (FilterOut B l)))
+        (q))) →
+      Empty)
+    (λ _ → ExistFirstBy-WitchIsAlso-FilterOut-lemma2' l f)
+    (λ x → sum-elim (λ a → x (proj₁ a))
+     λ b → ExistFirstBy-WitchIsAlso-FilterOut-lemma2' l f (proj₂ b))
+    (Dec-Pred.decide Dec-Pred-B x₂)
+  
+
+-- ExistFirstBy-WitchIsAlso-map-indempotent-on-FilteredOut-lemma :
+--                                             ∀ {ℓ ℓ' ℓ''} → {A : Type ℓ} → {B : A → Type ℓ'} → {B' : A → Type ℓ''} →
+--                                               {{Dec-Pred-B : Dec-Pred B}} → 
+--                                                  (l : List A) → (f : (x : A) → B x → B' x → A) →
+--                                                  (z' : {!!}) → 
+--                                                   fst (FilterOut B l) ≡
+--                        map-ExistingFirstBy B WitchIsAlso B' (fst (FilterOut B l)) z' f
+-- ExistFirstBy-WitchIsAlso-map-indempotent-on-FilteredOut-lemma {B = B} {B' = B'} {{Dec-Pred-B}} (x ∷ l) f =  
+--   dec-elim
+--     (λ x₁ → (z'
+--        : ExistFirstBy B WitchIsAlso B'
+--          (fst
+--           (dec-rec' (B x) (λ _ → FilterOut B l)
+--            (λ y → x ∷ fst (FilterOut B l) , sum-elim y (snd (FilterOut B l)))
+--            x₁))) →
+--       fst
+--       (dec-rec' (B x) (λ _ → FilterOut B l)
+--        (λ y → x ∷ fst (FilterOut B l) , sum-elim y (snd (FilterOut B l)))
+--        x₁)
+--       ≡
+--       map-ExistingFirstBy B WitchIsAlso B'
+--       (fst
+--        (dec-rec' (B x) (λ _ → FilterOut B l)
+--         (λ y → x ∷ fst (FilterOut B l) , sum-elim y (snd (FilterOut B l)))
+--         x₁))
+--       z' f)
+--     (λ x₁ z' → {!snd (FilterOut B l)!})
+--     {!!}
+--     ((Dec-Pred.decide Dec-Pred-B x))
+    
+-- ExistFirstBy-WitchIsAlso-FilterOut-lemma2 : ∀ {ℓ ℓ' ℓ''} → {A : Type ℓ} → {B : A → Type ℓ'} → {B' : A → Type ℓ''} →
+--                                               {{Dec-Pred-B : Dec-Pred B}}  → 
+--                                                  (l : List A) → (f : (x : A) → B x → B' x → A) →
+--                                                   (∀ x → (y : (B x)) → (y' : B' x) → B (f x y y' ))
+--                                                  → (z : ExistFirstBy B WitchIsAlso B' l) →
+--                                                  (z' : ExistFirstBy B WitchIsAlso B' (fst (FilterOut B l))) → 
+--                                                  (fst (FilterOut B
+--                                                     (map-ExistingFirstBy B WitchIsAlso B'
+--                                                        l
+--                                                          z f)))
+--                                                    ≡
+--                                                   (map-ExistingFirstBy B WitchIsAlso B'
+--                                                      (fst (FilterOut B l))
+--                                                        z' f)
+
+-- ExistFirstBy-WitchIsAlso-FilterOut-lemma2 {B = B} {B'} ⦃ Dec-Pred-B = Dec-Pred-B ⦄ (x ∷ l) f g (inl x₁) =
+
+--  dec-elim2
+--    (λ q x₂ →
+--      (z'
+--        : ExistFirstBy B WitchIsAlso B'
+--          (fst
+--           (dec-rec' (B x) (λ _ → FilterOut B l)
+--            (λ y → x ∷ fst (FilterOut B l) , sum-elim y (snd (FilterOut B l)))
+--            x₂))) →
+--       fst
+--       (dec-rec' (B (f x (proj₁ x₁) (proj₂ x₁))) (λ _ → FilterOut B l)
+--        (λ y →
+--           f x (proj₁ x₁) (proj₂ x₁) ∷ fst (FilterOut B l) ,
+--           sum-elim y (snd (FilterOut B l)))
+--        q)
+--       ≡
+--       map-ExistingFirstBy B WitchIsAlso B'
+--       (fst
+--        (dec-rec' (B x) (λ _ → FilterOut B l)
+--         (λ y → x ∷ fst (FilterOut B l) , sum-elim y (snd (FilterOut B l)))
+--         x₂))
+--       z' f)
+--    (λ x₂ x' → λ z' →  ExistFirstBy-WitchIsAlso-map-indempotent-on-FilteredOut-lemma l f z' )
+--    (λ x₂ x' → empty-rec (x' (proj₁ x₁)))
+--    (λ x₂ x' → empty-rec (x₂ ((g x (proj₁ x₁) (proj₂ x₁))) ))
+--    (λ x₂ x' → empty-rec (x' (proj₁ x₁)))
+--    (Dec-Pred.decide Dec-Pred-B (f x (proj₁ x₁) (proj₂ x₁)))
+--    ((Dec-Pred.decide Dec-Pred-B x))
+   
+-- ExistFirstBy-WitchIsAlso-FilterOut-lemma2 {B = B} {B'} ⦃ Dec-Pred-B = Dec-Pred-B ⦄ (x ∷ l) f g (inr x₁) = 
+--  dec-elim 
+--          (λ x₂ →            
+--               (z' : ExistFirstBy B WitchIsAlso B'
+--            (fst
+--             (dec-rec' (B x) (λ _ → FilterOut B l)
+--              (λ y → x ∷ fst (FilterOut B l) , sum-elim y (snd (FilterOut B l)))
+--              x₂))) → 
+--             fst
+--            (dec-rec' (B x)
+--             (λ _ →
+--                FilterOut B (map-ExistingFirstBy B WitchIsAlso B' l (proj₂ x₁) f))
+--             (λ y →
+--                x ∷
+--                fst
+--                (FilterOut B (map-ExistingFirstBy B WitchIsAlso B' l (proj₂ x₁) f))
+--                ,
+--                sum-elim y
+--                (snd
+--                 (FilterOut B
+--                  (map-ExistingFirstBy B WitchIsAlso B' l (proj₂ x₁) f))))
+--             x₂)
+--            ≡
+--            map-ExistingFirstBy B WitchIsAlso B'
+--            (fst
+--             (dec-rec' (B x) (λ _ → FilterOut B l)
+--              (λ y → x ∷ fst (FilterOut B l) , sum-elim y (snd (FilterOut B l)))
+--              x₂))
+--            z' f)
+--          (λ x₂ z'' → empty-rec (proj₁ x₁ x₂))
+--          (λ x₂ → sum-elim (λ b → empty-rec (x₂ (proj₁ b)) )
+--          λ b → cong (x ∷_) (ExistFirstBy-WitchIsAlso-FilterOut-lemma2 l f g (proj₂ x₁) (proj₂ b)))
+
+--       (Dec-Pred.decide Dec-Pred-B x)
+
 
 
 Empty⊎ : ∀ {ℓ ℓ'} → {A : Type ℓ} → {B : Type ℓ'} → (IsEmpty A) → A ⊎ B → B
