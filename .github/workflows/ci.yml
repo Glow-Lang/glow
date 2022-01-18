@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 defaults:
   run:
-    shell: bash
+    shell: /bin/sh
 
 jobs:
   build_job:
@@ -12,7 +12,7 @@ jobs:
     container: mukn/glow:devel
     defaults:
       run:
-        shell: bash
+        shell: /bin/sh
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
