@@ -493,6 +493,8 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
                
         (λ x₁ → yes λ i → iwt (proj₁ x₁ i) (proj₂ x₁ i)) λ x₁ → no λ x₂ → x₁ ((λ i → name (x₂ i)) , (λ i → (type (x₂ i))))
 
+  isSet-IdentifierWithType : isSet IdentifierWithType
+  isSet-IdentifierWithType = Discrete→isSet (IsDiscrete.eqTest IdentifierWithType-Discrete)
 
   ParametersValue : List IdentifierWithType →  Type₀
   ParametersValue [] = Unit
@@ -616,7 +618,10 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
       IsDefinedSymbolOfTy : GType → Identifier → DecPropΣ
       IsDefinedSymbolOfTy ty x = 
         ⟨ IsDefinedVariableOfTy ty x ⟩ ⊎ IsNotShadowedParamOfTy ty x ,
-          ⊎-Dec {{snd (IsDefinedVariableOfTy ty x) }} , {!!}
+          ⊎-Dec {{snd (IsDefinedVariableOfTy ty x) }} ,
+            ⊎-isProp {!!} 
+                     (λ x₁ y → ×≡ (isProp¬ _ _ _) (Is-Prop-ExistMemberAs _ _ (λ x₂ x₃ y₁ → isSet-IdentifierWithType _ _ _ _) _ _))
+              λ x₁ x₂ → proj₁ x₂ {!x₁!}
 
 
       data DefinedSymbolOfTy (Τ : GType) : Type ℓ-zero where
@@ -630,7 +635,8 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
          ExistFirstBy ((x ≡_) ∘ name)
             WitchIsAlso (λ y → recMaybe Empty (λ p' → (pId-name p) ≡ (pId-name p')) (scope y)) entries
            , Dec-ExistFirstBy_WitchIsAlso {{Dec-Pred-B' = Dec-Pred-Maybe {f = scope}}}
-             , ExistFirstBy-WitchIsAlso-isProp _ (λ x₁ → isSetIdentifier _ _) {!!}
+             , ExistFirstBy-WitchIsAlso-isProp _ (λ x₁ → isSetIdentifier _ _)
+                {!elim-maybe!}
 
 
       data PrivateSymbolOf (p : ParticipantId) : Type ℓ-zero where
@@ -858,33 +864,192 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
 
 
 
+    
 
-open AST String {{String-Discrete-postulated}} zero
+module Test where 
+  open AST String {{String-Discrete-postulated}} zero
 
-someInteraction : Interaction
-someInteraction =  
-   interaction⟨   "A" ∷ "B" ∷ [] ,  "pI1" ∶ Nat ∷ "b2" ∶ Bool ∷ "b1" ∶ Bool ∷ [] ⟩ (
-        set "x" ∶ Bool ≔ < true > ;
-        at "B" set "y" ∶ Bool ≔ v "b1" ;
-        at "A" set "xx" ∶ Bool ≔
-         ( if v "b1"
-           then
-              (
-              set "z" ∶ Bool ≔ input "enter choice 1" ;₁ ;b
-              v "z"
-            )
-           else (
-            require! v "b2" ;'
-            -- publish! "B" ⟶ "y" ;
-            -- withdraw! "B" ⟵ < 3 > ;
-            -- deposit! "B" ⟶ < 2 > ;
-            set "z" ∶ Bool ≔ < false > ;b
-            < true >
-            )) ;
-        deposit! "B" ⟶ < 2 > ;
-        at "A" set "yq" ∶ Bool ≔ input "enter choice 2" ;
-        withdraw! "B" ⟵ < 3 > ;
-        publish! "A" ⟶ "xx" ;        
+  someInteraction : Interaction
+  someInteraction =  
+     interaction⟨   "A" ∷ "B" ∷ [] ,  "pI1" ∶ Nat ∷ "b2" ∶ Bool ∷ "b1" ∶ Bool ∷ [] ⟩ (
+          set "x" ∶ Bool ≔ < true > ;
+          at "B" set "y" ∶ Bool ≔ v "b1" ;
+          at "A" set "xx" ∶ Bool ≔
+           ( if v "b1"
+             then
+                (
+                set "z" ∶ Bool ≔ input "enter choice 1" ;₁ ;b
+                v "z"
+              )
+             else (
+              require! v "b2" ;'
+              -- publish! "B" ⟶ "y" ;
+              -- withdraw! "B" ⟵ < 3 > ;
+              -- deposit! "B" ⟶ < 2 > ;
+              set "z" ∶ Bool ≔ < false > ;b
+              < true >
+              )) ;
+          deposit! "B" ⟶ < 2 > ;
+          at "A" set "yq" ∶ Bool ≔ input "enter choice 2" ;
+          withdraw! "B" ⟵ < 3 > ;
+          publish! "A" ⟶ "xx" ;        
 
-        publish! "B" ⟶ "y" ;'        
-        set "yy" ∶ Bool ≔ v "y" )
+          publish! "B" ⟶ "y" ;'        
+          set "yy" ∶ Bool ≔ v "y" )
+
+safeHead : {A : Type₀} → List A → Maybe A
+safeHead [] = nothing
+safeHead (x ∷ x₁) = just x
+
+-- module Test' where
+--   open AST String {{String-Discrete-postulated}}
+
+--   trnsprt : Interaction zero  →
+--                 Interaction one
+--   trnsprt = transport λ i → Interaction (seg i)
+
+
+--   trsnprtTest = trnsprt Test.someInteraction
+
+--   trsnprtTest' : Maybe GType
+--   trsnprtTest' = map-Maybe ContextEntry'.type  ( (safeHead (Context.entries (foldLinked' (Interaction.code trsnprtTest)))))
+
+--   trsnprtTest'' : _
+--   trsnprtTest'' = InteractionHead.uniqueParams (Interaction.head trsnprtTest)
+
+--   trsnprtTest''' = (λ { (inl p)
+--                             → ?
+--                         ; (inr q)
+--                             → Cubical.Data.Sum.Base..extendedlambda0 {ℓ-zero}
+--                               {_×_ {ℓ-zero} {ℓ-zero} (_≡_ {ℓ-zero} {String} "pI1" "b1")
+--                                (Dec {ℓ-zero} (Lift {ℓ-zero} {ℓ-zero} Empty))}
+--                               {_×_ {ℓ-zero} {ℓ-zero} (_≡_ {ℓ-zero} {String} "pI1" "b1" → Empty)
+--                                (Lift {ℓ-zero} {ℓ-zero} Empty)}
+--                               (no
+--                                (λ x →
+--                                   Glow.DecEqMore.different-strings "pI1" "b1"
+--                                   (proj₁ {ℓ-zero} {ℓ-zero} {_≡_ {ℓ-zero} {String} "pI1" "b1"}
+--                                    {Dec {ℓ-zero} (Lift {ℓ-zero} {ℓ-zero} Empty)} x)))
+--                               (no
+--                                (λ x →
+--                                   lower
+--                                   (proj₂ {ℓ-zero} {ℓ-zero} {_≡_ {ℓ-zero} {String} "pI1" "b1" → Empty}
+--                                    {Lift {ℓ-zero} {ℓ-zero} Empty} x)))
+--                               (λ x →
+--                                  Glow.DecEqMore.different-strings "pI1" "b1"
+--                                  (proj₁ {ℓ-zero} {ℓ-zero} {_≡_ {ℓ-zero} {String} "pI1" "b1"}
+--                                   {Dec {ℓ-zero} (Lift {ℓ-zero} {ℓ-zero} Empty)} x))
+--                               (λ x →
+--                                  lower
+--                                  (proj₂ {ℓ-zero} {ℓ-zero} {_≡_ {ℓ-zero} {String} "pI1" "b1" → Empty}
+--                                   {Lift {ℓ-zero} {ℓ-zero} Empty} x))
+--                               (proj₂ {ℓ-zero} {ℓ-zero} {_≡_ {ℓ-zero} {String} "pI1" "b2" → Empty}
+--                                {_⊎_ {ℓ-zero} {ℓ-zero}
+--                                 (_×_ {ℓ-zero} {ℓ-zero} (_≡_ {ℓ-zero} {String} "pI1" "b1")
+--                                  (Dec {ℓ-zero} (Lift {ℓ-zero} {ℓ-zero} Empty)))
+--                                 (_×_ {ℓ-zero} {ℓ-zero} (_≡_ {ℓ-zero} {String} "pI1" "b1" → Empty)
+--                                  (Lift {ℓ-zero} {ℓ-zero} Empty))}
+--                                q)
+--                         })
+--                      ,
+--                      ((λ { (inl p)
+--                              → different-strings "b2" "b1"
+--                                (proj₁ {ℓ-zero} {ℓ-zero} {_≡_ {ℓ-zero} {String} "b2" "b1"}
+--                                 {Dec {ℓ-zero} (Lift {ℓ-zero} {ℓ-zero} Empty)} p)
+--                          ; (inr q)
+--                              → lower
+--                                (proj₂ {ℓ-zero} {ℓ-zero} {_≡_ {ℓ-zero} {String} "b2" "b1" → Empty}
+--                                 {Lift {ℓ-zero} {ℓ-zero} Empty} q)
+--                          })
+--                       , (lower , tt*))
+
+
+module Testℕ where 
+  open AST ℕ zero
+
+  someInteraction : Interaction
+  someInteraction =  
+     interaction⟨   1 ∷ 2 ∷ [] ,  3 ∶ Nat ∷ 4 ∶ Bool ∷ 5 ∶ Bool ∷ [] ⟩ (
+          set 6 ∶ Bool ≔ < true > ;
+          at 2 set 7 ∶ Bool ≔ v 5 ;
+          at 1 set 8 ∶ Bool ≔ (
+              require! v 4 ;'
+              -- publish! "B" ⟶ "y" ;
+              -- withdraw! "B" ⟵ < 3 > ;
+              -- deposit! "B" ⟶ < 2 > ;
+              set 9 ∶ Bool ≔ < false > ;b
+              < true >
+              );
+          deposit! 2 ⟶ < 2 > ;
+          withdraw! 2 ⟵ < 3 > ;
+          publish! 2 ⟶ 7 ;'        
+          set 10 ∶ Bool ≔ v 7 )
+          
+module Testℕ' where
+  open AST ℕ
+
+  trnsprt : Interaction zero  →
+                Interaction one
+  trnsprt = transport λ i → Interaction (seg i)
+
+
+  trsnprtTest = trnsprt Testℕ.someInteraction
+
+  trsnprtTest' : Maybe GType
+  trsnprtTest' = map-Maybe ContextEntry'.type  ( (safeHead (Context.entries (foldLinked' (Interaction.code trsnprtTest)))))
+
+  trsnprtTest'' : PropMode.PM one
+                    (UniqueBy
+                     (λ x x₁ →
+                        AST.IdentifierWithType.name x ≡ AST.IdentifierWithType.name x₁)
+                     (AST.parameters (AST.Interaction.head trsnprtTest))
+                     ,
+                     (UniqueByDec≡ AST.IdentifierWithType.name
+                      (AST.parameters (AST.Interaction.head trsnprtTest))
+                      ,
+                      isProp-UniqueBy
+                      (λ x x₁ →
+                         AST.IdentifierWithType.name x ≡ AST.IdentifierWithType.name x₁)
+                      (AST.parameters (AST.Interaction.head trsnprtTest))))
+  trsnprtTest'' = InteractionHead.uniqueParams (Interaction.head trsnprtTest)
+
+
+  -- trsnprtTest''' : {!!}
+  -- trsnprtTest''' = (λ { (inl p)
+  --                           → transp
+  --                             (λ i → caseNat ℕ Empty (predℕ (predℕ (predℕ (proj₁ p i))))) i0 0
+  --                       ; (inr q)
+  --                           → Cubical.Data.Sum.Base..extendedlambda0
+  --                             (no
+  --                              (λ x →
+  --                                 transp (λ i → caseNat ℕ Empty (predℕ (predℕ (predℕ (proj₁ x i)))))
+  --                                 i0 0))
+  --                             (no (λ x → lower (proj₂ x)))
+  --                             (λ x →
+  --                                transp (λ i → caseNat ℕ Empty (predℕ (predℕ (predℕ (proj₁ x i)))))
+  --                                i0 0)
+  --                             (λ x → lower (proj₂ x)) (proj₂ q)
+  --                       })
+  --                    ,
+  --                    ((λ { (inl p)
+  --                            → transp
+  --                              (λ i → caseNat ℕ Empty (predℕ (predℕ (predℕ (predℕ (proj₁ p i))))))
+  --                              i0 0
+  --                        ; (inr q) → lower (proj₂ q)
+  --                        })
+  --                     , (lower , tt*))
+
+  xtx : PropMode.PM one
+                    (UniqueBy
+                     (λ x x₁ →
+                        AST.IdentifierWithType.name x ≡ AST.IdentifierWithType.name x₁)
+                     (AST.parameters (AST.Interaction.head trsnprtTest))
+                     ,
+                     (UniqueByDec≡ AST.IdentifierWithType.name
+                      (AST.parameters (AST.Interaction.head trsnprtTest))
+                      ,
+                      isProp-UniqueBy
+                      (λ x x₁ →
+                         AST.IdentifierWithType.name x ≡ AST.IdentifierWithType.name x₁)
+                      (AST.parameters (AST.Interaction.head trsnprtTest))))
+  xtx = {!!} , ({!!} , ({!!} , {!tt*!}))

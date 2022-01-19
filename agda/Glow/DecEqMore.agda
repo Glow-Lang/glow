@@ -380,65 +380,9 @@ module PropMode (b : Interval) where
   fromWitness' {A} = fromWitness'-h' {fst A} {snd A} b
 
 
-  -- fromWitness' : ∀ {A} → fst A → PM A
-  -- fromWitness' {A} = interval-elim (λ x → fst A → PM-h x A) _ _
-  --       (λ i → coe1→i (λ x → PM-h (seg x) A) i )
-  --       b 
 
-
-  --empty- (¬p {!coei→1 (λ j → fst (PM-h A (no ¬p , x₁) (seg j))) i x!})
-
-
-
-
-
-
-  -- PM-h : Interval → DecPropΣ → Type₀
-  -- PM-h zero = True ∘ proj₁ ∘ snd
-  -- PM-h one = fst
-  -- PM-h (seg i) x =
-  --    hPropExt {A = PM-h zero x}
-  --             {B = PM-h one x}
-  --              isProp-True (proj₂ (snd x))
-  --      toWitness fromWitness i
-     
-  -- PM≡ : ∀ x → PM-h zero x ≡ PM-h one x   
-  -- PM≡ x i = PM-h (seg i) x 
-
-  -- PM≡one : ∀ x → ∀ i →  PM-h (seg i) x ≡ PM-h one x   
-  -- PM≡one x i i' = PM-h (seg (i ∨ i')) x
-
-  -- PM≡zero : ∀ x → ∀ i →  PM-h (seg i) x ≡ PM-h zero x   
-  -- PM≡zero x i i' = PM-h (seg (~ ((~ i) ∨ i'))) x
-
-
-    
-
-  -- toWitness'-h : ∀ {A} → ∀ b → PM-h b A → fst A
-  -- toWitness'-h {A} zero = transport (PM≡one A i0)
-  -- toWitness'-h {A} one = transport (PM≡one A i1)
-  -- toWitness'-h {A} (seg i) = transport (PM≡one A i)
-
-  -- -- toWitness'-h' : ∀ {A} → ∀ b → PM-h b A → fst A
-  -- -- toWitness'-h' {A} zero = toWitness
-  -- -- toWitness'-h' {A} one x = x
-  -- -- toWitness'-h' {A} (seg i) x =
-  -- --   let z = uaβ (propBiimpl→Equiv isProp-True (proj₂ (snd A)) toWitness fromWitness)
-  -- --   in {!z!}
-
-  -- -- toWitness'-h' : ∀ {A} → ∀ b → PM-h b A → fst A
-  -- -- toWitness'-h' {A} zero = toWitness
-  -- -- toWitness'-h' {A} one = idfun _
-  -- -- toWitness'-h' {fst₁ , (yes p , x₂)} (seg i) x = {!!}
-  -- -- toWitness'-h' {fst₁ , (no ¬p , x₂)} (seg i) x = {!x!}
-
-
-  -- -- fromWitness'-h : ∀ {A} → ∀ b → fst A → PM-h b A
-  -- -- fromWitness'-h {fst₁ , _} false x = fromWitness x
-  -- -- fromWitness'-h true x = x
-
-
-  -- toWitness' : ∀ {A} → PM A → fst A
-  -- toWitness' = toWitness'-h b
-
-
+⊎-isProp : ∀ {ℓ ℓ'} → {A : Type ℓ} → {B : Type ℓ'} → isProp A → isProp B → (A → B → ⊥) → isProp (A ⊎ B)
+⊎-isProp x x₁ y (inl x₃) (inl x₄) = cong inl (x _ _)
+⊎-isProp x x₁ y (inl x₃) (inr x₄) = empty-elim (y x₃ x₄)
+⊎-isProp x x₁ y (inr x₃) (inl x₄) = empty-elim (y x₄ x₃)
+⊎-isProp x x₁ y (inr x₃) (inr x₄) = cong inr (x₁ _ _)
