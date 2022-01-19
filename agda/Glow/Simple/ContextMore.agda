@@ -36,7 +36,7 @@ open import Glow.Simple.AST
 
 module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}} where
 
-  prop-mode = true
+  prop-mode = one
   
   -- open AST Identifier prop-mode
 

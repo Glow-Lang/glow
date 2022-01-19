@@ -20,6 +20,7 @@ open import Cubical.Data.Bool hiding (if_then_else_) renaming (Bool to 𝟚 ; _�
 
 open import Cubical.Data.Empty renaming (elim to empty-elim ; rec to empty-rec ;  ⊥ to Empty )
 
+open import Cubical.HITs.Interval
 
 -- open import Cubical.Data.Nat.Order.Recursive
 -- open import Cubical.Functions.Logic
@@ -169,9 +170,25 @@ maybe-elim x x₁ (just x₂) = x₁ x₂
 
 ExistMemberAs : ∀ {ℓ ℓ'} → {A : Type ℓ} → (B : A → Type ℓ') → List A → Type ℓ' 
 ExistMemberAs B [] = Lift Empty
-ExistMemberAs B (x ∷ x₁) = (B x) ⊎ (ExistMemberAs B x₁)
+ExistMemberAs B (x ∷ x₁) =
+  ((B x) × Dec (ExistMemberAs B x₁))
+    ⊎
+  ((IsEmpty (B x)) × ExistMemberAs B x₁)
 
+ExistMemberAs-¬head→tail : ∀ {ℓ ℓ'} → {A : Type ℓ} → {B : A → Type ℓ'} → {l : List A} → {x : A}
+                           → ExistMemberAs B (x ∷ l) → IsEmpty (B x) → ExistMemberAs B l 
+ExistMemberAs-¬head→tail (inl x₁) x₂ = empty-rec (x₂ (proj₁ x₁))
+ExistMemberAs-¬head→tail (inr x₁) x₂ = proj₂ x₁ 
 
+Is-Prop-ExistMemberAs : ∀ {ℓ ℓ'} → {A : Type ℓ} → (B : A → Type ℓ') → (l : List A) → (∀ x → isProp (B x)) → isProp (ExistMemberAs B l) 
+Is-Prop-ExistMemberAs B [] _ = isProp⊥*
+Is-Prop-ExistMemberAs B (x₁ ∷ l) x (inl x₂) (inl x₃) =
+  cong inl (×≡ (x _ _ _) (isPropDec (Is-Prop-ExistMemberAs B l x) _ _) )
+Is-Prop-ExistMemberAs B (x₁ ∷ l) x (inl x₂) (inr x₃) = empty-rec (proj₁ x₃ (proj₁ x₂))
+Is-Prop-ExistMemberAs B (x₁ ∷ l) x (inr x₂) (inl x₃) = empty-rec (proj₁ x₂ (proj₁ x₃))
+Is-Prop-ExistMemberAs B (x₁ ∷ l) x (inr x₂) (inr x₃) = 
+  cong inr (×≡ (isProp¬ _ _ _) (Is-Prop-ExistMemberAs B l x _ _) )
+  
 
 instance
   Dec-Pred-ExistMemberAs : ∀ {ℓ ℓ'} {A : Type ℓ} {B : A → Type ℓ'} {{Dec-Pred-B : Dec-Pred B}}
@@ -180,7 +197,8 @@ instance
      where      
        h : (l : List _) → Dec (ExistMemberAs _ l)
        h [] = no lower
-       h (x ∷ xs) = Pred-app ⊎? h xs 
+       h (x ∷ xs) = ×-Dec {{Pred-app}} {{yes (h xs)}} ⊎? ×-Dec {{Dec-IsEmpty {{Pred-app}}}} {{h xs}}
+         
 
 -- this is better encoded like that, than with general rule about turning decidable predicated into propositions, such genreal rule generated tu much
 -- unresolved instances resolutions
@@ -227,6 +245,13 @@ ExistFirstBy_WitchIsAlso : ∀ {ℓ ℓ' ℓ''} → {A : Type ℓ} → (B : A �
 ExistFirstBy_WitchIsAlso B B' [] = Lift Empty
 ExistFirstBy_WitchIsAlso B B' (x ∷ xs) = (B x × B' x) ⊎ ((IsEmpty (B x) × ExistFirstBy_WitchIsAlso B B' xs))
 
+ExistFirstBy-WitchIsAlso-isProp : ∀ {ℓ ℓ' ℓ''} → {A : Type ℓ} → {B : A → Type ℓ'} → {B' : A → Type ℓ''} → (l : List A)
+                                    → (∀ x → isProp (B x)) → (∀ x → isProp (B' x)) → isProp (ExistFirstBy_WitchIsAlso B B' l)
+ExistFirstBy-WitchIsAlso-isProp (x₁ ∷ l) propB propB' (inl x) (inl x₂) = cong inl (×≡ (propB _ _ _) (propB' _ _ _))
+ExistFirstBy-WitchIsAlso-isProp (x₁ ∷ l) _ _ (inl x) (inr x₂) = empty-rec (proj₁ x₂ (proj₁ x))
+ExistFirstBy-WitchIsAlso-isProp (x₁ ∷ l) _ _ (inr x) (inl x₂) = empty-rec (proj₁ x (proj₁ x₂))
+ExistFirstBy-WitchIsAlso-isProp (x₁ ∷ l) propB propB' (inr x) (inr x₂) =
+  cong inr (×≡ (isProp¬ _ _ _) (ExistFirstBy-WitchIsAlso-isProp l propB propB' (proj₂ x) (proj₂ x₂) ))
 
 instance
   Dec-Pred-ExistFirstBy_WitchIsAlso : ∀ {ℓ ℓ' ℓ''} → {A : Type ℓ} {B : A → Type ℓ'} {B' : A → Type ℓ''}
@@ -284,6 +309,10 @@ UniqueByDec≡  : ∀ {ℓ ℓ'} → {A : Type ℓ} → {A' : Type ℓ'} → (f 
 UniqueByDec≡ _ [] = yes _
 UniqueByDec≡ _ (x ∷ xs) = ×-Dec {{Dec-B = UniqueByDec≡ _ xs }}
 
+isProp-UniqueBy : ∀ {ℓ ℓ'} → {A : Type ℓ} → (f : A → A → Type ℓ') → (l : List A) → isProp (UniqueBy f l)
+isProp-UniqueBy f [] x y = refl
+isProp-UniqueBy f (x₁ ∷ l) _ _ = ×≡ (isProp¬ _ _ _) (isProp-UniqueBy f l _ _)
+
 FilterOut : ∀ {ℓ ℓ'} → {A : Type ℓ} (B : A → Type ℓ') {{Dec-Pred-B : Dec-Pred B}}
                 → List A → Σ (List A) λ l → IsEmpty (ExistMemberAs B l)
 FilterOut _ ⦃ Dec-Pred-B = Dec-Pred-B ⦄ [] = [] , lower
@@ -291,7 +320,7 @@ FilterOut B ⦃ Dec-Pred-B = Dec-Pred-B ⦄ (x ∷ x₁) =
    let q = FilterOut B x₁
    in dec-rec' _ 
         (λ _ → q)
-         (λ y → x ∷ fst q , sum-elim y (snd q))
+         (λ y → x ∷ fst q , sum-elim (y ∘ proj₁) (snd q ∘ proj₂))
          (Dec-Pred.decide Dec-Pred-B x)
 -- TODD : decision procedure
 
@@ -316,7 +345,7 @@ ExistFirstBy-WitchIsAlso-FilterOut-lemma2' {B = B} {B' = B'} {{Dec-Pred-B}} (x�
     (λ q → ExistFirstBy B WitchIsAlso B'
       (fst
        (dec-rec' (B x₂) (λ _ → FilterOut B l)
-        (λ y → x₂ ∷ fst (FilterOut B l) , sum-elim y (snd (FilterOut B l)))
+        (λ y → x₂ ∷ fst (FilterOut B l) , sum-elim (y ∘ proj₁) (snd (FilterOut B l) ∘ proj₂))
         (q))) →
       Empty)
     (λ _ → ExistFirstBy-WitchIsAlso-FilterOut-lemma2' l f)
@@ -441,12 +470,13 @@ Empty⊎ : ∀ {ℓ ℓ'} → {A : Type ℓ} → {B : Type ℓ'} → (IsEmpty A)
 Empty⊎ x (inl x₁) = empty-elim (x x₁)
 Empty⊎ x (inr x₁) = x₁
 
-module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}}  (prop-mode : 𝟚) where 
+module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}}  (prop-mode : Interval) where 
 
+
+  isSetIdentifier = Discrete→isSet (IsDiscrete.eqTest IsDiscrete-Identifier)
 
   open PropMode prop-mode
  
-
   record IdentifierWithType : Type₀ where
     pattern
     constructor iwt
@@ -475,12 +505,12 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
   lookup-ParametersValue (x₃ ∷ l) (x₁ , x₂) x ex =
      dec-rec (x ≡ x₃)
         (λ p → subst (GTypeAgdaRep) (cong type (sym p)) x₁)
-        (λ ¬p → lookup-ParametersValue l x₂ x (Empty⊎ ¬p ex))
+        (λ ¬p → lookup-ParametersValue l x₂ x (ExistMemberAs-¬head→tail ex ¬p)) -- ?
 
-  IsParticipantId : {participants : List Identifier} → Identifier → Σ _ Dec
+  IsParticipantId : {participants : List Identifier} → Identifier → DecPropΣ 
   IsParticipantId {participants} name =
       ExistMemberAs (name ≡_) participants
-        , ?? _
+        , ?? _ , Is-Prop-ExistMemberAs _ _ (isSetIdentifier _)
 
   data ParticipantId' {participants : List Identifier} : Type₀ where
     pId : (name : Identifier) → {isIn :  PM ( IsParticipantId {participants} name ) } → ParticipantId'
@@ -506,9 +536,9 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
   just x CanAccess just x₁ = ((pId-name x) ≡ (pId-name x₁)) , ?? _
   nothing CanAccess just x₁ = Empty , ?? _
 
-  AllowedScopeNarrowing' : ∀ {ps} → Scope' {ps} → Scope' {ps} → Σ _ Dec
-  AllowedScopeNarrowing' s nothing = Unit , yes _
-  AllowedScopeNarrowing' s (just x) = caseMaybe (Unit , yes _) (Empty , no (idfun _)) s
+  AllowedScopeNarrowing' : ∀ {ps} → Scope' {ps} → Scope' {ps} → DecPropΣ
+  AllowedScopeNarrowing' s nothing = Unit , yes _ , λ x y i → tt
+  AllowedScopeNarrowing' s (just x) = caseMaybe (Unit , yes _ , λ x₁ y i → tt ) (Empty , no (idfun _) , isProp⊥) s
 
 
 
@@ -534,7 +564,7 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
     field
       participants : List Identifier
       parameters : List IdentifierWithType
-      {uniqueParams} : PM (_ , UniqueByDec≡ name parameters)
+      {uniqueParams} : PM (_ , UniqueByDec≡ name parameters , isProp-UniqueBy _ _ )
 
 
 
@@ -583,10 +613,10 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
             × IsMemberOf (iwt x ty) parameters      
                  
 
-      IsDefinedSymbolOfTy : GType → Identifier → Σ _ Dec
-      IsDefinedSymbolOfTy ty x =
+      IsDefinedSymbolOfTy : GType → Identifier → DecPropΣ
+      IsDefinedSymbolOfTy ty x = 
         ⟨ IsDefinedVariableOfTy ty x ⟩ ⊎ IsNotShadowedParamOfTy ty x ,
-          ⊎-Dec {{snd (IsDefinedVariableOfTy ty x) }}
+          ⊎-Dec {{snd (IsDefinedVariableOfTy ty x) }} , {!!}
 
 
       data DefinedSymbolOfTy (Τ : GType) : Type ℓ-zero where
@@ -595,11 +625,12 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
       open DefinedSymbolOfTy public
 
 
-      IsPrivateSymbolOf : ParticipantId → Identifier → Σ _ Dec
-      IsPrivateSymbolOf p x =
+      IsPrivateSymbolOf : ParticipantId → Identifier → DecPropΣ
+      IsPrivateSymbolOf p x = 
          ExistFirstBy ((x ≡_) ∘ name)
             WitchIsAlso (λ y → recMaybe Empty (λ p' → (pId-name p) ≡ (pId-name p')) (scope y)) entries
-           , Dec-ExistFirstBy_WitchIsAlso {{Dec-Pred-B' = Dec-Pred-Maybe {f = scope}}} 
+           , Dec-ExistFirstBy_WitchIsAlso {{Dec-Pred-B' = Dec-Pred-Maybe {f = scope}}}
+             , ExistFirstBy-WitchIsAlso-isProp _ (λ x₁ → isSetIdentifier _ _) {!!}
 
 
       data PrivateSymbolOf (p : ParticipantId) : Type ℓ-zero where
@@ -617,11 +648,11 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
 
 
 
-      IsConsensus : Σ _ Dec
-      IsConsensus = caseMaybe (Unit , yes _) (Empty , no (idfun _)) scope'
+      IsConsensus : DecPropΣ
+      IsConsensus = caseMaybe (Unit , yes _ , λ x y i → tt ) (Empty , no (idfun _) , isProp⊥) scope'
 
-      IsNotConsensus : Σ _ Dec
-      IsNotConsensus = caseMaybe (Empty , no (idfun _)) (Unit , yes _)  scope'
+      IsNotConsensus : DecPropΣ
+      IsNotConsensus = caseMaybe (Empty , no (idfun _) , isProp⊥ ) (Unit , yes _ , λ x y i → tt)  scope'
 
 
     open Context public
@@ -647,7 +678,7 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
     removeFromContext Γ s Τ x = record Γ { entries =  removeFromContext' Γ s Τ x } 
 
 
-    AllowedScopeNarrowing : (Γ : Context) → Scope → Σ _ Dec
+    AllowedScopeNarrowing : (Γ : Context) → Scope → DecPropΣ
     AllowedScopeNarrowing Γ = AllowedScopeNarrowing' (scope' Γ) 
 
 
@@ -756,8 +787,8 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
                  ∀ Τ s → 
                  IsMemberOf (iwt s Τ) l →
                  GTypeAgdaRep Τ
-  toParamValue (x₂ ∷ l) (x , xs) Τ s (inl p) = subst (GTypeAgdaRep) (cong type (sym p)) x
-  toParamValue (x₂ ∷ l) (x , xs) Τ s (inr x₁) = (toParamValue l xs Τ s x₁)
+  toParamValue (x₂ ∷ l) (x , xs) Τ s (inl (p , _)) = subst (GTypeAgdaRep) (cong type (sym p)) x -- 
+  toParamValue (x₂ ∷ l) (x , xs) Τ s (inr (_ , x₁)) = (toParamValue l xs Τ s x₁) --
 
 
 
@@ -828,32 +859,32 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
 
 
 
--- open AST String {{String-Discrete-postulated}} false
+open AST String {{String-Discrete-postulated}} zero
 
--- someInteraction : Interaction
--- someInteraction =  
---    interaction⟨   "A" ∷ "B" ∷ [] ,  "pI1" ∶ Nat ∷ "b2" ∶ Bool ∷ "b1" ∶ Bool ∷ [] ⟩ (
---         set "x" ∶ Bool ≔ < true > ;
---         at "B" set "y" ∶ Bool ≔ v "b1" ;
---         at "A" set "xx" ∶ Bool ≔
---          ( if v "b1"
---            then
---               (
---               set "z" ∶ Bool ≔ input "enter choice 1" ;₁ ;b
---               v "z"
---             )
---            else (
---             require! v "b2" ;'
---             -- publish! "B" ⟶ "y" ;
---             -- withdraw! "B" ⟵ < 3 > ;
---             -- deposit! "B" ⟶ < 2 > ;
---             set "z" ∶ Bool ≔ < false > ;b
---             < true >
---             )) ;
---         deposit! "B" ⟶ < 2 > ;
---         at "A" set "yq" ∶ Bool ≔ input "enter choice 2" ;
---         withdraw! "B" ⟵ < 3 > ;
---         publish! "A" ⟶ "xx" ;        
+someInteraction : Interaction
+someInteraction =  
+   interaction⟨   "A" ∷ "B" ∷ [] ,  "pI1" ∶ Nat ∷ "b2" ∶ Bool ∷ "b1" ∶ Bool ∷ [] ⟩ (
+        set "x" ∶ Bool ≔ < true > ;
+        at "B" set "y" ∶ Bool ≔ v "b1" ;
+        at "A" set "xx" ∶ Bool ≔
+         ( if v "b1"
+           then
+              (
+              set "z" ∶ Bool ≔ input "enter choice 1" ;₁ ;b
+              v "z"
+            )
+           else (
+            require! v "b2" ;'
+            -- publish! "B" ⟶ "y" ;
+            -- withdraw! "B" ⟵ < 3 > ;
+            -- deposit! "B" ⟶ < 2 > ;
+            set "z" ∶ Bool ≔ < false > ;b
+            < true >
+            )) ;
+        deposit! "B" ⟶ < 2 > ;
+        at "A" set "yq" ∶ Bool ≔ input "enter choice 2" ;
+        withdraw! "B" ⟵ < 3 > ;
+        publish! "A" ⟶ "xx" ;        
 
---         publish! "B" ⟶ "y" ;'        
---         set "yy" ∶ Bool ≔ v "y" )
+        publish! "B" ⟶ "y" ;'        
+        set "yy" ∶ Bool ≔ v "y" )

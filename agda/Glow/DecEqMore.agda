@@ -9,12 +9,13 @@ open import Agda.Builtin.Char
 open import Cubical.Foundations.Everything
 
 open import Cubical.Data.Nat
+open import Cubical.Data.Unit
 open import Cubical.Data.Int
 open import Cubical.Data.Prod
 open import Cubical.Data.Sum
 open import Cubical.Data.List
 open import Cubical.Data.Empty renaming (elim to empty-elim ; rec to empty-rec)
-
+open import Cubical.Foundations.CartesianKanOps
 
 open import Cubical.Data.Maybe renaming (rec to recMaybe)
 open import Cubical.Data.Bool renaming (if_then_else_ to if_then_else'_ ; _≟_ to _≟B_)
@@ -25,7 +26,15 @@ open import Cubical.Relation.Nullary renaming (¬_ to IsEmpty)
 
 open import Cubical.HITs.SetQuotients
 
+open import Cubical.HITs.Interval renaming (elim to interval-elim)
+
+import Cubical.Functions.Logic as L
+
+open import Cubical.Foundations.Univalence
+
 infix 20 ??_ 
+
+
 
 Empty-elim-dot : ∀ {w} {Whatever : Type w} → .⊥ → Whatever
 Empty-elim-dot ()
@@ -316,31 +325,120 @@ Id-Dec-hlp : ∀ {ℓ ℓ2 ℓ' ℓ''} {A : Type ℓ} {A2 : Type ℓ2} {A' : Typ
                    (A → A2) → (A2 → A) → (A → A' → B') → (IsEmpty A → A'' → B'') → (A × A') ⊎ (IsEmpty A × A'') → (A2 × B') ⊎ (IsEmpty A2 × B'') 
 Id-Dec-hlp y n f g x = Id-Dec-hlp→ (Id-Dec-hlp-mid' y n f g (Id-Dec-hlp← x))
 
+-- test diferent variants of pattern amtching to figure out best evaluation
+isProp-True : ∀ {ℓ} {A : Type ℓ} {Q : Dec A} → isProp (True Q)
+isProp-True {Q = yes p} = isPropUnit
+isProp-True {Q = no ¬p} = isProp⊥
+
+-- record IsDecProp ℓ : Type ? where
 
 
-module PropMode (b : Bool) where
+-- record DecProp ℓ : Type ?
 
-  PM-h : Bool → Σ _ Dec → Type₀
-  PM-h false = True ∘ snd
-  PM-h true = fst
+DecPropΣ : Type₁
+DecPropΣ = Σ Type₀ (λ x → Dec x × isProp x)
 
-  
-  PM : Σ _ Dec → Type₀
-  PM = PM-h b 
-    
+module PropMode (b : Interval) where
 
-  toWitness'-h : ∀ {A} → ∀ b → PM-h b A → fst A
-  toWitness'-h {A} false x = toWitness x
-  toWitness'-h true x = x
 
-  fromWitness'-h : ∀ {A} → ∀ b → fst A → PM-h b A
-  fromWitness'-h {fst₁ , _} false x = fromWitness x
-  fromWitness'-h true x = x
+  PM-h : ∀ A → (Dec A × isProp A) → Interval → Σ Type₀ (A ≡_ ) 
+  PM-h A x zero = (True (proj₁ x)) , hPropExt (proj₂ x) isProp-True fromWitness toWitness
+  PM-h A x one = A , (λ _ → A)
+  PM-h A x (seg i) = snd (isContrSingl A) ((True (proj₁ x)) , hPropExt (proj₂ x) isProp-True fromWitness toWitness) (~ i)
+
+
+  -- toWitness'-P' : ∀ {A x} → _≡_ {A = Interval → Σ Type₀ (A ≡_ )} (PM-h A x) λ x₁ → _ , refl --PathP (λ i → fst (PM-h A x (seg i)) → A) toWitness (idfun _)
+  -- toWitness'-P' {A} {x} = isPropΠ (λ _ → isContr→isProp (isContrSingl _)) _ _ 
+
+
+  toWitness'-P : ∀ {A x} → PathP (λ i → fst (PM-h A x (seg i)) → A) toWitness (idfun _)
+  toWitness'-P {A} {x} = toPathP (isPropΠ (const (proj₂ x)) _ _)
+
+  fromWitness'-P : ∀ {A x} → PathP (λ i → fst (PM-h A x (seg i)) → True (proj₁ x)) (idfun _) fromWitness 
+  fromWitness'-P {A} {x} = toPathP (isPropΠ (const isProp-True) _ _)
+
+
+  toWitness'-h' : ∀ {A x} → ∀ b → fst (PM-h A x b) → A
+  toWitness'-h' {A} zero = toWitness
+  toWitness'-h' {A} one = idfun _
+  toWitness'-h' {A} {x} (seg i) = toWitness'-P {x = x} i
+
+  fromWitness'-h' : ∀ {A x} → ∀ b → fst (PM-h A x b) → True (proj₁ x)
+  fromWitness'-h' {A} zero = idfun _
+  fromWitness'-h' {A} one = fromWitness
+  fromWitness'-h' {A} {x} (seg i) = fromWitness'-P {x = x} i
+
+
+  PM : DecPropΣ → Type₀
+  PM x = fst (PM-h (fst x) (snd x) b)
 
 
   toWitness' : ∀ {A} → PM A → fst A
-  toWitness' = toWitness'-h b
+  toWitness' {A} = toWitness'-h' {fst A} {snd A} b
 
-  fromWitness' : ∀ {A} → fst A → PM A
-  fromWitness' = fromWitness'-h b
+  fromWitness' : ∀ {A} → PM A → True (proj₁ (snd A))
+  fromWitness' {A} = fromWitness'-h' {fst A} {snd A} b
+
+
+  -- fromWitness' : ∀ {A} → fst A → PM A
+  -- fromWitness' {A} = interval-elim (λ x → fst A → PM-h x A) _ _
+  --       (λ i → coe1→i (λ x → PM-h (seg x) A) i )
+  --       b 
+
+
+  --empty- (¬p {!coei→1 (λ j → fst (PM-h A (no ¬p , x₁) (seg j))) i x!})
+
+
+
+
+
+
+  -- PM-h : Interval → DecPropΣ → Type₀
+  -- PM-h zero = True ∘ proj₁ ∘ snd
+  -- PM-h one = fst
+  -- PM-h (seg i) x =
+  --    hPropExt {A = PM-h zero x}
+  --             {B = PM-h one x}
+  --              isProp-True (proj₂ (snd x))
+  --      toWitness fromWitness i
+     
+  -- PM≡ : ∀ x → PM-h zero x ≡ PM-h one x   
+  -- PM≡ x i = PM-h (seg i) x 
+
+  -- PM≡one : ∀ x → ∀ i →  PM-h (seg i) x ≡ PM-h one x   
+  -- PM≡one x i i' = PM-h (seg (i ∨ i')) x
+
+  -- PM≡zero : ∀ x → ∀ i →  PM-h (seg i) x ≡ PM-h zero x   
+  -- PM≡zero x i i' = PM-h (seg (~ ((~ i) ∨ i'))) x
+
+
+    
+
+  -- toWitness'-h : ∀ {A} → ∀ b → PM-h b A → fst A
+  -- toWitness'-h {A} zero = transport (PM≡one A i0)
+  -- toWitness'-h {A} one = transport (PM≡one A i1)
+  -- toWitness'-h {A} (seg i) = transport (PM≡one A i)
+
+  -- -- toWitness'-h' : ∀ {A} → ∀ b → PM-h b A → fst A
+  -- -- toWitness'-h' {A} zero = toWitness
+  -- -- toWitness'-h' {A} one x = x
+  -- -- toWitness'-h' {A} (seg i) x =
+  -- --   let z = uaβ (propBiimpl→Equiv isProp-True (proj₂ (snd A)) toWitness fromWitness)
+  -- --   in {!z!}
+
+  -- -- toWitness'-h' : ∀ {A} → ∀ b → PM-h b A → fst A
+  -- -- toWitness'-h' {A} zero = toWitness
+  -- -- toWitness'-h' {A} one = idfun _
+  -- -- toWitness'-h' {fst₁ , (yes p , x₂)} (seg i) x = {!!}
+  -- -- toWitness'-h' {fst₁ , (no ¬p , x₂)} (seg i) x = {!x!}
+
+
+  -- -- fromWitness'-h : ∀ {A} → ∀ b → fst A → PM-h b A
+  -- -- fromWitness'-h {fst₁ , _} false x = fromWitness x
+  -- -- fromWitness'-h true x = x
+
+
+  -- toWitness' : ∀ {A} → PM A → fst A
+  -- toWitness' = toWitness'-h b
+
 
