@@ -34,7 +34,7 @@
     (run-process/batch ["cachix" "use" cachix-cache])))
 
 (def (current-nix-store-paths)
-  (run-process ["nix" "path-info" "--all"]
+  (run-process ["nix" "--extra-experimental-features" "nix-command" "path-info" "--all"]
                stdin-redirection: #f stdout-redirection: #t
                coprocess: read-all-as-lines))
 
@@ -85,16 +85,16 @@
   ;;(def current-paths (current-nix-store-paths))
   ;;(def paths (lset-difference equal? current-paths previous-paths))
   (def paths
-    (run-process ["nix" "path-info" "-r" "-f" "./pkgs.nix" "glow-lang"]
+    (run-process ["nix" "--extra-experimental-features" "nix-command" "path-info" "-r" "-f" "./pkgs.nix" "glow-lang"]
                  stdin-redirection: #f stdout-redirection: #t
                  coprocess: read-all-as-lines))
   (run-process/batch ["cachix" "push" cachix-cache . paths]))
 
 (def (set-test-environment-variables)
   (let* ((glow-lang.out
-          (run-process ["nix" "eval" "--raw" "-f" "pkgs.nix" "glow-lang"]
+          (run-process ["nix" "--extra-experimental-features" "nix-command" "eval" "--raw" "-f" "pkgs.nix" "glow-lang"]
                        coprocess: read-all-as-string))
-         (loadpath (run-process ["nix" "eval" "--raw" "-f" "pkgs.nix"
+         (loadpath (run-process ["nix" "--extra-experimental-features" "nix-command" "eval" "--raw" "-f" "pkgs.nix"
                           "glow-lang.passthru.pre-pkg.testGerbilLoadPath"]
                          coprocess: read-all-as-string)))
     (setenv "GERBIL_LOADPATH" loadpath)
