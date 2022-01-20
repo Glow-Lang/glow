@@ -32,11 +32,11 @@ open import Glow.Simple.AST
 
 open import Glow.DecEqMore
 
-
+open import Cubical.HITs.Interval
 
 module ParamsSubst {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}} where
 
-  prop-mode = true
+  prop-mode = one
   
   open AST Identifier prop-mode
 
@@ -116,37 +116,37 @@ module ParamsSubst {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete I
 
 
 -- module Test-String where
---   open AST String {{String-Discrete-postulated}}
+--   open AST String {{String-Discrete-postulated}} zero
 
 --   module ParamsSubstS = ParamsSubst {{String-Discrete-postulated}}
 
---   someInteraction : Interaction
+--   someInteraction : Interaction 
 --   someInteraction =  
-       -- interaction⟨   "A" ∷ "B" ∷ [] ,  "pI1" ∶ Nat ∷ "b2" ∶ Bool ∷ "b1" ∶ Bool ∷ [] ⟩ (
-       --      set "x" ∶ Bool ≔ < true > ;
-       --      at "B" set "y" ∶ Bool ≔ v "b1" ;
-       --      at "A" set "xx" ∶ Bool ≔
-       --       ( if v "b1"
-       --         then
-       --            (
-       --            set "z" ∶ Bool ≔ input "enter choice 1" ;₁ ;b
-       --            v "z"
-       --          )
-       --         else (
-       --          require! v "b2" ;'
-       --          -- publish! "B" ⟶ "y" ;
-       --          -- withdraw! "B" ⟵ < 3 > ;
-       --          -- deposit! "B" ⟶ < 2 > ;
-       --          set "z" ∶ Bool ≔ < false > ;b
-       --          < true >
-       --          )) ;
-       --      deposit! "B" ⟶ < 2 > ;
-       --      at "A" set "yq" ∶ Bool ≔ input "enter choice 2" ;
-       --      withdraw! "B" ⟵ < 3 > ;
-       --      publish! "A" ⟶ "xx" ;        
+--        interaction⟨   "A" ∷ "B" ∷ [] ,  "pI1" ∶ Nat ∷ "b2" ∶ Bool ∷ "b1" ∶ Bool ∷ [] ⟩ (
+--             set "x" ∶ Bool ≔ < true > ;
+--             at "B" set "y" ∶ Bool ≔ v "b1" ;
+--             at "A" set "xx" ∶ Bool ≔
+--              ( if v "b1"
+--                then
+--                   (
+--                   set "z" ∶ Bool ≔ input "enter choice 1" ;₁ ;b
+--                   v "z"
+--                 )
+--                else (
+--                 require! v "b2" ;'
+--                 -- publish! "B" ⟶ "y" ;
+--                 -- withdraw! "B" ⟵ < 3 > ;
+--                 -- deposit! "B" ⟶ < 2 > ;
+--                 set "z" ∶ Bool ≔ < false > ;b
+--                 < true >
+--                 )) ;
+--             deposit! "B" ⟶ < 2 > ;
+--             at "A" set "yq" ∶ Bool ≔ input "enter choice 2" ;
+--             withdraw! "B" ⟵ < 3 > ;
+--             publish! "A" ⟶ "xx" ;        
 
-       --      publish! "B" ⟶ "y" ;'        
-       --      set "yy" ∶ Bool ≔ v "y" )
+--             publish! "B" ⟶ "y" ;'        
+--             set "yy" ∶ Bool ≔ v "y" )
 
 
 --   param-sub-test : ℕ × 𝟚 × 𝟚 × Unit → Linked'

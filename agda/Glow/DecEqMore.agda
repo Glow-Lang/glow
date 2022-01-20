@@ -12,7 +12,7 @@ open import Cubical.Data.Nat
 open import Cubical.Data.Unit
 open import Cubical.Data.Int
 open import Cubical.Data.Prod
-open import Cubical.Data.Sum
+open import Cubical.Data.Sum renaming (elim to sum-elim)
 open import Cubical.Data.List
 open import Cubical.Data.Empty renaming (elim to empty-elim ; rec to empty-rec)
 open import Cubical.Foundations.CartesianKanOps
@@ -191,47 +191,31 @@ primStringEquality-comm {x} {y} with primStringEquality x y | primStringEquality
 ... | true | true = refl
 
 
-postulate same-strings : ∀ {x y : String} → x ≡ y
+postulate same-strings :
+             ∀ {x y : String} →
+             Bool→Type (primStringEquality x y) → x ≡ y
 
+postulate different-strings :
+             ∀ {x y : String} →
+             Bool→Type (not (primStringEquality x y)) → IsEmpty (x ≡ y)
+
+dichotomyBool' : (x : Bool) → (Bool→Type x) ⊎ (Bool→Type (not x))
+dichotomyBool' false = inr _
+dichotomyBool' true = inl _
 
 -- instance
 String-Discrete-postulated : IsDiscrete String
-eqTest String-Discrete-postulated x y with primStringEquality x y
-... | false = no different-strings
-  where 
-    postulate different-strings : IsEmpty (x ≡ y) 
-... | true = yes same-strings
+eqTest String-Discrete-postulated x y = 
+
+   sum-elim {C = const (Dec (x ≡ y)) }
+      (yes ∘ same-strings {x} {y})
+      (no ∘ different-strings {x} {y})
+   (dichotomyBool' (primStringEquality x y))
 
 
 String' : Type₀
 String' = String / λ x x₁ → Bool→Type (primStringEquality x x₁)
 
-
-
-
-record AA (s : String') : Type₀ where
-  field
-    zz : ℕ
-
--- instance
-Dec-test-/ : ∀ {ℓ} → {A : Type ℓ} → (t : A → A → Bool) → IsDiscrete (A / λ x x₁ → (Bool→Type (t x x₁)))   
-eqTest (Dec-test-/ t) =
-  elimProp2 (λ _ _ → isPropDec (squash/ _ _) ) h
-
-  where
-    h : ∀ a b → Dec (_/_.[ a ] ≡ _/_.[ b ])
-    h a b = mapDec
-      (eq/ _ _)
-      different-strings
-      (?? (Bool→Type (t a b)))
-
-      where
-        postulate different-strings : IsEmpty (Bool→Type (t a b)) → IsEmpty (_/_.[ a ] ≡ _/_.[ b ])
-         
-
-instance
-  String-Discrete : IsDiscrete String'
-  String-Discrete = Dec-test-/ primStringEquality
 
 
 
@@ -386,3 +370,14 @@ module PropMode (b : Interval) where
 ⊎-isProp x x₁ y (inl x₃) (inr x₄) = empty-elim (y x₃ x₄)
 ⊎-isProp x x₁ y (inr x₃) (inl x₄) = empty-elim (y x₄ x₃)
 ⊎-isProp x x₁ y (inr x₃) (inr x₄) = cong inr (x₁ _ _)
+
+-- elimMaybe-Empty-isProp :
+--       ∀ {ℓ ℓ'} {A : Type ℓ} {B : A → Type ℓ'} →
+--       (∀ x → isProp (B x)) → ∀ x → isProp ((recMaybe ⊥ {!B!}) x)
+-- elimMaybe-Empty-isProp = {!!}
+
+
+recMaybe-Empty-isProp :
+      ∀ {ℓ} {A : Type ℓ} {B : A → Type₀} →
+      (∀ x → isProp (B x)) → ∀ x → isProp ((recMaybe ⊥ B) x)
+recMaybe-Empty-isProp x (just x₁) = x _

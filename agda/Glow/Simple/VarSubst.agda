@@ -34,7 +34,7 @@ open import Glow.DecEqMore
 
 open import Glow.Simple.ContextMore
 
-
+open import Cubical.HITs.Interval
 
 module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}} where
 
@@ -42,7 +42,7 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
 
   module AlwaysCanPrepend {ptps : List Identifier} (ce : AST.ContextEntry (AST.interactionHead ptps []) ) where
 
-    open AST.InteractionHead {prop-mode = true} (AST.interactionHead ptps []) 
+    open AST.InteractionHead {prop-mode = one} (AST.interactionHead ptps []) 
 
 
     
@@ -113,7 +113,7 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
   -- TODO : provide alternative implementation, substituting multiple variables in one pass, compare performance
   module SubstOne {ptps : List Identifier} where
 
-    open AST.InteractionHead  {prop-mode = true} (AST.interactionHead ptps [])
+    open AST.InteractionHead  {prop-mode = one} (AST.interactionHead ptps [])
 
 
 
@@ -249,7 +249,7 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
 
   module SubstAll {ptps : List Identifier} where
 
-    open AST.InteractionHead  {prop-mode = true} (AST.interactionHead ptps [])
+    open AST.InteractionHead  {prop-mode = one} (AST.interactionHead ptps [])
 
     {-# TERMINATING #-}
     substAllStmnts : ∀ {Γ} → (r : Rec Γ) → Statements Γ → Statements (record Γ {entries = []}) 

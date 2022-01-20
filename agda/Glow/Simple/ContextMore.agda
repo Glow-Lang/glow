@@ -32,6 +32,7 @@ open import Glow.DecEqMore
 
 open import Glow.Simple.AST
 
+open import Cubical.HITs.Interval
 
 
 module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}} where
@@ -139,12 +140,13 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
         inr (_ , ((snd (FilterOut (((ce-name x₁) ≡_) ∘ ce-name) l))
          ∘ subst (λ z → ExistMemberAs (λ x₃ → z ≡ AST.name x₃)
                          (fst (FilterOut (λ x₃ → AST.name x₁ ≡ AST.name x₃) l))) (proj₁ x₂)))
-    ExistFirstBy-WitchIsAlso-remSubs-lemm (x₁ ∷ l) (inl x) (inr x₂) = inl (_ , (ExistFirstBy-WitchIsAlso-FilterOut-lemma _ (λ a x₃ y → proj₁ x₂ (x₃ ∙ sym y)) (proj₂ x₂)))
+    ExistFirstBy-WitchIsAlso-remSubs-lemm (x₁ ∷ l) (inl x) (inr x₂) =
+         inl (_ , (ExistFirstBy-WitchIsAlso-FilterOut-lemma _ (λ a x₃ y → proj₁ x₂ (x₃ ∙ sym y)) (proj₂ x₂)))
     ExistFirstBy-WitchIsAlso-remSubs-lemm (x₁ ∷ l) (inr x) (inl x₂) = inl (tt , (inl x₂))
     ExistFirstBy-WitchIsAlso-remSubs-lemm {nm} {p} (x₁ ∷ l) (inr x) (inr x₂) = map-sum
-          (map-prod (idfun _) (inr ∘ (proj₁ x₂ ,_)))
-          (map-prod (idfun _) (sum-elim (proj₁ x₂)))
-          (ExistFirstBy-WitchIsAlso-remSubs-lemm {nm} {p} l x (proj₂ x₂))
+          (map-prod (idfun _)  (inr ∘ (proj₁ x₂ ,_)))
+          (map-prod (idfun _) λ b → sum-elim (proj₁ x₂) (b ∘ proj₂))
+           (ExistFirstBy-WitchIsAlso-remSubs-lemm {nm} {p} l x (proj₂ x₂))
 
 
 
@@ -202,7 +204,7 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
                       (fst
                        (dec-rec' (B* x₁) (λ _ → FilterOut B* l)
                         (λ y →
-                           x₁ ∷ fst (FilterOut B* l) , sum-elim y (snd (FilterOut B* l)))
+                           x₁ ∷ fst (FilterOut B* l) , sum-elim y ((snd (FilterOut B* l)) ∘ proj₂))
                         xx))) →
                    fst
                    (dec-rec' (B* x₁)
@@ -214,17 +216,19 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
                        (FilterOut B*
                         (map-ExistingFirstBy B WitchIsAlso B' l (proj₂ x₂) λ v v₁ v₂ → f v))
                        ,
-                       sum-elim y
-                       (snd
-                        (FilterOut B*
-                         (map-ExistingFirstBy B WitchIsAlso B' l (proj₂ x₂) λ v v₁ v₂ → f v))))
+                       sum-elim y                         
+                        (snd (FilterOut B* (map-ExistingFirstBy B WitchIsAlso B' l (proj₂ x₂) (λ v v₁ v₂ → f v))) ∘ proj₂ )
+
+                         )
                     xx)
                    ≡
                    map-ExistingFirstBy B WitchIsAlso B'
                    (fst
                     (dec-rec' (B* x₁) (λ _ → FilterOut B* l)
                      (λ y →
-                        x₁ ∷ fst (FilterOut B* l) , sum-elim y (snd (FilterOut B* l)))
+                        x₁ ∷ fst (FilterOut B* l) , sum-elim y
+                          ((snd (FilterOut B* l)) ∘ proj₂)
+                        )
                      xx))
                    z' λ v v₁ v₂ → f v
              )
