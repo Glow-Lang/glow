@@ -137,7 +137,7 @@
 (define-entry-point (after-test)
   (help: "Cleanup tests in Gitlab CI" getopt: [])
   (displayln "after-test")
-  (ignore-errors (run-process/batch ["killall" "geth"])))
+  (void (ignore-errors (run-process/batch ["killall" "geth"]))))
 
 (define-entry-point (local-all)
   (help: "Do it all locally on your machine" getopt: [])
