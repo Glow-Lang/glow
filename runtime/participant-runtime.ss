@@ -11,7 +11,7 @@
   :std/sort
   :std/srfi/1 :std/srfi/13
   :std/sugar
-  :std/text/base64 :std/text/json
+  :std/text/base64 :std/text/json :std/text/csv :std/db/sqlite :std/db/dbi :std/iter
   (for-syntax :std/stxutil)
   :gerbil/gambit/exceptions
   :clan/base :clan/exception :clan/io :clan/json :clan/number :clan/pure/dict/assq
@@ -846,11 +846,24 @@
          (displayln "Starting libp2p client")
          (def libp2p-client (ensure-libp2p-client nickname: my-nickname host-address: host-address))
 
+
+         (def db (sql-connect sqlite-open "multiaddrsql.db"))
+         (displayln (connection? db))
+         (displayln "connection to db")
+         (sql-eval db "CREATE TABLE IF NOT EXISTS nametoaddr (name TEXT NOT NULL UNIQUE PRIMARY KEY, addr TEXT NOT NULL)")
+
+
          ;; Get and Broadcast identity
          (def self (libp2p-identify libp2p-client))
          (for (p (peer-info->string* self))
-           (displayln "I am " p))
+           
+            (displayln "I am " p)
+            (sql-eval db "INSERT INTO nametoaddr VALUES ($1, $2) ON CONFLICT (name) DO UPDATE SET addr=excluded.addr" my-nickname p))
 
+         (displayln "printing out new sql row created")
+         (displayln `("hello" "goodbye"))
+         (displayln (type-of (car (sql-eval-query db "SELECT * FROM nametoaddr WHERE name = $1" my-nickname))))
+         
          (def listening-thread
            (begin
             (displayln "Listening for messages...")
