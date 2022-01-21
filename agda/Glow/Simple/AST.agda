@@ -140,27 +140,33 @@ GTypeAgdaRep Unitᵍ = Unit
 isSet-GType : isSet GType
 isSet-GType = Discrete→isSet (IsDiscrete.eqTest IsDiscrete-GType)
 
-record IsGlowTy (A : Type₀) : Type₁ where
+record IsGlowTy (A : Type₀) : Type₀ where
   field
     glowRep : GType
-    glowRep-coh : A ≡ GTypeAgdaRep glowRep
+    -- glowRep-coh : A ≡ GTypeAgdaRep glowRep
     cast : A → GTypeAgdaRep glowRep
 
 instance
   Bool-IsGlowTy : IsGlowTy 𝟚
-  Bool-IsGlowTy = record { glowRep = Bool ; glowRep-coh = refl ; cast = idfun _}
+  Bool-IsGlowTy = record { glowRep = Bool ; cast = idfun _}
 
 instance
   ℤ-IsGlowTy : IsGlowTy ℤ
-  ℤ-IsGlowTy = record { glowRep = Int  ; glowRep-coh = refl ; cast = idfun _ }
+  ℤ-IsGlowTy = record { glowRep = Int  ; cast = idfun _ }
 
 instance
   ℕ-IsGlowTy : IsGlowTy ℕ
-  ℕ-IsGlowTy = record { glowRep = Nat  ; glowRep-coh = refl ; cast = idfun _ }
+  ℕ-IsGlowTy = record { glowRep = Nat  ; cast = idfun _ }
 
 instance
   Unit-IsGlowTy : IsGlowTy Unit
-  Unit-IsGlowTy = record { glowRep = Unitᵍ  ; glowRep-coh = refl ; cast = idfun _ }
+  Unit-IsGlowTy = record { glowRep = Unitᵍ  ; cast = idfun _ }
+
+GTypeAgdaRep' : (Τ : GType) → IsGlowTy (GTypeAgdaRep Τ) 
+GTypeAgdaRep' Bool = Bool-IsGlowTy
+GTypeAgdaRep' Int = ℤ-IsGlowTy
+GTypeAgdaRep' Nat = ℕ-IsGlowTy
+GTypeAgdaRep' Unitᵍ = Unit-IsGlowTy
 
 
 𝟚-elim : ∀ {a} {A : 𝟚 → Type a} → A false → A true → ∀ b → A b
@@ -800,6 +806,28 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
     blankStmnt : ∀ {Γ} → Stmnt Γ
     blankStmnt = nonBindingS (stmntNBS (NBS-require! (lit true)))
 
+    IsPureE : ∀ {Γ Τ} → Expr Γ Τ → DecPropΣ 
+
+    IsPureS : ∀ {Γ} → Stmnt Γ → DecPropΣ
+    
+    IsPureStmnts : ∀ {Γ} → Statements Γ → DecPropΣ 
+
+
+    IsPureE (var x) = Unit-dp
+    IsPureE (body (bodyR stmnts₁ expr₁)) =
+       (×-dp (IsPureStmnts stmnts₁) (IsPureE expr₁))
+    IsPureE (lit x) = Unit-dp
+    IsPureE (input x) = Empty-dp
+    IsPureE (if x then x₁ else x₂) = ×-dp (IsPureE x) (×-dp (IsPureE x₁) (IsPureE x₂))
+
+
+    IsPureS (bindingS (BS-let ce x)) = (IsPureE x)
+    IsPureS (bindingS (BS-publish! p x)) = Empty-dp
+    IsPureS (nonBindingS (stmntNBS x)) = Empty-dp
+    IsPureS (nonBindingS (exprNBS x)) = (IsPureE x)
+
+    IsPureStmnts []L = Unit-dp
+    IsPureStmnts (h ∷L x) = ×-dp (IsPureS h) (IsPureStmnts x)
 
 
   toParamValue : ∀ (l : List IdentifierWithType)  → ParametersValue l →
@@ -808,7 +836,6 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
                  GTypeAgdaRep Τ
   toParamValue (x₂ ∷ l) (x , xs) Τ s (inl p) = subst (GTypeAgdaRep) (cong type (sym p)) x -- 
   toParamValue (x₂ ∷ l) (x , xs) Τ s (inr (_ , x₁)) = (toParamValue l xs Τ s x₁) --
-
 
 
   record Interaction : Type₀ where

@@ -381,3 +381,15 @@ recMaybe-Empty-isProp :
       ∀ {ℓ} {A : Type ℓ} {B : A → Type₀} →
       (∀ x → isProp (B x)) → ∀ x → isProp ((recMaybe ⊥ B) x)
 recMaybe-Empty-isProp x (just x₁) = x _
+
+
+Unit-dp : DecPropΣ
+Unit-dp = Unit , ((yes tt) , (λ x y i → tt))
+
+Empty-dp : DecPropΣ
+Empty-dp = (⊥ , no (idfun _) , isProp⊥)
+
+
+×-dp : DecPropΣ → DecPropΣ → DecPropΣ
+×-dp x x₁ = (fst x × fst x₁ ) , (×-Dec {{proj₁ (snd x)}} {{proj₁ (snd x₁)}}
+                  , λ x₂ y → ×≡ (proj₂ (snd x) _ _ ) (proj₂ (snd x₁) _ _))

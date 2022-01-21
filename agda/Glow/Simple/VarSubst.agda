@@ -269,13 +269,38 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
     substAllExpr {Γ@(AST.con (x₁ ∷ entries₁) scope'')} (y , r') x = 
       substAllExpr  r' (SubstOne.substOneExpr (inl y) x)
 
+    {-# TERMINATING #-}
+    evalPureExpr : ∀ {sc Τ} → (e : Expr (con [] sc) Τ) → ⟨ IsPureE e ⟩ → GTypeAgdaRep Τ 
+    evalPureExpr (AST.var (AST.dsot name {inr (x₁ , ())})) x
+    
+    evalPureExpr (AST.body (AST.bodyR []L e)) x = evalPureExpr e (proj₂ x)
+    evalPureExpr (AST.body (AST.bodyR (AST.bindingS (AST.BS-let ce x₁) ∷L stmnts₁) e)) x =
+       let x₁' = evalPureExpr x₁ (proj₁ (proj₁ x))
+           e' = SubstOne.substOneExpr (inl x₁')
+                  ((AST.body (AST.bodyR (stmnts₁) e))) 
+       in dec-rec ⟨ IsPureE e' ⟩ {{proj₁ (snd (IsPureE e'))}}
+          (λ x₂ → evalPureExpr e' x₂)
+          subst-preserver-pure 
 
+      where
+        postulate subst-preserver-pure : _
+        
+    evalPureExpr (AST.body (AST.bodyR (AST.bindingS (AST.BS-publish! p x₁) ∷L stmnts₁) expr₁)) ((() , x₃) , x₂)
+       
+    evalPureExpr (AST.body (AST.bodyR (AST.nonBindingS _ ∷L stmnts₁) expr₁)) x =
+       evalPureExpr (AST.body (AST.bodyR (stmnts₁) expr₁)) ((proj₂ (proj₁ x)) , (proj₂ x))
 
-module Test where
+    evalPureExpr (AST.lit x₁) x = x₁
+    evalPureExpr (AST.if e then e₁ else e₂) x =
+       Cubical.Data.Bool.if evalPureExpr e (proj₁ x)
+          then evalPureExpr e₁ (proj₁ (proj₂ x))
+          else evalPureExpr e₂ (proj₂ (proj₂ x))
 
-  open SubstOne {String} {{String-Discrete-postulated}} {"A" ∷ "B" ∷ []}
+-- module Test where
 
-  -- open AST.InteractionHead  {prop-mode = true} (AST.interactionHead ptps [])
+--   open SubstOne {String} {{String-Discrete-postulated}} {"A" ∷ "B" ∷ []}
 
-  -- test-stmnts : {!Statements ?!}
-  -- test-stmnts = {!!}
+--   -- open AST.InteractionHead  {prop-mode = true} (AST.interactionHead ptps [])
+
+--   -- test-stmnts : {!Statements ?!}
+--   -- test-stmnts = {!!}
