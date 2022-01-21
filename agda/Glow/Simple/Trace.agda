@@ -36,6 +36,8 @@ open import Glow.Simple.ContextMore
 
 open import Glow.Simple.VarSubst
 
+open import Glow.Simple.Monad
+
 
 open import Cubical.HITs.Interval
 
@@ -48,11 +50,56 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
 
     open AST.InteractionHead  {prop-mode = one} (AST.interactionHead ptps []) 
 
+    open SubstAll {Identifier} {ptps}
+    open SubstOne {Identifier} {ptps}
 
+
+    {-# TERMINATING #-}
     Trace : ∀ sc → Statements (con [] sc) → Type₀
+    TraceNBS : ∀ sc → NBStmnt (con [] sc) → Σ Type₀ λ Ty → Ty → Type₀ → Type₀
+
+    TraceE : ∀ sc → ∀ {Τ} → (e : Expr (con [] sc) Τ) → IsEmpty ⟨ IsPureE e ⟩
+                                  → Σ Type₀ λ Tr → (Tr → (Maybe (GTypeAgdaRep Τ)))
+
+
     Trace sc []L = Unit
-    Trace sc (AST.bindingS x₁ ∷L x) = {!x!}
-    Trace sc (AST.nonBindingS x₁ ∷L x) = {!!}
+    Trace sc ss@(bindingS (BS-let ce x₁) ∷L x) with proj₁ (snd (IsPureE x₁))
+    ... | yes p =
+          let v = evalPureExpr x₁ p
+              e' = substOneStmnts (inl v) (mkStatements* x) 
+          in Trace sc e'
+
+    ... | no ¬p = Σ (fst (TraceE _ x₁ ¬p))
+                ((recMaybe Unit λ v → Trace _ (substOneStmnts (inl v) (mkStatements* x))) ∘ snd (TraceE _ x₁ ¬p))
+       
+    Trace sc ss@(AST.bindingS (AST.BS-publish! p (AST.psof name {()})) ∷L x)
+    
+    Trace sc ss@(AST.nonBindingS (AST.stmntNBS x₁) ∷L x) =
+      Σ (fst (TraceNBS sc x₁)) (λ x₂ → (snd (TraceNBS sc x₁)) x₂ (Trace sc x))
+    Trace sc ss@(AST.nonBindingS (AST.exprNBS {Τ} x₁) ∷L x)  with proj₁ (snd (IsPureE x₁))
+    ... | yes p = Trace sc x
+
+
+    ... | no ¬p = Σ (fst (TraceE _ x₁ ¬p))
+                     ((caseMaybe {A = GTypeAgdaRep Τ} Unit (Trace _ x)))
+
+        -- Σ (fst (TraceE _ x₁ ¬p))
+        --         ((recMaybe Unit λ v → Trace _ (substOneStmnts (inl v) (mkStatements* x))) ∘ snd (TraceE _ x₁ ¬p))
+
+      
+
+
+    TraceNBS sc _ = 𝟚 , λ x x₁ → Cubical.Data.Bool.if x then x₁ else Unit
+
+    -- TraceNBS sc (AST.NBS-require! x) = 𝟚 , {!!}
+    -- TraceNBS sc (AST.NBS-deposit! x x₁) = 𝟚 , {!!}
+    -- TraceNBS sc (AST.NBS-withdraw! x x₁) = 𝟚 , {!!}
+
+    TraceE = {!!}
+
+      -- dec-rec _ {{proj₁ (snd (IsPureStmnts ss))}}
+      --   (λ x₁ → {!!})
+      --   (λ x₁ → {!!})
 
 
 -- data G (A : Type₀) : Type₁ where
