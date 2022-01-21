@@ -393,3 +393,14 @@ Empty-dp = (⊥ , no (idfun _) , isProp⊥)
 ×-dp : DecPropΣ → DecPropΣ → DecPropΣ
 ×-dp x x₁ = (fst x × fst x₁ ) , (×-Dec {{proj₁ (snd x)}} {{proj₁ (snd x₁)}}
                   , λ x₂ y → ×≡ (proj₂ (snd x) _ _ ) (proj₂ (snd x₁) _ _))
+
+
+
+
+Empty⊎ : ∀ {ℓ ℓ'} → {A : Type ℓ} → {B : Type ℓ'} → (IsEmpty A) → A ⊎ B → B
+Empty⊎ x (inl x₁) = empty-elim (x x₁)
+Empty⊎ x (inr x₁) = x₁
+
+safeHead : {A : Type₀} → List A → Maybe A
+safeHead [] = nothing
+safeHead (x ∷ x₁) = just x

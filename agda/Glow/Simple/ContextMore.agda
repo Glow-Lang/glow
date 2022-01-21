@@ -37,17 +37,17 @@ open import Cubical.HITs.Interval
 
 module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}} where
 
-  prop-mode = one
+  -- prop-mode = one
   
   -- open AST Identifier prop-mode
 
-  open PropMode prop-mode 
+  open PropMode one 
 
   -- open AST Identifier
 
   module _ {ptps : List Identifier} where
   
-    open AST.InteractionHead {prop-mode = prop-mode} (AST.interactionHead ptps []) 
+    open AST.InteractionHead {prop-mode = one} (AST.interactionHead ptps []) 
 
     {-# TERMINATING #-}
     Subst' : List ContextEntry → Type₀

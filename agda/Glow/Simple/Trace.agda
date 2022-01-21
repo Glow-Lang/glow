@@ -81,7 +81,8 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
 
 
     ... | no ¬p = Σ (fst (TraceE _ x₁ ¬p))
-                     ((caseMaybe {A = GTypeAgdaRep Τ} Unit (Trace _ x)))
+                    (caseMaybe {A = GTypeAgdaRep Τ} Unit (Trace _ x) ∘ (snd (TraceE _ x₁ ¬p)))
+                     -- ((caseMaybe {A = GTypeAgdaRep Τ} Unit (Trace _ x)))
 
         -- Σ (fst (TraceE _ x₁ ¬p))
         --         ((recMaybe Unit λ v → Trace _ (substOneStmnts (inl v) (mkStatements* x))) ∘ snd (TraceE _ x₁ ¬p))
@@ -95,7 +96,11 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
     -- TraceNBS sc (AST.NBS-deposit! x x₁) = 𝟚 , {!!}
     -- TraceNBS sc (AST.NBS-withdraw! x x₁) = 𝟚 , {!!}
 
-    TraceE = {!!}
+    TraceE sc (AST.var (AST.dsot name {inr (x₁ , ())})) x
+    TraceE sc (AST.body (AST.bodyR stmnts₁ expr₁)) x = {!x!}
+    TraceE sc (AST.lit x₁) x = empty-elim (x tt)
+    TraceE sc {Τ} (AST.input x₁) x = Maybe (GTypeAgdaRep Τ) , idfun _
+    TraceE sc (AST.if e then e₁ else e₂) x = {!!}
 
       -- dec-rec _ {{proj₁ (snd (IsPureStmnts ss))}}
       --   (λ x₁ → {!!})
