@@ -87,7 +87,7 @@ module Deep where
   -- negTest (x >>= x₁) = {!!}
   -- negTest (end x) = {!!}
 
-module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}} where
+module Shallow {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}} where
   
   -- open AST Identifier prop-mode
 
