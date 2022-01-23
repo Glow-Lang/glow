@@ -1,6 +1,6 @@
 
 {-# OPTIONS --cubical  #-}
-module Glow.Simple.VarSubst where
+module Glow.Simple.VarSubstPrim where
 
 open import Agda.Builtin.String
 open import Agda.Builtin.Char
@@ -40,78 +40,8 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
 
 
 
-  module AlwaysCanPrepend {ptps : List Identifier} (ce : AST.ContextEntry (AST.interactionHead ptps []) ) where
-
-    open AST.InteractionHead {prop-mode = one} (AST.interactionHead ptps []) 
-
-
-    
-    -- TODO : remove unsafe pragma by stratification on nesting depth
-    {-# TERMINATING #-}
-    prependCtxStmnts : ∀ {Γ : _} → Statements Γ → Statements (prependContext ce Γ) 
-
-
-
-    prependCtxStmnts = map-Linked'-map _ h  hh
-      where
-
-
-
-        h : {Γ : Context}
-               → (b : Stmnt Γ) → Stmnt (prependContext ce Γ)
-
-
-        h-expr : {Γ : Context} → ∀ {Τ}
-               → (b : Expr Γ Τ) → Expr (prependContext ce Γ) Τ
-
-
-        h  (bindingS x) = bindingS (BS-lemma x)
-           where
-                BS-lemma : {Γ : Context} →  BStmnt Γ -> BStmnt (prependContext ce Γ)
-                BS-lemma (BS-let x {asn} y) = (BS-let x {asn} (h-expr y))  
-                BS-lemma (BS-publish! p (psof name₁ {w}) {y}) = 
-                  (BS-publish! p (psof name₁ {(ExistFirstBy-WitchIsAlso-preppend-lemma _ _ w)}) {y})
-
-
-        h (nonBindingS x) = nonBindingS (z x)
-           where
-
-             zz : NBStmnt _ → NBStmnt _ 
-             zz (NBS-require! x) = NBS-require! (h-expr x)
-             zz (NBS-deposit! p {y} x) = NBS-deposit! p {y} (h-expr x)
-             zz (NBS-withdraw! p {y} x) = NBS-withdraw! p {y} (h-expr x)
-
-             z : NBStmnt+Expr _ → NBStmnt+Expr _
-             z (stmntNBS x) =  stmntNBS (zz x)
-             z (exprNBS x) = exprNBS (h-expr x)
-
-        h-expr (var (dsot x {y})) = var (dsot x { (
-            sum-elim (λ a → (inl ((ExistFirstBy-WitchIsAlso-preppend-lemma _ _ a))))
-             -- TODO : figure it out -- (λ a → var (dsot x {transport (λ i → {!True (ExistFirstBy-WitchIsAlso-preppend-lemma ? ? (fromWitness y) i)!}) y}))
-             (λ b → empty-elim (lower (proj₂ b)))
-              y)})
-
-              --(var (dsot name₁ {transport {!!} y }))
-        h-expr (stmnts₁ AST.;b x) =
-            prependCtxStmnts stmnts₁ AST.;b subst (λ x₁ → Expr x₁ _)
-             -- TODO : improve evaluation performance by introducing specialized "subst"
-             -- specialisation should be not only on Expr, but also on map-Linked'-map-fold
-          (map-Linked'-map-fold ((prependContext ce)) _ _ stmnts₁ ) (h-expr x)
-        h-expr (lit x) = (AST.lit x)
-        h-expr (input msg {y}) = input msg {y}
-        h-expr (if b then t else f) = if (h-expr b) then (h-expr t) else (h-expr f)
-
-        postulate hh : (Γ : Context) (x : Stmnt Γ) →
-                           prependContext ce (bindingMechanics' Γ x) ≡
-                           bindingMechanics'
-                           (prependContext ce Γ) (h x)
-        -- hh _ (bindingS (BS-let _ _)) = refl 
-        -- hh _ (AST.bindingS (AST.BS-publish! _ _)) = {!!}
-        -- hh _ (nonBindingS _) = refl
-
-
   -- TODO : provide alternative implementation, substituting multiple variables in one pass, compare performance
-  module SubstOne {ptps : List Identifier} where
+  module SubstOnePrim {ptps : List Identifier} where
 
     open AST.InteractionHead  {prop-mode = one} (AST.interactionHead ptps [])
 
@@ -236,75 +166,74 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
                                bindingMechanics' (remSubst Γ r)
                                (substOneStmnt r (bindingS (BS-publish! p (psof nm {w}) {q})))
     publish-subst-lemma {AST.con entries₁ scope''} r p nm w q with (ExistFirstBy-WitchIsAlso-remSubs-lemm {p = p} (entries₁) r w) 
-    ... | inl x₁ = cong (λ xx → con xx scope'') (map-ExistingFirstBy-lemma3 {cs = entries₁} _ _ _ _ (proj₁ x₁) (proj₂ x₁))
-    ... | inr x₁ = cong (λ xx → con xx scope'') (map-ExistingFirstBy-lemma2 {cs = entries₁} _ _ _ _ (proj₁ x₁))
+    ... | inl x₁ = {!!}
+       -- cong (λ xx → con xx scope'') (map-ExistingFirstBy-lemma3 {cs = entries₁} _ _ _ _ (proj₁ x₁) (proj₂ x₁))
+    ... | inr x₁ = {!!}
+       -- cong (λ xx → con xx scope'') (map-ExistingFirstBy-lemma2 {cs = entries₁} _ _ _ _ (proj₁ x₁))
     
     substOneStmnts-coh Γ r (AST.bindingS (AST.BS-let ce x)) = refl
-    substOneStmnts-coh Γ r (AST.bindingS (AST.BS-publish! p (AST.psof name {w}) {q})) = publish-subst-lemma {Γ} r p name w q
+    substOneStmnts-coh Γ r (AST.bindingS (AST.BS-publish! p (AST.psof name {w}) {q})) = {!!}
+      -- publish-subst-lemma {Γ} r p name w q
     substOneStmnts-coh Γ r (AST.nonBindingS (AST.stmntNBS (AST.NBS-require! x))) = refl
     substOneStmnts-coh Γ r (AST.nonBindingS (AST.stmntNBS (AST.NBS-deposit! x x₁))) = refl
     substOneStmnts-coh Γ r (AST.nonBindingS (AST.stmntNBS (AST.NBS-withdraw! x x₁))) = refl
     substOneStmnts-coh Γ r (AST.nonBindingS (AST.exprNBS x)) = refl
 
-    substOneStmnts-coh-list : ∀ {Γ} → (r : Subst Γ) → (ss : Statements Γ) → _
-    substOneStmnts-coh-list {Γ} r stmnts₁ =
-       map-Linked'-map-fold {fld' = bindingMechanics'} (λ v → remSubst (fst v) (snd v)) (λ {ΓRec} → substOneStmnt (snd ΓRec))
-                         (λ ΓRec →  substOneStmnts-coh (fst ΓRec) (snd ΓRec)) (mkStatements* {_} {r} stmnts₁)
 
-  module SubstAll {ptps : List Identifier} where
+--   module SubstAllPrim {ptps : List Identifier} where
 
-    open AST.InteractionHead  {prop-mode = one} (AST.interactionHead ptps [])
+--     open AST.InteractionHead  {prop-mode = one} (AST.interactionHead ptps [])
 
-    {-# TERMINATING #-}
-    substAllStmnts : ∀ {Γ} → (r : Rec Γ) → Statements Γ → Statements (record Γ {entries = []}) 
-    substAllStmnts {AST.con [] scope''} r x = x
-    substAllStmnts {Γ@(AST.con (x₁ ∷ entries₁) scope'')} (y , r') x = 
-      substAllStmnts  r' (SubstOne.substOneStmnts (inl y) (SubstOne.mkStatements* x))
+--     {-# TERMINATING #-}
+--     substAllStmnts : ∀ {Γ} → (r : Rec Γ) → Statements Γ → Statements (record Γ {entries = []}) 
+--     substAllStmnts {AST.con [] scope''} r x = x
+--     substAllStmnts {Γ@(AST.con (x₁ ∷ entries₁) scope'')} (y , r') x = 
+--       substAllStmnts  r' (SubstOnePrim.substOneStmnts (inl y) (SubstOne.mkStatements* x))
 
-    {-# TERMINATING #-}
-    substAllStmnt : ∀ {Γ} → (r : Rec Γ) → Stmnt Γ → Stmnt (record Γ {entries = []}) 
-    substAllStmnt {AST.con [] scope''} r x = x
-    substAllStmnt {Γ@(AST.con (x₁ ∷ entries₁) scope'')} (y , r') x = 
-      substAllStmnt  r' (SubstOne.substOneStmnt (inl y) x)
+--     {-# TERMINATING #-}
+--     substAllStmnt : ∀ {Γ} → (r : Rec Γ) → Stmnt Γ → Stmnt (record Γ {entries = []}) 
+--     substAllStmnt {AST.con [] scope''} r x = x
+--     substAllStmnt {Γ@(AST.con (x₁ ∷ entries₁) scope'')} (y , r') x = 
+--       substAllStmnt  r' (SubstOne.substOneStmnt (inl y) x)
 
-    {-# TERMINATING #-}
-    substAllExpr : ∀ {Γ Τ} → (r : Rec Γ) → Expr Γ Τ → Expr (record Γ {entries = []}) Τ 
-    substAllExpr {AST.con [] scope''} r x = x
-    substAllExpr {Γ@(AST.con (x₁ ∷ entries₁) scope'')} (y , r') x = 
-      substAllExpr  r' (SubstOne.substOneExpr (inl y) x)
+--     {-# TERMINATING #-}
+--     substAllExpr : ∀ {Γ Τ} → (r : Rec Γ) → Expr Γ Τ → Expr (record Γ {entries = []}) Τ 
+--     substAllExpr {AST.con [] scope''} r x = x
+--     substAllExpr {Γ@(AST.con (x₁ ∷ entries₁) scope'')} (y , r') x = 
+--       substAllExpr  r' (SubstOne.substOneExpr (inl y) x)
 
-    {-# TERMINATING #-}
-    evalPureExpr : ∀ {sc Τ} → (e : Expr (con [] sc) Τ) → ⟨ IsPureE e ⟩ → GTypeAgdaRep Τ 
-    evalPureExpr (AST.var (AST.dsot name {inr (x₁ , ())})) x
+--     {-# TERMINATING #-}
+--     evalPureExpr : ∀ {sc Τ} → (e : Expr (con [] sc) Τ) → ⟨ IsPureE e ⟩ → GTypeAgdaRep Τ 
+--     evalPureExpr (AST.var (AST.dsot name {inr (x₁ , ())})) x
     
-    evalPureExpr (AST.body (AST.bodyR []L e)) x = evalPureExpr e (proj₂ x)
-    evalPureExpr (AST.body (AST.bodyR (AST.bindingS (AST.BS-let ce x₁) ∷L stmnts₁) e)) x =
-       let x₁' = evalPureExpr x₁ (proj₁ (proj₁ x))
-           e' = SubstOne.substOneExpr (inl x₁')
-                  ((AST.body (AST.bodyR (stmnts₁) e))) 
-       in dec-rec ⟨ IsPureE e' ⟩ {{proj₁ (snd (IsPureE e'))}}
-          (λ x₂ → evalPureExpr e' x₂)
-          subst-preserver-pure 
+--     evalPureExpr (AST.body (AST.bodyR []L e)) x = evalPureExpr e (proj₂ x)
+--     evalPureExpr (AST.body (AST.bodyR (AST.bindingS (AST.BS-let ce x₁) ∷L stmnts₁) e)) x =
+--        let x₁' = evalPureExpr x₁ (proj₁ (proj₁ x))
+--            e' = SubstOne.substOneExpr (inl x₁')
+--                   ((AST.body (AST.bodyR (stmnts₁) e))) 
+--        in dec-rec ⟨ IsPureE e' ⟩ {{proj₁ (snd (IsPureE e'))}}
+--           (λ x₂ → evalPureExpr e' x₂)
+--           subst-preserver-pure 
 
-      where
-        postulate subst-preserver-pure : _
+--       where
+--         postulate subst-preserver-pure : _
         
-    evalPureExpr (AST.body (AST.bodyR (AST.bindingS (AST.BS-publish! p x₁) ∷L stmnts₁) expr₁)) ((() , x₃) , x₂)
+--     evalPureExpr (AST.body (AST.bodyR (AST.bindingS (AST.BS-publish! p x₁) ∷L stmnts₁) expr₁)) ((() , x₃) , x₂)
        
-    evalPureExpr (AST.body (AST.bodyR (AST.nonBindingS _ ∷L stmnts₁) expr₁)) x =
-       evalPureExpr (AST.body (AST.bodyR (stmnts₁) expr₁)) ((proj₂ (proj₁ x)) , (proj₂ x))
+--     evalPureExpr (AST.body (AST.bodyR (AST.nonBindingS _ ∷L stmnts₁) expr₁)) x =
+--        evalPureExpr (AST.body (AST.bodyR (stmnts₁) expr₁)) ((proj₂ (proj₁ x)) , (proj₂ x))
 
-    evalPureExpr (AST.lit x₁) x = x₁
-    evalPureExpr (AST.if e then e₁ else e₂) x =
-       Cubical.Data.Bool.if evalPureExpr e (proj₁ x)
-          then evalPureExpr e₁ (proj₁ (proj₂ x))
-          else evalPureExpr e₂ (proj₂ (proj₂ x))
+--     evalPureExpr (AST.lit x₁) x = x₁
+--     evalPureExpr (AST.if e then e₁ else e₂) x =
+--        Cubical.Data.Bool.if evalPureExpr e (proj₁ x)
+--           then evalPureExpr e₁ (proj₁ (proj₂ x))
+--           else evalPureExpr e₂ (proj₂ (proj₂ x))
 
--- module Test where
+-- -- module Test where
 
---   open SubstOne {String} {{String-Discrete-postulated}} {"A" ∷ "B" ∷ []}
+-- --   open SubstOne {String} {{String-Discrete-postulated}} {"A" ∷ "B" ∷ []}
 
---   -- open AST.InteractionHead  {prop-mode = true} (AST.interactionHead ptps [])
+-- --   -- open AST.InteractionHead  {prop-mode = true} (AST.interactionHead ptps [])
 
---   -- test-stmnts : {!Statements ?!}
---   -- test-stmnts = {!!}
+-- --   -- test-stmnts : {!Statements ?!}
+-- --   -- test-stmnts = {!!}
