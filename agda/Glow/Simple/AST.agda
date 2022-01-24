@@ -836,7 +836,7 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
 
 
   record Interaction : Type₀ where
-    pattern
+    -- pattern
     constructor interaction
     field
       head : InteractionHead

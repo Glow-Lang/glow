@@ -34,7 +34,13 @@ open import Glow.DecEqMore
 
 open import Glow.Simple.AST
 
+open import Glow.Simple.ParamsSubst
 
+
+instance
+  String-Discrete-postulated-unsafe : IsDiscrete String
+  String-Discrete-postulated-unsafe = String-Discrete-postulated
+  
 module Test where 
   open AST String {{String-Discrete-postulated}} zero
 
@@ -42,9 +48,11 @@ module Test where
   someInteraction =  
      interaction⟨   "A" ∷ "B" ∷ [] ,  "pI1" ∶ Nat ∷ "b2" ∶ Bool ∷ "b1" ∶ Bool ∷ [] ⟩ (
           set "x" ∶ Bool ≔ < true > ;
-          at "B" set "y" ∶ Bool ≔ v "b1" ;
+          at "B" set "y" ∶ Bool ≔ input "enter choice 0" ;
+          publish! "B" ⟶ "y" ;        
+
           at "A" set "xx" ∶ Bool ≔
-           ( if v "b1"
+           ( if v "y"
              then
                 (
                 set "z" ∶ Bool ≔ input "enter choice 1" ;₁ ;b
@@ -60,15 +68,30 @@ module Test where
               )) ;
           deposit! "B" ⟶ < 2 > ;
           at "A" set "yq" ∶ Bool ≔ input "enter choice 2" ;
-          withdraw! "B" ⟵ < 3 > ;
-          publish! "A" ⟶ "xx" ;        
+          withdraw! "A" ⟵ < 3 > ;
+          deposit! "A" ⟶ < 3 > ;
+          -- withdraw! "A" ⟵ < 3 > ;
+          -- withdraw! "B" ⟵ < 3 > ;'
+          publish! "A" ⟶ "xx" ;'        
 
-          publish! "B" ⟶ "y" ;'        
-          set "yy" ∶ Bool ≔ v "y" )
+          set "yy" ∶ Bool ≔ < false >
+          )
 
 
 someInteraction = toProofs {{String-Discrete-postulated}} Test.someInteraction
 
+someCode : ℕ × 𝟚 × 𝟚 × Unit → AST.Statements {{String-Discrete-postulated}} {one}
+                     (AST.interactionHead ("A" ∷ "B" ∷ []) [])
+                        (AST.emptyContext {{String-Discrete-postulated}}  _) 
+someCode x = ParamsSubst.paramSubst {{String-Discrete-postulated}} x
+               (AST.Interaction.code {{String-Discrete-postulated}} someInteraction )
+
+-- someInteraction' : AST.Interaction String one
+-- AST.Interaction.head someInteraction' = transp (λ i → AST.InteractionHead String (seg i)) i0
+--                                           (AST.Interaction.head Test.someInteraction)
+-- AST.Interaction.code someInteraction' = {!AST.Interaction.code (toProofs Test.someInteraction)!}
+
+  
 
 -- module Test' where
 --   open AST String {{String-Discrete-postulated}}

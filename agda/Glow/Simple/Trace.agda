@@ -36,17 +36,19 @@ open import Glow.Simple.ContextMore
 
 open import Glow.Simple.VarSubst
 
-open import Glow.Simple.Monad
+-- open import Glow.Simple.Monad
 
 
 open import Cubical.HITs.Interval
 
-
+bindMaybe : {A : Type₀} {B : Type₀}  → Maybe A → (A → Maybe B) → Maybe B
+bindMaybe nothing x₁ = nothing
+bindMaybe (just x) x₁ = x₁ x
 
 module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}} where
 
 
-  module Trave {ptps : List Identifier} (ce : AST.ContextEntry {prop-mode = one} (AST.interactionHead ptps []) ) where
+  module Trace {ptps : List Identifier}  where
 
     open AST.InteractionHead  {prop-mode = one} (AST.interactionHead ptps []) 
 
@@ -61,7 +63,10 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
                       → IsEmpty ⟨ IsPureE (body (AST.bodyR (s ∷L (stmnts bd)) (expr bd))) ⟩ 
                     → Σ Type₀ λ Tr →  (Tr → (Maybe (GTypeAgdaRep Τ)))
         
-    TraceNBS : ∀ sc → NBStmnt (con [] sc) → Σ Type₀ λ Ty → Ty → Type₀ → Type₀
+    TraceNBS : ∀ sc → NBStmnt (con [] sc) →
+       Σ (Σ Type₀ λ Ty → Ty → Type₀ → Type₀)
+          λ x → ∀ {Ty'} → {y : (fst x)} →  ((λ b → b Ty') ∘ (snd x)) y
+                           → Maybe Ty' 
 
     TraceE : ∀ sc → ∀ {Τ} → (e : Expr (con [] sc) Τ) → IsEmpty ⟨ IsPureE e ⟩
                                   → Σ Type₀ λ Tr → (Tr → (Maybe (GTypeAgdaRep Τ)))
@@ -70,12 +75,21 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
                                   → Σ Type₀ λ Tr → (Tr → (Maybe (GTypeAgdaRep Τ)))
 
     Trace sc []L = Unit
-    Trace sc (h ∷L x) = fst (TraceB sc h (AST.bodyR x (lit tt)) {!!})
+    Trace sc (h ∷L x) with proj₁ (snd (IsPureS h))
+    ... | no ¬p = fst (TraceB sc h (AST.bodyR x (lit tt)) (¬p ∘ proj₁ ∘ proj₁))
+    ... | yes p with h
+    ... | AST.bindingS (AST.BS-let ce x₁) =
+             Trace sc (substOneStmnts (inl (evalPureExpr x₁ p)) (mkStatements* x))
+    ... | AST.nonBindingS x₁ = Trace sc x
+-- fst (TraceB sc h (AST.bodyR x (lit tt)) {!!})
 
       
 
 
-    TraceNBS sc _ = 𝟚 , λ x x₁ → Cubical.Data.Bool.if x then x₁ else Unit
+    TraceNBS sc _ =
+       (𝟚 , λ x X → Cubical.Data.Bool.if x then X else Unit)
+        , λ {Ty'} {b} → 𝟚-elim {A = λ x → Cubical.Data.Bool.if x then Ty' else Unit → Maybe Ty'}
+           (λ _ → nothing) just b
 
     -- TraceNBS sc (AST.NBS-require! x) = 𝟚 , {!!}
     -- TraceNBS sc (AST.NBS-deposit! x x₁) = 𝟚 , {!!}
@@ -153,16 +167,48 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
 
     ... | no ¬p =
       let q = (TraceE _ x₁ ¬p)
+           
       in Σ (fst q)
              (((recMaybe Unit
                 λ v → let bo' = substOneExpr {Γ = con  [ ce ] sc} {Τ = Τ} (inl v) (body bo)
                       in fst (TraceE' sc {Τ} (substOneExpr (inl v) (body bo)))
                 ) ∘ snd q))
-           , {!!} 
+           ,
+           λ x →
+             maybe-elim
+                {B = λ b' → (recMaybe Unit
+                λ v → let bo' = substOneExpr {Γ = con  [ ce ] sc} {Τ = Τ} (inl v) (body bo)
+                      in fst (TraceE' sc {Τ} (substOneExpr (inl v) (body bo)))
+                ) b' → Maybe (GTypeAgdaRep Τ) }
+                  (λ x₂ → nothing)
+                  (λ v →
+                      let bo' = substOneExpr {Γ = con  [ ce ] sc} {Τ = Τ} (inl v) (body bo)
+                      in snd (TraceE' sc {Τ} (substOneExpr (inl v) (body bo)))
+                  )
+                  ((snd q (fst x))) (snd x)
+                   -- (snd q (fst x)) 
     
     TraceB sc (AST.bindingS (AST.BS-publish! p (AST.psof name {()}))) (AST.bodyR stmnts₁ expr₁) x₁
     
-    TraceB sc (AST.nonBindingS x) (AST.bodyR stmnts₁ expr₁) xx = {!!}
+    TraceB sc (AST.nonBindingS (AST.stmntNBS x)) bo@(AST.bodyR stmnts₁ expr₁) xx =
+       let z = TraceNBS sc x
+           q = TraceE' sc (body bo)
+        in Σ (fst (fst z)) (λ x₁ → snd (fst z) x₁ (fst q)) ,
+              λ x₁ → bindMaybe (( snd z {_} {fst x₁} ((snd x₁)))) (snd q) 
+    TraceB sc (AST.nonBindingS (AST.exprNBS x)) bo@(AST.bodyR stmnts₁ expr₁) xx =
+        let nbe' = TraceE' sc x
+            bo' = TraceE' sc (body bo)
+        in Σ (fst nbe') (caseMaybe Unit (fst bo') ∘ snd nbe')
+             , λ x₁ → maybe-elim {B = λ b'' → (caseMaybe Unit (fst bo') b'') → Maybe (GTypeAgdaRep _)}
+                         (λ x₂ → nothing)
+                         (λ _ → snd bo')
+                         (snd nbe' (fst x₁)) (snd x₁)
+
+
+
+
+
+
            -- Trace sc []L = Unit
     -- Trace sc ss@(bindingS (BS-let ce x₁) ∷L x) with proj₁ (snd (IsPureE x₁))
     -- ... | yes p =

@@ -36,10 +36,10 @@ open import Glow.Simple.ContextMore
 
 open import Cubical.HITs.Interval
 
+open import Glow.Simple.VarSubst
 
 module Deep where
-  -- deep embeding, forgetfull, not necessary usefull for proofs,
-  -- I am not shure if it will be usefull but it is easy to define
+
   data G (A : Type₀) : Type₁ where
     input : ∀ {A'} → String → {{IsGlowTy A'}} → A ≡ Maybe A'  → G A
     withdraw : 𝟚 ≡ A → G A
@@ -80,12 +80,8 @@ module Deep where
     in exec _ (snd x₁)
   -- exec {A} (end x) = transport⁻ x 
 
-  -- negTest : G Empty → Type₀
-  -- negTest (input x x₁) = {!!}
-  -- negTest (withdraw x) = {!!}
-  -- negTest (deposit x) = {!!}
-  -- negTest (x >>= x₁) = {!!}
-  -- negTest (end x) = {!!}
+
+
 
 module Shallow {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}} where
   
@@ -98,13 +94,27 @@ module Shallow {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Ident
 
   module Shallow (ptps : List Identifier) where
     open AST.InteractionHead {{IsDiscrete-Identifier}} {one} (AST.interactionHead ptps []) 
-    
-    data G (A : GType) : Type₀ where
-      pure : ∀ {sc} → (e : Expr (con [] sc) A) → ⟨ IsPureE e ⟩ → G A
-      input : String → G A
-      -- withdraw : 
-      _>>_ : ∀ {A'} → G A' → G A → G A 
+
+    open SubstAll {Identifier} {ptps}
+    open SubstOne {Identifier} {ptps}
+
+
+    -- data G (A : GType) : Type₀ where
+    --   pure : ∀ {sc} → (e : Expr (con [] sc) A) → ⟨ IsPureE e ⟩ → G A
+    --   input : String → G A
+    --   -- withdraw : 
+    --   _>>_ : ∀ {A'} → G A' → G A → G A 
 
     -- _>>=_ : ∀ {A sc Τ nm} → Expr (con [] sc) Τ
     --                      → Expr (con [ AST.ice sc nm Τ ] sc) A → G A
     -- _>>=_ = {!!}
+
+
+    data G (A : GType) : Type₀ where
+      pure : GTypeAgdaRep A → G A
+      input : String → G A
+      withdraw : ℕ → ParticipantId → G A
+      deposit : ℕ → ParticipantId → G A
+      require : (b : 𝟚) → {!!} → G {!!}
+      -- withdraw : 
+      -- _>>_ : ∀ {A'} → G A' → G A → G A 

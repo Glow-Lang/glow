@@ -1,6 +1,6 @@
 
 {-# OPTIONS --cubical  #-}
-module Glow.Simple.Example where
+module Glow.Simple.TraceExample where
 
 open import Agda.Builtin.String
 open import Agda.Builtin.Char
@@ -34,157 +34,121 @@ open import Glow.DecEqMore
 
 open import Glow.Simple.AST
 
+open import Glow.Simple.Example
 
-module Test where 
-  open AST String {{String-Discrete-postulated}} zero
+open import Glow.Simple.Trace
 
-  someInteraction : Interaction
-  someInteraction =  
-     interaction⟨   "A" ∷ "B" ∷ [] ,  "pI1" ∶ Nat ∷ "b2" ∶ Bool ∷ "b1" ∶ Bool ∷ [] ⟩ (
-          set "x" ∶ Bool ≔ < true > ;
-          at "B" set "y" ∶ Bool ≔ v "b1" ;
-          at "A" set "xx" ∶ Bool ≔
-           ( if v "b1"
-             then
-                (
-                set "z" ∶ Bool ≔ input "enter choice 1" ;₁ ;b
-                v "z"
-              )
-             else (
-              require! v "b2" ;'
-              -- publish! "B" ⟶ "y" ;
-              -- withdraw! "B" ⟵ < 3 > ;
-              -- deposit! "B" ⟶ < 2 > ;
-              set "z" ∶ Bool ≔ < false > ;b
-              < true >
-              )) ;
-          deposit! "B" ⟶ < 2 > ;
-          at "A" set "yq" ∶ Bool ≔ input "enter choice 2" ;
-          withdraw! "B" ⟵ < 3 > ;
-          publish! "A" ⟶ "xx" ;        
-
-          publish! "B" ⟶ "y" ;'        
-          set "yy" ∶ Bool ≔ v "y" )
+module TestTrace where 
+  open AST String {{String-Discrete-postulated}} one
 
 
-someInteraction = toProofs {{String-Discrete-postulated}} Test.someInteraction
+  open Trace {{String-Discrete-postulated}} {ptps =  "A" ∷ "B" ∷ []}
+
+  traceTestTy : ℕ × 𝟚 × 𝟚 × Unit → Type₀
+  traceTestTy p = Trace _ (someCode p)
+
+  -- tyEvalTest : Type₀
+  -- tyEvalTest = traceTestTy (2 , (false , (true , tt)))
+
+  tyEvalTest : Type₀
+  tyEvalTest = Σ {ℓ-zero} {ℓ-zero} (Maybe {ℓ-zero} 𝟚)
+                 (λ x →
+                    recMaybe {ℓ-suc ℓ-zero} {Type} {ℓ-zero} {𝟚} Unit
+                    (λ v →
+                       Σ {ℓ-zero} {ℓ-zero} 𝟚
+                       (λ x₁ →
+                          Cubical.Data.Bool.if_then_else_ {ℓ-suc ℓ-zero} {Type} x₁
+                          (Σ {ℓ-zero} {ℓ-zero}
+                           (fst
+                            (Cubical.Data.Bool.if_then_else_ {ℓ-suc ℓ-zero}
+                             {Σ {ℓ-suc ℓ-zero} {ℓ-zero} Type (λ Tr → Tr → Maybe {ℓ-zero} 𝟚)} v
+                             (Σ {ℓ-zero} {ℓ-zero} (Maybe {ℓ-zero} 𝟚)
+                              (λ x₂ →
+                                 recMaybe {ℓ-suc ℓ-zero} {Type} {ℓ-zero} {𝟚} Unit (λ v₁ → Unit) x₂)
+                              ,
+                              (λ x₂ →
+                                 maybe-elim {ℓ-zero} {𝟚}
+                                 {λ b' →
+                                    recMaybe {ℓ-suc ℓ-zero} {Type} {ℓ-zero} {𝟚} Unit (λ v₁ → Unit) b' →
+                                    Maybe {ℓ-zero} 𝟚}
+                                 (λ x₃ → nothing) (λ v₁ _ → just v₁) (fst x₂) (snd x₂)))
+                             (Σ {ℓ-zero} {ℓ-zero} 𝟚
+                              (λ x₂ →
+                                 Cubical.Data.Bool.if_then_else_ {ℓ-suc ℓ-zero} {Type} x₂ Unit Unit)
+                              ,
+                              (λ x₂ →
+                                 bindMaybe {Unit} {𝟚}
+                                 (𝟚-elim {ℓ-zero}
+                                  {λ x₃ →
+                                     Cubical.Data.Bool.if_then_else_ {ℓ-suc ℓ-zero} {Type} x₃ Unit
+                                     Unit →
+                                     Maybe {ℓ-zero} Unit}
+                                  (λ _ → nothing) just (fst x₂) (snd x₂))
+                                 (λ _ → just true)))))
+                           (λ x₂ →
+                              recMaybe {ℓ-suc ℓ-zero} {Type} {ℓ-zero} {𝟚} Unit
+                              (λ v₁ →
+                                 Σ {ℓ-zero} {ℓ-zero} 𝟚
+                                 (λ x₃ →
+                                    Cubical.Data.Bool.if_then_else_ {ℓ-suc ℓ-zero} {Type} x₃
+                                    (Σ {ℓ-zero} {ℓ-zero} (Maybe {ℓ-zero} 𝟚)
+                                     (λ x₄ →
+                                        recMaybe {ℓ-suc ℓ-zero} {Type} {ℓ-zero} {𝟚} Unit
+                                        (λ v₂ →
+                                           Σ {ℓ-zero} {ℓ-zero} 𝟚
+                                           (λ x₅ →
+                                              Cubical.Data.Bool.if_then_else_ {ℓ-suc ℓ-zero} {Type} x₅
+                                              (Σ {ℓ-zero} {ℓ-zero} 𝟚
+                                               (λ x₆ →
+                                                  Cubical.Data.Bool.if_then_else_ {ℓ-suc ℓ-zero} {Type} x₆
+                                                  (Σ {ℓ-zero} {ℓ-zero} 𝟚
+                                                   (λ x₇ →
+                                                      Cubical.Data.Bool.if_then_else_ {ℓ-suc ℓ-zero} {Type} x₇ Unit
+                                                      Unit))
+                                                  Unit))
+                                              Unit))
+                                        x₄))
+                                    Unit))
+                              (snd
+                               (Cubical.Data.Bool.if_then_else_ {ℓ-suc ℓ-zero}
+                                {Σ {ℓ-suc ℓ-zero} {ℓ-zero} Type (λ Tr → Tr → Maybe {ℓ-zero} 𝟚)} v
+                                (Σ {ℓ-zero} {ℓ-zero} (Maybe {ℓ-zero} 𝟚)
+                                 (λ x₃ →
+                                    recMaybe {ℓ-suc ℓ-zero} {Type} {ℓ-zero} {𝟚} Unit (λ v₁ → Unit) x₃)
+                                 ,
+                                 (λ x₃ →
+                                    maybe-elim {ℓ-zero} {𝟚}
+                                    {λ b' →
+                                       recMaybe {ℓ-suc ℓ-zero} {Type} {ℓ-zero} {𝟚} Unit (λ v₁ → Unit) b' →
+                                       Maybe {ℓ-zero} 𝟚}
+                                    (λ x₄ → nothing) (λ v₁ _ → just v₁) (fst x₃) (snd x₃)))
+                                (Σ {ℓ-zero} {ℓ-zero} 𝟚
+                                 (λ x₃ →
+                                    Cubical.Data.Bool.if_then_else_ {ℓ-suc ℓ-zero} {Type} x₃ Unit Unit)
+                                 ,
+                                 (λ x₃ →
+                                    bindMaybe {Unit} {𝟚}
+                                    (𝟚-elim {ℓ-zero}
+                                     {λ x₄ →
+                                        Cubical.Data.Bool.if_then_else_ {ℓ-suc ℓ-zero} {Type} x₄ Unit
+                                        Unit →
+                                        Maybe {ℓ-zero} Unit}
+                                     (λ _ → nothing) just (fst x₃) (snd x₃))
+                                    (λ _ → just true))))
+                               x₂)))
+                          Unit))
+                    x)
 
 
--- module Test' where
---   open AST String {{String-Discrete-postulated}}
-
---   trnsprt : Interaction zero  →
---                 Interaction one
---   trnsprt = transport λ i → Interaction (seg i)
+  -- traceTestCases : traceTestTy (2 , (false , (true , tt))) → 𝟚 
+  -- traceTestCases (false , snd₁) = {!snd₁!}
+  -- traceTestCases (true , snd₁) = {!!}
 
 
---   trsnprtTest = trnsprt Test.someInteraction
-
---   trsnprtTest' : Maybe GType
---   trsnprtTest' = map-Maybe ContextEntry'.type  ( (safeHead (Context.entries (foldLinked' (Interaction.code trsnprtTest)))))
-
---   trsnprtTest'' : (("pI1" ≡ "b2") ⊎
---                      (("pI1" ≡ "b2" → Empty) ×
---                       (("pI1" ≡ "b1") ⊎ (("pI1" ≡ "b1" → Empty) × Lift Empty))) →
---                      Empty)
---                     ×
---                     (("b2" ≡ "b1") ⊎ (("b2" ≡ "b1" → Empty) × Lift Empty) → Empty) ×
---                     (Lift Empty → Empty) × Lift Unit
---   trsnprtTest'' = InteractionHead.uniqueParams (Interaction.head trsnprtTest)
-
---   trsnprtTest''* : {!!} 
---   trsnprtTest''* = InteractionHead.uniqueParams (Interaction.head Test.someInteraction)
-
---   -- trsnprtTest''' = {!!}
-
-
--- module Testℕ where 
---   open AST ℕ zero
-
---   someInteraction : Interaction
---   someInteraction =  
---      interaction⟨   1 ∷ 2 ∷ [] ,  3 ∶ Nat ∷ 4 ∶ Bool ∷ 5 ∶ Bool ∷ [] ⟩ (
---           set 6 ∶ Bool ≔ < true > ;
---           at 2 set 7 ∶ Bool ≔ v 5 ;
---           at 1 set 8 ∶ Bool ≔ (
---               require! v 4 ;'
---               -- publish! "B" ⟶ "y" ;
---               -- withdraw! "B" ⟵ < 3 > ;
---               -- deposit! "B" ⟶ < 2 > ;
---               set 9 ∶ Bool ≔ < false > ;b
---               < true >
---               );
---           deposit! 2 ⟶ < 2 > ;
---           withdraw! 2 ⟵ < 3 > ;
---           publish! 2 ⟶ 7 ;'        
---           set 10 ∶ Bool ≔ v 7 )
-
-
--- module Testℕ' where
---   open AST ℕ
-
---   trnsprt : Interaction zero  →
---                 Interaction one
---   trnsprt = transport λ i → Interaction (seg i)
-
-
---   trsnprtTest = trnsprt Testℕ.someInteraction
-
---   trsnprtTest' : Maybe GType
---   trsnprtTest' = map-Maybe ContextEntry'.type  ( (safeHead (Context.entries (foldLinked' (Interaction.code trsnprtTest)))))
-
---   trsnprtTest'' : PropMode.PM one
---                     (UniqueBy
---                      (λ x x₁ →
---                         AST.IdentifierWithType.name x ≡ AST.IdentifierWithType.name x₁)
---                      (AST.parameters (AST.Interaction.head trsnprtTest))
---                      ,
---                      (UniqueByDec≡ AST.IdentifierWithType.name
---                       (AST.parameters (AST.Interaction.head trsnprtTest))
---                       ,
---                       isProp-UniqueBy
---                       (λ x x₁ →
---                          AST.IdentifierWithType.name x ≡ AST.IdentifierWithType.name x₁)
---                       (AST.parameters (AST.Interaction.head trsnprtTest))))
---   trsnprtTest'' = InteractionHead.uniqueParams (Interaction.head trsnprtTest)
-
-
---   -- trsnprtTest''' : {!!}
---   -- trsnprtTest''' = (λ { (inl p)
---   --                           → transp
---   --                             (λ i → caseNat ℕ Empty (predℕ (predℕ (predℕ (proj₁ p i))))) i0 0
---   --                       ; (inr q)
---   --                           → Cubical.Data.Sum.Base..extendedlambda0
---   --                             (no
---   --                              (λ x →
---   --                                 transp (λ i → caseNat ℕ Empty (predℕ (predℕ (predℕ (proj₁ x i)))))
---   --                                 i0 0))
---   --                             (no (λ x → lower (proj₂ x)))
---   --                             (λ x →
---   --                                transp (λ i → caseNat ℕ Empty (predℕ (predℕ (predℕ (proj₁ x i)))))
---   --                                i0 0)
---   --                             (λ x → lower (proj₂ x)) (proj₂ q)
---   --                       })
---   --                    ,
---   --                    ((λ { (inl p)
---   --                            → transp
---   --                              (λ i → caseNat ℕ Empty (predℕ (predℕ (predℕ (predℕ (proj₁ p i))))))
---   --                              i0 0
---   --                        ; (inr q) → lower (proj₂ q)
---   --                        })
---   --                     , (lower , tt*))
-
---   xtx : PropMode.PM one
---                     (UniqueBy
---                      (λ x x₁ →
---                         AST.IdentifierWithType.name x ≡ AST.IdentifierWithType.name x₁)
---                      (AST.parameters (AST.Interaction.head trsnprtTest))
---                      ,
---                      (UniqueByDec≡ AST.IdentifierWithType.name
---                       (AST.parameters (AST.Interaction.head trsnprtTest))
---                       ,
---                       isProp-UniqueBy
---                       (λ x x₁ →
---                          AST.IdentifierWithType.name x ≡ AST.IdentifierWithType.name x₁)
---                       (AST.parameters (AST.Interaction.head trsnprtTest))))
---   xtx = {!!} , ({!!} , ({!!} , {!tt*!}))
+  traceTestCases : tyEvalTest → 𝟚 
+  traceTestCases (nothing , snd₁) = {!!}
+  traceTestCases (just x , false , tt) = {!!}
+  traceTestCases (just false , true , (false , snd₂) , snd₁) = {!!}
+  traceTestCases (just false , true , (true , snd₂) , snd₁) = {!!}
+  traceTestCases (just true , true , (nothing , tt) , tt) = {!!}
+  traceTestCases (just true , true , (just x , tt) , fst₁ , snd₁) = {!!}

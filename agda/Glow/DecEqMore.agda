@@ -404,3 +404,5 @@ Empty⊎ x (inr x₁) = x₁
 safeHead : {A : Type₀} → List A → Maybe A
 safeHead [] = nothing
 safeHead (x ∷ x₁) = just x
+
+
