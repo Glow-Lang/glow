@@ -176,9 +176,7 @@ parseStatement = \case
     Ignore (parseExpression sexpr)
   Builtin "return" [List [Atom typeName]] ->
     Return $ var typeName
-  Builtin "consensus:set-participant" [roleName] ->
-    SetParticipant (var $ parseName roleName)
-  Builtin "participant:set-participant" [roleName] ->
+  Builtin "set-participant" [roleName] ->
     SetParticipant (var $ parseName roleName)
   Builtin "expect-deposited" [Atom amountName] ->
     ExpectDeposited (var amountName)

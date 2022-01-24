@@ -61,7 +61,7 @@
     ((@label x) (pure-stmt stx))
     ((@debug-label x) (pure-stmt stx))
     ((@ p s) (identifier? #'p)
-     (append (project-set-participant #'p cpit this-p)
+     (append [[#'set-participant #'p]]
              (cond ((eq? (stx-e #'p) this-p) (pure-stmt #'s))
                    (else []))))
     ((publish! . _) (project-publish stx cpit this-p))
@@ -76,18 +76,11 @@
     ((defdata . _) (pure-stmt stx))
     ((deftype . _) (pure-stmt stx))))
 
-;; TODO: if the active participant is already statically known to be `p`,
-;;       don't need to produce anything, or, insert set-participant in checkpointify instead of project
-(def (project-set-participant p cpit this-p)
-  (cond
-    (this-p [[#'participant:set-participant p]])
-    (else   [[#'consensus:set-participant p]])))
-
 ;; project-publish : StmtStx CpiTable MPart -> [Listof StmtStx]
 (def (project-publish stx cpit this-p)
   (syntax-case stx ()
     ((_ p x)
-     (append (project-set-participant #'p cpit this-p)
+     (append [[#'set-participant #'p]]
              (cond
                ((eq? (stx-e #'p) this-p) [#'(add-to-publish 'x x)])
                (else [#'(def x (expect-published 'x))]))))))
@@ -96,7 +89,7 @@
 (def (project-deposit stx cpit this-p)
   (syntax-case stx ()
     ((_ p n)
-     (append (project-set-participant #'p cpit this-p)
+     (append [[#'set-participant #'p]]
              (cond
                ((eq? (stx-e #'p) this-p) [#'(add-to-deposit n)])
                (else [#'(expect-deposited n)]))))))
