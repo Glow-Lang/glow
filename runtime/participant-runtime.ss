@@ -820,7 +820,7 @@
   )
 
 (define-type (Libp2pChannel @ [])
-    .make: (lambda (my-nickname host-address dest-address)
+    .make: (lambda (my-nickname host-address dest-address contacts)
        (let ()
 
          ;; ------------ Libp2p channel buffer setup
@@ -846,11 +846,11 @@
          (displayln "Starting libp2p client")
          (def libp2p-client (ensure-libp2p-client nickname: my-nickname host-address: host-address))
 
+         ;; Find your Blockchain Addr from your Nickname
+         (def my-0xaddr (0x<-address (.@ (car (.@ (lookup-contact nickname: my-nickname contacts: contacts) identities)) address) ) )
 
-         (def db (sql-connect sqlite-open "multiaddrsql.db"))
-         (displayln (connection? db))
-         (displayln "connection to db")
-         (sql-eval db "CREATE TABLE IF NOT EXISTS nametoaddr (name TEXT NOT NULL UNIQUE PRIMARY KEY, addr TEXT NOT NULL)")
+         ;; Create local Database to hold Blockchainaddr-> multiaddr
+         (def db (connect-to-multiaddr-db filepath: "multiaddrsql.db"))
 
 
          ;; Get and Broadcast identity
@@ -858,11 +858,13 @@
          (for (p (peer-info->string* self))
            
             (displayln "I am " p)
-            (sql-eval db "INSERT INTO nametoaddr VALUES ($1, $2) ON CONFLICT (name) DO UPDATE SET addr=excluded.addr" my-nickname p))
 
+            ;;Insert your Blockchainaddr-> multiaddr and replace if need to
+            (update-multiaddr-db db: db hex-addr: my-0xaddr multi-addr: p))
+
+         ;;Print out resulting row
          (displayln "printing out new sql row created")
-         (displayln `("hello" "goodbye"))
-         (displayln (type-of (car (sql-eval-query db "SELECT * FROM nametoaddr WHERE name = $1" my-nickname))))
+         (displayln (vector-ref (car (sql-eval-query db "SELECT * FROM nametoaddr WHERE name = $1" my-0xaddr)) 1) )
          
          (def listening-thread
            (begin
@@ -883,28 +885,30 @@
            .send-contract-agreement: (lambda (agreement)
              (displayln MAGENTA "Sending agreement to multiaddr..." END)
              (def agreement-string (string<-json (json<- InteractionAgreement agreement)))
-             (dial-and-send-contents libp2p-client dest-address agreement-string)
+             (def dest-multiaddr (get-multiaddr-db db: db hex-addr: dest-address)) ;;Multiaddr from the Eth addr
+             (dial-and-send-contents libp2p-client dest-multiaddr agreement-string)
              (displayln)
              (force-output))
 
            .send-contract-handshake: (lambda (_runtime handshake)
              (displayln MAGENTA "Sending handshake to multiaddr..." END)
              (def handshake-string (string<-json (json<- AgreementHandshake handshake)))
-             (dial-and-send-contents libp2p-client dest-address handshake-string)
+             (def dest-multiaddr (get-multiaddr-db db: db hex-addr: dest-address)) ;;Multiaddr from the Eth addr
+             (dial-and-send-contents libp2p-client dest-multiaddr handshake-string)
              (displayln)
              (force-output))
 
            .listen-for-handshake: (lambda (_runtime)
-             (displayln MAGENTA "Listening for handshake via libp2p ...")
+             (displayln MAGENTA "Listening for handshake via libp2p ..." END)
              (def handshake-str (poll-buffer))
-             (displayln MAGENTA "Received handshake")
+             (displayln MAGENTA "Received handshake" END)
              (def handshake (<-json AgreementHandshake (json<-string handshake-str)))
              handshake)
 
            .listen-for-agreement: (lambda ()
-             (displayln MAGENTA "Listening for agreement via libp2p ...")
+             (displayln MAGENTA "Listening for agreement via libp2p ..." END)
              (def agreement-str (poll-buffer))
-             (displayln MAGENTA "Received agreement")
+             (displayln MAGENTA "Received agreement" END)
              (def agreement (<-json InteractionAgreement (json<-string agreement-str)))
              agreement)
 
@@ -976,7 +980,8 @@
      (def my-nickname (hash-ref options 'my-nickname))
      (def host-address (hash-ref options 'host-address))
      (def dest-address (hash-ref options 'dest-address))
-     (.call Libp2pChannel .make my-nickname host-address dest-address)))
+     (def contacts (hash-ref options 'contacts))
+     (.call Libp2pChannel .make my-nickname host-address dest-address contacts)))
     (else (error "Invalid off-chain channel selection"))))
 
 
@@ -985,8 +990,23 @@
 
 
 (def (lookup-contact nickname: nickname contacts: contacts)
-  (for-each (lambda (contact) (displayln (.@ contact name))) contacts)
+  ;; (for-each (lambda (contact) (displayln (.@ contact name))) contacts)
   (find (lambda (contact) (equal? (.@ contact name) nickname)) contacts))
+
+;; Database methods for Retreiving, Creating, and Adding data for ethaddr->multiaddr
+
+(def (connect-to-multiaddr-db filepath: filepath)
+  (let ((db (sql-connect sqlite-open filepath)))
+    (sql-eval db "CREATE TABLE IF NOT EXISTS nametoaddr (name TEXT NOT NULL UNIQUE PRIMARY KEY, addr TEXT NOT NULL)")
+    db))
+
+(def (update-multiaddr-db db: db hex-addr: hex-addr multi-addr: multi-addr)
+  (sql-eval db "INSERT INTO nametoaddr VALUES ($1, $2) ON CONFLICT (name) DO UPDATE SET addr=excluded.addr" hex-addr multi-addr))
+
+(def (get-multiaddr-db db: db hex-addr: hex-addr)
+  (vector-ref 
+    (car (sql-eval-query db "SELECT * FROM nametoaddr WHERE name = $1" hex-addr)) 
+    1))
 
 
 ;; ------------------ Libp2p client methods

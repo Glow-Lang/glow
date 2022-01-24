@@ -273,7 +273,7 @@
              ;; It is supplied here as a temporary workaround,
              ;; until storing peerIds in `contacts` is supported.
              (option 'dest-address "-d" "--dest-address" default: #f
-                     help: "dest-address (only required if using libp2p as off-chain-channel)")
+                     help: "dest-address in the format of eth address (only required if using libp2p as off-chain-channel)")
              (flag 'wait-for-agreement "-W" "--wait-for-agreement"
                    help: "wait for agreement via off-chain-channel")]
             [(lambda (opt) (hash-remove! opt 'test))]
