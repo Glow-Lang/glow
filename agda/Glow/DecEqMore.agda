@@ -406,3 +406,7 @@ safeHead [] = nothing
 safeHead (x ∷ x₁) = just x
 
 
+
+bindMaybe : {A : Type₀} {B : Type₀}  → Maybe A → (A → Maybe B) → Maybe B
+bindMaybe nothing x₁ = nothing
+bindMaybe (just x) x₁ = x₁ x

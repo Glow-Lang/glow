@@ -23,6 +23,8 @@ open import Cubical.Data.Nat.Order.Recursive
 
 open import Cubical.Relation.Nullary.Base renaming (¬_ to IsEmpty)
 
+open import Cubical.Relation.Binary
+
 
 
 data Linked {C : Type₀} {A : C → Type₀} (fld : ∀ c → A c → C) (c : C) : Type₀
@@ -98,6 +100,12 @@ map-Linked'-map {C = C} {C' = C'} {fld = fld} {fld' = fld'} g f e {c} (h ∷L x)
   in f h ∷L
          -- substLinked' fld' e t 
       subst (Linked' fld') (e _ _) t
+
+
+-- map-Linked'-map-Rel : {C C' : Type₀} { A : C → Type₀} {A' : C' → Type₀} {fld : ∀ c → A c → C} {fld' : ∀ c → A' c → C'}
+--                     → EquivRel C ℓ-zero
+--                    → (g : C → C') → (f :  ∀ {c} → A c → A' (g c) ) → (∀ c → (x : A c) → g (fld _ x) ≡ (fld' _ (f x)) ) → {c : C} → Linked' fld c → Linked' fld' (g c) 
+-- map-Linked'-map-Rel = {!!}
 
 
 map-Linked'-map-fold : {C C' : Type₀} { A : C → Type₀} {A' : C' → Type₀} {fld : ∀ c → A c → C} {fld' : ∀ c → A' c → C'}

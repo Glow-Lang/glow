@@ -107,35 +107,54 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
                                                                                                   recMaybe Empty (λ p' → AST.pId-name _ _ p ≡ AST.pId-name _ _ p')
                                                                                                   (AST.scope y))  (psof-proof _ x) (λ _ → nothing) r
 
-    SubstMathEntry : ∀ {ℓ} (B' : ContextEntry → Type ℓ) → (l : List ContextEntry) → (nm : Identifier)
+
+    SubstMatchEntry : ∀ {ℓ} (B' : ContextEntry → Type ℓ) → (l : List ContextEntry) → (nm : Identifier)
                      → (r : Subst' l)
                      → ExistFirstBy ((nm ≡_) ∘ ce-name)
                          WitchIsAlso B' l
                            → Type₀
-    SubstMathEntry B' (x₁ ∷ l) nm (inl x) (inl x₂) = Unit
-    SubstMathEntry B' (x₁ ∷ l) nm (inl x) (inr x₂) = Empty
-    SubstMathEntry B' (x₁ ∷ l) nm (inr x) (inl x₂) = Empty
-    SubstMathEntry B' (x₁ ∷ l) nm (inr x) (inr x₂) = SubstMathEntry B' (l) nm (x) (proj₂ x₂)
+    SubstMatchEntry B' (x₁ ∷ l) nm (inl x) (inl x₂) = Unit
+    SubstMatchEntry B' (x₁ ∷ l) nm (inl x) (inr x₂) = Empty
+    SubstMatchEntry B' (x₁ ∷ l) nm (inr x) (inl x₂) = Empty
+    SubstMatchEntry B' (x₁ ∷ l) nm (inr x) (inr x₂) = SubstMatchEntry B' (l) nm (x) (proj₂ x₂)
 
-    SubstNotMathEntry : ∀ {ℓ} (B' : ContextEntry → Type ℓ) → (l : List ContextEntry) → (nm : Identifier)
+    SubstNotMatchEntry : ∀ {ℓ} (B' : ContextEntry → Type ℓ) → (l : List ContextEntry) → (nm : Identifier)
                      → (r : Subst' l)
                      → ExistFirstBy ((nm ≡_) ∘ ce-name)
                          WitchIsAlso B' l
                            → Type₀
-    SubstNotMathEntry B' (x₁ ∷ l) nm (inl x) (inl x₂) = Empty
-    SubstNotMathEntry B' (x₁ ∷ l) nm (inl x) (inr x₂) = Unit
-    SubstNotMathEntry B' (x₁ ∷ l) nm (inr x) (inl x₂) = Unit
-    SubstNotMathEntry B' (x₁ ∷ l) nm (inr x) (inr x₂) = SubstNotMathEntry B' (l) nm (x) (proj₂ x₂)
+    SubstNotMatchEntry B' (x₁ ∷ l) nm (inl x) (inl x₂) = Empty
+    SubstNotMatchEntry B' (x₁ ∷ l) nm (inl x) (inr x₂) = Unit
+    SubstNotMatchEntry B' (x₁ ∷ l) nm (inr x) (inl x₂) = Unit
+    SubstNotMatchEntry B' (x₁ ∷ l) nm (inr x) (inr x₂) = SubstNotMatchEntry B' (l) nm (x) (proj₂ x₂)
 
+
+    SubstMatchEntry? : ∀ {ℓ} (B' : ContextEntry → Type ℓ) → (l : List ContextEntry) → (nm : Identifier)
+                     → (r : Subst' l)
+                     → (y : ExistFirstBy ((nm ≡_) ∘ ce-name)
+                         WitchIsAlso B' l)
+                           → SubstNotMatchEntry _ _ _ r y ⊎ SubstMatchEntry _ _ _ r y
+    SubstMatchEntry? B' (x ∷ l) nm (inl x₁) (inl x₂) = inr tt
+    SubstMatchEntry? B' (x ∷ l) nm (inl x₁) (inr x₂) = inl tt
+    SubstMatchEntry? B' (x ∷ l) nm (inr x₁) (inl x₂) = inl tt
+    SubstMatchEntry? B' (x ∷ l) nm (inr x₁) (inr x₂) = SubstMatchEntry? B' l nm x₁ (proj₂ x₂) 
+
+    SubstMatch-Extract : ∀ {ℓ} (B' : ContextEntry → Type ℓ) → (l : List ContextEntry) → (nm : Identifier)
+                     → (r : Subst' l)
+                     → (y : ExistFirstBy ((nm ≡_) ∘ ce-name)
+                         WitchIsAlso B' l)
+                           → SubstMatchEntry _ _ _ r y → Σ _ GTypeAgdaRep
+    SubstMatch-Extract B' (AST.ice scope name type ∷ l) nm (inl x₂) (inl x₃) x = type , x₂
+    SubstMatch-Extract B' (x₁ ∷ l) nm (inr x₂) (inr x₃) x = SubstMatch-Extract B' l nm x₂ (proj₂ x₃) x 
 
     ExistFirstBy-WitchIsAlso-remSubs-lemm : {nm : Identifier} {p : ParticipantId} (l : List ContextEntry) → (r : Subst' l)  →
                                                       (z : ExistFirstBy ((nm ≡_) ∘ ce-name) WitchIsAlso
                                                         ((λ y → recMaybe Empty (λ p' → (AST.pId-name _ _ p) ≡ (AST.pId-name _ _ p')) (ce-scope y))) l) →
                                                         
-                                                      ((SubstNotMathEntry _ _ _ r z × ExistFirstBy ((nm ≡_) ∘ ce-name) WitchIsAlso
+                                                      ((SubstNotMatchEntry _ _ _ r z × ExistFirstBy ((nm ≡_) ∘ ce-name) WitchIsAlso
                                                          ((λ y → recMaybe Empty (λ p' → (AST.pId-name _ _ p) ≡ (AST.pId-name _ _ p')) (ce-scope y)))
                                                          (remSubst' l r))
-                                                       ⊎ (SubstMathEntry _ _ _ r z  × IsEmpty (ExistMemberAs ((nm ≡_) ∘ ce-name) (remSubst' l r))))
+                                                       ⊎ (SubstMatchEntry _ _ _ r z  × IsEmpty (ExistMemberAs ((nm ≡_) ∘ ce-name) (remSubst' l r))))
     ExistFirstBy-WitchIsAlso-remSubs-lemm (x₁ ∷ l) (inl x) (inl x₂) =  
         inr (_ , ((snd (FilterOut (((ce-name x₁) ≡_) ∘ ce-name) l))
          ∘ subst (λ z → ExistMemberAs (λ x₃ → z ≡ AST.name x₃)
@@ -155,7 +174,7 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
                        (z : ExistFirstBy ((nm ≡_) ∘ ce-name) WitchIsAlso B' cs) →
                        (f : ContextEntry → Scope)
                        (r : Subst' cs) →
-                       (SubstMathEntry _ _ _ r z) → 
+                       (SubstMatchEntry _ _ _ r z) → 
                        remSubst' _ (map-ExistingFirstBy-lemma ((nm ≡_) ∘ ce-name) B' z f r) ≡ remSubst' cs r
     map-ExistingFirstBy-lemma2 {x₁ ∷ cs} B' (inl x) f (inl x₂) (x₃) = refl
     map-ExistingFirstBy-lemma2 {x₁ ∷ cs} B' (inr x) f (inr x₂) (x₃) = cong (x₁ ∷_) (map-ExistingFirstBy-lemma2 {cs} _ _ _ _ x₃)
@@ -251,7 +270,7 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
                        (z : ExistFirstBy ((nm ≡_) ∘ ce-name) WitchIsAlso B' cs) →
                        (f : ContextEntry → Scope)
                        (r : Subst' cs) →                       
-                       (SubstNotMathEntry _ _ _ r z) →
+                       (SubstNotMatchEntry _ _ _ r z) →
                        (ex' : ExistFirstBy ((nm ≡_) ∘ ce-name) WitchIsAlso B' (remSubst' cs r)) → 
                        remSubst' _ (map-ExistingFirstBy-lemma ((nm ≡_) ∘ ce-name) B' z f r) ≡
                            map-ExistingFirstBy ((nm ≡_) ∘ ce-name) WitchIsAlso B' (remSubst' cs r)

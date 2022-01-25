@@ -208,15 +208,12 @@ instance
        h (x ∷ xs) = Pred-app ⊎? ×-Dec {{Dec-IsEmpty {{Pred-app}}}} {{h xs}}
          
 
--- this is better encoded like that, than with general rule about turning decidable predicated into propositions, such genreal rule generated tu much
+-- this is better encoded like that, than with general rule about turning decidable predicated into propositions,  genreal rule generated too much
 -- unresolved instances resolutions
 instance
   Dec-ExistMemberAs : ∀ {ℓ ℓ'} {A : Type ℓ} {B : A → Type ℓ'} {{Dec-Pred-B : Dec-Pred B}}
                                         → {l : List A} → Dec (ExistMemberAs B l)
   Dec-ExistMemberAs {ℓ} {ℓ'} {A} {B} ⦃ Dec-Pred-B ⦄ {l} = Pred-app 
-
-
--- Dec-Pred-Dec {{Dec-Pred-ExistMemberAs {{record { predicateDecision = λ _ → ?? _ }}}}}
 
 
 FirstIs∙ : ∀ {ℓ ℓ'} → {A : Type ℓ} → (B : A → Type ℓ') → List A → Type ℓ' 
@@ -287,14 +284,6 @@ ExistFirstByWitchIsAlso→ExistMemberAs (x₂ ∷ l) =
    map-sum proj₁ (map-prod (idfun _) (ExistFirstByWitchIsAlso→ExistMemberAs l))                    
 
 
--- postulate ExistFirstBy-WitchIsAlso-preppend-lemma : ∀ {ℓ ℓ' ℓ''} → {A : Type ℓ} → {B : A → Type ℓ'} → {B' : A → Type ℓ''} →
---                                                  (l : List A) → (l' : List A) →
---                                                   ExistFirstBy B WitchIsAlso B' l →
---                                                  (ExistFirstBy B WitchIsAlso B' l ≡ ExistFirstBy B WitchIsAlso B' (l ++ l'))
--- -- ExistFirstBy-WitchIsAlso-preppend-lemma (x₁ ∷ l) l' (inl x) = {!!}
--- -- ExistFirstBy-WitchIsAlso-preppend-lemma (x₁ ∷ l) l' (inr x) = {!!}
---  --cong (_ ⊎_) (cong (_ ×_) ((ExistFirstBy-WitchIsAlso-preppend-lemma l l' {!!})))
-
 
 ExistFirstBy-WitchIsAlso-preppend-lemma : ∀ {ℓ ℓ' ℓ''} → {A : Type ℓ} → {B : A → Type ℓ'} → {B' : A → Type ℓ''} →
                                                  (l : List A) → (l' : List A) →
@@ -303,12 +292,6 @@ ExistFirstBy-WitchIsAlso-preppend-lemma : ∀ {ℓ ℓ' ℓ''} → {A : Type ℓ
 ExistFirstBy-WitchIsAlso-preppend-lemma (x₁ ∷ l) l' (inl x) = inl x
 ExistFirstBy-WitchIsAlso-preppend-lemma (x₁ ∷ l) l' (inr x) =
   inr ((proj₁ x) , (ExistFirstBy-WitchIsAlso-preppend-lemma l l' (proj₂ x)))
-
--- ExistFirstBy-WitchIsAlso-preppend-lemma' : ∀ {ℓ ℓ' ℓ''} → {A : Type ℓ} → {B : A → Type ℓ'} → {B' : A → Type ℓ''} →
---                                                  (l : List A) → (l' : List A) →
---                                                   ExistFirstBy B WitchIsAlso B' l →
---                                                  (ExistFirstBy B WitchIsAlso B' (l ++ l'))
--- ExistFirstBy-WitchIsAlso-preppend-lemma' (x₁ ∷ l) l' = {!!}
 
 
 
@@ -370,118 +353,6 @@ ExistFirstBy-WitchIsAlso-FilterOut-lemma2' {B = B} {B' = B'} {{Dec-Pred-B}} (x�
      λ b → ExistFirstBy-WitchIsAlso-FilterOut-lemma2' l f (proj₂ b))
     (Dec-Pred.decide Dec-Pred-B x₂)
   
-
--- ExistFirstBy-WitchIsAlso-map-indempotent-on-FilteredOut-lemma :
---                                             ∀ {ℓ ℓ' ℓ''} → {A : Type ℓ} → {B : A → Type ℓ'} → {B' : A → Type ℓ''} →
---                                               {{Dec-Pred-B : Dec-Pred B}} → 
---                                                  (l : List A) → (f : (x : A) → B x → B' x → A) →
---                                                  (z' : {!!}) → 
---                                                   fst (FilterOut B l) ≡
---                        map-ExistingFirstBy B WitchIsAlso B' (fst (FilterOut B l)) z' f
--- ExistFirstBy-WitchIsAlso-map-indempotent-on-FilteredOut-lemma {B = B} {B' = B'} {{Dec-Pred-B}} (x ∷ l) f =  
---   dec-elim
---     (λ x₁ → (z'
---        : ExistFirstBy B WitchIsAlso B'
---          (fst
---           (dec-rec' (B x) (λ _ → FilterOut B l)
---            (λ y → x ∷ fst (FilterOut B l) , sum-elim y (snd (FilterOut B l)))
---            x₁))) →
---       fst
---       (dec-rec' (B x) (λ _ → FilterOut B l)
---        (λ y → x ∷ fst (FilterOut B l) , sum-elim y (snd (FilterOut B l)))
---        x₁)
---       ≡
---       map-ExistingFirstBy B WitchIsAlso B'
---       (fst
---        (dec-rec' (B x) (λ _ → FilterOut B l)
---         (λ y → x ∷ fst (FilterOut B l) , sum-elim y (snd (FilterOut B l)))
---         x₁))
---       z' f)
---     (λ x₁ z' → {!snd (FilterOut B l)!})
---     {!!}
---     ((Dec-Pred.decide Dec-Pred-B x))
-    
--- ExistFirstBy-WitchIsAlso-FilterOut-lemma2 : ∀ {ℓ ℓ' ℓ''} → {A : Type ℓ} → {B : A → Type ℓ'} → {B' : A → Type ℓ''} →
---                                               {{Dec-Pred-B : Dec-Pred B}}  → 
---                                                  (l : List A) → (f : (x : A) → B x → B' x → A) →
---                                                   (∀ x → (y : (B x)) → (y' : B' x) → B (f x y y' ))
---                                                  → (z : ExistFirstBy B WitchIsAlso B' l) →
---                                                  (z' : ExistFirstBy B WitchIsAlso B' (fst (FilterOut B l))) → 
---                                                  (fst (FilterOut B
---                                                     (map-ExistingFirstBy B WitchIsAlso B'
---                                                        l
---                                                          z f)))
---                                                    ≡
---                                                   (map-ExistingFirstBy B WitchIsAlso B'
---                                                      (fst (FilterOut B l))
---                                                        z' f)
-
--- ExistFirstBy-WitchIsAlso-FilterOut-lemma2 {B = B} {B'} ⦃ Dec-Pred-B = Dec-Pred-B ⦄ (x ∷ l) f g (inl x₁) =
-
---  dec-elim2
---    (λ q x₂ →
---      (z'
---        : ExistFirstBy B WitchIsAlso B'
---          (fst
---           (dec-rec' (B x) (λ _ → FilterOut B l)
---            (λ y → x ∷ fst (FilterOut B l) , sum-elim y (snd (FilterOut B l)))
---            x₂))) →
---       fst
---       (dec-rec' (B (f x (proj₁ x₁) (proj₂ x₁))) (λ _ → FilterOut B l)
---        (λ y →
---           f x (proj₁ x₁) (proj₂ x₁) ∷ fst (FilterOut B l) ,
---           sum-elim y (snd (FilterOut B l)))
---        q)
---       ≡
---       map-ExistingFirstBy B WitchIsAlso B'
---       (fst
---        (dec-rec' (B x) (λ _ → FilterOut B l)
---         (λ y → x ∷ fst (FilterOut B l) , sum-elim y (snd (FilterOut B l)))
---         x₂))
---       z' f)
---    (λ x₂ x' → λ z' →  ExistFirstBy-WitchIsAlso-map-indempotent-on-FilteredOut-lemma l f z' )
---    (λ x₂ x' → empty-rec (x' (proj₁ x₁)))
---    (λ x₂ x' → empty-rec (x₂ ((g x (proj₁ x₁) (proj₂ x₁))) ))
---    (λ x₂ x' → empty-rec (x' (proj₁ x₁)))
---    (Dec-Pred.decide Dec-Pred-B (f x (proj₁ x₁) (proj₂ x₁)))
---    ((Dec-Pred.decide Dec-Pred-B x))
-   
--- ExistFirstBy-WitchIsAlso-FilterOut-lemma2 {B = B} {B'} ⦃ Dec-Pred-B = Dec-Pred-B ⦄ (x ∷ l) f g (inr x₁) = 
---  dec-elim 
---          (λ x₂ →            
---               (z' : ExistFirstBy B WitchIsAlso B'
---            (fst
---             (dec-rec' (B x) (λ _ → FilterOut B l)
---              (λ y → x ∷ fst (FilterOut B l) , sum-elim y (snd (FilterOut B l)))
---              x₂))) → 
---             fst
---            (dec-rec' (B x)
---             (λ _ →
---                FilterOut B (map-ExistingFirstBy B WitchIsAlso B' l (proj₂ x₁) f))
---             (λ y →
---                x ∷
---                fst
---                (FilterOut B (map-ExistingFirstBy B WitchIsAlso B' l (proj₂ x₁) f))
---                ,
---                sum-elim y
---                (snd
---                 (FilterOut B
---                  (map-ExistingFirstBy B WitchIsAlso B' l (proj₂ x₁) f))))
---             x₂)
---            ≡
---            map-ExistingFirstBy B WitchIsAlso B'
---            (fst
---             (dec-rec' (B x) (λ _ → FilterOut B l)
---              (λ y → x ∷ fst (FilterOut B l) , sum-elim y (snd (FilterOut B l)))
---              x₂))
---            z' f)
---          (λ x₂ z'' → empty-rec (proj₁ x₁ x₂))
---          (λ x₂ → sum-elim (λ b → empty-rec (x₂ (proj₁ b)) )
---          λ b → cong (x ∷_) (ExistFirstBy-WitchIsAlso-FilterOut-lemma2 l f g (proj₂ x₁) (proj₂ b)))
-
---       (Dec-Pred.decide Dec-Pred-B x)
-
-
 
 
 module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}}  (prop-mode : Interval) where 
@@ -747,6 +618,10 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
       body : Body Γ Τ → Expr Γ Τ
       lit : GTypeAgdaRep Τ → Expr Γ Τ
       input : String → {_ : PM (IsNotConsensus Γ) } → Expr Γ Τ
+
+      -- this is temporary solution, this constructors cannot apear in code, and are introduced on some passes, this distinction must be typesafe in the future! 
+      -- receivePublished : GTypeAgdaRep Τ → {_ : PM (IsConsensus Γ) } → Expr Γ Τ
+      
       if_then_else_ : Expr Γ Bool → Expr Γ Τ → Expr Γ Τ → Expr Γ Τ
 
     data Stmnt Γ where
@@ -760,14 +635,15 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
       BS-let : (ce : ContextEntry) → {asn : PM  (AllowedScopeNarrowing Γ (scope ce) )}
                   → Expr (narrow Γ (scope ce) asn) (type ce) → BStmnt Γ    
       BS-publish! : (p : ParticipantId) → (PrivateSymbolOf Γ p)
-                             → {_ : PM ( IsConsensus Γ ) }→  BStmnt Γ
-      -- verify! ‹ids›
-
+                             → {_ : PM ( IsConsensus Γ ) } →  BStmnt Γ
+     
     data NBStmnt Γ where
       NBS-require! : Expr Γ Bool → NBStmnt Γ
       NBS-deposit! : ParticipantId → {_ : PM ( IsConsensus Γ ) } → Expr Γ Nat → NBStmnt Γ
       NBS-withdraw! : ParticipantId → {_ : PM ( IsConsensus Γ ) } → Expr Γ Nat → NBStmnt Γ
-
+      -- this is temporary solution, this constructors cannot apear in code, and are introduced on some passes, this distinction must be typesafe in the future!
+      -- beter solution is commented, but needs additional coherence conditions to work
+      NBS-publishVal! : ParticipantId → Identifier → {_ : PM ( IsConsensus Γ ) } → NBStmnt Γ
 
     data NBStmnt+Expr Γ where
       stmntNBS : NBStmnt Γ → NBStmnt+Expr Γ
@@ -815,6 +691,7 @@ module AST (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifie
        (×-dp (IsPureStmnts stmnts₁) (IsPureE expr₁))
     IsPureE (lit x) = Unit-dp
     IsPureE (input x) = Empty-dp
+    -- IsPureE (receivePublished x) = Empty-dp
     IsPureE (if x then x₁ else x₂) = ×-dp (IsPureE x) (×-dp (IsPureE x₁) (IsPureE x₂))
 
 

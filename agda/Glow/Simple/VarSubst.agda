@@ -80,6 +80,7 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
              zz (NBS-require! x) = NBS-require! (h-expr x)
              zz (NBS-deposit! p {y} x) = NBS-deposit! p {y} (h-expr x)
              zz (NBS-withdraw! p {y} x) = NBS-withdraw! p {y} (h-expr x)
+             zz (NBS-publishVal! x x₁ {y}) = (NBS-publishVal! x x₁ {y})
 
              z : NBStmnt+Expr _ → NBStmnt+Expr _
              z (stmntNBS x) =  stmntNBS (zz x)
@@ -99,6 +100,7 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
           (map-Linked'-map-fold ((prependContext ce)) _ _ stmnts₁ ) (h-expr x)
         h-expr (lit x) = (AST.lit x)
         h-expr (input msg {y}) = input msg {y}
+        -- h-expr (receivePublished x {y}) = receivePublished x {y}
         h-expr (if b then t else f) = if (h-expr b) then (h-expr t) else (h-expr f)
 
         postulate hh : (Γ : Context) (x : Stmnt Γ) →
@@ -189,7 +191,7 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
     substOneStmnt r (AST.bindingS (AST.BS-publish! p (AST.psof name {w}) {y})) =
       sum-elim
          (λ w → (AST.bindingS (AST.BS-publish! p (AST.psof name {proj₂ w}) {y})))
-         (λ _ → blankStmnt)
+         (λ _ → (AST.nonBindingS (AST.stmntNBS (AST.NBS-publishVal! p name {y}))))
         (ExistFirstBy-WitchIsAlso-remSubs-lemm {p = p} _ r w) 
 
    
@@ -200,6 +202,8 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
                      (AST.nonBindingS (AST.stmntNBS (AST.NBS-deposit! x {z} (substOneExpr r x₁))))
     substOneStmnt r (AST.nonBindingS (AST.stmntNBS (AST.NBS-withdraw! x {z} x₁))) =
                     (AST.nonBindingS (AST.stmntNBS (AST.NBS-withdraw! x {z} (substOneExpr r x₁))))
+    substOneStmnt r (AST.nonBindingS (AST.stmntNBS (AST.NBS-publishVal! x y {z}))) =
+                    (AST.nonBindingS (AST.stmntNBS (AST.NBS-publishVal! x y {z})))
     
     substOneStmnt r (AST.nonBindingS (AST.exprNBS x)) = (AST.nonBindingS (AST.exprNBS (substOneExpr r x))) 
 
@@ -221,6 +225,7 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
            ) e'
     substOneExpr r (AST.lit x) = (AST.lit x)
     substOneExpr r (AST.input x {y}) = (AST.input x {y})
+    -- substOneExpr r (AST.receivePublished x {y}) = (AST.receivePublished x {y})
     substOneExpr r (AST.if x then x₁ else x₂) = (AST.if (substOneExpr r x) then (substOneExpr r x₁) else (substOneExpr r x₂))
 
 
@@ -244,6 +249,7 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
     substOneStmnts-coh Γ r (AST.nonBindingS (AST.stmntNBS (AST.NBS-require! x))) = refl
     substOneStmnts-coh Γ r (AST.nonBindingS (AST.stmntNBS (AST.NBS-deposit! x x₁))) = refl
     substOneStmnts-coh Γ r (AST.nonBindingS (AST.stmntNBS (AST.NBS-withdraw! x x₁))) = refl
+    substOneStmnts-coh Γ r (AST.nonBindingS (AST.stmntNBS (AST.NBS-publishVal! x x₁))) = refl
     substOneStmnts-coh Γ r (AST.nonBindingS (AST.exprNBS x)) = refl
 
     substOneStmnts-coh-list : ∀ {Γ} → (r : Subst Γ) → (ss : Statements Γ) → _

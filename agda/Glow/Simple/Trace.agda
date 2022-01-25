@@ -41,10 +41,6 @@ open import Glow.Simple.VarSubst
 
 open import Cubical.HITs.Interval
 
-bindMaybe : {A : Type₀} {B : Type₀}  → Maybe A → (A → Maybe B) → Maybe B
-bindMaybe nothing x₁ = nothing
-bindMaybe (just x) x₁ = x₁ x
-
 module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}} where
 
 
@@ -81,7 +77,6 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
     ... | AST.bindingS (AST.BS-let ce x₁) =
              Trace sc (substOneStmnts (inl (evalPureExpr x₁ p)) (mkStatements* x))
     ... | AST.nonBindingS x₁ = Trace sc x
--- fst (TraceB sc h (AST.bodyR x (lit tt)) {!!})
 
       
 

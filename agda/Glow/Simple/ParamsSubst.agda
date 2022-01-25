@@ -84,6 +84,7 @@ module ParamsSubst {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete I
            zz (NBS-require! x) = NBS-require! (h-expr x)
            zz (NBS-deposit! p {y} x) = NBS-deposit! p {y} (h-expr x)
            zz (NBS-withdraw! p {y} x) = NBS-withdraw! p {y} (h-expr x)
+           zz (NBS-publishVal! x y {z}) = NBS-publishVal! x y {z}
 
            z : NBStmnt+Expr ih _ → NBStmnt+Expr (stripParamsHead ih) _
            z (stmntNBS x) =  stmntNBS (zz x)
@@ -104,6 +105,7 @@ module ParamsSubst {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete I
       h-expr (lit x) = lit x
 
       h-expr (input msg {y}) = input msg {y}
+      -- h-expr (receivePublished x {y}) = publishVal x {y}
       h-expr (if b then t else f) = if (h-expr b) then (h-expr t) else (h-expr f)
 
       hh : (Γ : Context ih) (x : Stmnt _ Γ) →
