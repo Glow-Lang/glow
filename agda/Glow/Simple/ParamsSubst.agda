@@ -34,11 +34,13 @@ open import Glow.DecEqMore
 
 open import Cubical.HITs.Interval
 
-module ParamsSubst {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}} where
+module ParamsSubst {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}}
+              {BuilitInsIndex : Type₀} {{IsDiscrete-BuilitInsIndex : IsDiscrete BuilitInsIndex}}
+              (builtIns : BuiltIns' BuilitInsIndex {{IsDiscrete-BuilitInsIndex}}) where
 
   prop-mode = one
   
-  open AST Identifier prop-mode
+  open AST Identifier builtIns prop-mode
 
   open PropMode prop-mode 
 
@@ -69,6 +71,10 @@ module ParamsSubst {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete I
       h-expr : {Γ : Context ih} → ∀ {Τ}
              → (b : Expr ih Γ Τ) → Expr _ (stripParamsCtx Γ) Τ
 
+      -- h-args : {Γ : Context ih} → ∀ {Τs}
+      --        → (b : Args ih Γ Τs) → Expr _ (stripParamsCtx Γ) Τs
+
+      
 
       h  (bindingS x) = bindingS (BS-lemma x)
          where
@@ -95,7 +101,8 @@ module ParamsSubst {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete I
            (λ a → var (dsot x {inl a}))
            (lit ∘ (lookup-ParametersValue (ih .parameters) vv (iwt x _)) ∘ proj₂)
             y
-        
+
+
 
       h-expr (stmnts₁ ;b x) =
          paramSubst {ih = ih} vv stmnts₁ ;b subst (λ x₁ → Expr _ x₁ _)
@@ -103,6 +110,7 @@ module ParamsSubst {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete I
              -- specialisation should be not only on Expr, but also on map-Linked'-map-fold
         (map-Linked'-map-fold (stripParamsCtx {ih}) _ _ stmnts₁ ) (h-expr x)
       h-expr (lit x) = lit x
+      h-expr (_$'_ f xs) = _$'_ f {!!}
 
       h-expr (input msg {y}) = input msg {y}
       -- h-expr (receivePublished x {y}) = publishVal x {y}
@@ -116,6 +124,7 @@ module ParamsSubst {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete I
       hh _ (AST.bindingS (AST.BS-publish! _ (AST.psof name₁))) = refl
       hh _ (nonBindingS _) = refl
 
+      -- h-args = ?
 
 -- module Test-String where
 --   open AST String {{String-Discrete-postulated}} zero

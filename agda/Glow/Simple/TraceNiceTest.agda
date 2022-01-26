@@ -33,68 +33,65 @@ open import Glow.Linked
 open import Glow.DecEqMore
 
 open import Glow.Simple.AST
+open import Glow.Simple.ASTDef
 
 open import Glow.Simple.Example
 
 open import Glow.Simple.TraceNice
 
 module TestTraceNice where 
-  open AST String {{String-Discrete-postulated}} one
+  -- open AST String {{String-Discrete-postulated}} one
 
 
-  open TraceNice {{String-Discrete-postulated}} {ptps =  "A" ∷ "B" ∷ []}
+  open TraceNice {String} {String} {Basic-BuiltIns} {ptps =  "A" ∷ "B" ∷ []}
 
-  traceTestTy : ℕ × 𝟚 × 𝟚 × Unit → EState → Type₀
-  traceTestTy p = (Trace _ (someCode p))
+  traceTestTy : EState → Type₀
+  traceTestTy = (Trace nothing (someCode))
 
   -- tyEvalTest : Type₀
   -- tyEvalTest = traceTestTy (2 , (false , (true , tt)))
 
-  tyEvalTest : ℕ → 𝟚 → 𝟚 →  EState → Type₀
+  tyEvalTest : EState → Type₀
     -- traceTestTy (x , (x₁ , (x₂ , tt)))
-  tyEvalTest x x₁ x₂ = ΣM (Input "B" Bool)
-                         (λ x →
-                            ×M (Publish "B" "y")
-                            (ΣM
-                             (λ es →
-                                Branch (Input "A" Bool es) (Require x₁ es)
-                                (ok-input-elim "B" Bool x))
-                             (λ x₁ →
-                                ×M (Deposit "B" 2)
-                                (ΣM (Input "A" Bool)
-                                 (λ x₂ →
-                                    ×M (Withdraw "A" 3) (×M (Deposit "A" 3) (Publish "A" "xx")))))))
+  tyEvalTest es = ΣM (Input "B" Bool)
+                    (λ x →
+                       ×M (Publish "B" "y")
+                       (ΣM
+                        (λ es →
+                           Branch (Input "A" Bool es) (Require true es)
+                           (ok-input-elim "B" Bool x))
+                        (λ x₁ →
+                           ×M (Deposit "B" 2)
+                           (ΣM (Input "A" Bool)
+                            (λ x₂ →
+                               ×M (Withdraw "A" 3) (×M (Deposit "A" 3) (Publish "A" "xx")))))))
+                    es
 
-  -- -- traceTestCases : traceTestTy (2 , (false , (true , tt))) → 𝟚 
-  -- -- traceTestCases (false , snd₁) = {!snd₁!}
-  -- -- traceTestCases (true , snd₁) = {!!}
+  -- -- -- -- -- traceTestCases : traceTestTy (2 , (false , (true , tt))) → 𝟚 
+  -- -- -- -- -- traceTestCases (false , snd₁) = {!snd₁!}
+  -- -- -- -- -- traceTestCases (true , snd₁) = {!!}
 
-  someTrace : ∀ x y z → Σ _ (tyEvalTest x y z)
-  someTrace x y z = 
+  someTrace :  Σ _ (tyEvalTest)
+  someTrace = 
       ok ,   "B" inp true
             ↦ p! "B" ⤇ "y"
-            ↦ br-T true {refl}
-                  ("A" inp false )
+            ↦ br-F ? ?
+                  -- ("A" inp false)
             ↦ d! "B" ⤇ 2
             ↦ "A" inp false
             ↦ w! "A" ⤆ 3
             ↦ d! "A" ⤇ 3
             ↦ p! "A" ⤇ "xx"
 
-  -- traceTestCases : ∀ x y z → tyEvalTest x y z ok → 𝟚
-  -- traceTestCases x y z w = {!!}
+  -- -- -- -- traceTestCases : ∀ x y z → tyEvalTest x y z ok → 𝟚
+  -- -- -- -- traceTestCases x y z w = {!!}
 
 
-  -- traceTestCasesF : ∀ x y z → tyEvalTest x y z fail → 𝟚
-  -- traceTestCasesF x y z w = {!!}
+  -- -- -- -- traceTestCasesF : ∀ x y z → tyEvalTest x y z fail → 𝟚
+  -- -- -- -- traceTestCasesF x y z w = {!!}
 
 
-  -- -- traceTestCases : tyEvalTest → 𝟚 
-  -- -- traceTestCases (nothing , snd₁) = {!!}
-  -- -- traceTestCases (just x , false , tt) = {!!}
-  -- -- traceTestCases (just false , true , (false , snd₂) , snd₁) = {!!}
-  -- -- traceTestCases (just false , true , (true , snd₂) , snd₁) = {!!}
-  -- -- traceTestCases (just true , true , (nothing , tt) , tt) = {!!}
-  -- -- traceTestCases (just true , true , (just x , tt) , fst₁ , snd₁) = {!!}
-
+  traceTestCases : tyEvalTest ok → Unit 
+  traceTestCases ((."B" inp x₁) ↦ (p! ."B" ⤇ ."y") ↦ br-T prf-T (."A" inp x) ↦ (d! ."B" ⤇ .2) ↦ (."A" inp x₃) ↦ (w! ."A" ⤆ .3) ↦ (d! ."A" ⤇ .3) ↦ (p! ."A" ⤇ ."xx")) = {!!}
+  traceTestCases ((."B" inp x₁) ↦ (p! ."B" ⤇ ."y") ↦ br-F prf-F (r! .true) ↦ (d! ."B" ⤇ .2) ↦ (."A" inp x₂) ↦ (w! ."A" ⤆ .3) ↦ (d! ."A" ⤇ .3) ↦ (p! ."A" ⤇ ."xx")) = {!!}
 

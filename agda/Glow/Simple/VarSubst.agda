@@ -36,86 +36,100 @@ open import Glow.Simple.ContextMore
 
 open import Cubical.HITs.Interval
 
-module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}} where
+
+module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}}
+            {BuilitInsIndex : Type₀} {{IsDiscrete-BuilitInsIndex : IsDiscrete BuilitInsIndex}}
+              {builtIns : BuiltIns' BuilitInsIndex {{IsDiscrete-BuilitInsIndex}}} where
+
+  -- prop-mode = one
+  
+  -- open AST Identifier prop-mode
+
+  open PropMode one 
+
+  -- open AST Identifier
 
 
 
-  module AlwaysCanPrepend {ptps : List Identifier} (ce : AST.ContextEntry (AST.interactionHead ptps []) ) where
 
-    open AST.InteractionHead {prop-mode = one} (AST.interactionHead ptps []) 
+  -- module AlwaysCanPrepend {ptps : List Identifier} (ce : AST.ContextEntry (AST.interactionHead ptps []) ) where
+
+  --   open AST.InteractionHead {prop-mode = one} (AST.interactionHead ptps []) 
 
 
     
-    -- TODO : remove unsafe pragma by stratification on nesting depth
-    {-# TERMINATING #-}
-    prependCtxStmnts : ∀ {Γ : _} → Statements Γ → Statements (prependContext ce Γ) 
+  --   -- TODO : remove unsafe pragma by stratification on nesting depth
+  --   {-# TERMINATING #-}
+  --   prependCtxStmnts : ∀ {Γ : _} → Statements Γ → Statements (prependContext ce Γ) 
 
 
 
-    prependCtxStmnts = map-Linked'-map _ h  hh
-      where
+  --   prependCtxStmnts = map-Linked'-map _ h  hh
+  --     where
 
 
 
-        h : {Γ : Context}
-               → (b : Stmnt Γ) → Stmnt (prependContext ce Γ)
+  --       h : {Γ : Context}
+  --              → (b : Stmnt Γ) → Stmnt (prependContext ce Γ)
 
 
-        h-expr : {Γ : Context} → ∀ {Τ}
-               → (b : Expr Γ Τ) → Expr (prependContext ce Γ) Τ
+  --       h-expr : {Γ : Context} → ∀ {Τ}
+  --              → (b : Expr Γ Τ) → Expr (prependContext ce Γ) Τ
 
 
-        h  (bindingS x) = bindingS (BS-lemma x)
-           where
-                BS-lemma : {Γ : Context} →  BStmnt Γ -> BStmnt (prependContext ce Γ)
-                BS-lemma (BS-let x {asn} y) = (BS-let x {asn} (h-expr y))  
-                BS-lemma (BS-publish! p (psof name₁ {w}) {y}) = 
-                  (BS-publish! p (psof name₁ {(ExistFirstBy-WitchIsAlso-preppend-lemma _ _ w)}) {y})
+  --       h  (bindingS x) = bindingS (BS-lemma x)
+  --          where
+  --               BS-lemma : {Γ : Context} →  BStmnt Γ -> BStmnt (prependContext ce Γ)
+  --               BS-lemma (BS-let x {asn} y) = (BS-let x {asn} (h-expr y))  
+  --               BS-lemma (BS-publish! p (psof name₁ {w}) {y}) = 
+  --                 (BS-publish! p (psof name₁ {(ExistFirstBy-WitchIsAlso-preppend-lemma _ _ w)}) {y})
 
 
-        h (nonBindingS x) = nonBindingS (z x)
-           where
+  --       h (nonBindingS x) = nonBindingS (z x)
+  --          where
 
-             zz : NBStmnt _ → NBStmnt _ 
-             zz (NBS-require! x) = NBS-require! (h-expr x)
-             zz (NBS-deposit! p {y} x) = NBS-deposit! p {y} (h-expr x)
-             zz (NBS-withdraw! p {y} x) = NBS-withdraw! p {y} (h-expr x)
-             zz (NBS-publishVal! x x₁ {y}) = (NBS-publishVal! x x₁ {y})
+  --            zz : NBStmnt _ → NBStmnt _ 
+  --            zz (NBS-require! x) = NBS-require! (h-expr x)
+  --            zz (NBS-deposit! p {y} x) = NBS-deposit! p {y} (h-expr x)
+  --            zz (NBS-withdraw! p {y} x) = NBS-withdraw! p {y} (h-expr x)
+  --            zz (NBS-publishVal! x x₁ {y}) = (NBS-publishVal! x x₁ {y})
 
-             z : NBStmnt+Expr _ → NBStmnt+Expr _
-             z (stmntNBS x) =  stmntNBS (zz x)
-             z (exprNBS x) = exprNBS (h-expr x)
+  --            z : NBStmnt+Expr _ → NBStmnt+Expr _
+  --            z (stmntNBS x) =  stmntNBS (zz x)
+  --            z (exprNBS x) = exprNBS (h-expr x)
 
-        h-expr (var (dsot x {y})) = var (dsot x { (
-            sum-elim (λ a → (inl ((ExistFirstBy-WitchIsAlso-preppend-lemma _ _ a))))
-             -- TODO : figure it out -- (λ a → var (dsot x {transport (λ i → {!True (ExistFirstBy-WitchIsAlso-preppend-lemma ? ? (fromWitness y) i)!}) y}))
-             (λ b → empty-elim (lower (proj₂ b)))
-              y)})
+  --       h-expr (var (dsot x {y})) = var (dsot x { (
+  --           sum-elim (λ a → (inl ((ExistFirstBy-WitchIsAlso-preppend-lemma _ _ a))))
+  --            -- TODO : figure it out -- (λ a → var (dsot x {transport (λ i → {!True (ExistFirstBy-WitchIsAlso-preppend-lemma ? ? (fromWitness y) i)!}) y}))
+  --            (λ b → empty-elim (lower (proj₂ b)))
+  --             y)})
 
-              --(var (dsot name₁ {transport {!!} y }))
-        h-expr (stmnts₁ AST.;b x) =
-            prependCtxStmnts stmnts₁ AST.;b subst (λ x₁ → Expr x₁ _)
-             -- TODO : improve evaluation performance by introducing specialized "subst"
-             -- specialisation should be not only on Expr, but also on map-Linked'-map-fold
-          (map-Linked'-map-fold ((prependContext ce)) _ _ stmnts₁ ) (h-expr x)
-        h-expr (lit x) = (AST.lit x)
-        h-expr (input msg {y}) = input msg {y}
-        -- h-expr (receivePublished x {y}) = receivePublished x {y}
-        h-expr (if b then t else f) = if (h-expr b) then (h-expr t) else (h-expr f)
+  --             --(var (dsot name₁ {transport {!!} y }))
+  --       h-expr (stmnts₁ AST.;b x) =
+  --           prependCtxStmnts stmnts₁ AST.;b subst (λ x₁ → Expr x₁ _)
+  --            -- TODO : improve evaluation performance by introducing specialized "subst"
+  --            -- specialisation should be not only on Expr, but also on map-Linked'-map-fold
+  --         (map-Linked'-map-fold ((prependContext ce)) _ _ stmnts₁ ) (h-expr x)
+  --       h-expr (lit x) = (AST.lit x)
+  --       h-expr (input msg {y}) = input msg {y}
+  --       -- h-expr (receivePublished x {y}) = receivePublished x {y}
+  --       h-expr (if b then t else f) = if (h-expr b) then (h-expr t) else (h-expr f)
 
-        postulate hh : (Γ : Context) (x : Stmnt Γ) →
-                           prependContext ce (bindingMechanics' Γ x) ≡
-                           bindingMechanics'
-                           (prependContext ce Γ) (h x)
-        -- hh _ (bindingS (BS-let _ _)) = refl 
-        -- hh _ (AST.bindingS (AST.BS-publish! _ _)) = {!!}
-        -- hh _ (nonBindingS _) = refl
+  --       postulate hh : (Γ : Context) (x : Stmnt Γ) →
+  --                          prependContext ce (bindingMechanics' Γ x) ≡
+  --                          bindingMechanics'
+  --                          (prependContext ce Γ) (h x)
+  --       -- hh _ (bindingS (BS-let _ _)) = refl 
+  --       -- hh _ (AST.bindingS (AST.BS-publish! _ _)) = {!!}
+  --       -- hh _ (nonBindingS _) = refl
 
 
   -- TODO : provide alternative implementation, substituting multiple variables in one pass, compare performance
   module SubstOne {ptps : List Identifier} where
+  
+    -- module AST* = AST Identifier builtIns one
 
-    open AST.InteractionHead  {prop-mode = one} (AST.interactionHead ptps [])
+    open AST.InteractionHead {Identifier} {builtIns = builtIns} {one} (AST.interactionHead ptps []) 
 
 
 
@@ -156,6 +170,9 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
     substOneStmnt : ∀ {Γ} → (r : Subst Γ) → Stmnt Γ → Stmnt (remSubst Γ r)
 
     substOneExpr : ∀ {Γ Τ} → (r : Subst Γ) → Expr Γ Τ → Expr (remSubst Γ r) Τ
+
+    postulate substOneArgs : ∀ {Γ Τs} → (r : Subst Γ) → Args Γ Τs → Args (remSubst Γ r) Τs
+
 
     substOneStmnts-coh :  ∀ Γ → (r : Subst Γ) → (x : Stmnt Γ) →
                                                     remSubst (fst (bindingMechanics'* (Γ , r) x))
@@ -227,6 +244,7 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
     substOneExpr r (AST.input x {y}) = (AST.input x {y})
     -- substOneExpr r (AST.receivePublished x {y}) = (AST.receivePublished x {y})
     substOneExpr r (AST.if x then x₁ else x₂) = (AST.if (substOneExpr r x) then (substOneExpr r x₁) else (substOneExpr r x₂))
+    substOneExpr r (AST._$'_ f xs) = AST._$'_ f (substOneArgs r xs)
 
 
     publish-subst-lemma : ∀ {Γ} → (r : Subst Γ) → ∀ p → ∀ nm → ∀ w → ∀ q → 
@@ -259,7 +277,8 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
 
   module SubstAll {ptps : List Identifier} where
 
-    open AST.InteractionHead  {prop-mode = one} (AST.interactionHead ptps [])
+    open AST.InteractionHead {Identifier} {builtIns = builtIns} {one} (AST.interactionHead ptps []) 
+
 
     {-# TERMINATING #-}
     substAllStmnts : ∀ {Γ} → (r : Rec Γ) → Statements Γ → Statements (record Γ {entries = []}) 
@@ -278,6 +297,15 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
     substAllExpr {AST.con [] scope''} r x = x
     substAllExpr {Γ@(AST.con (x₁ ∷ entries₁) scope'')} (y , r') x = 
       substAllExpr  r' (SubstOne.substOneExpr (inl y) x)
+
+    evalArgs : ∀ {Τs sc} → Args (con [] sc) Τs → argsV Τs
+    evalArgs {[]} x = tt
+    evalArgs {x₁ ∷ []} (AST.var-a (AST.dsot name {inr (x , ())}))
+    evalArgs {x₁ ∷ []} (AST.lit-a x) = x , _
+    evalArgs {x₁ ∷ x₂ ∷ Τs} (AST.var-a (AST.dsot name {inr (x , ())}) , x₃)
+    evalArgs {x₁ ∷ x₂ ∷ Τs} (AST.lit-a x , x₃) = x , evalArgs x₃
+    
+
 
     {-# TERMINATING #-}
     evalPureExpr : ∀ {sc Τ} → (e : Expr (con [] sc) Τ) → ⟨ IsPureE e ⟩ → GTypeAgdaRep Τ 
@@ -300,12 +328,17 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
     evalPureExpr (AST.body (AST.bodyR (AST.nonBindingS _ ∷L stmnts₁) expr₁)) x =
        evalPureExpr (AST.body (AST.bodyR (stmnts₁) expr₁)) ((proj₂ (proj₁ x)) , (proj₂ x))
 
+    
     evalPureExpr (AST.lit x₁) x = x₁
     evalPureExpr (AST.if e then e₁ else e₂) x =
        Cubical.Data.Bool.if evalPureExpr e (proj₁ x)
           then evalPureExpr e₁ (proj₁ (proj₂ x))
           else evalPureExpr e₂ (proj₂ (proj₂ x))
-
+    evalPureExpr (AST._$'_ f xs) x =
+       let z = BuiltIn'.impl (snd (BuiltIns'.getBi builtIns (AST.BI.bIndex f)))
+           q = appV z (transport (cong argsV (AST.BI.dm≡ f)) (evalArgs xs))
+       in (transport⁻ (cong GTypeAgdaRep (AST.BI.cdm≡ f)) q)
+       
 -- module Test where
 
 --   open SubstOne {String} {{String-Discrete-postulated}} {"A" ∷ "B" ∷ []}

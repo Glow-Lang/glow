@@ -125,8 +125,9 @@ instance
   Bool-Discrete : IsDiscrete Bool
   eqTest Bool-Discrete = _≟B_
 
-
-
+instance
+  IsDiscreteList : ∀ {a} {A : Type a} → {{IsDiscrete A}} → IsDiscrete (List A)
+  eqTest IsDiscreteList = discreteList (_≟_)
 
 instance
   ×-Discrete : ∀ {ℓ ℓ'} → {A : Type ℓ} → {B : Type ℓ'} → {{IsDiscrete A}} → {{IsDiscrete B}} → IsDiscrete (A × B)   
@@ -166,6 +167,7 @@ instance
   Bool→Type-Dec : ∀ {b} → Dec (Bool→Type b)   
   Bool→Type-Dec {false} = no (idfun _)
   Bool→Type-Dec {true} = yes tt
+
 
 
 
@@ -322,6 +324,10 @@ isProp-True {Q = no ¬p} = isProp⊥
 DecPropΣ : Type₁
 DecPropΣ = Σ Type₀ (λ x → Dec x × isProp x)
 
+_DP≡_ : ∀ {A} {{IsDiscrete-A : IsDiscrete A}} → (x y : A) → DecPropΣ
+_DP≡_ {{IsDiscrete-A}} x y = ((x ≡ y) , ((eqTest IsDiscrete-A x y) , Discrete→isSet (eqTest IsDiscrete-A) _ _))
+
+
 module PropMode (b : Interval) where
 
 
@@ -338,14 +344,28 @@ module PropMode (b : Interval) where
   toWitness'-P : ∀ {A x} → PathP (λ i → fst (PM-h A x (seg i)) → A) toWitness (idfun _)
   toWitness'-P {A} {x} = toPathP (isPropΠ (const (proj₂ x)) _ _)
 
+  toWitness'bck-P : ∀ {A x} → PathP (λ i → A → fst (PM-h A x (seg i))) fromWitness (idfun _)
+  toWitness'bck-P {A} {x} = toPathP (isPropΠ (const (proj₂ x)) _ _)
+
+
   fromWitness'-P : ∀ {A x} → PathP (λ i → fst (PM-h A x (seg i)) → True (proj₁ x)) (idfun _) fromWitness 
   fromWitness'-P {A} {x} = toPathP (isPropΠ (const isProp-True) _ _)
+
+  fromWitness'bck-P : ∀ {A x} → PathP (λ i → True (proj₁ x) → fst (PM-h A x (seg i))) (idfun _) toWitness 
+  fromWitness'bck-P {A} {x} = toPathP ((isPropΠ (const (proj₂ x)) _ _))
 
 
   toWitness'-h' : ∀ {A x} → ∀ b → fst (PM-h A x b) → A
   toWitness'-h' {A} zero = toWitness
   toWitness'-h' {A} one = idfun _
   toWitness'-h' {A} {x} (seg i) = toWitness'-P {x = x} i
+
+
+
+  toWitness'bck-h' : ∀ {A x} → ∀ b → A → fst (PM-h A x b)
+  toWitness'bck-h' {A} zero = fromWitness
+  toWitness'bck-h' {A} one = idfun _
+  toWitness'bck-h' {A} {x} (seg i) = toWitness'bck-P {x = x} (i)
 
   fromWitness'-h' : ∀ {A x} → ∀ b → fst (PM-h A x b) → True (proj₁ x)
   fromWitness'-h' {A} zero = idfun _
@@ -360,10 +380,15 @@ module PropMode (b : Interval) where
   toWitness' : ∀ {A} → PM A → fst A
   toWitness' {A} = toWitness'-h' {fst A} {snd A} b
 
+  toWitness'bck : ∀ {A} → fst A → PM A
+  toWitness'bck {A} = toWitness'bck-h' {fst A} {snd A} b
+
+
   fromWitness' : ∀ {A} → PM A → True (proj₁ (snd A))
   fromWitness' {A} = fromWitness'-h' {fst A} {snd A} b
 
-
+  _PM≡_ : ∀ {A} {{IsDiscrete-A : IsDiscrete A}} → (x y : A) → Type₀
+  x PM≡ y = PM ( x DP≡ y )
 
 ⊎-isProp : ∀ {ℓ ℓ'} → {A : Type ℓ} → {B : Type ℓ'} → isProp A → isProp B → (A → B → ⊥) → isProp (A ⊎ B)
 ⊎-isProp x x₁ y (inl x₃) (inl x₄) = cong inl (x _ _)

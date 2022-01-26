@@ -96,8 +96,8 @@ ok-input-elim : {Identifier : Type₀} → ∀ x Τ → Input {Identifier} x Τ 
 ok-input-elim x Τ (.x inp x₁) = x₁
 
 data Branch (A-t A-f : Type₀) : 𝟚 → Type₀ where
-  br-T : ∀ b → {prf : b ≡ true} → {Bool→Type b} → A-t → Branch A-t A-f b
-  br-F : ∀ b → {prf : b ≡ false} → {Bool→Type (not b)} → A-f → Branch A-t A-f b
+  br-T : ∀ {b} → (prf-T : b ≡ true) → {Bool→Type b} → A-t → Branch A-t A-f b
+  br-F : ∀ {b} → (prf-F : b ≡ false) → {Bool→Type (not b)} → A-f → Branch A-t A-f b
 
 branch-elim : ∀ {A-t A-f B : Type₀} → (A-t → B) → (A-f → B) →  ∀ {b} → Branch A-t A-f b → B 
 branch-elim x x₁ (br-T _ x₂) = x x₂
@@ -107,15 +107,18 @@ data End : Type₀ where
   ▣ : End
 
 
-module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}} where
+module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}}
+            {BuilitInsIndex : Type₀} {{IsDiscrete-BuilitInsIndex : IsDiscrete BuilitInsIndex}}
+              {builtIns : BuiltIns' BuilitInsIndex {{IsDiscrete-BuilitInsIndex}}} where
 
 
   module TraceNice {ptps : List Identifier}  where
 
-    open AST.InteractionHead  {prop-mode = one} (AST.interactionHead ptps []) 
+    open AST.InteractionHead {Identifier} {builtIns = builtIns} {one} (AST.interactionHead ptps []) 
 
-    open SubstAll {Identifier} {ptps}
-    open SubstOne {Identifier} {ptps}
+
+    open SubstAll {Identifier} {builtIns = builtIns} {ptps = ptps}
+    open SubstOne {Identifier} {builtIns = builtIns} {ptps = ptps}
 
     GMO : ∀ Τ → Type₁
     GMO Τ = (Σ (EState → Type₀) λ x → x ok → GTypeAgdaRep Τ) 
@@ -210,6 +213,7 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
 
 
     TraceE sc (AST.var (AST.dsot name {inr (x₁ , ())})) x
+    TraceE sc (AST._$_ _ _) x = empty-elim (x _)
     TraceE sc (AST.body (AST.bodyR []L expr₁)) x = TraceE sc expr₁ (x ∘ (_ ,_))
     TraceE sc (AST.body (AST.bodyR (h ∷L stmnts₁) expr₁)) x = TraceB sc h (bodyR stmnts₁ expr₁) x
     TraceE sc (AST.lit x₁) x = empty-elim (x tt)
