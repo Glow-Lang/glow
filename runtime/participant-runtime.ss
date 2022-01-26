@@ -774,14 +774,6 @@
      (displayln)
      result)))
 
-;; json-object-ref : JsonObject StringOrSymbol -> Json
-(def (json-object-ref j k)
-  (hash-ref/default j k
-    (lambda ()
-      (hash-ref j
-        (cond ((symbol? k) (symbol->string k))
-              (else        (string->symbol k)))))))
-
 
 ;; ---------------------------------------------------
 ;; ------------------ Off-chain communication channels
