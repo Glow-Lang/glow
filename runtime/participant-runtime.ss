@@ -820,7 +820,7 @@
   )
 
 (define-type (Libp2pChannel @ [])
-    .make: (lambda (my-nickname host-address dest-address contacts)
+    .make: (lambda (my-nickname host-address contacts)
        (let ()
 
          ;; ------------ Libp2p channel buffer setup
@@ -872,10 +872,9 @@
             (spawn libp2p-listen libp2p-client [chat-proto] push-to-buffer)))
 
 
-
+         (def dest-address #f)
 
          { libp2p-client
-           dest-address
            poll-buffer
            push-to-buffer
            _listening-thread: listening-thread
@@ -885,6 +884,14 @@
            .send-contract-agreement: (lambda (agreement)
              (displayln MAGENTA "Sending agreement to multiaddr..." END)
              (def agreement-string (string<-json (json<- InteractionAgreement agreement)))
+             ;;Get the other participant from the agreement
+
+             (set! dest-address
+                  (hash-find (lambda (key value)
+                               (if (not (equal? my-0xaddr (0x<-address value)))
+                                 (0x<-address value)))
+                             (hash<-object (.@ agreement participants))))
+
              (def dest-multiaddr (get-multiaddr-db db: db hex-addr: dest-address)) ;;Multiaddr from the Eth addr
              (dial-and-send-contents libp2p-client dest-multiaddr agreement-string)
              (displayln)
@@ -979,9 +986,8 @@
     ('libp2p (let ()
      (def my-nickname (hash-ref options 'my-nickname))
      (def host-address (hash-ref options 'host-address))
-     (def dest-address (hash-ref options 'dest-address))
      (def contacts (hash-ref options 'contacts))
-     (.call Libp2pChannel .make my-nickname host-address dest-address contacts)))
+     (.call Libp2pChannel .make my-nickname host-address contacts)))
     (else (error "Invalid off-chain channel selection"))))
 
 

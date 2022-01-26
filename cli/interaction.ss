@@ -269,11 +269,6 @@
                      help: "command to specify off-chain-channel")
              (option 'host-address "-O" "--host-address" default: #f
                      help: "host-address (only required if using libp2p as off-chain-channel)")
-             ;; FIXME: This should be stored and extracted from `contacts`.
-             ;; It is supplied here as a temporary workaround,
-             ;; until storing peerIds in `contacts` is supported.
-             (option 'dest-address "-d" "--dest-address" default: #f
-                     help: "dest-address in the format of eth address (only required if using libp2p as off-chain-channel)")
              (flag 'wait-for-agreement "-W" "--wait-for-agreement"
                    help: "wait for agreement via off-chain-channel")]
             [(lambda (opt) (hash-remove! opt 'test))]
@@ -310,7 +305,6 @@
     (hash
      (off-chain-channel-selection (symbolify off-chain-channel-selection))
      (host-address host-address)
-     (dest-address dest-address)
      (my-nickname my-nickname)
      (contacts contacts)))
   (def off-chain-channel (init-off-chain-channel channel-options))
