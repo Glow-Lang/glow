@@ -235,6 +235,7 @@ DEPS=(github.com/fare/gerbil-utils
       github.com/drewc/gerbil-swank
       github.com/drewc/drewc-r7rs-swank
       github.com/drewc/smug-gerbil
+      github.com/drewc/ftw
       github.com/vyzo/gerbil-libp2p
       ) ;
 for i in ${DEPS[@]} ; do

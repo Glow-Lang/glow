@@ -2,7 +2,11 @@
 
 (import
   :gerbil/gambit/bits :gerbil/gambit/os :gerbil/gambit/ports :gerbil/gambit/threads
-  :std/format :std/srfi/1 :std/test :std/sugar :std/iter :std/text/json :std/misc/ports :std/misc/hash
+  :std/assert :std/format :std/iter
+  :std/misc/hash :std/misc/ports
+  :std/srfi/1
+  :std/sugar :std/test
+  :std/text/json
   :clan/base :clan/concurrency :clan/debug :clan/decimal :clan/exception
   :clan/io :clan/json :clan/path-config :clan/ports :clan/ffi
   :clan/poo/object :clan/poo/io :clan/poo/debug
@@ -19,22 +23,18 @@
   ../runtime/program
   ../runtime/participant-runtime
   ../runtime/reify-contract-parameters
-  ./cli-integration)
-
-(register-test-keys)
-(def a-address alice)
-(def b-address bob)
-(def wagerAmount (wei<-ether .5))
-(def escrowAmount (wei<-ether .01))
+  ./cli-integration
+  ./utils)
 
 (def coin-flip-integrationtest
   (test-suite "integration test for ethereum/coin-flip"
-    (delete-agreement-handshake)
-    (ensure-ethereum-connection "pet")
-    (ensure-db-connection "testdb")
-    (DBG "Ensure participants funded")
-    (ensure-addresses-prefunded)
-    (DBG "DONE")
+    (setup-test-env)
+
+    (def a-address alice)
+    (def b-address bob)
+    (def wagerAmount (wei<-ether .5))
+    (def escrowAmount (wei<-ether .01))
+
 
     (test-case "coin flip executes"
       (def a-balance-before (eth_getBalance a-address 'latest))

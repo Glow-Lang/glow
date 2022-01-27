@@ -6,6 +6,7 @@
  :clan/ffi
  :gerbil/gambit/ports
  :gerbil/gambit/threads
+ :std/assert
  :std/db/dbi
  :std/format
  :std/misc/hash

@@ -2,7 +2,11 @@
 
 (import
   :gerbil/gambit/bits :gerbil/gambit/os :gerbil/gambit/ports :gerbil/gambit/threads
-  :std/format :std/srfi/1 :std/test :std/sugar :std/iter :std/text/json :std/misc/ports :std/misc/hash
+  :std/assert :std/format :std/iter
+  :std/misc/hash :std/misc/ports
+  :std/srfi/1
+  :std/sugar :std/test
+  :std/text/json
   :clan/base :clan/concurrency :clan/debug :clan/decimal :clan/exception
   :clan/io :clan/json :clan/path-config :clan/ports :clan/ffi
   :clan/poo/object :clan/poo/io :clan/poo/debug
@@ -20,17 +24,19 @@
   ../runtime/program
   ../runtime/participant-runtime
   ../runtime/reify-contract-parameters
-  ./cli-integration)
-
-(register-test-keys)
-(def a-address alice)
-(def b-address bob)
-(def gas-allowance (wei<-ether .01))
-(def t (wei<-ether .01))
-(def u (wei<-ether .02))
+  ./cli-integration
+  ./utils)
 
 (def asset-swap-integrationtest
   (test-suite "integration test for ethereum/asset_swap"
+    (setup-test-env)
+
+    (def a-address alice)
+    (def b-address bob)
+    (def gas-allowance (wei<-ether .01))
+    (def t (wei<-ether .01))
+    (def u (wei<-ether .02))
+
     (delete-agreement-handshake)
     (ensure-ethereum-connection "pet")
     (ensure-db-connection "testdb")

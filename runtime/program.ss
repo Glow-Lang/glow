@@ -6,6 +6,7 @@
   <expander-runtime>
   :mukn/ethereum/types
   :mukn/ethereum/ethereum
+  (only-in ../compiler/common hash-kref)
   (only-in ../compiler/alpha-convert/alpha-convert init-syms)
   ../compiler/typecheck/type
   ../compiler/checkpointify/checkpointify)
@@ -53,22 +54,22 @@
      .definitely-constant?:
       (lambda (self variable-name)
         (or (and (memq variable-name init-syms) #t)
-              (let* ((alba (hash-ref (.@ self compiler-output) 'albatable.sexp))
-                     (alenv (hash-ref (.@ self compiler-output) 'AlphaEnv)))
-                (symdict-has-key? alenv (hash-ref alba variable-name)))))
+              (let* ((alba (hash-kref (.@ self compiler-output) 'albatable.sexp))
+                     (alenv (hash-kref (.@ self compiler-output) 'AlphaEnv)))
+                (symdict-has-key? alenv (hash-kref alba variable-name)))))
     }))
 
 ;; Interaction <- Program Symbol Symbol
 (def (get-interaction self name participant)
   (def specific-interactions
-        (.@ (hash-get (.@ self interactions) name) specific-interactions))
-  (hash-get specific-interactions participant))
+        (.@ (hash-kref (.@ self interactions) name) specific-interactions))
+  (hash-kref specific-interactions participant))
 
 ;; TODO: use typemethods table for custom data types
 ;; Runtime type descriptor from alpha-converted symbol
 ;; : Type <- Program Symbol
 (def (lookup-type self variable-name)
-  (def type-table (hash-ref (.@ self compiler-output) 'typetable.sexp))
+  (def type-table (hash-kref (.@ self compiler-output) 'typetable.sexp))
   (def (type-methods t)
     (match t
       ((type:name 'Bool) Bool)
@@ -79,24 +80,24 @@
       ((type:name sym) (eval sym))
       ((type:name-subtype sym _) (eval sym))
       ((type:tuple ts) (apply Tuple (map type-methods ts)))))
-  (def t (hash-get type-table variable-name))
+  (def t (hash-kref type-table variable-name))
   (type-methods t))
 
 ;; : Symbol <- Program Symbol
 (def (lookup-surface-name self variable-name)
-  (def alba (hash-ref (.@ self compiler-output) 'albatable.sexp))
-  (hash-ref alba variable-name))
+  (def alba (hash-kref (.@ self compiler-output) 'albatable.sexp))
+  (hash-kref alba variable-name))
 
 ;; : ListOf Symbol <- Program Symbol Symbol
 (def (lookup-live-variables self name code-block-label)
-  (def live-variable-table (hash-ref (.@ self compiler-output) 'cpitable2.sexp))
+  (def live-variable-table (hash-kref (.@ self compiler-output) 'cpitable2.sexp))
   (def specific-interactions
-    (.@ (hash-get (.@ self interactions) name) specific-interactions))
+    (.@ (hash-kref (.@ self interactions) name) specific-interactions))
   ;; TODO: Store participants in fixed addresses.
   (def participants (filter (λ (x) x) (hash-keys specific-interactions)))
   (unique (append participants
     (filter (λ (x) (not (.call Program .definitely-constant? self x)))
-          (ci-variables-live (hash-get live-variable-table code-block-label))))))
+          (ci-variables-live (hash-kref live-variable-table code-block-label))))))
 
 (define-type ParseContext
   (.+
@@ -167,7 +168,7 @@
 ;; by finding the code-blocks that are transaction boundaries
 ;; Program <- Sexp
 (def (parse-compiler-output compiler-output)
-  (def module (hash-ref compiler-output 'project.sexp))
+  (def module (hash-kref compiler-output 'project.sexp))
   (match (syntax->datum module)
     (['@module [initial-label final-label] . statements]
       (def program (.call Program .make compiler-output initial-label))
@@ -211,9 +212,7 @@
   (def parse-context (.call ParseContext .make initial-code-block-label))
   (for-each! body (λ (statement)
     (match statement
-      (['participant:set-participant new-participant]
-        (set-participant parse-context new-participant))
-      (['consensus:set-participant new-participant]
+      (['set-participant new-participant]
         (set-participant parse-context new-participant))
       (else
         (add-statement parse-context statement)))))
@@ -221,8 +220,8 @@
 
 (def (get-last-code-block-label self name)
   (def specific-interactions
-    (.@ (hash-get (.@ self interactions) name) specific-interactions))
-  (def consensus-interaction (hash-get specific-interactions #f))
+    (.@ (hash-kref (.@ self interactions) name) specific-interactions))
+  (def consensus-interaction (hash-kref specific-interactions #f))
   (let/cc return
     (for ((values label code-block) (in-hash consensus-interaction))
       (when (equal? (.@ code-block exit) #f)

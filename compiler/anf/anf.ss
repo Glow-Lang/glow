@@ -1,6 +1,6 @@
 (export #t)
 
-(import :std/iter :std/misc/hash :std/srfi/1 :std/sugar
+(import :std/assert :std/iter :std/misc/hash :std/srfi/1 :std/sugar
         <expander-runtime>
         (for-template :mukn/glow/compiler/syntax-context)
         :mukn/glow/compiler/syntax-context

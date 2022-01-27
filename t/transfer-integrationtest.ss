@@ -13,28 +13,38 @@
   :clan/crypto/keccak
   :clan/persist/content-addressing :clan/persist/db
   :clan/versioning
+  :clan/assert
   :mukn/ethereum/types :mukn/ethereum/ethereum :mukn/ethereum/known-addresses :mukn/ethereum/json-rpc
   :mukn/ethereum/simple-apps :mukn/ethereum/network-config :mukn/ethereum/assets
   :mukn/ethereum/hex :mukn/ethereum/transaction :mukn/ethereum/types
-  :mukn/ethereum/testing
+  :mukn/ethereum/testing :mukn/ethereum/test-contracts
   ../compiler/passes
   ../compiler/multipass
   ../compiler/syntax-context
   ../runtime/program
   ../runtime/participant-runtime
   ../runtime/reify-contract-parameters
-  ./cli-integration
-  ./utils)
+  ./cli-integration)
 
-(def rps-simple-integrationtest
-  (test-suite "integration test for ethereum/rps_simple"
-    (setup-test-env)
+(register-test-keys)
+(def a-address alice)
+(def b-address bob)
+(def gas-allowance (wei<-ether .01))
+(def amount (wei<-ether .02))
 
-    (def a-address alice)
-    (def b-address bob)
-    (def wagerAmount (wei<-ether .01))
+(def transfer-integrationtest
+  (test-suite "integration test for ethereum/transfer"
+    (delete-agreement-handshake)
+    (ensure-ethereum-connection "pet")
+    (ensure-db-connection "testdb")
+    (DBG "Ensure participants funded")
+    (ensure-addresses-prefunded)
+    (DBG "DONE")
 
-    (test-case "rps_simple executes"
+    (test-case "transfer executes"
+      (def a-pet-before (eth_getBalance a-address 'latest))
+      (def b-pet-before (eth_getBalance b-address 'latest))
+
       (def proc-a #f)
       (def proc-b #f)
       (try
@@ -52,17 +62,17 @@
            (lambda ()
              (answer-questions
               [["Choose application:"
-                "rps_simple"]
+                "transfer"]
                ["Choose your identity:"
                 (lambda (id) (string-prefix? "t/alice " id))]
                ["Choose your role:"
-                "A"]
-               ["Select address for B:"
+                "From"]
+               ["Select address for To:"
                 (lambda (id) (string-prefix? "t/bob " id))]
                ["Select asset for DefaultToken:"
                 (lambda (id) (string-prefix? "PET " id))]])
              (supply-parameters
-              [["wagerAmount" wagerAmount]])
+              [["amount" amount]])
              (set-initial-block)
              (read-peer-command))))
 
@@ -78,35 +88,33 @@
                       " --test"
                       " --handshake 'nc localhost 3232'")]]))
 
-       (with-io-port proc-b
-         (lambda ()
-           (answer-questions
-            [["Choose your identity:"
-              (lambda (id) (string-prefix? "t/bob " id))]
-             ["Choose your role:"
-              "B"]])))
-
-       (with-io-port proc-a
-         (lambda ()
-           (displayln "2") ; Scissors
-           (force-output)))
-
        (def b-environment
          (with-io-port proc-b
            (lambda ()
-             (displayln "1") ; Paper
-             (force-output)
+             (answer-questions
+              [["Choose your identity:"
+                (lambda (id) (string-prefix? "t/bob " id))]
+               ["Choose your role:"
+                "To"]])
              (read-environment))))
 
        (def a-environment
          (with-io-port proc-a read-environment))
-       (assert! (equal? a-environment b-environment))
+       (assert-equal! a-environment b-environment)
 
-       ;; if A chose scissors, B chose paper, then outcome 2 (A_Wins)
-       (def outcome (hash-get a-environment 'outcome))
-       (display-object
-        ["outcome extracted from contract logs, 0 (B_Wins), 1 (Draw), 2 (A_Wins):" UInt256 outcome])
-       (check-equal? outcome 2)
+       (def a-pet-after (eth_getBalance a-address 'latest))
+       (def b-pet-after (eth_getBalance b-address 'latest))
+
+       ;; TODO: balances in both assets PET and QASPET
+       (DDT "DApp completed"
+            (.@ PET .string<-) a-pet-before
+            (.@ PET .string<-) b-pet-before
+            (.@ PET .string<-) a-pet-after
+            (.@ PET .string<-) b-pet-after)
+
+       ;; in PET, a loses t, b gains t
+       (assert! (<= 0 (- (- a-pet-before amount) a-pet-after) gas-allowance))
+       (assert! (<= 0 (- (+ b-pet-before amount) b-pet-after) gas-allowance))
 
        (finally
         (ignore-errors (close-port proc-a))

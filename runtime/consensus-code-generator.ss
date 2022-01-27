@@ -1,11 +1,16 @@
 (export #t)
 
 (import
-  :std/iter :std/sort :std/srfi/1 :std/misc/hash :std/misc/list :std/misc/number
+  :std/assert :std/iter
+  :std/misc/hash :std/misc/list :std/misc/number
+  :std/sort
+  :std/srfi/1
+  :std/sugar
   :clan/base :clan/number :clan/syntax
   :clan/poo/io :clan/poo/object :clan/poo/brace :clan/poo/debug
   :mukn/ethereum/ethereum :mukn/ethereum/assembly :mukn/ethereum/evm-runtime
   :mukn/ethereum/assets :mukn/ethereum/types
+  (only-in :mukn/glow/compiler/common hash-kref)
   ./program)
 
 (define-type ConsensusCodeGenerator
@@ -20,7 +25,8 @@
 
       ; TODO: rename params-end; its actual meaning is all statically-allocated
       ; space in the executable, incl. globals, so the name should reflect that.
-      params-end: [(OrFalse Nat)])
+      params-end: [(OrFalse Nat)]
+      timeout: [Nat])
     {.make:
       (lambda (some-program some-name some-timeout assets)
         {program: some-program
@@ -65,7 +71,7 @@
                 (&simple-contract-prelude)
                 &define-tail-call
                 (&define-commit-contract-call/simple self)
-                (&define-check-participant-or-timeout assets-and-vars)
+                (&define-check-participant-or-timeout assets-and-vars timeout: (.@ self timeout))
                 (&define-end-contract assets-and-vars)
                 compiled-small-functions
                 compiled-medium-functions
@@ -80,14 +86,14 @@
     ;; .deposit-var : [StaticBlockCtx Symbol -> StaticVar]
     .deposit-var:
       (lambda (sbc sym)
-        (hash-ref (.@ sbc deposit-vars) sym))
+        (hash-kref (.@ sbc deposit-vars) sym))
     .balance-var:
       (lambda (sbc sym)
-        (hash-ref (.@ sbc balance-vars) sym))
+        (hash-kref (.@ sbc balance-vars) sym))
     ;; .withdraw-var : [StaticBlockCtx Symbol Symbol -> StaticVar]
     .withdraw-var:
       (lambda (sbc asset-sym participant)
-        (hash-ref (.@ sbc withdraw-vars) [asset-sym participant]))
+        (hash-kref (.@ sbc withdraw-vars) [asset-sym participant]))
 
     ;; .get-asset-names : [StaticBlockCtx -> [Listof Symbol]]
     .get-asset-names: (lambda (sbc) (.@ sbc asset-names))
@@ -108,7 +114,7 @@
     .&add-withdraw!: (lambda (sbc asset-sym participant)
                       (&add-var! (.call StaticBlockCtx .withdraw-var sbc asset-sym participant)))
     .make: (lambda (program name assets)
-             (def inter (hash-ref (.@ program interactions) name))
+             (def inter (hash-kref (.@ program interactions) name))
              (def asset-names (.@ inter asset-names))
              (def participant-names (.@ inter participant-names))
              (unless (length<=n? asset-names MAX_ASSETS)
@@ -151,7 +157,7 @@
   (def assets (.call StaticBlockCtx .get-asset-names sbc))
   (def participants (.call StaticBlockCtx .get-participant-names sbc))
   (def initial-label
-    (.@ (hash-ref (.@ self program interactions) (.@ self name))
+    (.@ (hash-kref (.@ self program interactions) (.@ self name))
         initial-code-block-label))
   (&begin
    [&jumpdest 'commit-contract-call] ;; -- return-address
@@ -246,6 +252,7 @@
     (['set-participant new-participant]
       ;; TODO: support more than two participants
       (let (other-participant (find-other-participant self new-participant))
+        ;; timeout argument is passed into `&define-check-participant-or-timeout`, not here
         [(&check-participant-or-timeout!
           must-act: (lookup-variable-offset self function-name new-participant)
           or-end-in-favor-of: (lookup-variable-offset self function-name other-participant))]))
@@ -306,7 +313,7 @@
 (def (find-other-participant self participant)
   (let*
     ((interactions (.@ self program interactions))
-     (entry (hash-ref interactions (.@ self name))))
+     (entry (hash-kref interactions (.@ self name))))
     (find
       (λ (p) (and (not (equal? #f p)) (not (equal? p participant))))
       (hash-keys (.@ entry specific-interactions)))))
@@ -381,7 +388,7 @@
 
 ;; Offset <- ConsensusCodeGenerator Symbol Symbol
 (def (lookup-variable-offset self function-name variable-name)
-  (hash-ref (hash-ref (.@ self variable-offsets) function-name) variable-name))
+  (hash-kref (hash-kref (.@ self variable-offsets) function-name) variable-name))
 
 ;; Assembly directives to load an immediate variable (i.e. for unboxed type) onto the stack
 ;; : Directives <- ConsensusCodeGenerator Symbol Symbol Type
@@ -438,6 +445,7 @@
 ;; Directive <- ConsensusCodeGenerator Symbol CodeBlock
 (def (setup-tail-call self code-block-label code-block)
   (let* ((next-code-block-label (.@ code-block exit))
+         (_ (assert! (symbol? next-code-block-label)))
          (next-code-block-live-variables (sort (lookup-live-variables (.@ self program) (.@ self name) next-code-block-label) symbol<?))
          (next-code-block-frame-size (- params-start@ frame@)))
     (&begin
@@ -471,6 +479,7 @@
 
 ;; Offset <- ConsensusCodeGenerator Symbol
 (def (compute-variable-offsets self code-block-label)
+  (assert! (symbol? code-block-label))
   (def frame-variables (make-hash-table))
   ;; Initial offset computed by global registers, see :mukn/ethereum/evm-runtime
   (def frame-size params-start@)

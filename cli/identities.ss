@@ -24,6 +24,9 @@
     address: [Address]
     public-key: [String]
     keypair: [Keypair])
+   ;; NOTE: This also derives and registers the Identity instance's address
+   ;; as a key-value mapping, from the Identity's nickname to the address.
+   ;; TODO: Edit this to also generate peerId.
    {.make: (lambda (nickname (network 'eth) (address #f) (public-key #f) (keypair #f))
              (when (and keypair (keypair-public-key keypair))
                (if (keypair-consistent? keypair)
