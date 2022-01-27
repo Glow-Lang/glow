@@ -75,7 +75,7 @@ module TestTraceNice where
   someTrace = 
       ok ,   "B" inp true
             ↦ p! "B" ⤇ "y"
-            ↦ br-F ? ?
+            ↦ br-F {!!} {!!}
                   -- ("A" inp false)
             ↦ d! "B" ⤇ 2
             ↦ "A" inp false
@@ -91,7 +91,7 @@ module TestTraceNice where
   -- -- -- -- traceTestCasesF x y z w = {!!}
 
 
-  traceTestCases : tyEvalTest ok → Unit 
-  traceTestCases ((."B" inp x₁) ↦ (p! ."B" ⤇ ."y") ↦ br-T prf-T (."A" inp x) ↦ (d! ."B" ⤇ .2) ↦ (."A" inp x₃) ↦ (w! ."A" ⤆ .3) ↦ (d! ."A" ⤇ .3) ↦ (p! ."A" ⤇ ."xx")) = {!!}
-  traceTestCases ((."B" inp x₁) ↦ (p! ."B" ⤇ ."y") ↦ br-F prf-F (r! .true) ↦ (d! ."B" ⤇ .2) ↦ (."A" inp x₂) ↦ (w! ."A" ⤆ .3) ↦ (d! ."A" ⤇ .3) ↦ (p! ."A" ⤇ ."xx")) = {!!}
+  -- traceTestCases : tyEvalTest ok → Unit 
+  -- traceTestCases ((."B" inp x₁) ↦ (p! ."B" ⤇ ."y") ↦ br-T prf-T (."A" inp x) ↦ (d! ."B" ⤇ .2) ↦ (."A" inp x₃) ↦ (w! ."A" ⤆ .3) ↦ (d! ."A" ⤇ .3) ↦ (p! ."A" ⤇ ."xx")) = {!!}
+  -- traceTestCases ((."B" inp x₁) ↦ (p! ."B" ⤇ ."y") ↦ br-F prf-F (r! .true) ↦ (d! ."B" ⤇ .2) ↦ (."A" inp x₂) ↦ (w! ."A" ⤆ .3) ↦ (d! ."A" ⤇ .3) ↦ (p! ."A" ⤇ ."xx")) = {!!}
 

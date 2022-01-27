@@ -52,76 +52,97 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
 
 
 
-  -- module AlwaysCanPrepend {ptps : List Identifier} (ce : AST.ContextEntry (AST.interactionHead ptps []) ) where
+  module AlwaysCanPrepend {ptps : List Identifier} (ce : AST.ContextEntry (AST.interactionHead ptps []) ) where
 
-  --   open AST.InteractionHead {prop-mode = one} (AST.interactionHead ptps []) 
+    open AST.InteractionHead {Identifier} {builtIns = builtIns} {one} (AST.interactionHead ptps []) 
 
 
     
-  --   -- TODO : remove unsafe pragma by stratification on nesting depth
-  --   {-# TERMINATING #-}
-  --   prependCtxStmnts : ∀ {Γ : _} → Statements Γ → Statements (prependContext ce Γ) 
+    -- TODO : remove unsafe pragma by stratification on nesting depth
+    {-# TERMINATING #-}
+    prependCtxStmnts : ∀ {Γ : _} → Statements Γ → Statements (prependContext ce Γ) 
 
 
 
-  --   prependCtxStmnts = map-Linked'-map _ h  hh
-  --     where
+    prependCtxStmnts = map-Linked'-map _ h  hh
+      where
 
 
 
-  --       h : {Γ : Context}
-  --              → (b : Stmnt Γ) → Stmnt (prependContext ce Γ)
+        h : {Γ : Context}
+               → (b : Stmnt Γ) → Stmnt (prependContext ce Γ)
 
 
-  --       h-expr : {Γ : Context} → ∀ {Τ}
-  --              → (b : Expr Γ Τ) → Expr (prependContext ce Γ) Τ
+        h-expr : {Γ : Context} → ∀ {Τ}
+               → (b : Expr Γ Τ) → Expr (prependContext ce Γ) Τ
 
 
-  --       h  (bindingS x) = bindingS (BS-lemma x)
-  --          where
-  --               BS-lemma : {Γ : Context} →  BStmnt Γ -> BStmnt (prependContext ce Γ)
-  --               BS-lemma (BS-let x {asn} y) = (BS-let x {asn} (h-expr y))  
-  --               BS-lemma (BS-publish! p (psof name₁ {w}) {y}) = 
-  --                 (BS-publish! p (psof name₁ {(ExistFirstBy-WitchIsAlso-preppend-lemma _ _ w)}) {y})
+        h  (bindingS x) = bindingS (BS-lemma x)
+           where
+                BS-lemma : {Γ : Context} →  BStmnt Γ -> BStmnt (prependContext ce Γ)
+                BS-lemma (BS-let x {asn} y) = (BS-let x {asn} (h-expr y))  
+                BS-lemma (BS-publish! p (psof name₁ {w}) {y}) = 
+                  (BS-publish! p (psof name₁ {(ExistFirstBy-WitchIsAlso-preppend-lemma _ _ w)}) {y})
 
 
-  --       h (nonBindingS x) = nonBindingS (z x)
-  --          where
+        h (nonBindingS x) = nonBindingS (z x)
+           where
 
-  --            zz : NBStmnt _ → NBStmnt _ 
-  --            zz (NBS-require! x) = NBS-require! (h-expr x)
-  --            zz (NBS-deposit! p {y} x) = NBS-deposit! p {y} (h-expr x)
-  --            zz (NBS-withdraw! p {y} x) = NBS-withdraw! p {y} (h-expr x)
-  --            zz (NBS-publishVal! x x₁ {y}) = (NBS-publishVal! x x₁ {y})
+             zz : NBStmnt _ → NBStmnt _ 
+             zz (NBS-require! x) = NBS-require! (h-expr x)
+             zz (NBS-deposit! p {y} x) = NBS-deposit! p {y} (h-expr x)
+             zz (NBS-withdraw! p {y} x) = NBS-withdraw! p {y} (h-expr x)
+             zz (NBS-publishVal! x x₁ {y}) = (NBS-publishVal! x x₁ {y})
 
-  --            z : NBStmnt+Expr _ → NBStmnt+Expr _
-  --            z (stmntNBS x) =  stmntNBS (zz x)
-  --            z (exprNBS x) = exprNBS (h-expr x)
+             z : NBStmnt+Expr _ → NBStmnt+Expr _
+             z (stmntNBS x) =  stmntNBS (zz x)
+             z (exprNBS x) = exprNBS (h-expr x)
 
-  --       h-expr (var (dsot x {y})) = var (dsot x { (
-  --           sum-elim (λ a → (inl ((ExistFirstBy-WitchIsAlso-preppend-lemma _ _ a))))
-  --            -- TODO : figure it out -- (λ a → var (dsot x {transport (λ i → {!True (ExistFirstBy-WitchIsAlso-preppend-lemma ? ? (fromWitness y) i)!}) y}))
-  --            (λ b → empty-elim (lower (proj₂ b)))
-  --             y)})
 
-  --             --(var (dsot name₁ {transport {!!} y }))
-  --       h-expr (stmnts₁ AST.;b x) =
-  --           prependCtxStmnts stmnts₁ AST.;b subst (λ x₁ → Expr x₁ _)
-  --            -- TODO : improve evaluation performance by introducing specialized "subst"
-  --            -- specialisation should be not only on Expr, but also on map-Linked'-map-fold
-  --         (map-Linked'-map-fold ((prependContext ce)) _ _ stmnts₁ ) (h-expr x)
-  --       h-expr (lit x) = (AST.lit x)
-  --       h-expr (input msg {y}) = input msg {y}
-  --       -- h-expr (receivePublished x {y}) = receivePublished x {y}
-  --       h-expr (if b then t else f) = if (h-expr b) then (h-expr t) else (h-expr f)
+        substOneArg : ∀ {Γ Τ} → Arg Γ Τ → Arg (prependContext ce Γ) Τ
+        substOneArg (AST.var-a (AST.dsot x {y})) = 
+           var-a (dsot x { (
+            sum-elim (λ a → (inl ((ExistFirstBy-WitchIsAlso-preppend-lemma _ _ a))))
+             -- TODO : figure it out -- (λ a → var (dsot x {transport (λ i → {!True (ExistFirstBy-WitchIsAlso-preppend-lemma ? ? (fromWitness y) i)!}) y}))
+             (λ b → empty-elim (lower (proj₂ b)))
+              y)})
 
-  --       postulate hh : (Γ : Context) (x : Stmnt Γ) →
-  --                          prependContext ce (bindingMechanics' Γ x) ≡
-  --                          bindingMechanics'
-  --                          (prependContext ce Γ) (h x)
-  --       -- hh _ (bindingS (BS-let _ _)) = refl 
-  --       -- hh _ (AST.bindingS (AST.BS-publish! _ _)) = {!!}
-  --       -- hh _ (nonBindingS _) = refl
+        substOneArg (AST.lit-a x) = lit-a x
+
+
+        substOneArgs : ∀ {Γ Τs}  → Args Γ Τs → Args (prependContext ce Γ) Τs
+        substOneArgs {Τs = []} x = tt
+        substOneArgs {Τs = x₁ ∷ []} x = substOneArg x 
+        substOneArgs {Τs = x₁ ∷ x₂ ∷ Τs} (x , x₃) = substOneArg x , substOneArgs x₃
+
+
+        h-expr (var (dsot x {y})) = var (dsot x { (
+            sum-elim (λ a → (inl ((ExistFirstBy-WitchIsAlso-preppend-lemma _ _ a))))
+             -- TODO : figure it out -- (λ a → var (dsot x {transport (λ i → {!True (ExistFirstBy-WitchIsAlso-preppend-lemma ? ? (fromWitness y) i)!}) y}))
+             (λ b → empty-elim (lower (proj₂ b)))
+              y)})
+
+              --(var (dsot name₁ {transport {!!} y }))
+        h-expr (stmnts₁ AST.;b x) =
+            prependCtxStmnts stmnts₁ AST.;b subst (λ x₁ → Expr x₁ _)
+             -- TODO : improve evaluation performance by introducing specialized "subst"
+             -- specialisation should be not only on Expr, but also on map-Linked'-map-fold
+          (map-Linked'-map-fold ((prependContext ce)) _ _ stmnts₁ ) (h-expr x)
+        h-expr (lit x) = (AST.lit x)
+        h-expr (input msg {y}) = input msg {y}
+        -- h-expr (receivePublished x {y}) = receivePublished x {y}
+        h-expr (if b then t else f) = if (h-expr b) then (h-expr t) else (h-expr f)
+        h-expr (AST._$'_ f xs) = AST._$'_ f (substOneArgs xs)
+
+
+
+        postulate hh : (Γ : Context) (x : Stmnt Γ) →
+                           prependContext ce (bindingMechanics' Γ x) ≡
+                           bindingMechanics'
+                           (prependContext ce Γ) (h x)
+        -- hh _ (bindingS (BS-let _ _)) = refl 
+        -- hh _ (AST.bindingS (AST.BS-publish! _ _)) = {!!}
+        -- hh _ (nonBindingS _) = refl
 
 
   -- TODO : provide alternative implementation, substituting multiple variables in one pass, compare performance
@@ -163,6 +184,8 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
     fold*-lemma (h ∷L stmnts₁) x = fold*-lemma  (stmnts₁) (bindingMechanics'-Subst x h) 
 
 
+    evalVar' : ∀ (Γ) → ∀ {Τ} → ∀ nm → ⟨ IsDefinedSymbolOfTy Γ Τ nm ⟩ → (r : Subst Γ) → ⟨ IsDefinedSymbolOfTy (remSubst Γ r) Τ nm ⟩ ⊎ GTypeAgdaRep Τ 
+
     -- TODO : remove unsafe pragma by stratification on nesting depth
     {-# TERMINATING #-}
     substOneStmnts : ∀ {Γ} → (r : Subst Γ) → Statements* (Γ , r) → Statements (remSubst Γ r) 
@@ -171,7 +194,21 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
 
     substOneExpr : ∀ {Γ Τ} → (r : Subst Γ) → Expr Γ Τ → Expr (remSubst Γ r) Τ
 
-    postulate substOneArgs : ∀ {Γ Τs} → (r : Subst Γ) → Args Γ Τs → Args (remSubst Γ r) Τs
+    substOneArg : ∀ {Γ Τ} → (r : Subst Γ) → Arg Γ Τ → Arg (remSubst Γ r) Τ
+    substOneArg r (AST.var-a (AST.dsot name {y})) =
+      sum-elim
+        (λ y → (AST.var-a (AST.dsot name {y})))
+        lit-a
+        (evalVar' _ name y r)
+
+    substOneArg r (AST.lit-a x) = lit-a x
+
+
+    substOneArgs : ∀ {Γ Τs} → (r : Subst Γ) → Args Γ Τs → Args (remSubst Γ r) Τs
+    substOneArgs {Τs = []} r x = tt
+    substOneArgs {Τs = x₁ ∷ []} r x = substOneArg r x 
+    substOneArgs {Τs = x₁ ∷ x₂ ∷ Τs} r (x , x₃) = substOneArg r x , substOneArgs r x₃
+
 
 
     substOneStmnts-coh :  ∀ Γ → (r : Subst Γ) → (x : Stmnt Γ) →
@@ -180,7 +217,7 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
                                                       ≡ bindingMechanics' (remSubst Γ r) (substOneStmnt r x)
 
 
-    evalVar' : ∀ (Γ) → ∀ {Τ} → ∀ nm → ⟨ IsDefinedSymbolOfTy Γ Τ nm ⟩ → (r : Subst Γ) → ⟨ IsDefinedSymbolOfTy (remSubst Γ r) Τ nm ⟩ ⊎ GTypeAgdaRep Τ 
+
     evalVar' (AST.con (x₁ ∷ entries₁) scope'') nm (inl (inl x)) (inl x₂) = inr (subst⁻ GTypeAgdaRep (proj₂ (proj₂ x)) x₂)
     evalVar' (AST.con (x₁ ∷ entries₁) scope'') nm (inl (inr x)) (inl x₂) =
        inl (inl (ExistFirstBy-WitchIsAlso-FilterOut-lemma entries₁ (λ a x₃ y → proj₁ x (x₃ ∙ sym y)) (proj₂ x)))
