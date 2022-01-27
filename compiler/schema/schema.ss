@@ -50,7 +50,7 @@
                  (participant (current-participant)))))
 
     ;; Change of participant.
-    ((consensus:set-participant p)
+    ((set-participant p)
      (current-participant (syntax->datum #'p))
      [])
 
