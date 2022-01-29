@@ -130,7 +130,7 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
           (map-Linked'-map-fold ((prependContext ce)) _ _ stmnts₁ ) (h-expr x)
         h-expr (lit x) = (AST.lit x)
         h-expr (input msg {y}) = input msg {y}
-        -- h-expr (receivePublished x {y}) = receivePublished x {y}
+        h-expr (receivePublished p x {y}) = receivePublished p x {y}
         h-expr (if b then t else f) = if (h-expr b) then (h-expr t) else (h-expr f)
         h-expr (AST._$'_ f xs) = AST._$'_ f (substOneArgs xs)
 
@@ -279,7 +279,7 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
            ) e'
     substOneExpr r (AST.lit x) = (AST.lit x)
     substOneExpr r (AST.input x {y}) = (AST.input x {y})
-    -- substOneExpr r (AST.receivePublished x {y}) = (AST.receivePublished x {y})
+    substOneExpr r (AST.receivePublished p x {y}) = (AST.receivePublished p x {y})
     substOneExpr r (AST.if x then x₁ else x₂) = (AST.if (substOneExpr r x) then (substOneExpr r x₁) else (substOneExpr r x₂))
     substOneExpr r (AST._$'_ f xs) = AST._$'_ f (substOneArgs r xs)
 

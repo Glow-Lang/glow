@@ -32,6 +32,26 @@ open import Glow.Linked
 
 open import Glow.DecEqMore
 
+-- myDepTyp : ℕ → Type₀
+-- myDepTyp 0 = ℕ
+-- myDepTyp 1 = 𝟚
+-- myDepTyp _ = ℕ × 𝟚
+
+-- myTuple : ℕ × 𝟚 
+-- myTuple = 3 , false
+
+-- myΣ : Σ ℕ myDepTyp
+-- myΣ = 3 , (3 , true)
+
+-- myFun : 𝟚 → ℕ
+-- myFun false = 3
+-- myFun true = 2
+
+-- myΠ : (x : ℕ) → myDepTyp x 
+-- myΠ 0 = 3
+-- myΠ 1 = true
+-- myΠ (suc (suc w)) = 3 , false
+
 
 
 
@@ -682,7 +702,7 @@ module _ (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}
         input : String → {_ : PM (IsNotConsensus Γ) } → Expr Γ Τ
 
         -- this is temporary solution, this constructors cannot apear in code, and are introduced on some passes, this distinction must be typesafe in the future! 
-        -- receivePublished : GTypeAgdaRep Τ → {_ : PM (IsConsensus Γ) } → Expr Γ Τ
+        receivePublished : ParticipantId → GTypeAgdaRep Τ → {_ : PM (IsConsensus Γ) } → Expr Γ Τ
 
         if_then_else_ : Expr Γ Bool → Expr Γ Τ → Expr Γ Τ → Expr Γ Τ
 
@@ -759,7 +779,7 @@ module _ (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}
          (×-dp (IsPureStmnts stmnts₁) (IsPureE expr₁))
       IsPureE (lit x) = Unit-dp
       IsPureE (input x) = Empty-dp
-      -- IsPureE (receivePublished x) = Empty-dp
+      IsPureE (receivePublished _ x) = Empty-dp
       IsPureE (if x then x₁ else x₂) = ×-dp (IsPureE x) (×-dp (IsPureE x₁) (IsPureE x₂))
 
 
@@ -866,3 +886,8 @@ module _ (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}
 
 
     
+
+
+
+
+

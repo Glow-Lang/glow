@@ -87,6 +87,11 @@ data Input {Identifier : Type₀} : Identifier → GType → EState → Type₀ 
   _inp_ : ∀ s → ∀ {gt} → GTypeAgdaRep gt → Input s gt ok
   ¬inp_ : ∀ s → ∀ {gt}  → Input s gt fail
 
+data ReceivePublished {Identifier : Type₀} : Identifier → GType → EState → Type₀ where
+  _rec_ : ∀ s → ∀ {gt} → GTypeAgdaRep gt → ReceivePublished s gt ok
+  ¬rec_ : ∀ s → ∀ {gt}  → ReceivePublished s gt fail
+
+
 data Publish {Identifier : Type₀} : Identifier → Identifier → EState → Type₀ where
   p!_⤇_ : ∀ pa → ∀ vn → Publish pa vn ok
   ¬p!_⤇_ : ∀ pa → ∀ vn → Publish pa vn fail
@@ -94,6 +99,10 @@ data Publish {Identifier : Type₀} : Identifier → Identifier → EState → T
 
 ok-input-elim : {Identifier : Type₀} → ∀ x Τ → Input {Identifier} x Τ ok → GTypeAgdaRep Τ 
 ok-input-elim x Τ (.x inp x₁) = x₁
+
+ok-rec-elim : {Identifier : Type₀} → ∀ x Τ → ReceivePublished {Identifier} x Τ ok → GTypeAgdaRep Τ 
+ok-rec-elim x Τ (.x rec x₁) = x₁
+
 
 data Branch (A-t A-f : Type₀) : 𝟚 → Type₀ where
   br-T : ∀ {b} → (prf-T : b ≡ true) → {Bool→Type b} → A-t → Branch A-t A-f b
@@ -218,6 +227,7 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
     TraceE sc (AST.body (AST.bodyR (h ∷L stmnts₁) expr₁)) x = TraceB sc h (bodyR stmnts₁ expr₁) x
     TraceE sc (AST.lit x₁) x = empty-elim (x tt)
     TraceE (just (AST.pId name)) {Τ} (AST.input x₁) x = Input name Τ  , ok-input-elim _ _
+    TraceE sc {Τ} (AST.receivePublished (AST.pId name) x₁) x = ReceivePublished name Τ  , ok-rec-elim _ _
     TraceE sc (AST.if e then e₁ else e₂) x = h (proj₁ (snd (IsPureE e₁))) (proj₁ (snd (IsPureE e₂)))
       where
         h' : Σ (EState → Type) (λ x₁ → x₁ ok → GTypeAgdaRep _)

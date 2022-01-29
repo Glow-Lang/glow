@@ -55,11 +55,14 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
 
      
 
-    {-# TERMINATING #-}
+
     Subst' : List ContextEntry → Type₀
     Subst' [] = Empty
     Subst' (x ∷ x₁) = AType x ⊎ Subst' x₁ 
 
+    Subst'-getCE : (l : List ContextEntry) → Subst' l → ContextEntry 
+    Subst'-getCE (x₁ ∷ _) (inl _) = x₁
+    Subst'-getCE (_ ∷ l) (inr x) = Subst'-getCE l x
 
     Subst : Context → Type₀
     Subst = Subst' ∘ entries 
@@ -70,6 +73,15 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
 
     remSubst : ∀ Γ → Subst Γ → Context
     remSubst Γ x = record Γ { entries = remSubst' (Γ .entries) x }
+
+
+    -- remSubst*' : Scope → ∀ l → Subst*' l → List ContextEntry
+    -- remSubst*' x ll@(AST.ice nothing name type ∷ l) (inl x₁) = remSubst' ll (inl (proj₂ x₁)) 
+    -- remSubst*' x (AST.ice (just x₂) name type ∷ l) (inl x₁) = {!!}
+    -- remSubst*' x (x₂ ∷ l) (inr x₁) = {!!}
+
+    -- remSubst* : ∀ Γ → Subst Γ → Context
+    -- remSubst* Γ x = record Γ { entries = remSubst*' (Γ .scope') (Γ .entries) x }
 
 
 
@@ -84,15 +96,9 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
     Statement* : ∀ { B : Context → Type₀ } → Σ Context B → Type₀
     Statement* = Stmnt ∘ fst
 
-    -- data IOs : Type₀ where
-    --   inputBy : IOs
-    --   timedOutInput
+    
 
-    -- toConsensusCodeStmnt : ∀ {s} → Stmnt (con [] s) → Stmnt emptyContext
-    -- toConsensusCodeStmnt {nothing} x = x
-    -- toConsensusCodeStmnt {just x₁} (AST.bindingS x) = {!!}
-    -- toConsensusCodeStmnt {just x₁} (AST.nonBindingS (AST.stmntNBS (AST.NBS-require! x))) = (AST.nonBindingS (AST.stmntNBS (AST.NBS-require! {!!})))
-    -- toConsensusCodeStmnt {just x₁} (AST.nonBindingS (AST.exprNBS x)) = {!!}
+
 
     map-ExistingFirstBy-lemma : {cs : List ContextEntry}
                        (B : ContextEntry → Type₀) (B' : ContextEntry → Type₀)

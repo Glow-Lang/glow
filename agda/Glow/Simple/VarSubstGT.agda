@@ -36,19 +36,25 @@ open import Glow.Simple.ContextMore
 
 open import Cubical.HITs.Interval
 
-module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}} where
+module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}}
+            {BuilitInsIndex : Type₀} {{IsDiscrete-BuilitInsIndex : IsDiscrete BuilitInsIndex}}
+              {builtIns : BuiltIns' BuilitInsIndex {{IsDiscrete-BuilitInsIndex}}} where
 
+  -- prop-mode = one
+  
+  -- open AST Identifier prop-mode
 
-  -- TODO : to acomplish this following is needed :
-  --   * machinery for morphism of Linked' up to some relation (instead only up to equality like right now)
-  --   * mowing symbol in front of context, and adequate coherences
-    
+  open PropMode one 
+
+  -- open AST Identifier
     
 
 
   module SubstOne {ptps : List Identifier} where
+  
+    -- module AST* = AST Identifier builtIns one
 
-    open AST.InteractionHead  {prop-mode = one} (AST.interactionHead ptps [])
+    open AST.InteractionHead {Identifier} {builtIns = builtIns} {one} (AST.interactionHead ptps []) 
 
     Subst$ : Context → Type₀
     Subst$ = Maybe ∘ Subst
@@ -131,10 +137,10 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
 
     substOneStmnt {AST.con entries₁ nothing} r (AST.bindingS (AST.BS-publish! p (AST.psof name {w}) {y})) with (ExistFirstBy-WitchIsAlso-remSubs-lemm {p = p} _ r w)
     ... | inl w = (AST.bindingS (AST.BS-publish! p (AST.psof name {proj₂ w}) {y}))
-    ... | inr x =
+    ... | inr x = 
         let vv = SubstMatch-Extract _ _ _ r w (proj₁ x)
-        in (AST.bindingS (AST.BS-let (AST.ice nothing name (fst vv)) (publishVal (snd vv)))) 
-
+        in (AST.bindingS (AST.BS-let (AST.ice nothing name (fst vv)) ((receivePublished (snd vv))))) 
+   -- (publishVal (snd vv))
    
     
     substOneStmnt r (AST.nonBindingS (AST.stmntNBS (AST.NBS-require! x))) =
@@ -163,11 +169,12 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
             λ i → remSubst$ ((fold*-lemma stmnts₁ (just r)) i)
               (subst-filler Subst$ (fold*-lemma stmnts₁ (just r)) ( (snd (foldLinked' (mkStatements*$ stmnts₁)))) i)           
            ) e'
+           
     substOneExpr r (AST.lit x) = (AST.lit x)
     substOneExpr r (AST.input x {y}) = (AST.input x {y})
-    substOneExpr r (AST.publishVal x {y}) = (AST.publishVal x {y})
+    substOneExpr r (AST.receivePublished x {y}) = {!!} --(AST.publishVal x {y})
     substOneExpr r (AST.if x then x₁ else x₂) = (AST.if (substOneExpr r x) then (substOneExpr r x₁) else (substOneExpr r x₂))
-
+    substOneExpr r (AST._$'_ f xs) = AST._$'_ f {!!} --(substOneArgs r xs)
 
     publish-subst-lemma : ∀ {Γ} → (r : Subst Γ) → ∀ p → ∀ nm → ∀ w → ∀ q →
 
@@ -183,7 +190,7 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
                                (substOneStmnt r (bindingS (BS-publish! p (psof nm {w}) {q})))
     publish-subst-lemma {AST.con ee@(AST.ice scope name type ∷ entries₁) nothing} r p nm w q with (ExistFirstBy-WitchIsAlso-remSubs-lemm {p = p} (ee) r w) 
     ... | inl x₁ = cong (λ xx → con xx nothing) (map-ExistingFirstBy-lemma3 {cs = ee} (λ y →
-                                                                                          recMaybe Empty (λ p' → AST.pId-name _ _ p ≡ AST.pId-name _ _ p')
+                                                                                          recMaybe Empty (λ p' → AST.pId-name _ _ _ p ≡ AST.pId-name _ _ _ p')
                                                                                           (AST.scope y)) w (λ _ → nothing) r (proj₁ x₁) (proj₂ x₁))
     ... | inr x₁ = cong (λ xx → con xx nothing) {!!}
 
