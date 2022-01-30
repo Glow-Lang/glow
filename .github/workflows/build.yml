@@ -1,4 +1,4 @@
-name: default
+name: Build
 
 on: [push, pull_request]
 
@@ -22,14 +22,3 @@ jobs:
         env:
           CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
         run: ./scripts/ci.ss after-build
-
-  test_job:
-    runs-on: ubuntu-latest
-    container: mukn/glow:devel
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v1
-      - run: ./scripts/ci.ss before-test
-      - run: ./scripts/ci.ss test
-      - run: ./scripts/ci.ss after-test
