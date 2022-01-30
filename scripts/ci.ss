@@ -7,6 +7,7 @@
   :std/format :std/getopt :std/misc/ports :std/misc/process :std/srfi/1 :std/sugar
   :clan/base :clan/exit :clan/debug :clan/files :clan/git-fu :clan/json
   :clan/multicall :clan/path :clan/path-config :clan/source :clan/versioning
+  :clan/poo/cli
   :mukn/ethereum/version)
 
 ;; Initialize paths from the environment
@@ -150,7 +151,7 @@
   (test)
   (after-test))
 
-(def docker-image "mukn/glow:latest")
+(def default-docker-image "mukn/glow:latest")
 
 ;; TODO: local build on docker
 (define-entry-point (docker-all)
@@ -164,25 +165,34 @@
 ;;;;(def (cachix-conf) (subpath (getenv "HOME") ".config/cachix/cachix.dhall"))
 ;;;;(def (get-cachix-auth-token) (json<-string (cadr (read-file-lines (cachix-conf)))))
 
-(def (docker-run command)
+(def options/docker-image
+  (make-options [(option 'docker-image "-i" "--image"
+                  help: "docker image" default: default-docker-image)]))
+
+(define-entry-point (docker-run docker-image: (docker-image default-docker-image) command)
+  (help: "Build locally in a docker container, emulating CI"
+   getopt: (make-options [(argument 'command)] [] options/docker-image))
   (run-process/batch ["docker" "run"
                       "-t" "-v" (format "~a:/root/glow-source" glow-home)
                       "-v" (format "~a/.config/cachix:/root/.config/cachix:ro" (getenv "HOME"))
                       ;;"-e" (format "CACHIX_AUTH_TOKEN=~a" (get-cachix-auth-token))
                       docker-image "bash" "-c" command]))
 
-(define-entry-point (docker-build)
-  (help: "Build locally in a docker container, emulating CI" getopt: [])
-  (docker-run "/root/glow-source/scripts/ci.ss in-docker-build"))
+(define-entry-point (docker-build docker-image: (docker-image default-docker-image))
+  (help: "Build locally in a docker container, emulating CI"
+   getopt: options/docker-image)
+  (docker-run docker-image: docker-image "/root/glow-source/scripts/ci.ss in-docker-build"))
 
-(define-entry-point (docker-test)
-  (help: "Run tests locally in a docker container, emulating CI" getopt: [])
-  (docker-run "/root/glow-source/scripts/ci.ss in-docker-test"))
+(define-entry-point (docker-test docker-image: (docker-image default-docker-image))
+  (help: "Run tests locally in a docker container, emulating CI"
+   getopt: options/docker-image)
+  (docker-run docker-image: docker-image "/root/glow-source/scripts/ci.ss in-docker-test"))
 
 #;
-(define-entry-point (docker-doc)
-  (help: "Build documentation locally in a docker container, emulating CI" getopt: [])
-  (docker-run "/root/glow-source/scripts/ci.ss in-docker-doc"))
+(define-entry-point (docker-doc docker-image: (docker-image default-docker-image))
+  (help: "Build documentation locally in a docker container, emulating CI"
+   getopt: options/docker-image)
+  (docker-run docker-image: docker-image "/root/glow-source/scripts/ci.ss in-docker-doc"))
 
 (define-entry-point (in-docker-setup)
   (help: "(Internal) Setup local docker container" getopt: [])
