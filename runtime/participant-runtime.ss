@@ -815,22 +815,6 @@
     .make: (lambda (my-nickname host-address dest-address)
        (let ()
 
-         ;; ------------ Libp2p channel buffer setup
-
-         (def buffer (make-channel 10)) ;; TODO: Do we need a larger buffer?
-
-         (def (poll-buffer (t 2)) ; poll every 2s by default
-           (def res (channel-try-get buffer))
-           (or res
-             (begin (thread-sleep! t)
-                    (poll-buffer t))))
-
-         (def (push-to-buffer s)
-           (def received-data (chat-reader s))
-           ; NOTE: This blocks indefinitely if channel buffer is full
-           (channel-put buffer received-data)
-           (stream-close s))
-
          ;; ------------ Libp2p listening thread setup
 
 
@@ -843,51 +827,55 @@
          (for (p (peer-info->string* self))
            (displayln "I am " p))
 
-         (def listening-thread
-           (begin
-            (displayln "Listening for messages...")
-            (spawn libp2p-listen libp2p-client [chat-proto] push-to-buffer)))
+         ;;Connect to bootstrap peer at dest-address
+         (displayln "Connecting to Bootstrap peer at dest-address")
+         (libp2p-connect/poll libp2p-client dest-address)
+         (displayln "Successfully connected to Bootstrap peer")
+
+         ;;Subscribe to pubsub
+         (displayln "Subscribing to glow pubsub")
+         (defvalues (sub cancel) (pubsub-subscribe libp2p-client "chat"))
+
 
 
 
 
          { libp2p-client
            dest-address
-           poll-buffer
-           push-to-buffer
-           _listening-thread: listening-thread
+           sub
+           cancel
            ;; FIXME: Get other participant addresses from contacts,
            ;; pass these in as a parameter,
            ;; instead of storing and using dest-address within the libp2p channel object.
            .send-contract-agreement: (lambda (agreement)
              (displayln MAGENTA "Sending agreement to multiaddr..." END)
              (def agreement-string (string<-json (json<- InteractionAgreement agreement)))
-             (dial-and-send-contents libp2p-client dest-address agreement-string)
+             (subscription-writer libp2p-client agreement-string)
              (displayln)
              (force-output))
 
            .send-contract-handshake: (lambda (_runtime handshake)
              (displayln MAGENTA "Sending handshake to multiaddr..." END)
              (def handshake-string (string<-json (json<- AgreementHandshake handshake)))
-             (dial-and-send-contents libp2p-client dest-address handshake-string)
+             (subscription-writer libp2p-client handshake-string)
              (displayln)
              (force-output))
 
            .listen-for-handshake: (lambda (_runtime)
              (displayln MAGENTA "Listening for handshake via libp2p ...")
-             (def handshake-str (poll-buffer))
+             (def handshake-str (subscription-reader sub libp2p-client))
              (displayln MAGENTA "Received handshake")
              (def handshake (<-json AgreementHandshake (json<-string handshake-str)))
              handshake)
 
            .listen-for-agreement: (lambda ()
              (displayln MAGENTA "Listening for agreement via libp2p ...")
-             (def agreement-str (poll-buffer))
+             (def agreement-str (subscription-reader sub libp2p-client))
              (displayln MAGENTA "Received agreement")
              (def agreement (<-json InteractionAgreement (json<-string agreement-str)))
              agreement)
 
-            .close: (lambda () (stop-libp2p-daemon!))
+            .close: (lambda () (stop-libp2p-daemon!) (cancel))
            })))
 
 
@@ -900,7 +888,7 @@
       (open-libp2p-client
        host-addresses: host-address
        wait: 5
-       options: ["-id" seckey-filename]))))
+       options: ["-id" seckey-filename "-pubsub"]))))
 
 (def (get-libp2p-client path: path)
   (displayln "Path:")
@@ -1109,6 +1097,28 @@
        (else
         line)))))
 
+
+;;subscription-writer
+;;c: the client associated with this node
+;;s: the string to send
+;;This will publish s to the "chat" pubsub topic(with good formatting)
+(def (subscription-writer c s)
+
+        (pubsub-publish c "chat" (string->bytes s)) ;;since raw strings cant be sent, you must convert to bytes first
+)
+
+;;subscription-reader
+;;sub: the message channel returned by pubsub-subscribe
+;;c: your libp2p client
+;;
+;;for each message in the message channel, if it is not from you, print it out with the associated Peer ID in front
+;;
+
+(def (subscription-reader sub c)
+
+  (let ((m (channel-get sub)));;block until it gets a message
+
+   (bytes->string (vector-ref m 1))))
 
 ;; ------------------ Misc
 
