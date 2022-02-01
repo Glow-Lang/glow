@@ -34,6 +34,9 @@ open import Glow.DecEqMore
 
 open import Glow.Simple.ContextMore
 
+open import Glow.Simple.Postulates
+
+
 open import Cubical.HITs.Interval
 
 
@@ -133,7 +136,7 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
         h-expr (receivePublished p x {y}) = receivePublished p x {y}
         h-expr (if b then t else f) = if (h-expr b) then (h-expr t) else (h-expr f)
         h-expr (AST._$'_ f xs) = AST._$'_ f (substOneArgs xs)
-
+        h-expr (AST.sign q {y} {z}) = AST.sign (substOneArg q) {y} {z}
 
 
         postulate hh : (Γ : Context) (x : Stmnt Γ) →
@@ -282,7 +285,7 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
     substOneExpr r (AST.receivePublished p x {y}) = (AST.receivePublished p x {y})
     substOneExpr r (AST.if x then x₁ else x₂) = (AST.if (substOneExpr r x) then (substOneExpr r x₁) else (substOneExpr r x₂))
     substOneExpr r (AST._$'_ f xs) = AST._$'_ f (substOneArgs r xs)
-
+    substOneExpr r (AST.sign q {y} {z}) = (AST.sign (substOneArg r q) {y} {z})
 
     publish-subst-lemma : ∀ {Γ} → (r : Subst Γ) → ∀ p → ∀ nm → ∀ w → ∀ q → 
                            remSubst
@@ -335,14 +338,16 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
     substAllExpr {Γ@(AST.con (x₁ ∷ entries₁) scope'')} (y , r') x = 
       substAllExpr  r' (SubstOne.substOneExpr (inl y) x)
 
+    evalPureArg : ∀ {sc Τ} → (e : Arg (con [] sc) Τ) → GTypeAgdaRep Τ 
+    evalPureArg (AST.var-a (AST.dsot name {inr (x , ())}))
+    evalPureArg (AST.lit-a x) = x
+
+
     evalArgs : ∀ {Τs sc} → Args (con [] sc) Τs → argsV Τs
     evalArgs {[]} x = tt
-    evalArgs {x₁ ∷ []} (AST.var-a (AST.dsot name {inr (x , ())}))
-    evalArgs {x₁ ∷ []} (AST.lit-a x) = x , _
-    evalArgs {x₁ ∷ x₂ ∷ Τs} (AST.var-a (AST.dsot name {inr (x , ())}) , x₃)
-    evalArgs {x₁ ∷ x₂ ∷ Τs} (AST.lit-a x , x₃) = x , evalArgs x₃
+    evalArgs {x₁ ∷ []} x = (evalPureArg x) , _
+    evalArgs {x₁ ∷ x₂ ∷ Τs} (x , x₃) = evalPureArg x , evalArgs x₃
     
-
 
     {-# TERMINATING #-}
     evalPureExpr : ∀ {sc Τ} → (e : Expr (con [] sc) Τ) → ⟨ IsPureE e ⟩ → GTypeAgdaRep Τ 
@@ -375,12 +380,8 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
        let z = BuiltIn'.impl (snd (BuiltIns'.getBi builtIns (AST.BI.bIndex f)))
            q = appV z (transport (cong argsV (AST.BI.dm≡ f)) (evalArgs xs))
        in (transport⁻ (cong GTypeAgdaRep (AST.BI.cdm≡ f)) q)
-       
--- module Test where
-
---   open SubstOne {String} {{String-Discrete-postulated}} {"A" ∷ "B" ∷ []}
-
---   -- open AST.InteractionHead  {prop-mode = true} (AST.interactionHead ptps [])
-
---   -- test-stmnts : {!Statements ?!}
---   -- test-stmnts = {!!}
+    evalPureExpr (AST.var (AST.dsot name {inl ()})) tt
+    evalPureExpr {sc = sc} (AST.sign q {z} {p}) w =
+        subst GTypeAgdaRep p (signPrim (AST.pId-name _ _ _ (IsNotConsensus→Participant
+           {con [] sc}
+             z)) (evalPureArg q))

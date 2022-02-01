@@ -71,9 +71,19 @@ module ParamsSubst {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete I
       h-expr : {Γ : Context ih} → ∀ {Τ}
              → (b : Expr ih Γ Τ) → Expr _ (stripParamsCtx Γ) Τ
 
-      -- h-args : {Γ : Context ih} → ∀ {Τs}
-      --        → (b : Args ih Γ Τs) → Expr _ (stripParamsCtx Γ) Τs
+      h-arg : ∀ {Γ Τ} → Arg ih Γ Τ → Arg _ (stripParamsCtx Γ) Τ
+      h-arg (AST.var-a (AST.dsot x {y})) =
+          sum-elim
+           (λ a → var-a (dsot x {inl a}))
+           (lit-a ∘ (lookup-ParametersValue (ih .parameters) vv (iwt x _)) ∘ proj₂)
+            y
+      h-arg (AST.lit-a x) = (AST.lit-a x)
 
+
+      h-args : ∀ {Γ Τs}  → Args ih Γ Τs → Args _ (stripParamsCtx Γ) Τs
+      h-args {Τs = []} x = tt
+      h-args {Τs = x₁ ∷ []} x = h-arg x
+      h-args {Τs = x₁ ∷ x₂ ∷ Τs} (x , x₃) = h-arg x , h-args  x₃ 
       
 
       h  (bindingS x) = bindingS (BS-lemma x)
@@ -110,11 +120,13 @@ module ParamsSubst {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete I
              -- specialisation should be not only on Expr, but also on map-Linked'-map-fold
         (map-Linked'-map-fold (stripParamsCtx {ih}) _ _ stmnts₁ ) (h-expr x)
       h-expr (lit x) = lit x
-      h-expr (_$'_ f xs) = _$'_ f {!!}
+      h-expr (_$'_ f xs) = _$'_ f (h-args xs)
 
       h-expr (input msg {y}) = input msg {y}
       -- h-expr (receivePublished x {y}) = publishVal x {y}
       h-expr (if b then t else f) = if (h-expr b) then (h-expr t) else (h-expr f)
+      h-expr (AST.sign q {y}) = (AST.sign (h-expr q) {y})
+      h-expr (AST.receivePublished x x₁ {y}) = AST.receivePublished x x₁ {y}
 
       hh : (Γ : Context ih) (x : Stmnt _ Γ) →
          stripParamsCtx (bindingMechanics' _ Γ x) ≡

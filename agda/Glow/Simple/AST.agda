@@ -32,6 +32,8 @@ open import Glow.Linked
 
 open import Glow.DecEqMore
 
+open import Glow.Simple.Postulates
+
 -- myDepTyp : ℕ → Type₀
 -- myDepTyp 0 = ℕ
 -- myDepTyp 1 = 𝟚
@@ -119,6 +121,8 @@ data GType : Type₀ where
   Int : GType
   Nat : GType
   Unitᵍ : GType
+  Digest : GType
+  Signature : GType
 
 
 
@@ -133,6 +137,8 @@ GTy== Bool Bool = true
 GTy== Int Int = true
 GTy== Nat Nat = true
 GTy== Unitᵍ Unitᵍ = true
+GTy== Digest Digest = true
+GTy== Signature Signature = true
 GTy== _ _ = false
 
 
@@ -155,12 +161,35 @@ instance
   eqTest IsDiscrete-GType Unitᵍ Int = no-dec-eq-help' GTy== _
   eqTest IsDiscrete-GType Unitᵍ Nat = no-dec-eq-help' GTy== _
   eqTest IsDiscrete-GType Unitᵍ Unitᵍ = yes refl
+  eqTest IsDiscrete-GType Digest Digest = yes refl
+  eqTest IsDiscrete-GType Signature Signature = yes refl
+  eqTest IsDiscrete-GType Bool Digest = no-dec-eq-help' GTy== _ 
+  eqTest IsDiscrete-GType Bool Signature = no-dec-eq-help' GTy== _
+  eqTest IsDiscrete-GType Int Digest = no-dec-eq-help' GTy== _
+  eqTest IsDiscrete-GType Int Signature = no-dec-eq-help' GTy== _
+  eqTest IsDiscrete-GType Nat Digest = no-dec-eq-help' GTy== _
+  eqTest IsDiscrete-GType Nat Signature = no-dec-eq-help' GTy== _
+  eqTest IsDiscrete-GType Unitᵍ Digest = no-dec-eq-help' GTy== _
+  eqTest IsDiscrete-GType Unitᵍ Signature = no-dec-eq-help' GTy== _
+  eqTest IsDiscrete-GType Digest Bool = no-dec-eq-help' GTy== _
+  eqTest IsDiscrete-GType Digest Int = no-dec-eq-help' GTy== _
+  eqTest IsDiscrete-GType Digest Nat = no-dec-eq-help' GTy== _
+  eqTest IsDiscrete-GType Digest Unitᵍ = no-dec-eq-help' GTy== _
+  eqTest IsDiscrete-GType Digest Signature = no-dec-eq-help' GTy== _
+  eqTest IsDiscrete-GType Signature Bool = no-dec-eq-help' GTy== _
+  eqTest IsDiscrete-GType Signature Int = no-dec-eq-help' GTy== _
+  eqTest IsDiscrete-GType Signature Nat = no-dec-eq-help' GTy== _
+  eqTest IsDiscrete-GType Signature Unitᵍ = no-dec-eq-help' GTy== _
+  eqTest IsDiscrete-GType Signature Digest = no-dec-eq-help' GTy== _
 
 GTypeAgdaRep : GType → Type₀
 GTypeAgdaRep Bool = 𝟚
 GTypeAgdaRep Int = ℤ
 GTypeAgdaRep Nat = ℕ
 GTypeAgdaRep Unitᵍ = Unit
+GTypeAgdaRep Digest = Dig
+GTypeAgdaRep Signature = Sig
+
 
 isSet-GType : isSet GType
 isSet-GType = Discrete→isSet (IsDiscrete.eqTest IsDiscrete-GType)
@@ -187,11 +216,22 @@ instance
   Unit-IsGlowTy : IsGlowTy Unit
   Unit-IsGlowTy = record { glowRep = Unitᵍ  ; cast = idfun _ }
 
+instance
+  Dig-IsGlowTy : IsGlowTy Dig
+  Dig-IsGlowTy = record { glowRep = Digest  ; cast = idfun _ }
+
+instance
+  Sig-IsGlowTy : IsGlowTy Sig
+  Sig-IsGlowTy = record { glowRep = Signature  ; cast = idfun _ }
+
+
 GTypeAgdaRep' : (Τ : GType) → IsGlowTy (GTypeAgdaRep Τ) 
 GTypeAgdaRep' Bool = Bool-IsGlowTy
 GTypeAgdaRep' Int = ℤ-IsGlowTy
 GTypeAgdaRep' Nat = ℕ-IsGlowTy
 GTypeAgdaRep' Unitᵍ = Unit-IsGlowTy
+GTypeAgdaRep' Digest = Dig-IsGlowTy
+GTypeAgdaRep' Signature = Sig-IsGlowTy
 
 
 
@@ -624,6 +664,11 @@ module _ (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}
 
       open Context public
 
+      IsNotConsensus→Participant : ∀ {Γ} → PM (IsNotConsensus Γ) → ParticipantId
+      IsNotConsensus→Participant {con entries₁ nothing} x = empty-elim (toWitness' x)
+      IsNotConsensus→Participant {con entries₁ (just x₁)} x = x₁
+
+
       -- context-< : Context → ℕ → Type₀ 
       -- context-< x x₁ = {!!}
 
@@ -700,6 +745,8 @@ module _ (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}
         lit : GTypeAgdaRep Τ → Expr Γ Τ
         _$'_ : ∀ {Τs} → BI Τs Τ → Args Γ Τs → Expr Γ Τ
         input : String → {_ : PM (IsNotConsensus Γ) } → Expr Γ Τ
+        sign : Arg Γ Digest → {_ : PM (IsNotConsensus Γ) } → {_ : Signature PM≡ Τ} → Expr Γ Τ
+        
 
         -- this is temporary solution, this constructors cannot apear in code, and are introduced on some passes, this distinction must be typesafe in the future! 
         receivePublished : ParticipantId → GTypeAgdaRep Τ → {_ : PM (IsConsensus Γ) } → Expr Γ Τ
@@ -779,9 +826,9 @@ module _ (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}
          (×-dp (IsPureStmnts stmnts₁) (IsPureE expr₁))
       IsPureE (lit x) = Unit-dp
       IsPureE (input x) = Empty-dp
-      IsPureE (receivePublished _ x) = Empty-dp
+      IsPureE (receivePublished _ _) = Empty-dp
       IsPureE (if x then x₁ else x₂) = ×-dp (IsPureE x) (×-dp (IsPureE x₁) (IsPureE x₂))
-
+      IsPureE (sign q) = Unit-dp
 
       IsPureS (bindingS (BS-let ce x)) = (IsPureE x)
       IsPureS (bindingS (BS-publish! p x)) = Empty-dp
