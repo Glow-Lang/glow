@@ -829,7 +829,7 @@
 
          ;;Connect to bootstrap peer at dest-address
          (displayln "Connecting to Bootstrap peer at dest-address")
-         (libp2p-connect/poll libp2p-client dest-address)
+         (libp2p-connect/poll libp2p-client (string->peer-info dest-address))
          (displayln "Successfully connected to Bootstrap peer")
 
          ;;Subscribe to pubsub
