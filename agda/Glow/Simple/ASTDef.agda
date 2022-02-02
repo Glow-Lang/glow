@@ -50,6 +50,7 @@ BuiltIns'.getBi Basic-BuiltIns = h
     h "and" = ( Bool ∷  [ Bool ] , Bool) , (builitIn _and_)
     h "or" = ( Bool ∷  [ Bool ] , Bool) , (builitIn _or_)
     h "+ℕ" = ( Nat ∷  [ Nat ] , Nat) , (builitIn Cubical.Data.Nat._+_)
+    h "randomUInt256" = ([] , Int) , (builitIn randomUInt256Prim)
     h _ = ([] , Unitᵍ) , builitIn _
 
 
