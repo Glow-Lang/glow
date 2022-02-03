@@ -10,7 +10,7 @@ and relies on an existing node to implement the Cardano protocol.
 ### Copyright and License
 
 Copyright 2020 Mutual Knowledge Systems, Inc. All rights reserved.
-Gerbil-Cardano is distributed under the Apache License, version 2.0. See the file [LICENSE](https://github.com/Glow-Lang/glow/blob/master/LICENSE).
+Gerbil-Cardano is distributed under the Apache License, version 2.0. See the file [LICENSE](/LICENSE).
 
 ### What does Gerbil Cardano do?
 
