@@ -106,7 +106,6 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
         substOneArg (AST.var-a (AST.dsot x {y})) = 
            var-a (dsot x { (
             sum-elim (λ a → (inl ((ExistFirstBy-WitchIsAlso-preppend-lemma _ _ a))))
-             -- TODO : figure it out -- (λ a → var (dsot x {transport (λ i → {!True (ExistFirstBy-WitchIsAlso-preppend-lemma ? ? (fromWitness y) i)!}) y}))
              (λ b → empty-elim (lower (proj₂ b)))
               y)})
 
@@ -121,11 +120,11 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
 
         h-expr (var (dsot x {y})) = var (dsot x { (
             sum-elim (λ a → (inl ((ExistFirstBy-WitchIsAlso-preppend-lemma _ _ a))))
-             -- TODO : figure it out -- (λ a → var (dsot x {transport (λ i → {!True (ExistFirstBy-WitchIsAlso-preppend-lemma ? ? (fromWitness y) i)!}) y}))
+             
              (λ b → empty-elim (lower (proj₂ b)))
               y)})
 
-              --(var (dsot name₁ {transport {!!} y }))
+
         h-expr (stmnts₁ AST.;b x) =
             prependCtxStmnts stmnts₁ AST.;b subst (λ x₁ → Expr x₁ _)
              -- TODO : improve evaluation performance by introducing specialized "subst"
@@ -221,7 +220,8 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
 
 
 
-    evalVar' (AST.con (x₁ ∷ entries₁) scope'') nm (inl (inl x)) (inl x₂) = inr (subst⁻ GTypeAgdaRep (proj₂ (proj₂ x)) x₂)
+    evalVar' (AST.con (x₁ ∷ entries₁) scope'') nm (inl (inl x)) (inl x₂) =
+       inr (subst-GTypeAgdaRep (sym (proj₂ (proj₂ x))) x₂)
     evalVar' (AST.con (x₁ ∷ entries₁) scope'') nm (inl (inr x)) (inl x₂) =
        inl (inl (ExistFirstBy-WitchIsAlso-FilterOut-lemma entries₁ (λ a x₃ y → proj₁ x (x₃ ∙ sym y)) (proj₂ x)))
     evalVar' (AST.con (x₁ ∷ entries₁) scope'') nm (inl (inl x)) (inr x₂) = inl (inl (inl x))
@@ -378,10 +378,11 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
           else evalPureExpr e₂ (proj₂ (proj₂ x))
     evalPureExpr (AST._$'_ f xs) x =
        let z = BuiltIn'.impl (snd (BuiltIns'.getBi builtIns (AST.BI.bIndex f)))
-           q = appV z (transport (cong argsV (AST.BI.dm≡ f)) (evalArgs xs))
-       in (transport⁻ (cong GTypeAgdaRep (AST.BI.cdm≡ f)) q)
+           q = appV z (evalArgs xs) 
+       in subst-GTypeAgdaRep (sym (AST.BI.cdm≡ f)) q
+         --(transport⁻ (cong GTypeAgdaRep (AST.BI.cdm≡ f)) q)
     evalPureExpr (AST.var (AST.dsot name {inl ()})) tt
     evalPureExpr {sc = sc} (AST.sign q {z} {p}) w =
-        subst GTypeAgdaRep p (signPrim (AST.pId-name _ _ _ (IsNotConsensus→Participant
+        subst-GTypeAgdaRep p (signPrim (AST.pId-name _ _ _ (IsNotConsensus→Participant
            {con [] sc}
              z)) (evalPureArg q))

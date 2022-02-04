@@ -52,8 +52,9 @@ module TestTraceNice where
   -- tyEvalTest = traceTestTy (2 , (false , (true , tt)))
 
   tyEvalTest : EState → Type₀
-    -- traceTestTy (x , (x₁ , (x₂ , tt)))
-  tyEvalTest es = ΣM (Input "B" Bool)
+    -- traceTestTy es
+  tyEvalTest es = 
+                  ΣM (Input "B" Bool)
                     (λ x →
                        ×M (Publish "B" "y")
                        (ΣM
@@ -67,29 +68,18 @@ module TestTraceNice where
                                ×M (Withdraw "A" 3) (×M (Deposit "A" 3) (Publish "A" "xx")))))))
                     es
 
-  -- -- -- -- -- traceTestCases : traceTestTy (2 , (false , (true , tt))) → 𝟚 
-  -- -- -- -- -- traceTestCases (false , snd₁) = {!snd₁!}
-  -- -- -- -- -- traceTestCases (true , snd₁) = {!!}
 
-  someTrace :  Σ _ (tyEvalTest)
-  someTrace = 
-      ok ,   "B" inp true
-            ↦ p! "B" ⤇ "y"
-            ↦ br-F {!!} {!!}
-                  -- ("A" inp false)
-            ↦ d! "B" ⤇ 2
-            ↦ "A" inp false
-            ↦ w! "A" ⤆ 3
-            ↦ d! "A" ⤇ 3
-            ↦ p! "A" ⤇ "xx"
-
-  -- -- -- -- traceTestCases : ∀ x y z → tyEvalTest x y z ok → 𝟚
-  -- -- -- -- traceTestCases x y z w = {!!}
-
-
-  -- -- -- -- traceTestCasesF : ∀ x y z → tyEvalTest x y z fail → 𝟚
-  -- -- -- -- traceTestCasesF x y z w = {!!}
-
+  -- someTrace :  Σ _ (tyEvalTest)
+  -- someTrace = 
+  --     ok ,   "B" inp true
+  --           ↦ p! "B" ⤇ "y"
+  --           ↦ br-T refl 
+  --                 ("A" inp false)
+  --           ↦ d! "B" ⤇ 2
+  --           ↦ "A" inp false
+  --           ↦ w! "A" ⤆ 3
+  --           ↦ d! "A" ⤇ 3
+  --           ↦ p! "A" ⤇ "xx"
 
   -- traceTestCases : tyEvalTest ok → Unit 
   -- traceTestCases ((."B" inp x₁) ↦ (p! ."B" ⤇ ."y") ↦ br-T prf-T (."A" inp x) ↦ (d! ."B" ⤇ .2) ↦ (."A" inp x₃) ↦ (w! ."A" ⤆ .3) ↦ (d! ."A" ⤇ .3) ↦ (p! ."A" ⤇ ."xx")) = {!!}

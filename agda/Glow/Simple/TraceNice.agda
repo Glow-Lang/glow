@@ -36,6 +36,8 @@ open import Glow.Simple.ContextMore
 
 open import Glow.Simple.VarSubst
 
+open import Glow.Simple.ParamsSubst
+
 -- open import Glow.Simple.Monad
 
 
@@ -82,6 +84,9 @@ data Require : 𝟚 → EState → Type₀ where
   r!_ : ∀ b → {Bool→Type b}  → Require b ok
   ¬r!_ : ∀ b → {Bool→Type (not b)} → Require b fail
   -- failed-deposit_⟶_ : ∀ s → ∀ k → Deposit s k fail
+
+Require-ok→proof : ∀ {b} → Require b ok → b ≡ true
+Require-ok→proof ((r! true) {y}) = refl
 
 data Input {Identifier : Type₀} : Identifier → GType → EState → Type₀ where
   _inp_ : ∀ s → ∀ {gt} → GTypeAgdaRep gt → Input s gt ok
@@ -247,7 +252,7 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
         h (yes p) (no ¬p) = h'
         h (no ¬p) (yes p) = h'
         h (no ¬p) (no ¬p₁) = h'
-        
+    TraceE sc (AST.sign x₁) x = empty-elim (x tt)
 
     TraceEAlways sc e with (proj₁ (snd (IsPureE e)))
     ... | yes p = returnGMO (evalPureExpr e p)
@@ -281,3 +286,21 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
                        q = TraceE sc (body bo) ¬p₁
                    in ×M (fst z) (fst q) ,
                         snd q ∘ snd-×M
+
+
+  module Helpers where
+
+    -- open AST.InteractionHead {Identifier} {builtIns = builtIns} {one}  
+
+
+    open SubstAll {Identifier} {builtIns = builtIns}
+    open SubstOne {Identifier} {builtIns = builtIns}
+    open ParamsSubst {Identifier} {builtIns = builtIns}
+
+    genTracesType : AST.Interaction Identifier builtIns one → Σ Type₀ λ x → x → EState → Type₀ 
+    genTracesType (AST.interaction head code) =
+       AST.ParametersValue Identifier builtIns one (AST.InteractionHead.parameters head) ,
+          λ paramsV → TraceNice.Trace {(AST.InteractionHead.participants head)} nothing (paramSubst paramsV code)
+
+
+  open Helpers public

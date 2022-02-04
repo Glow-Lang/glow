@@ -234,6 +234,17 @@ GTypeAgdaRep' Digest = Dig-IsGlowTy
 GTypeAgdaRep' Signature = Sig-IsGlowTy
 
 
+subst-GTypeAgdaRep : ∀ {Τ₀ Τ₁} → Τ₀ ≡ Τ₁ → GTypeAgdaRep Τ₀ → GTypeAgdaRep Τ₁
+subst-GTypeAgdaRep {Τ₀} {Τ₁} = h _ _ ∘ fromWitness
+  where
+    h : ∀ Τ₀ Τ₁ → True (Τ₀ ≟ Τ₁) → GTypeAgdaRep Τ₀ → GTypeAgdaRep Τ₁
+    h Bool Bool tt = idfun _
+    h Int Int tt = idfun _
+    h Nat Nat tt = idfun _
+    h Unitᵍ Unitᵍ tt = idfun _
+    h Digest Digest tt = idfun _
+    h Signature Signature tt = idfun _
+
 
 -- data GFunType : Type₀ where
 --   _G→_ : List GType → GType → GFunType
@@ -463,15 +474,27 @@ module _ (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}
     open BuiltIns' builtIns
 
 
-    record BI (dm : List GType) (cdm : GType ) : Type₀ where
-      constructor bi'
+    record BI₀ (dm : List GType) (cdm : GType ) : Type₀ where
+      constructor bi'₀
       field
         bIndex : BuilitInsIndex
         {dm≡} : dm PM≡ proj₁ (fst (getBi bIndex))
         {cdm≡} : cdm PM≡ proj₂ (fst (getBi bIndex))
 
-    bi : (x : BuilitInsIndex) → BI (proj₁ (fst (getBi x))) ((proj₂ (fst (getBi x))))
-    bi x = bi' x {toWitness'bck refl} {toWitness'bck refl}
+
+    record BI (cdm : GType ) : Type₀ where
+      constructor bi'
+      field
+        bIndex : BuilitInsIndex
+        -- {dm≡} : dm PM≡ proj₁ (fst (getBi bIndex))
+        {cdm≡} : cdm PM≡ proj₂ (fst (getBi bIndex))
+
+
+    getBI-Dm : ∀ {cdm} → BI cdm → List GType 
+    getBI-Dm x = proj₁ (fst (getBi (BI.bIndex x )))
+
+    bi : (x : BuilitInsIndex) → BI ((proj₂ (fst (getBi x))))
+    bi x = bi' x {toWitness'bck refl}
 
     isSetIdentifier = Discrete→isSet (IsDiscrete.eqTest IsDiscrete-Identifier)
 
@@ -505,7 +528,7 @@ module _ (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}
                                → GTypeAgdaRep (type x)
     lookup-ParametersValue (x₃ ∷ l) (x₁ , x₂) x ex =
        dec-rec (x ≡ x₃)
-          (λ p → subst (GTypeAgdaRep) (cong type (sym p)) x₁)
+          (λ p → subst-GTypeAgdaRep (cong type (sym p)) x₁)
           (λ ¬p → lookup-ParametersValue l x₂ x (ExistMemberAs-¬head→tail ex ¬p)) -- ?
 
     IsParticipantId : {participants : List Identifier} → Identifier → DecPropΣ 
@@ -743,7 +766,7 @@ module _ (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}
         var : DefinedSymbolOfTy Γ Τ → Expr Γ Τ
         body : Body Γ Τ → Expr Γ Τ
         lit : GTypeAgdaRep Τ → Expr Γ Τ
-        _$'_ : ∀ {Τs} → BI Τs Τ → Args Γ Τs → Expr Γ Τ
+        _$'_ : (x : BI Τ) → Args Γ (getBI-Dm x) → Expr Γ Τ
         input : String → {_ : PM (IsNotConsensus Γ) } → Expr Γ Τ
         sign : Arg Γ Digest → {_ : PM (IsNotConsensus Γ) } → {_ : Signature PM≡ Τ} → Expr Γ Τ
         
@@ -843,7 +866,7 @@ module _ (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}
                    ∀ Τ s → 
                    IsMemberOf (iwt s Τ) l →
                    GTypeAgdaRep Τ
-    toParamValue (x₂ ∷ l) (x , xs) Τ s (inl p) = subst (GTypeAgdaRep) (cong type (sym p)) x -- 
+    toParamValue (x₂ ∷ l) (x , xs) Τ s (inl p) = subst-GTypeAgdaRep (cong type (sym p)) x -- 
     toParamValue (x₂ ∷ l) (x , xs) Τ s (inr (_ , x₁)) = (toParamValue l xs Τ s x₁) --
 
 
@@ -918,6 +941,7 @@ module _ (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}
     infixr 60 v_
 
     pattern v_ x = var (dsot x)
+    pattern va_ x = var-a (dsot x)
 
   open AST
 

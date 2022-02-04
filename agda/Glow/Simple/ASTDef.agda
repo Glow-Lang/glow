@@ -34,6 +34,8 @@ open import Glow.DecEqMore
 
 open import Glow.Simple.AST
 
+open import Glow.Simple.Postulates
+
 
 
 instance
@@ -50,7 +52,13 @@ BuiltIns'.getBi Basic-BuiltIns = h
     h "and" = ( Bool ∷  [ Bool ] , Bool) , (builitIn _and_)
     h "or" = ( Bool ∷  [ Bool ] , Bool) , (builitIn _or_)
     h "+ℕ" = ( Nat ∷  [ Nat ] , Nat) , (builitIn Cubical.Data.Nat._+_)
-    h "randomUInt256" = ([] , Int) , (builitIn randomUInt256Prim)
+    h "*ℕ" = ( Nat ∷  [ Nat ] , Nat) , (builitIn Cubical.Data.Nat._·_)
+    h "^^^" = ( Nat ∷  [ Nat ] , Nat) , (builitIn ^^^Prim)
+    h "&&&" = ( Nat ∷  [ Nat ] , Nat) , (builitIn &&&Prim)
+    h "randomUInt256" = ([] , Nat) , (builitIn randomUInt256Prim)
+    h "digestNat" = ([ Nat ] , Digest) , (builitIn digestPrim)
+    h "==Digest" = (Digest ∷ Digest ∷ [] , Bool) , (builitIn digestEqTestPrim)
+    h "==Nat" = (Nat ∷ Nat ∷ [] , Bool) , (builitIn (λ x x₁ → Dec→Bool (x ≟ x₁)))
     h _ = ([] , Unitᵍ) , builitIn _
 
 

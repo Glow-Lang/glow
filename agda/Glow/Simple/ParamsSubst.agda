@@ -36,7 +36,7 @@ open import Cubical.HITs.Interval
 
 module ParamsSubst {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}}
               {BuilitInsIndex : Type₀} {{IsDiscrete-BuilitInsIndex : IsDiscrete BuilitInsIndex}}
-              (builtIns : BuiltIns' BuilitInsIndex {{IsDiscrete-BuilitInsIndex}}) where
+              {builtIns : BuiltIns' BuilitInsIndex {{IsDiscrete-BuilitInsIndex}}} where
 
   prop-mode = one
   
@@ -125,7 +125,7 @@ module ParamsSubst {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete I
       h-expr (input msg {y}) = input msg {y}
       -- h-expr (receivePublished x {y}) = publishVal x {y}
       h-expr (if b then t else f) = if (h-expr b) then (h-expr t) else (h-expr f)
-      h-expr (AST.sign q {y}) = (AST.sign (h-expr q) {y})
+      h-expr (AST.sign q {y} {w}) = (AST.sign (h-arg q) {y} {w})
       h-expr (AST.receivePublished x x₁ {y}) = AST.receivePublished x x₁ {y}
 
       hh : (Γ : Context ih) (x : Stmnt _ Γ) →
