@@ -459,6 +459,13 @@ module _ (BuilitInsIndex : Type₀) {{IsDiscrete-BuilitInsIndex : IsDiscrete Bui
 
 
 
+ParticipantModality : Type₀
+ParticipantModality = 𝟚
+
+honest dishonest : ParticipantModality 
+honest = true
+dishonest = false
+
 
 
 module _ (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}}
@@ -536,11 +543,50 @@ module _ (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}
         ExistMemberAs (name ≡_) participants
           , ?? _ , Is-Prop-ExistMemberAs _ _ (isSetIdentifier _)
 
+    IsHonestParticipantId : {participants : List (Identifier × ParticipantModality)} → Identifier → DecPropΣ 
+    IsHonestParticipantId {participants} name =
+        let q : (Identifier × ParticipantModality) → Σ Type (λ x → Dec x × isProp x)
+            q = (λ x → (×-dp (name DP≡ (proj₁ x)) (honest DP≡ (proj₂ x)))  )
+        in ExistMemberAs (λ x → fst (q x)  ) participants
+              , Dec-ExistMemberAs {{dec-pred (λ x → proj₁ (snd (q x)))}}
+                , Is-Prop-ExistMemberAs _ _ (λ x → proj₂ (snd (q x)))
+
+
+    IsDishonestParticipantId : {participants : List (Identifier × ParticipantModality)} → Identifier → DecPropΣ 
+    IsDishonestParticipantId {participants} name =
+        let q : (Identifier × ParticipantModality) → Σ Type (λ x → Dec x × isProp x)
+            q = (λ x → (×-dp (name DP≡ (proj₁ x)) (dishonest DP≡ (proj₂ x)))  )
+        in ExistMemberAs (λ x → fst (q x)  ) participants
+              , Dec-ExistMemberAs {{dec-pred (λ x → proj₁ (snd (q x)))}}
+                , Is-Prop-ExistMemberAs _ _ (λ x → proj₂ (snd (q x)))
+
+
+
+    -- IsHonest : {participantsWH : List (Identifier × ParticipantModality)}
+    --               → (x : Identifier) → PM ( IsParticipantId {map-List proj₁ participantsWH} x )
+    --               → DecPropΣ 
+    -- IsHonest x x₁ = {!
+    -- !}
+
     data ParticipantId' {participants : List Identifier} : Type₀ where
       pId : (name : Identifier) → {isIn :  PM ( IsParticipantId {participants} name ) } → ParticipantId'
 
+    data HonestParticipantId' {participants : List (Identifier × ParticipantModality)} : Type₀ where
+      pId : (name : Identifier) → {isIn :  PM ( IsHonestParticipantId {participants} name ) } → HonestParticipantId'
+
+    data DishonestParticipantId' {participants : List (Identifier × ParticipantModality)} : Type₀ where
+      pId : (name : Identifier) → {isIn :  PM ( IsDishonestParticipantId {participants} name ) } → DishonestParticipantId'
+
+
+
     pId-name : ∀ {ptps} → ParticipantId' {ptps} → Identifier
     pId-name (pId name₁) = name₁
+
+    pId-nameHon : ∀ {ptps} → HonestParticipantId' {ptps} → Identifier
+    pId-nameHon (pId name₁) = name₁
+
+    pId-nameDishon : ∀ {ptps} → DishonestParticipantId' {ptps} → Identifier
+    pId-nameDishon (pId name₁) = name₁
 
     -- record ParticipantId' {participants : List Identifier} : Type₀ where
     --   constructor pId
@@ -552,25 +598,29 @@ module _ (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}
     open ParticipantId' public
 
 
-    Scope' : {participants : List Identifier} → Type₀
-    Scope' {participants} = Maybe (ParticipantId' {participants})
+    Scope' : {participants : List (Identifier × ParticipantModality)} → Type₀
+    Scope' {participants} = Maybe (HonestParticipantId' {participants})
 
     _CanAccess_ : ∀ {ps} → Scope' {ps} → Scope' {ps} → DecPropΣ
     _ CanAccess nothing = Unit , ?? _ , λ x y i → tt
-    just x CanAccess just x₁ = ((pId-name x) ≡ (pId-name x₁)) , ?? _ , isSetIdentifier _ _
+    just x CanAccess just x₁ = ((pId-nameHon x) DP≡ (pId-nameHon x₁))
     nothing CanAccess just x₁ = Empty , ?? _ , isProp⊥
 
     AllowedScopeNarrowing' : ∀ {ps} → Scope' {ps} → Scope' {ps} → DecPropΣ
     AllowedScopeNarrowing' s nothing = Unit , yes _ , λ x y i → tt
-    AllowedScopeNarrowing' s (just x) = caseMaybe (Unit , yes _ , λ x₁ y i → tt ) (Empty , no (idfun _) , isProp⊥) s
+    AllowedScopeNarrowing' s (just x) =
+       caseMaybe
+          Unit-dp
+          Empty-dp
+           s
 
 
 
-    record ContextEntry' {participants : List Identifier} : Type₀ where
+    record ContextEntry' {participantsWM : List (Identifier × ParticipantModality)} : Type₀ where
       constructor ice
 
       field
-        scope : Scope' {participants}
+        scope : Scope' {participantsWM}
         name : Identifier
         type : GType
 
@@ -586,22 +636,29 @@ module _ (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}
       -- inductive
       pattern
       field
-        participants : List Identifier
+        participantsWM : List (Identifier × ParticipantModality)
         parameters : List IdentifierWithType
         {uniqueParams} : PM (_ , UniqueByDec≡ name parameters , isProp-UniqueBy _ _ )
+        {uniquePtcpnts} : PM (_ , UniqueByDec≡ proj₁ participantsWM , isProp-UniqueBy _ _ )
 
-
+      participants = map-List proj₁ participantsWM
 
 
 
       ParticipantId : Type₀
       ParticipantId = ParticipantId' {participants}
 
+      HonestParticipantId : Type₀
+      HonestParticipantId = HonestParticipantId' {participantsWM}
+
+      DishonestParticipantId : Type₀
+      DishonestParticipantId = DishonestParticipantId' {participantsWM}
+
 
       Scope : Type₀
-      Scope = Maybe ParticipantId
+      Scope = Maybe HonestParticipantId
 
-      ContextEntry = ContextEntry' {participants}
+      ContextEntry = ContextEntry' {participantsWM}
 
       AType : ContextEntry → Type₀
       AType ce = GTypeAgdaRep (ce .type)
@@ -654,16 +711,16 @@ module _ (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}
         open DefinedSymbolOfTy public
 
 
-        IsPrivateSymbolOf : ParticipantId → Identifier → DecPropΣ
+        IsPrivateSymbolOf : HonestParticipantId → Identifier → DecPropΣ
         IsPrivateSymbolOf p x = 
            ExistFirstBy ((x ≡_) ∘ name)
-              WitchIsAlso (λ y → recMaybe Empty (λ p' → (pId-name p) ≡ (pId-name p')) (scope y)) entries
+              WitchIsAlso (λ y → recMaybe Empty (λ p' → (pId-nameHon p) ≡ (pId-nameHon p')) (scope y)) entries
              , Dec-ExistFirstBy_WitchIsAlso {{Dec-Pred-B' = Dec-Pred-Maybe {f = scope}}}
                , ExistFirstBy-WitchIsAlso-isProp _ (λ x₁ → isSetIdentifier _ _)
                   λ y → recMaybe-Empty-isProp ((λ x₁ → isSetIdentifier _ _)) (scope y)
 
 
-        data PrivateSymbolOf (p : ParticipantId) : Type ℓ-zero where
+        data PrivateSymbolOf (p : HonestParticipantId) : Type ℓ-zero where
           psof : (name : Identifier) → {isDefinedSymbolOf : PM ( IsPrivateSymbolOf p name ) } → PrivateSymbolOf p 
 
         psof-name : ∀ {p} → PrivateSymbolOf p → Identifier
@@ -687,7 +744,7 @@ module _ (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}
 
       open Context public
 
-      IsNotConsensus→Participant : ∀ {Γ} → PM (IsNotConsensus Γ) → ParticipantId
+      IsNotConsensus→Participant : ∀ {Γ} → PM (IsNotConsensus Γ) → HonestParticipantId
       IsNotConsensus→Participant {con entries₁ nothing} x = empty-elim (toWitness' x)
       IsNotConsensus→Participant {con entries₁ (just x₁)} x = x₁
 
@@ -772,7 +829,7 @@ module _ (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}
         
 
         -- this is temporary solution, this constructors cannot apear in code, and are introduced on some passes, this distinction must be typesafe in the future! 
-        receivePublished : ParticipantId → GTypeAgdaRep Τ → {_ : PM (IsConsensus Γ) } → Expr Γ Τ
+        receivePublished : DishonestParticipantId → GTypeAgdaRep Τ → {_ : PM (IsConsensus Γ) } → Expr Γ Τ
 
         if_then_else_ : Expr Γ Bool → Expr Γ Τ → Expr Γ Τ → Expr Γ Τ
 
@@ -786,7 +843,7 @@ module _ (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}
                       -- (TODO : consider speical type here)
         BS-let : (ce : ContextEntry) → {asn : PM  (AllowedScopeNarrowing Γ (scope ce) )}
                     → Expr (narrow Γ (scope ce) asn) (type ce) → BStmnt Γ    
-        BS-publish! : (p : ParticipantId) → (PrivateSymbolOf Γ p)
+        BS-publish! : (p : HonestParticipantId) → (PrivateSymbolOf Γ p)
                                → {_ : PM ( IsConsensus Γ ) } →  BStmnt Γ
 
       data NBStmnt Γ where
@@ -795,7 +852,7 @@ module _ (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}
         NBS-withdraw! : ParticipantId → {_ : PM ( IsConsensus Γ ) } → Expr Γ Nat → NBStmnt Γ
         -- this is temporary solution, this constructors cannot apear in code, and are introduced on some passes, this distinction must be typesafe in the future!
         -- beter solution is commented, but needs additional coherence conditions to work
-        NBS-publishVal! : ParticipantId → Identifier → {_ : PM ( IsConsensus Γ ) } → NBStmnt Γ
+        NBS-publishVal! : HonestParticipantId → Identifier → {_ : PM ( IsConsensus Γ ) } → NBStmnt Γ
 
       data NBStmnt+Expr Γ where
         stmntNBS : NBStmnt Γ → NBStmnt+Expr Γ

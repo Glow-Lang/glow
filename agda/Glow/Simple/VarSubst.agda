@@ -55,9 +55,10 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
 
 
 
-  module AlwaysCanPrepend {ptps : List Identifier} (ce : AST.ContextEntry (AST.interactionHead ptps []) ) where
+  module AlwaysCanPrepend {ptps : List (Identifier × ParticipantModality)} {uniquePtps : _}
+                          (ce : AST.ContextEntry (AST.interactionHead ptps [] {_} {uniquePtps}) ) where
 
-    open AST.InteractionHead {Identifier} {builtIns = builtIns} {one} (AST.interactionHead ptps []) 
+    open AST.InteractionHead {Identifier} {builtIns = builtIns} {one} (AST.interactionHead ptps [] {_} {uniquePtps}) 
 
 
     
@@ -148,11 +149,11 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
 
 
   -- TODO : provide alternative implementation, substituting multiple variables in one pass, compare performance
-  module SubstOne {ptps : List Identifier} where
+  module SubstOne {ptps : List (Identifier × ParticipantModality)} {uniquePtps : _} where
   
     -- module AST* = AST Identifier builtIns one
 
-    open AST.InteractionHead {Identifier} {builtIns = builtIns} {one} (AST.interactionHead ptps []) 
+    open AST.InteractionHead {Identifier} {builtIns = builtIns} {one} (AST.interactionHead ptps [] {_} {uniquePtps}) 
 
 
 
@@ -315,9 +316,9 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
        map-Linked'-map-fold {fld' = bindingMechanics'} (λ v → remSubst (fst v) (snd v)) (λ {ΓRec} → substOneStmnt (snd ΓRec))
                          (λ ΓRec →  substOneStmnts-coh (fst ΓRec) (snd ΓRec)) (mkStatements* {_} {r} stmnts₁)
 
-  module SubstAll {ptps : List Identifier} where
+  module SubstAll {ptps : List (Identifier × ParticipantModality)} {uniquePtps : _} where
 
-    open AST.InteractionHead {Identifier} {builtIns = builtIns} {one} (AST.interactionHead ptps []) 
+    open AST.InteractionHead {Identifier} {builtIns = builtIns} {one} (AST.interactionHead ptps [] {_} {uniquePtps}) 
 
 
     {-# TERMINATING #-}
@@ -383,6 +384,6 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
          --(transport⁻ (cong GTypeAgdaRep (AST.BI.cdm≡ f)) q)
     evalPureExpr (AST.var (AST.dsot name {inl ()})) tt
     evalPureExpr {sc = sc} (AST.sign q {z} {p}) w =
-        subst-GTypeAgdaRep p (signPrim (AST.pId-name _ _ _ (IsNotConsensus→Participant
+        subst-GTypeAgdaRep p (signPrim (AST.pId-nameHon _ _ _ (IsNotConsensus→Participant
            {con [] sc}
              z)) (evalPureArg q))

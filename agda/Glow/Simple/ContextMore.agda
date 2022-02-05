@@ -47,11 +47,11 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
 
   -- open AST Identifier
 
-  module _ {ptps : List Identifier} where
+  module _ {ptps : List (Identifier × ParticipantModality)} {uniquePtps : _} where
   
     -- module AST* = AST Identifier builtIns one
 
-    open AST.InteractionHead {Identifier} {builtIns = builtIns} {one} (AST.interactionHead ptps []) 
+    open AST.InteractionHead {Identifier} {builtIns = builtIns} {one} (AST.interactionHead ptps [] {_} {uniquePtps}) 
 
      
 
@@ -111,12 +111,12 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
 
 
     publish-substlemma : {c : Context} (r : Subst c)
-                       (p : AST.ParticipantId (AST.interactionHead ptps parameters))
+                       (p : AST.HonestParticipantId (AST.interactionHead ptps parameters {_} {uniquePtps}))
                        (x : AST.PrivateSymbolOf c p)
                        (z : ⟨ AST.IsConsensus c ⟩) →
                      Subst (bindingMechanics' c (bindingS (BS-publish! p x {z})))
     publish-substlemma r p x _ = map-ExistingFirstBy-lemma (λ x₁ → psof-name _ x ≡ AST.name x₁) (λ y →
-                                                                                                  recMaybe Empty (λ p' → AST.pId-name _ _ _ p ≡ AST.pId-name _ _ _ p')
+                                                                                                  recMaybe Empty (λ p' → AST.pId-nameHon _ _ _ p ≡ AST.pId-nameHon _ _ _ p')
                                                                                                   (AST.scope y))  (psof-proof _ x) (λ _ → nothing) r
 
 
@@ -159,12 +159,12 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
     SubstMatch-Extract B' (AST.ice scope name type ∷ l) nm (inl x₂) (inl x₃) x = type , x₂
     SubstMatch-Extract B' (x₁ ∷ l) nm (inr x₂) (inr x₃) x = SubstMatch-Extract B' l nm x₂ (proj₂ x₃) x 
 
-    ExistFirstBy-WitchIsAlso-remSubs-lemm : {nm : Identifier} {p : ParticipantId} (l : List ContextEntry) → (r : Subst' l)  →
+    ExistFirstBy-WitchIsAlso-remSubs-lemm : {nm : Identifier} {p : HonestParticipantId} (l : List ContextEntry) → (r : Subst' l)  →
                                                       (z : ExistFirstBy ((nm ≡_) ∘ ce-name) WitchIsAlso
-                                                        ((λ y → recMaybe Empty (λ p' → (AST.pId-name _ _ _ p) ≡ (AST.pId-name _ _ _ p')) (ce-scope y))) l) →
+                                                        ((λ y → recMaybe Empty (λ p' → (AST.pId-nameHon _ _ _ p) ≡ (AST.pId-nameHon _ _ _ p')) (ce-scope y))) l) →
                                                         
                                                       ((SubstNotMatchEntry _ _ _ r z × ExistFirstBy ((nm ≡_) ∘ ce-name) WitchIsAlso
-                                                         ((λ y → recMaybe Empty (λ p' → (AST.pId-name _ _ _ p) ≡ (AST.pId-name _ _ _ p')) (ce-scope y)))
+                                                         ((λ y → recMaybe Empty (λ p' → (AST.pId-nameHon _ _ _ p) ≡ (AST.pId-nameHon _ _ _ p')) (ce-scope y)))
                                                          (remSubst' l r))
                                                        ⊎ (SubstMatchEntry _ _ _ r z  × IsEmpty (ExistMemberAs ((nm ≡_) ∘ ce-name) (remSubst' l r))))
     ExistFirstBy-WitchIsAlso-remSubs-lemm (x₁ ∷ l) (inl x) (inl x₂) =  

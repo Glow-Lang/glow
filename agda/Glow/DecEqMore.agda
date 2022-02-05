@@ -436,3 +436,14 @@ bindMaybe : {A : Type₀} {B : Type₀}  → Maybe A → (A → Maybe B) → May
 bindMaybe nothing x₁ = nothing
 bindMaybe (just x) x₁ = x₁ x
 
+-- TrueDP : Bool → DecPropΣ
+-- TrueDP false = Empty-dp
+-- TrueDP true = Unit-dp
+
+-- FalseDP : Bool → DecPropΣ
+-- FalseDP true = Empty-dp
+-- FalseDP false = Unit-dp
+
+-- Bool→TypeDP : Bool → Bool → DecPropΣ
+-- Bool→TypeDP false = FalseDP
+-- Bool→TypeDP true = TrueDP

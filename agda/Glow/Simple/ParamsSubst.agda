@@ -47,7 +47,7 @@ module ParamsSubst {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete I
   -- open InteractionHead
 
   stripParamsHead : InteractionHead → InteractionHead 
-  stripParamsHead ih = interactionHead (participants ih) []
+  stripParamsHead ih = interactionHead (participantsWM ih) [] {_} {uniquePtcpnts ih}
 
 
   stripParamsCtx : ∀ {ih : _} → Context ih → Context (stripParamsHead ih)
@@ -130,7 +130,7 @@ module ParamsSubst {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete I
 
       hh : (Γ : Context ih) (x : Stmnt _ Γ) →
          stripParamsCtx (bindingMechanics' _ Γ x) ≡
-         bindingMechanics' (interactionHead (participants ih) [])
+         bindingMechanics' (interactionHead (participantsWM ih) [])
          (stripParamsCtx Γ) (h x)
       hh _ (bindingS (BS-let _ _)) = refl 
       hh _ (AST.bindingS (AST.BS-publish! _ (AST.psof name₁))) = refl
