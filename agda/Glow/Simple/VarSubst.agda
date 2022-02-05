@@ -36,6 +36,8 @@ open import Glow.Simple.ContextMore
 
 open import Glow.Simple.Postulates
 
+open import Glow.ListDecProps
+
 
 open import Cubical.HITs.Interval
 

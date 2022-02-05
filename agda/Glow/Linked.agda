@@ -60,6 +60,27 @@ data Linked' {C} {A} fld c  where
   []L : Linked' fld c
   _∷L_ : (h : A c) → (Linked' fld (fld _ h)) → Linked' fld c
 
+Linked'-F : {C : Type₀} {A : C → Type₀} 
+                (F : Type₀ → Type₀) → (∀ c → (A c → C) → F (A c) → C)
+                → (fld : ∀ c → A c → C) (c : C) → Type₀
+Linked'-F {C} {A} F g fld c  =
+   Linked' {C} {F ∘ A} (λ c₁ → g c₁ (fld c₁)) c 
+
+Linked'-Maybe : {C : Type₀} {A : C → Type₀} (fld : ∀ c → A c → C) (c : C) → Type₀
+Linked'-Maybe {C} = Linked'-F Maybe λ c → recMaybe {B = C} c 
+
+toLinked'-Maybe : {C : Type₀} {A : C → Type₀} (fld : ∀ c → A c → C) (c : C)
+                      → Linked' fld c → Linked'-Maybe fld c
+toLinked'-Maybe {C} {A} fld c []L = []L
+toLinked'-Maybe {C} {A} fld c (h ∷L x) = (just h ∷L toLinked'-Maybe _ _ x)
+
+fromLinked'-Maybe : {C : Type₀} {A : C → Type₀} (fld : ∀ c → A c → C) (c : C)
+                       → Linked'-Maybe fld c → Linked' fld c
+fromLinked'-Maybe {C} {A} fld c []L = []L
+fromLinked'-Maybe {C} {A} fld c (nothing ∷L x) = fromLinked'-Maybe {C} {A} fld c x
+fromLinked'-Maybe {C} {A} fld c (just x₁ ∷L x) = x₁ ∷L fromLinked'-Maybe {C} {A} _ _ x 
+
+
 Linked'-len : {C : Type₀} {A : C → Type₀} {fld : ∀ c → A c → C} {c : C} → Linked' fld c → ℕ
 Linked'-len []L = zero
 Linked'-len (h ∷L x) = suc (Linked'-len x)
@@ -155,7 +176,7 @@ map-Linked'-map-fold-bck g f e l =
     (Linked'-of-len<-len l)
 
 
---------- filter Map
+--------- filter
 
 filter-Linked' : {C : Type₀} { A : C → Type₀} {fld : ∀ c → A c → C}
                    (f :  ∀ {c} → (x : A c) →  Maybe ((Linked' fld (fld c x) → Linked' fld c)))
@@ -166,6 +187,54 @@ filter-Linked' f (h ∷L x) =
    recMaybe ( (h ∷L filter-Linked' f x))
              (λ y → y x)
              (f h)
+
+
+
+--------- filterMap
+
+filter-map-Linked' : {C C' : Type₀} {A : C → Type₀} {A' : C' → Type₀}
+                                    {fld : ∀ c → A c → C} {fld' : ∀ c → A' c → C'}
+                                    (g : C → C')
+                                  → (f :  ∀ {c} → A c → Maybe (A' (g c)) )
+                                  → ((c : C) (x : A c) → g (fld c x) ≡ recMaybe (g c) (fld' (g c)) (f x))
+                   → {c : C} → Linked' fld c → Linked' fld' (g c)
+
+filter-map-Linked' {C} {C'} g f x =
+   fromLinked'-Maybe _ _ ∘ (map-Linked'-map g f x)
+
+
+
+--- collect sigma
+
+Linked'-collect-Σ : {C : Type₀}
+                     {D : C → Type₀}
+                     { A : C → Type₀} 
+                        {fld : ∀ c → A c → C}
+                        {fld-D : ∀ c → (a : A c) → D c →  D (fld c a)}
+                   → {c : C} → (d : D c)
+                   → Linked' fld c → Linked' {Σ _ D} ((λ c₁ x₁ → fld (fst c₁) x₁ , fld-D (fst c₁) x₁ (snd c₁))) (c , d)
+Linked'-collect-Σ d []L = []L
+Linked'-collect-Σ d (h ∷L x) = h ∷L (Linked'-collect-Σ _ x)
+----- map linked sigma
+
+map-Linked'-map-Σ : {C C' : Type₀}
+                     {D : C → Type₀}
+                     { A : C → Type₀} {A' : C' → Type₀}
+                        {fld : ∀ c → A c → C}
+                        {fld-D : ∀ c → (a : A c) → D c →  D (fld c a)}
+                        {fld' : ∀ c → A' c → C'}
+                   (g : ∀ c → D c → C') → (f :  ∀ {c} → ∀ d → A c → A' (g c d) )
+                    → (∀ c → ∀ d → (x : A c) → g (fld c x) (fld-D c x d) ≡ fld' (g c d) (f d x))
+                   → {c : C} → ∀ d
+                   → Linked' fld c → Linked' fld' (g c d)
+                  
+map-Linked'-map-Σ {C' = C'} {D = D} {A} {A'} {fld = fld} {fld-D} {fld' = fld'} g f x d =
+              map-Linked'-map {Σ _ D} {C'} {A ∘ fst} {A'}
+                        {fld = λ c₁ x₁ → fld (fst c₁) x₁ , fld-D (fst c₁) x₁ (snd c₁)}
+                        {fld' = fld'} 
+                       (λ x₁ → g _ (snd x₁)) (λ {y} → f (snd y)) (λ d → x (fst d) (snd d)) {_ , d}
+            ∘  Linked'-collect-Σ d
+-- map-Linked'-map
 
 -- map-Linked'-map g f e []L = []L
 -- map-Linked'-map {C = C} {C' = C'} {fld = fld} {fld' = fld'} g f e {c} (h ∷L x) =

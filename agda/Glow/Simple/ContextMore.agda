@@ -34,6 +34,8 @@ open import Glow.Simple.AST
 
 open import Cubical.HITs.Interval
 
+open import Glow.ListDecProps
+
 
 module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}}
             {BuilitInsIndex : Type₀} {{IsDiscrete-BuilitInsIndex : IsDiscrete BuilitInsIndex}}

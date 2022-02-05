@@ -237,6 +237,106 @@ ExistFirstBy-WitchIsAlso-FilterOut-lemma2' {B = B} {B' = B'} {{Dec-Pred-B}} (x�
 
 
 
+-- ExistMemberAs-map-subst : ∀ {ℓ ℓ'} → {A : Type ℓ} → {B B' : A → Type ℓ'}
+--                      → (l : List A)
+--                      → (∀ {a} → B a → B' a) → (∀ {a} → B' a → B a)
+--                      → ExistMemberAs B l → ExistMemberAs B' l 
+-- ExistMemberAs-map-subst (x₃ ∷ l) x x₁ = map-sum x (map-prod (_∘ x₁) (ExistMemberAs-map-subst  l x x₁))
+
+
+-- ExistMemberAs-mapExisting : ∀ {ℓ ℓ'} → {A : Type ℓ} → {B : A → Type ℓ'}
+--                     → (A → A) → (l : List A) 
+--                     → ExistMemberAs B l
+--                     → List A
+-- ExistMemberAs-mapExisting f (x₁ ∷ l) (inl x) = f x₁ ∷ l
+-- ExistMemberAs-mapExisting f (x₁ ∷ l) (inr x) = x₁ ∷ (ExistMemberAs-mapExisting f l (proj₂ x))
+
+-- ExistMemberAs-mapExisting-stillUnique-lem :
+--                     ∀ {ℓ ℓ' ℓ''} → {A : Type ℓ} → {B : A → Type ℓ'} → {R : A → A → Type ℓ''}
+--                     → (f : A → A) → (l : List A) → (y : ExistMemberAs B l)
+--                     → (∀ {a a'} →  R a (f a') → R a a' )
+--                     → (∀ {a a'} → R a a' → R a (f a') )
+--                     → ∀ x₃
+--                     → ExistMemberAs (R x₃) (ExistMemberAs-mapExisting f l y)
+--                     → ExistMemberAs (R x₃) l
+-- ExistMemberAs-mapExisting-stillUnique-lem f (x₄ ∷ l) (inl x₅) x x₁ x₃ = map-sum x (map-prod (_∘ x₁) (idfun _))
+-- ExistMemberAs-mapExisting-stillUnique-lem f (x₄ ∷ l) (inr x₅) x x₁ x₃ =
+--   map-sum (idfun _) (map-prod (idfun _)
+--       (ExistMemberAs-mapExisting-stillUnique-lem f l (proj₂ x₅)
+--         (λ {a} {a'} x₅ → x {a} {a'} x₅)
+--             (λ {a} {a'} x₅ → x₁ {a} {a'} x₅)
+--         x₃))
+
+-- ExistMemberAs-mapExisting-stillUnique :
+--                     ∀ {ℓ ℓ' ℓ''} → {A : Type ℓ} → {B : A → Type ℓ'} → {R : A → A → Type ℓ''}
+--                     → (f : A → A) → (l : List A) → (y : ExistMemberAs B l)
+--                     → (∀ {a a'} →  R (f a) a' → R a a' )
+--                     → (∀ {a a'} → R a a' → R (f a) a' )
+--                     → (∀ {a a'} →  R a (f a') → R a a' )
+--                     → (∀ {a a'} → R a a' → R a (f a') )
+--                     → UniqueBy R l
+--                     → UniqueBy R (ExistMemberAs-mapExisting f l y)
+-- ExistMemberAs-mapExisting-stillUnique f (x₃ ∷ l) (inl x₄) x x₁ z z₁ x₂ =
+--   proj₁ x₂ ∘ ExistMemberAs-map-subst _ (x) (x₁) , (proj₂ x₂)
+-- ExistMemberAs-mapExisting-stillUnique f (x₃ ∷ l) (inr x₄) x x₁ z z₁ x₂ =
+--   proj₁ x₂ ∘ (λ a → ExistMemberAs-mapExisting-stillUnique-lem f l (proj₂ x₄)
+--             (λ {a} {a'} x₅ → z {a} {a'} x₅)
+--             (λ {a} {a'} x₅ → z₁ {a} {a'} x₅) x₃ a)
+--          , ExistMemberAs-mapExisting-stillUnique _ _ _ x x₁ z z₁ (proj₂ x₂)
+
+
+-- ExistMemberAs-mapExisting-mapProp' :
+--                     ∀ {ℓ ℓ' ℓ''} → {A : Type ℓ} → {B B' : A → Type ℓ'} → {R : A → A → Type ℓ''}
+--                       (l : List A) 
+--                     → UniqueBy R l
+--                     → (a* : A)
+--                     → (∀ (a a' : A) → B' a' → B a  → R a' a)
+--                     → (∀ (a a' : A) → B' a' → R a' a → IsEmpty (B a) → B' a)
+--                     → B' a* → ExistMemberAs B l → ExistMemberAs (R a*) l
+-- ExistMemberAs-mapExisting-mapProp' (x₃ ∷ l) x a* x₁ x₁' x₂ =
+--   map-sum (x₁ _ _ x₂)
+--     λ x₄ →
+--           (λ x₅ → proj₁ x (ExistMemberAs-mapExisting-mapProp' l (proj₂ x) x₃ x₁ x₁'
+--             ((x₁' _ _ x₂ x₅ (proj₁ x₄))) (proj₂ x₄)))
+--          , (ExistMemberAs-mapExisting-mapProp' l (proj₂ x) a* x₁ x₁' x₂ (proj₂ x₄))
+         
+
+-- ExistMemberAs-mapExisting-mapProp :
+--                     ∀ {ℓ ℓ' ℓ'''} → {A : Type ℓ} → {B B' : A → Type ℓ'} → {R : A → A → Type ℓ'''}
+--                     → (f : A → A) → (l : List A) 
+--                     → (∀ {a} → B a → B' (f a)) 
+--                     → UniqueBy R l
+--                     → (∀ (a a' : A) →  B' a' → B a → R a' a)
+--                     → (∀ (a a' : A) → B' a' → R a' a → IsEmpty (B a) → B' a)
+--                     → (y : ExistMemberAs B l)
+--                     → ExistMemberAs B' (ExistMemberAs-mapExisting f l y)
+-- ExistMemberAs-mapExisting-mapProp f (x₂ ∷ l) x _ _ _ (inl x₃) = inl (x x₃)
+-- ExistMemberAs-mapExisting-mapProp f (x₂ ∷ l) x u q q' (inr x₃) =
+--   inr ((λ x₄ → proj₁ u (ExistMemberAs-mapExisting-mapProp' l (proj₂ u) x₂ q q' x₄ (proj₂ x₃)))
+--      , ExistMemberAs-mapExisting-mapProp f l x (proj₂ u) q q' (proj₂ x₃))
+
+
+-- ExistMemberAs-mapExisting-help : ∀ {ℓ ℓ'} → {A C : Type ℓ} → {B B' : A → Type ℓ'} → {r : A → C} → {{Discrete C}}
+--                                  → ∀ l
+--                                  → (UniqueBy {A = A} (λ x x₁ → r x ≡ r x₁) l)
+--                                  → ExistMemberAs B l
+--                                  → (f : A → Σ _ B')
+--                                  → (∀ a → (r ∘ (fst ∘ f)) a ≡ r a)
+--                                  → ((a a' : A) → B' a' → B a → r a' ≡ r a)
+--                                  → ((a a' : A) → B' a' → r a' ≡ r a → IsEmpty (B a) → B' a)
+--                                  → Σ _ λ l' → ExistMemberAs B' l' × (UniqueBy {A = A} (λ x x₁ → r x ≡ r x₁) l')
+-- ExistMemberAs-mapExisting-help l u e f p l1 l2 =
+--    ExistMemberAs-mapExisting (fst ∘ f) l e  ,
+--       (ExistMemberAs-mapExisting-mapProp (fst ∘ f) l (λ {a} _ → snd (f a)) u l1 l2 e
+--          , ExistMemberAs-mapExisting-stillUnique (fst ∘ f) l e
+--             (λ x → sym (p _)  ∙ x)
+--             (λ x → p _ ∙ x)
+--             (λ x → x ∙ p _)
+--             (λ x → x ∙ sym (p _))
+--             u
+--          )
+
+
 ExistMemberAs-map-subst : ∀ {ℓ ℓ'} → {A : Type ℓ} → {B B' : A → Type ℓ'}
                      → (l : List A)
                      → (∀ {a} → B a → B' a) → (∀ {a} → B' a → B a)
@@ -245,22 +345,23 @@ ExistMemberAs-map-subst (x₃ ∷ l) x x₁ = map-sum x (map-prod (_∘ x₁) (E
 
 
 ExistMemberAs-mapExisting : ∀ {ℓ ℓ'} → {A : Type ℓ} → {B : A → Type ℓ'}
-                    → (A → A) → (l : List A) 
+                    → (∀ x → B x → A) → (l : List A) 
                     → ExistMemberAs B l
                     → List A
-ExistMemberAs-mapExisting f (x₁ ∷ l) (inl x) = f x₁ ∷ l
+ExistMemberAs-mapExisting f (x₁ ∷ l) (inl x) = f x₁ x ∷ l
 ExistMemberAs-mapExisting f (x₁ ∷ l) (inr x) = x₁ ∷ (ExistMemberAs-mapExisting f l (proj₂ x))
 
 ExistMemberAs-mapExisting-stillUnique-lem :
-                    ∀ {ℓ ℓ'} → {A : Type ℓ} → {B : A → Type ℓ'} → {R : A → A → Type ℓ'}
-                    → (f : A → A) → (l : List A) → (y : ExistMemberAs B l)
-                    → (∀ {a a'} →  R a (f a') → R a a' )
-                    → (∀ {a a'} → R a a' → R a (f a') )
+                    ∀ {ℓ ℓ' ℓ''} → {A : Type ℓ} → {B : A → Type ℓ'} → {R : A → A → Type ℓ''}
+                    → (f : (x : A) → B x → A) → (l : List A) → (y : ExistMemberAs B l)
+                    → (∀ {a a'} → ∀ q → R a (f a' q) → R a a' )
+                    → (∀ {a a'} → ∀ q → R a a' → R a (f a' q) )
                     → ∀ x₃
                     → ExistMemberAs (R x₃) (ExistMemberAs-mapExisting f l y)
                     → ExistMemberAs (R x₃) l
-ExistMemberAs-mapExisting-stillUnique-lem f (x₄ ∷ l) (inl x₅) x x₁ x₃ = map-sum x (map-prod (_∘ x₁) (idfun _))
-ExistMemberAs-mapExisting-stillUnique-lem f (x₄ ∷ l) (inr x₅) x x₁ x₃ =
+ExistMemberAs-mapExisting-stillUnique-lem f (x₄ ∷ l) (inl x₅) x x₁ x₃ =
+  map-sum (x _) (map-prod (_∘ x₁ _) (idfun _))
+ExistMemberAs-mapExisting-stillUnique-lem f (x₄ ∷ l) (inr x₅) x x₁ x₃ = 
   map-sum (idfun _) (map-prod (idfun _)
       (ExistMemberAs-mapExisting-stillUnique-lem f l (proj₂ x₅)
         (λ {a} {a'} x₅ → x {a} {a'} x₅)
@@ -268,16 +369,17 @@ ExistMemberAs-mapExisting-stillUnique-lem f (x₄ ∷ l) (inr x₅) x x₁ x₃ 
         x₃))
 
 ExistMemberAs-mapExisting-stillUnique :
-                    ∀ {ℓ ℓ'} → {A : Type ℓ} → {B : A → Type ℓ'} → {R : A → A → Type ℓ'}
-                    → (f : A → A) → (l : List A) → (y : ExistMemberAs B l)
-                    → (∀ {a a'} →  R (f a) a' → R a a' )
-                    → (∀ {a a'} → R a a' → R (f a) a' )
-                    → (∀ {a a'} →  R a (f a') → R a a' )
-                    → (∀ {a a'} → R a a' → R a (f a') )
+                    ∀ {ℓ ℓ' ℓ''} → {A : Type ℓ} → {B : A → Type ℓ'} → {R : A → A → Type ℓ''}
+                    → (f : (x : A) → B x → A) → (l : List A) → (y : ExistMemberAs B l)
+                    → (∀ {a a'} → ∀ q → R (f a q) a' → R a a' )
+                    → (∀ {a a'} → ∀ q → R a a' → R (f a q) a' )
+                    → (∀ {a a'} → ∀ q → R a (f a' q) → R a a' )
+                    → (∀ {a a'} → ∀ q → R a a' → R a (f a' q) )
                     → UniqueBy R l
                     → UniqueBy R (ExistMemberAs-mapExisting f l y)
+
 ExistMemberAs-mapExisting-stillUnique f (x₃ ∷ l) (inl x₄) x x₁ z z₁ x₂ =
-  proj₁ x₂ ∘ ExistMemberAs-map-subst _ (x) (x₁) , (proj₂ x₂)
+  proj₁ x₂ ∘ ExistMemberAs-map-subst _ (x _) (x₁ _) , (proj₂ x₂)
 ExistMemberAs-mapExisting-stillUnique f (x₃ ∷ l) (inr x₄) x x₁ z z₁ x₂ =
   proj₁ x₂ ∘ (λ a → ExistMemberAs-mapExisting-stillUnique-lem f l (proj₂ x₄)
             (λ {a} {a'} x₅ → z {a} {a'} x₅)
@@ -286,31 +388,53 @@ ExistMemberAs-mapExisting-stillUnique f (x₃ ∷ l) (inr x₄) x x₁ z z₁ x�
 
 
 ExistMemberAs-mapExisting-mapProp' :
-                    ∀ {ℓ ℓ'} → {A : Type ℓ} → {B B' : A → Type ℓ'} → {R : A → A → Type ℓ'}
+                    ∀ {ℓ ℓ' ℓ''} → {A : Type ℓ} → {B B' : A → Type ℓ'} → {R : A → A → Type ℓ''}
                       (l : List A) 
                     → UniqueBy R l
                     → (a* : A)
                     → (∀ (a a' : A) → B' a' → B a  → R a' a)
                     → (∀ (a a' : A) → B' a' → R a' a → IsEmpty (B a) → B' a)
                     → B' a* → ExistMemberAs B l → ExistMemberAs (R a*) l
-ExistMemberAs-mapExisting-mapProp' (x₃ ∷ l) x a* x₁ x₁' x₂ =
+ExistMemberAs-mapExisting-mapProp' (x₃ ∷ l) x a* x₁ x₁' x₂ = 
   map-sum (x₁ _ _ x₂)
     λ x₄ →
-          (λ x₅ → proj₁ x (ExistMemberAs-mapExisting-mapProp' l (proj₂ x) x₃ x₁ x₁' (x₁' _ _ x₂ x₅ (proj₁ x₄)) (proj₂ x₄)))
+          (λ x₅ → proj₁ x (ExistMemberAs-mapExisting-mapProp' l (proj₂ x) x₃ x₁ x₁'
+            ((x₁' _ _ x₂ x₅ (proj₁ x₄))) (proj₂ x₄)))
          , (ExistMemberAs-mapExisting-mapProp' l (proj₂ x) a* x₁ x₁' x₂ (proj₂ x₄))
          
 
 ExistMemberAs-mapExisting-mapProp :
-                    ∀ {ℓ ℓ'} → {A : Type ℓ} → {B B' : A → Type ℓ'} → {R : A → A → Type ℓ'}
-                    → (f : A → A) → (l : List A) 
-                    → (∀ {a} → B a → B' (f a)) → (∀ {a} → B' (f a) → B a)
+                    ∀ {ℓ ℓ' ℓ'''} → {A : Type ℓ} → {B B' : A → Type ℓ'} → {R : A → A → Type ℓ'''}
+                    → (f : (x : A) → B x → A) → (l : List A) 
+                    → (∀ {a} → ∀ q → B' (f a q)) 
                     → UniqueBy R l
                     → (∀ (a a' : A) →  B' a' → B a → R a' a)
                     → (∀ (a a' : A) → B' a' → R a' a → IsEmpty (B a) → B' a)
                     → (y : ExistMemberAs B l)
                     → ExistMemberAs B' (ExistMemberAs-mapExisting f l y)
-ExistMemberAs-mapExisting-mapProp f (x₂ ∷ l) x x₁ _ _ _ (inl x₃) = inl (x x₃)
-ExistMemberAs-mapExisting-mapProp f (x₂ ∷ l) x x₁ u q q' (inr x₃) =
+ExistMemberAs-mapExisting-mapProp f (x₂ ∷ l) x _ _ _ (inl x₃) = inl (x x₃)
+ExistMemberAs-mapExisting-mapProp f (x₂ ∷ l) x u q q' (inr x₃) =
   inr ((λ x₄ → proj₁ u (ExistMemberAs-mapExisting-mapProp' l (proj₂ u) x₂ q q' x₄ (proj₂ x₃)))
-     , ExistMemberAs-mapExisting-mapProp f l x x₁ (proj₂ u) q q' (proj₂ x₃))
+     , ExistMemberAs-mapExisting-mapProp f l x (proj₂ u) q q' (proj₂ x₃))
 
+
+ExistMemberAs-mapExisting-help : ∀ {ℓ ℓ'} → {A C : Type ℓ} → {B B' : A → Type ℓ'} → {r : A → C} → {{Discrete C}}
+                                 → ∀ l
+                                 → (UniqueBy {A = A} (λ x x₁ → r x ≡ r x₁) l)
+                                 → ExistMemberAs B l
+                                 → (f : ∀ a → B a → Σ _ B')
+                                 → (∀ a → ∀ q → (r (fst (f a q)) ≡ r a))
+                                 → ((a a' : A) → B' a' → B a → r a' ≡ r a)
+                                 → ((a a' : A) → B' a' → r a' ≡ r a → IsEmpty (B a) → B' a)
+                                 → Σ _ λ l' → ExistMemberAs B' l' × (UniqueBy {A = A} (λ x x₁ → r x ≡ r x₁) l')
+ExistMemberAs-mapExisting-help l u e f p l1 l2 =
+ let f' = λ x x₁ → fst (f x x₁) 
+ in ExistMemberAs-mapExisting (f') l e  ,
+      (ExistMemberAs-mapExisting-mapProp (f') l (λ {a} q → snd (f a q)) u l1 l2 e
+         , ExistMemberAs-mapExisting-stillUnique (f') l e
+            (λ x →  sym (p _ _) ∙_)
+            (λ x → p _ _ ∙_)
+            (λ x → _∙ p _ _)
+            (λ x → _∙ sym (p _ _))
+            u
+         )
