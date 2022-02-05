@@ -65,6 +65,7 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
 
     
     -- TODO : remove unsafe pragma by stratification on nesting depth
+    --         OR by introducing specialized subst in h-expr (stmnts₁ AST.;b x) 
     {-# TERMINATING #-}
     prependCtxStmnts : ∀ {Γ : _} → Statements Γ → Statements (prependContext ce Γ) 
 

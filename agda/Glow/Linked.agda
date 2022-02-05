@@ -234,14 +234,22 @@ map-Linked'-map-Σ {C' = C'} {D = D} {A} {A'} {fld = fld} {fld-D} {fld' = fld'} 
                         {fld' = fld'} 
                        (λ x₁ → g _ (snd x₁)) (λ {y} → f (snd y)) (λ d → x (fst d) (snd d)) {_ , d}
             ∘  Linked'-collect-Σ d
--- map-Linked'-map
 
--- map-Linked'-map g f e []L = []L
--- map-Linked'-map {C = C} {C' = C'} {fld = fld} {fld' = fld'} g f e {c} (h ∷L x) =
---   let t = map-Linked'-map {C = C} {C' = C'} {fld = fld} {fld' = fld'} g f e x 
---   in f h ∷L
---          -- substLinked' fld' e t 
---       subst (Linked' fld') (e _ _) t
+map-Linked'-map-Σ-Mb : {C C' : Type₀}
+                     {D : C → Type₀}
+                     { A : C → Type₀} {A' : C' → Type₀}
+                        {fld : ∀ c → A c → C}
+                        (fld-D : ∀ c → (a : A c) → D c →  D (fld c a))
+                        {fld' : ∀ c → A' c → C'}
+                   (g : ∀ c → D c → C')
+                    → (f :  ∀ {c} → ∀ d → A c → Maybe (A' (g c d)) )
+                    → ((c : C) (d : D c) (x : A c) →
+                         g (fld c x) (fld-D c x d) ≡ recMaybe (g c d) (fld' (g c d)) (f d x))
+                   → {c : C} → ∀ d
+                   → Linked' fld c → Linked' fld' (g c d)
+                  
+map-Linked'-map-Σ-Mb {C' = C'} {D = D} {A} {A'} {fld = fld} fld-D {fld' = fld'} g f x d =
+     fromLinked'-Maybe _ _ ∘ map-Linked'-map-Σ g f x d
 
 
 
