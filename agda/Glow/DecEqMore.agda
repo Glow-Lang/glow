@@ -447,3 +447,12 @@ bindMaybe (just x) x₁ = x₁ x
 -- Bool→TypeDP : Bool → Bool → DecPropΣ
 -- Bool→TypeDP false = FalseDP
 -- Bool→TypeDP true = TrueDP
+
+
+𝟚-elim : ∀ {a} {A : Bool → Type a} → A false → A true → ∀ b → A b
+𝟚-elim {a} {A} x x₁ false = x
+𝟚-elim {a} {A} x x₁ true = x₁
+
+maybe-elim : ∀ {a} {A : Type a} {B : Maybe A  → Type a} → B nothing → (∀ a → B (just a)) → ∀ x → B x
+maybe-elim x x₁ nothing = x
+maybe-elim x x₁ (just x₂) = x₁ x₂

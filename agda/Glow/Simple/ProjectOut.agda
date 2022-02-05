@@ -11,12 +11,12 @@ open import Cubical.Foundations.Everything
 open import Cubical.Data.Nat
 open import Cubical.Data.Int
 open import Cubical.Data.Prod
-open import Cubical.Data.Sum renaming (elim to sum-elim ; rec to sum-rec ; map to sum-map)
+open import Cubical.Data.Sum renaming (elim to sum-elim)
 open import Cubical.Data.List renaming (map to map-List)
 
 
 open import Cubical.Data.Maybe renaming (rec to recMaybe )
-open import Cubical.Data.Bool hiding (if_then_else_)  renaming (Bool to 𝟚)
+open import Cubical.Data.Bool hiding (if_then_else_) renaming (Bool to 𝟚)
 
 open import Cubical.Data.Empty renaming (elim to empty-elim ; rec to empty-rec ;  ⊥ to Empty )
 
@@ -32,112 +32,355 @@ open import Glow.Simple.AST
 
 open import Glow.DecEqMore
 
-open import Glow.Simple.ContextMore
-
-open import Glow.Simple.Postulates
-
-
 open import Cubical.HITs.Interval
 
-
-module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}}
-            {BuilitInsIndex : Type₀} {{IsDiscrete-BuilitInsIndex : IsDiscrete BuilitInsIndex}}
+module ProjectOut {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}}
+              {BuilitInsIndex : Type₀} {{IsDiscrete-BuilitInsIndex : IsDiscrete BuilitInsIndex}}
               {builtIns : BuiltIns' BuilitInsIndex {{IsDiscrete-BuilitInsIndex}}} where
 
-  -- prop-mode = one
+  prop-mode = one
   
-  -- open AST Identifier prop-mode
+  open AST Identifier builtIns prop-mode
 
-  open PropMode one 
+  open PropMode prop-mode 
 
-  -- open AST Identifier
+  -- open InteractionHead
 
+  makeDishonest' : (ps : List (Identifier × ParticipantModality))
+                   → PM (_ , UniqueByDec≡ proj₁ ps , isProp-UniqueBy _ _ )
+                   → ∀ nm → PM ( IsHonestParticipantId {ps} nm )  
+                           →  Σ (List (Identifier × ParticipantModality))
+                                  λ ps → PM ( IsDishonestParticipantId {ps} nm )
+                                    × PM (_ , UniqueByDec≡ proj₁ ps , isProp-UniqueBy _ _ )
+  fst (makeDishonest' (x₂ ∷ ps) x nm (inl x₁)) = (proj₁ x₂ , dishonest) ∷ ps
+  snd (makeDishonest' (x₂ ∷ ps) x nm (inl x₁)) = inl (proj₁ x₁ , refl) , x
+  makeDishonest' (x₂ ∷ ps) x nm (inr x₁) =
+    let (ps' , zz) = makeDishonest' ps (proj₂ x) nm (proj₂ x₁)
+        q = {!proj₁ x!}
+    in x₂ ∷ ps'  , ((inr ((λ b → {!!}) ∘ proj₁ , proj₁ zz)) , (q , (proj₂ zz)))
 
+  makeDishonest : (ih : InteractionHead) → HonestParticipantId ih 
+                           →  Σ InteractionHead DishonestParticipantId 
+  AST.participantsWM (fst (makeDishonest ih hp)) =
+     (fst (makeDishonest' (AST.participantsWM ih) (AST.uniquePtcpnts ih) (pId-nameHon hp) (pId-isInHon hp)))
+  AST.parameters (fst (makeDishonest ih hp)) = AST.parameters ih
+  AST.uniqueParams (fst (makeDishonest ih hp)) = AST.uniqueParams ih
+  AST.uniquePtcpnts (fst (makeDishonest ih hp)) = 
+     proj₂ (snd (makeDishonest' (AST.participantsWM ih) (AST.uniquePtcpnts ih) (pId-nameHon hp) (pId-isInHon hp)))
+  snd (makeDishonest ih hp) =
+    AST.pId ((pId-nameHon hp))
+       {proj₁ (snd (makeDishonest' (AST.participantsWM ih) (AST.uniquePtcpnts ih) (pId-nameHon hp) (pId-isInHon hp)))}
 
-  -- TODO : provide alternative implementation, substituting multiple variables in one pass, compare performance
-  module ProjectOut {ptps : List Identifier} (pid : AST.ParticipantId' Identifier builtIns one {ptps} ) where
-  
-    -- module AST* = AST Identifier builtIns one
-
-    open AST.InteractionHead {Identifier} {builtIns = builtIns} {one} (AST.interactionHead ptps [])
-                                                                      
-
-    projectOutStmnts : ∀ {Γ} → Statements Γ → Statements Γ
-    projectOutStmnts = {!!}
-
-    projectOutExpr : ∀ {Γ Τ} → Expr Γ Τ → Expr Γ Τ
-    projectOutExpr = {!!}
-
-
-
-  -- module SubstAll {ptps : List Identifier} where
-
-  --   open AST.InteractionHead {Identifier} {builtIns = builtIns} {one} (AST.interactionHead ptps []) 
-
-
-  --   {-# TERMINATING #-}
-  --   substAllStmnts : ∀ {Γ} → (r : Rec Γ) → Statements Γ → Statements (record Γ {entries = []}) 
-  --   substAllStmnts {AST.con [] scope''} r x = x
-  --   substAllStmnts {Γ@(AST.con (x₁ ∷ entries₁) scope'')} (y , r') x = 
-  --     substAllStmnts  r' (SubstOne.substOneStmnts (inl y) (SubstOne.mkStatements* x))
-
-  --   {-# TERMINATING #-}
-  --   substAllStmnt : ∀ {Γ} → (r : Rec Γ) → Stmnt Γ → Stmnt (record Γ {entries = []}) 
-  --   substAllStmnt {AST.con [] scope''} r x = x
-  --   substAllStmnt {Γ@(AST.con (x₁ ∷ entries₁) scope'')} (y , r') x = 
-  --     substAllStmnt  r' (SubstOne.substOneStmnt (inl y) x)
-
-  --   {-# TERMINATING #-}
-  --   substAllExpr : ∀ {Γ Τ} → (r : Rec Γ) → Expr Γ Τ → Expr (record Γ {entries = []}) Τ 
-  --   substAllExpr {AST.con [] scope''} r x = x
-  --   substAllExpr {Γ@(AST.con (x₁ ∷ entries₁) scope'')} (y , r') x = 
-  --     substAllExpr  r' (SubstOne.substOneExpr (inl y) x)
-
-  --   evalPureArg : ∀ {sc Τ} → (e : Arg (con [] sc) Τ) → GTypeAgdaRep Τ 
-  --   evalPureArg (AST.var-a (AST.dsot name {inr (x , ())}))
-  --   evalPureArg (AST.lit-a x) = x
+ --interactionHead (participantsWM ih) [] {_} {uniquePtcpnts ih}
 
 
-  --   evalArgs : ∀ {Τs sc} → Args (con [] sc) Τs → argsV Τs
-  --   evalArgs {[]} x = tt
-  --   evalArgs {x₁ ∷ []} x = (evalPureArg x) , _
-  --   evalArgs {x₁ ∷ x₂ ∷ Τs} (x , x₃) = evalPureArg x , evalArgs x₃
-    
+--   stripParamsCtx : ∀ {ih : _} → Context ih → Context (stripParamsHead ih)
+--   stripParamsCtx Γ = con (Γ .entries) (Γ .scope')
 
-  --   {-# TERMINATING #-}
-  --   evalPureExpr : ∀ {sc Τ} → (e : Expr (con [] sc) Τ) → ⟨ IsPureE e ⟩ → GTypeAgdaRep Τ 
-  --   evalPureExpr (AST.var (AST.dsot name {inr (x₁ , ())})) x
-    
-  --   evalPureExpr (AST.body (AST.bodyR []L e)) x = evalPureExpr e (proj₂ x)
-  --   evalPureExpr (AST.body (AST.bodyR (AST.bindingS (AST.BS-let ce x₁) ∷L stmnts₁) e)) x =
-  --      let x₁' = evalPureExpr x₁ (proj₁ (proj₁ x))
-  --          e' = SubstOne.substOneExpr (inl x₁')
-  --                 ((AST.body (AST.bodyR (stmnts₁) e))) 
-  --      in dec-rec ⟨ IsPureE e' ⟩ {{proj₁ (snd (IsPureE e'))}}
-  --         (λ x₂ → evalPureExpr e' x₂)
-  --         subst-preserver-pure 
+-- --   -- TODO : remove unsafe pragma by stratification on nesting depth
+-- --   {-# TERMINATING #-}
+-- --   paramSubst : ∀ {ih : _} → ParametersValue (parameters ih) → 
+-- --                    ∀ {Γ : _} →  Statements _ Γ → Statements _ (stripParamsCtx Γ) 
 
-  --     where
-  --       postulate subst-preserver-pure : _
-        
-  --   evalPureExpr (AST.body (AST.bodyR (AST.bindingS (AST.BS-publish! p x₁) ∷L stmnts₁) expr₁)) ((() , x₃) , x₂)
-       
-  --   evalPureExpr (AST.body (AST.bodyR (AST.nonBindingS _ ∷L stmnts₁) expr₁)) x =
-  --      evalPureExpr (AST.body (AST.bodyR (stmnts₁) expr₁)) ((proj₂ (proj₁ x)) , (proj₂ x))
 
-    
-  --   evalPureExpr (AST.lit x₁) x = x₁
-  --   evalPureExpr (AST.if e then e₁ else e₂) x =
-  --      Cubical.Data.Bool.if evalPureExpr e (proj₁ x)
-  --         then evalPureExpr e₁ (proj₁ (proj₂ x))
-  --         else evalPureExpr e₂ (proj₂ (proj₂ x))
-  --   evalPureExpr (AST._$'_ f xs) x =
-  --      let z = BuiltIn'.impl (snd (BuiltIns'.getBi builtIns (AST.BI.bIndex f)))
-  --          q = appV z (evalArgs xs) 
-  --      in subst-GTypeAgdaRep (sym (AST.BI.cdm≡ f)) q
-  --        --(transport⁻ (cong GTypeAgdaRep (AST.BI.cdm≡ f)) q)
-  --   evalPureExpr (AST.var (AST.dsot name {inl ()})) tt
-  --   evalPureExpr {sc = sc} (AST.sign q {z} {p}) w =
-  --       subst-GTypeAgdaRep p (signPrim (AST.pId-name _ _ _ (IsNotConsensus→Participant
-  --          {con [] sc}
-  --            z)) (evalPureArg q))
+
+-- --   paramSubst {ih}  vv = map-Linked'-map _ h hh
+-- --     where
+
+
+
+-- --       h : {Γ : Context ih}
+-- --              → (b : Stmnt ih Γ) → Stmnt _ (stripParamsCtx Γ)
+
+-- --       h-expr : {Γ : Context ih} → ∀ {Τ}
+-- --              → (b : Expr ih Γ Τ) → Expr _ (stripParamsCtx Γ) Τ
+
+-- --       h-arg : ∀ {Γ Τ} → Arg ih Γ Τ → Arg _ (stripParamsCtx Γ) Τ
+-- --       h-arg (AST.var-a (AST.dsot x {y})) =
+-- --           sum-elim
+-- --            (λ a → var-a (dsot x {inl a}))
+-- --            (lit-a ∘ (lookup-ParametersValue (ih .parameters) vv (iwt x _)) ∘ proj₂)
+-- --             y
+-- --       h-arg (AST.lit-a x) = (AST.lit-a x)
+
+
+-- --       h-args : ∀ {Γ Τs}  → Args ih Γ Τs → Args _ (stripParamsCtx Γ) Τs
+-- --       h-args {Τs = []} x = tt
+-- --       h-args {Τs = x₁ ∷ []} x = h-arg x
+-- --       h-args {Τs = x₁ ∷ x₂ ∷ Τs} (x , x₃) = h-arg x , h-args  x₃ 
+      
+
+-- --       h  (bindingS x) = bindingS (BS-lemma x)
+-- --          where
+-- --               BS-lemma : {Γ : Context ih} →  BStmnt ih Γ -> BStmnt _ (stripParamsCtx Γ)
+-- --               BS-lemma (BS-let x {asn} y) = (BS-let x {asn} (h-expr y))  
+-- --               BS-lemma (BS-publish! p (psof name₁ {w}) {y}) = (BS-publish! p (psof name₁ {w}) {y})
+
+
+-- --       h (nonBindingS x) = nonBindingS (z x)
+-- --          where
+
+-- --            zz : NBStmnt _ _ → NBStmnt _ _ 
+-- --            zz (NBS-require! x) = NBS-require! (h-expr x)
+-- --            zz (NBS-deposit! p {y} x) = NBS-deposit! p {y} (h-expr x)
+-- --            zz (NBS-withdraw! p {y} x) = NBS-withdraw! p {y} (h-expr x)
+-- --            zz (NBS-publishVal! x y {z}) = NBS-publishVal! x y {z}
+
+-- --            z : NBStmnt+Expr ih _ → NBStmnt+Expr (stripParamsHead ih) _
+-- --            z (stmntNBS x) =  stmntNBS (zz x)
+-- --            z (exprNBS x) = exprNBS (h-expr x)
+
+-- --       h-expr (var (dsot x {y})) =
+-- --          sum-elim
+-- --            (λ a → var (dsot x {inl a}))
+-- --            (lit ∘ (lookup-ParametersValue (ih .parameters) vv (iwt x _)) ∘ proj₂)
+-- --             y
+
+
+
+-- --       h-expr (stmnts₁ ;b x) =
+-- --          paramSubst {ih = ih} vv stmnts₁ ;b subst (λ x₁ → Expr _ x₁ _)
+-- --              -- TODO : improve evaluation performance by introducing specialized "subst"
+-- --              -- specialisation should be not only on Expr, but also on map-Linked'-map-fold
+-- --         (map-Linked'-map-fold (stripParamsCtx {ih}) _ _ stmnts₁ ) (h-expr x)
+-- --       h-expr (lit x) = lit x
+-- --       h-expr (_$'_ f xs) = _$'_ f (h-args xs)
+
+-- --       h-expr (input msg {y}) = input msg {y}
+-- --       -- h-expr (receivePublished x {y}) = publishVal x {y}
+-- --       h-expr (if b then t else f) = if (h-expr b) then (h-expr t) else (h-expr f)
+-- --       h-expr (AST.sign q {y} {w}) = (AST.sign (h-arg q) {y} {w})
+-- --       h-expr (AST.receivePublished x x₁ {y}) = AST.receivePublished x x₁ {y}
+
+-- --       hh : (Γ : Context ih) (x : Stmnt _ Γ) →
+-- --          stripParamsCtx (bindingMechanics' _ Γ x) ≡
+-- --          bindingMechanics' (interactionHead (participantsWM ih) [])
+-- --          (stripParamsCtx Γ) (h x)
+-- --       hh _ (bindingS (BS-let _ _)) = refl 
+-- --       hh _ (AST.bindingS (AST.BS-publish! _ (AST.psof name₁))) = refl
+-- --       hh _ (nonBindingS _) = refl
+
+-- --       -- h-args = ?
+
+-- -- -- module Test-String where
+-- -- --   open AST String {{String-Discrete-postulated}} zero
+
+-- -- --   module ParamsSubstS = ParamsSubst {{String-Discrete-postulated}}
+
+-- -- --   someInteraction : Interaction 
+-- -- --   someInteraction =  
+-- -- --        interaction⟨   "A" ∷ "B" ∷ [] ,  "pI1" ∶ Nat ∷ "b2" ∶ Bool ∷ "b1" ∶ Bool ∷ [] ⟩ (
+-- -- --             set "x" ∶ Bool ≔ < true > ;
+-- -- --             at "B" set "y" ∶ Bool ≔ v "b1" ;
+-- -- --             at "A" set "xx" ∶ Bool ≔
+-- -- --              ( if v "b1"
+-- -- --                then
+-- -- --                   (
+-- -- --                   set "z" ∶ Bool ≔ input "enter choice 1" ;₁ ;b
+-- -- --                   v "z"
+-- -- --                 )
+-- -- --                else (
+-- -- --                 require! v "b2" ;'
+-- -- --                 -- publish! "B" ⟶ "y" ;
+-- -- --                 -- withdraw! "B" ⟵ < 3 > ;
+-- -- --                 -- deposit! "B" ⟶ < 2 > ;
+-- -- --                 set "z" ∶ Bool ≔ < false > ;b
+-- -- --                 < true >
+-- -- --                 )) ;
+-- -- --             deposit! "B" ⟶ < 2 > ;
+-- -- --             at "A" set "yq" ∶ Bool ≔ input "enter choice 2" ;
+-- -- --             withdraw! "B" ⟵ < 3 > ;
+-- -- --             publish! "A" ⟶ "xx" ;        
+
+-- -- --             publish! "B" ⟶ "y" ;'        
+-- -- --             set "yy" ∶ Bool ≔ v "y" )
+
+
+-- -- --   param-sub-test : ℕ × 𝟚 × 𝟚 × Unit → Linked'
+-- -- --                                         (bindingMechanics'
+-- -- --                                          (ParamsSubstS.stripParamsHead
+-- -- --                                           (interactionHead ("A" ∷ "B" ∷ [])
+-- -- --                                            ("pI1" ∶ Nat ∷ "b2" ∶ Bool ∷ "b1" ∶ Bool ∷ []))))
+-- -- --                                         (ParamsSubstS.stripParamsCtx (Interaction.emptyContext someInteraction))
+-- -- --   param-sub-test vv = ParamsSubstS.paramSubst vv (Interaction.code someInteraction)
+-- -- --       -- {!ParamsSubstS.paramSubst vv (Interaction.code someInteraction)!}
+
+
+-- -- --   zzz :
+-- -- --     let q : ℕ × 𝟚 × 𝟚 × Unit
+-- -- --         q = 3 , false , true , _
+-- -- --         bT : Statements _ _
+-- -- --         bT = (
+-- -- --           set "x" ∶ Bool ≔ < true > ;
+-- -- --           at "B" set "y" ∶ Bool ≔ < true > ;
+-- -- --           at "A" set "xx" ∶ Bool ≔ (
+-- -- --               require! < false > ;'
+-- -- --               -- publish! "B" ⟶ "y" ;
+-- -- --               -- withdraw! "B" ⟵ < 3 > ;
+-- -- --               -- deposit! "B" ⟶ < 2 > ;
+-- -- --               set "z" ∶ Bool ≔ < false > ;b
+-- -- --               < true >
+-- -- --               );
+-- -- --           deposit! "B" ⟶ < 2 > ;
+-- -- --           withdraw! "B" ⟵ < 3 > ;
+-- -- --           publish! "B" ⟶ "y" ;'        
+-- -- --           set "yy" ∶ Bool ≔ v "y"
+-- -- --           )
+-- -- --     in bT ≡ param-sub-test q 
+
+-- -- --   zzz = refl
+
+
+
+-- -- -- module Test-ℕ where
+-- -- --   open AST ℕ 
+
+-- -- --   module ParamsSubstS = ParamsSubst {ℕ}
+
+-- -- --   someInteraction : Interaction
+-- -- --   someInteraction =  
+-- -- --      interaction⟨   1 ∷ 2 ∷ [] ,  3 ∶ Nat ∷ 4 ∶ Bool ∷ 5 ∶ Bool ∷ [] ⟩ (
+-- -- --           set 6 ∶ Bool ≔ < true > ;
+-- -- --           at 2 set 7 ∶ Bool ≔ v 5 ;
+-- -- --           at 1 set 8 ∶ Bool ≔ (
+-- -- --               require! v 4 ;'
+-- -- --               -- publish! "B" ⟶ "y" ;
+-- -- --               -- withdraw! "B" ⟵ < 3 > ;
+-- -- --               -- deposit! "B" ⟶ < 2 > ;
+-- -- --               set 9 ∶ Bool ≔ < false > ;b
+-- -- --               < true >
+-- -- --               );
+-- -- --           deposit! 2 ⟶ < 2 > ;
+-- -- --           withdraw! 2 ⟵ < 3 > ;
+-- -- --           publish! 2 ⟶ 7 ;'        
+-- -- --           set 10 ∶ Bool ≔ v 7 )
+
+
+-- -- --   param-sub-test : ℕ × 𝟚 × 𝟚 × Unit → Linked'
+-- -- --                                         (bindingMechanics'
+-- -- --                                          (ParamsSubstS.stripParamsHead
+-- -- --                                           (interactionHead (1 ∷ 2 ∷ [])
+-- -- --                                            (3 ∶ Nat ∷ 4 ∶ Bool ∷ 5 ∶ Bool ∷ []))))
+-- -- --                                         (ParamsSubstS.stripParamsCtx (Interaction.emptyContext someInteraction))
+-- -- --   param-sub-test vv = ParamsSubstS.paramSubst vv (Interaction.code someInteraction)
+
+-- -- --   zzz-0 : Linked'
+-- -- --             (bindingMechanics'
+-- -- --              (ParamsSubstS.stripParamsHead
+-- -- --               (interactionHead (1 ∷ 2 ∷ [])
+-- -- --                (3 ∶ Nat ∷ 4 ∶ Bool ∷ 5 ∶ Bool ∷ []))))
+-- -- --             (ParamsSubst.stripParamsCtx
+-- -- --              (Interaction.emptyContext someInteraction))
+              
+-- -- --   zzz-0 = param-sub-test (3 , false , true , _)
+-- -- --            -- bindingS
+-- -- --             -- (BS-let (AST.ice nothing 6 Bool) {_}
+-- -- --             --  (lit true))
+-- -- --             -- ∷L
+-- -- --             -- (bindingS
+-- -- --             --  (BS-let
+-- -- --             --   (transp {λ i → ℓ-zero}
+-- -- --             --    (λ i → AST.ContextEntry' ℕ ⦃ ℕ-Discrete ⦄ {1 ∷ 2 ∷ []}) i0
+-- -- --             --    (AST.ice (just (AST.pId 2 {_})) 7 Bool))
+-- -- --             --   {_} (lit true))
+-- -- --             --  ∷L
+-- -- --             --  (bindingS
+-- -- --             --   (BS-let
+-- -- --             --    (transp {λ i → ℓ-zero}
+-- -- --             --     (λ i → AST.ContextEntry' ℕ ⦃ ℕ-Discrete ⦄ {1 ∷ 2 ∷ []}) i0
+-- -- --             --     (transp {λ i → ℓ-zero}
+-- -- --             --      (λ i → AST.ContextEntry' ℕ ⦃ ℕ-Discrete ⦄ {1 ∷ 2 ∷ []}) i0
+-- -- --             --      (AST.ice (just (AST.pId 1 {_})) 8 Bool)))
+-- -- --             --    {_}
+-- -- --             --    (body
+-- -- --             --     (transp {λ i → ℓ-zero}
+-- -- --             --      (λ i →
+-- -- --             --         AST.Body {ℕ} ⦃ ℕ-Discrete ⦄
+-- -- --             --         (AST.interactionHead (1 ∷ 2 ∷ []) [] {_})
+-- -- --             --         (record
+-- -- --             --          { entries =
+-- -- --             --              transp {λ i₁ → ℓ-zero}
+-- -- --             --              (λ i₁ → AST.ContextEntry' ℕ ⦃ ℕ-Discrete ⦄ {1 ∷ 2 ∷ []}) (~ i)
+-- -- --             --              (AST.ice (just (AST.pId 2 {_})) 7 Bool)
+-- -- --             --              ∷ AST.ice nothing 6 Bool ∷ []
+-- -- --             --          ; scope' = just (AST.pId 1 {_})
+-- -- --             --          })
+-- -- --             --         Bool)
+-- -- --             --      i0
+-- -- --             --      (transp {λ i → ℓ-zero}
+-- -- --             --       (λ i →
+-- -- --             --          AST.Body {ℕ} ⦃ ℕ-Discrete ⦄
+-- -- --             --          (AST.interactionHead (1 ∷ 2 ∷ []) [] {_})
+-- -- --             --          (record
+-- -- --             --           { entries =
+-- -- --             --               AST.ice (just (AST.pId 2 {_})) 7 Bool ∷ AST.ice nothing 6 Bool ∷ []
+-- -- --             --           ; scope' = just (AST.pId 1 {_})
+-- -- --             --           })
+-- -- --             --          Bool)
+-- -- --             --       i0
+-- -- --             --       (bodyR
+-- -- --             --        (nonBindingS
+-- -- --             --         (stmntNBS
+-- -- --             --          (NBS-require! (lit false)))
+-- -- --             --         ∷L
+-- -- --             --         (bindingS
+-- -- --             --          (BS-let
+-- -- --             --           (transp {λ i → ℓ-zero}
+-- -- --             --            (λ i → AST.ContextEntry' ℕ ⦃ ℕ-Discrete ⦄ {1 ∷ 2 ∷ []}) i0
+-- -- --             --            (AST.ice nothing 9 Bool))
+-- -- --             --           {_} (lit false))
+-- -- --             --          ∷L []L))
+-- -- --             --        (lit true))))))
+-- -- --             --   ∷L
+-- -- --             --   (nonBindingS
+-- -- --             --    (stmntNBS
+-- -- --             --     (NBS-deposit! (AST.pId 2 {_}) {_}
+-- -- --             --      (lit 2)))
+-- -- --             --    ∷L
+-- -- --             --    (nonBindingS
+-- -- --             --     (stmntNBS
+-- -- --             --      (NBS-withdraw! (AST.pId 2 {_}) {_}
+-- -- --             --       (lit 3)))
+-- -- --             --     ∷L
+-- -- --             --     (bindingS
+-- -- --             --      (BS-publish! (AST.pId 2 {_})
+-- -- --             --       (psof 7 {_}) {_})
+-- -- --             --      ∷L
+-- -- --             --      (bindingS
+-- -- --             --       (BS-let
+-- -- --             --        (transp {λ i → ℓ-zero}
+-- -- --             --         (λ i → AST.ContextEntry' ℕ ⦃ ℕ-Discrete ⦄ {1 ∷ 2 ∷ []}) i0
+-- -- --             --         (transp {λ i → ℓ-zero}
+-- -- --             --          (λ i → AST.ContextEntry' ℕ ⦃ ℕ-Discrete ⦄ {1 ∷ 2 ∷ []}) i0
+-- -- --             --          (transp {λ i → ℓ-zero}
+-- -- --             --           (λ i → AST.ContextEntry' ℕ ⦃ ℕ-Discrete ⦄ {1 ∷ 2 ∷ []}) i0
+-- -- --             --           (transp {λ i → ℓ-zero}
+-- -- --             --            (λ i → AST.ContextEntry' ℕ ⦃ ℕ-Discrete ⦄ {1 ∷ 2 ∷ []}) i0
+-- -- --             --            (transp {λ i → ℓ-zero}
+-- -- --             --             (λ i → AST.ContextEntry' ℕ ⦃ ℕ-Discrete ⦄ {1 ∷ 2 ∷ []}) i0
+-- -- --             --             (transp {λ i → ℓ-zero}
+-- -- --             --              (λ i → AST.ContextEntry' ℕ ⦃ ℕ-Discrete ⦄ {1 ∷ 2 ∷ []}) i0
+-- -- --             --              (AST.ice nothing 10 Bool)))))))
+-- -- --             --        {_} (var (dsot 7 {_})))
+-- -- --             --       ∷L []L))))))
+
+-- -- --   zzz :
+-- -- --     let q : ℕ × 𝟚 × 𝟚 × Unit
+-- -- --         q = 3 , false , true , _
+-- -- --     in (
+-- -- --           set 6 ∶ Bool ≔ < true > ;
+-- -- --           at 2 set 7 ∶ Bool ≔ < true > ;
+-- -- --           at 1 set 8 ∶ Bool ≔ (
+-- -- --               require! < false > ;'
+-- -- --               -- publish! "B" ⟶ "y" ;
+-- -- --               -- withdraw! "B" ⟵ < 3 > ;
+-- -- --               -- deposit! "B" ⟶ < 2 > ;
+-- -- --               set 9 ∶ Bool ≔ < false > ;b
+-- -- --               < true >
+-- -- --               );
+-- -- --           deposit! 2 ⟶ < 2 > ;
+-- -- --           withdraw! 2 ⟵ < 3 > ;
+-- -- --           publish! 2 ⟶ 7 ;'        
+-- -- --           set 10 ∶ Bool ≔ v 7 ) ≡ param-sub-test q
+
+-- -- --   zzz = refl
