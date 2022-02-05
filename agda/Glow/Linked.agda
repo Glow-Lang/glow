@@ -155,6 +155,31 @@ map-Linked'-map-fold-bck g f e l =
     (Linked'-of-len<-len l)
 
 
+--------- filter Map
+
+filter-Linked' : {C : Type₀} { A : C → Type₀} {fld : ∀ c → A c → C}
+                   (f :  ∀ {c} → (x : A c) →  Maybe ((Linked' fld (fld c x) → Linked' fld c)))
+                   → {c : C} → Linked' fld c → Linked' fld c
+
+filter-Linked' f []L = []L
+filter-Linked' f (h ∷L x) = 
+   recMaybe ( (h ∷L filter-Linked' f x))
+             (λ y → y x)
+             (f h)
+
+-- map-Linked'-map g f e []L = []L
+-- map-Linked'-map {C = C} {C' = C'} {fld = fld} {fld' = fld'} g f e {c} (h ∷L x) =
+--   let t = map-Linked'-map {C = C} {C' = C'} {fld = fld} {fld' = fld'} g f e x 
+--   in f h ∷L
+--          -- substLinked' fld' e t 
+--       subst (Linked' fld') (e _ _) t
+
+
+
+
+
+
+
 -- -- -- TODO : remove unsafe pragma by stratifing on lengths
 -- -- module _ {C : Type₀} {A : C → Type₀} (fld : ∀ c → A c → C) where
 

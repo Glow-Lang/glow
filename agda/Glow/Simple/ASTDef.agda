@@ -55,7 +55,7 @@ BuiltIns'.getBi Basic-BuiltIns = h
     h "*ℕ" = ( Nat ∷  [ Nat ] , Nat) , (builitIn Cubical.Data.Nat._·_)
     h "^^^" = ( Nat ∷  [ Nat ] , Nat) , (builitIn ^^^Prim)
     h "&&&" = ( Nat ∷  [ Nat ] , Nat) , (builitIn &&&Prim)
-    h "randomUInt256" = ([] , Nat) , (builitIn randomUInt256Prim)
+    -- h "randomUInt256" = ([] , Nat) , (builitIn randomUInt256Prim)
     h "digestNat" = ([ Nat ] , Digest) , (builitIn digestPrim)
     h "==Digest" = (Digest ∷ Digest ∷ [] , Bool) , (builitIn digestEqTestPrim)
     h "==Nat" = (Nat ∷ Nat ∷ [] , Bool) , (builitIn (λ x x₁ → Dec→Bool (x ≟ x₁)))
