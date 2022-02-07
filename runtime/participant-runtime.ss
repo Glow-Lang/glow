@@ -5,7 +5,7 @@
   :gerbil/gambit/bits :gerbil/gambit/bytes :gerbil/gambit/threads :gerbil/gambit/ports :std/net/bio
   :gerbil/gambit
   :std/assert :std/crypto :std/format :std/iter
-  :std/misc/hash :std/misc/list :std/misc/number :std/misc/uuid
+  :std/misc/hash :std/misc/list :std/misc/number :std/misc/uuid :std/misc/channel :std/text/utf8 :std/text/base64
   :std/os/pid :std/os/signal
   :std/pregexp
   :std/sort
@@ -812,7 +812,7 @@
   )
 
 (define-type (Libp2pChannel @ [])
-    .make: (lambda (my-nickname host-address contacts)
+    .make: (lambda (my-nickname host-address contacts circuit-relay-address pubsub-node)
        (let ()
 
          ;; ------------ Libp2p channel buffer setup
@@ -839,24 +839,28 @@
          (def libp2p-client (ensure-libp2p-client nickname: my-nickname host-address: host-address))
 
          ;; Find your Blockchain Addr from your Nickname
+         ;; TODO: get better way for getting self's peerID
          (def my-0xaddr (0x<-address (.@ (car (.@ (lookup-contact nickname: my-nickname contacts: contacts) identities)) address) ) )
 
-         ;; Create local Database to hold Blockchainaddr-> multiaddr
-         (def db (connect-to-multiaddr-db filepath: "multiaddrsql.db"))
+         ;;initialize the pubsub for peer discovery
+         (defvalues (sub cancel pubsub-listen-thread)
+           (if (pubsub-node)
+             (connect-to-multiaddr-pubsub pubsub-node: pubsub-node c: libp2p-client)
+             (error "Default pubsub-node connection has not been implemented yet")))
 
+         ;;connect to the circuit-relay
+
+         (def circuit-relay (if (circuit-relay-address)
+                              (string->peer-info circuit-relay-address)
+                              (error "Default circuit-relay connection has not been implemented yet")))
+
+         (libp2p-connect libp2p-client circuit-relay)
 
          ;; Get and Broadcast identity
          (def self (libp2p-identify libp2p-client))
          (for (p (peer-info->string* self))
            
-            (displayln "I am " p)
-
-            ;;Insert your Blockchainaddr-> multiaddr and replace if need to
-            (update-multiaddr-db db: db hex-addr: my-0xaddr multi-addr: p))
-
-         ;;Print out resulting row
-         (displayln "printing out new sql row created")
-         (displayln (vector-ref (car (sql-eval-query db "SELECT * FROM nametoaddr WHERE name = $1" my-0xaddr)) 1) )
+            (displayln "I am " p))
          
          (def listening-thread
            (begin
@@ -870,34 +874,50 @@
            poll-buffer
            push-to-buffer
            _listening-thread: listening-thread
+           pubsub-listen-thread
+           sub
+           cancel
+           circuit-relay
            ;; FIXME: Get other participant addresses from contacts,
            ;; pass these in as a parameter,
            ;; instead of storing and using dest-address within the libp2p channel object.
            .send-contract-agreement: (lambda (agreement)
              (displayln MAGENTA "Sending agreement to multiaddr..." END)
              (def agreement-string (string<-json (json<- InteractionAgreement agreement)))
-             ;;Get the other participant from the agreement
 
+             ;;Get the other participant from the agreement
              (set! dest-address
                   (hash-find (lambda (key value)
                                (if (not (equal? my-0xaddr (0x<-address value)))
                                  (0x<-address value)))
                              (hash<-object (.@ agreement participants))))
 
-             (def dest-multiaddr (get-multiaddr-db db: db hex-addr: dest-address)) ;;Multiaddr from the Eth addr
-             (dial-and-send-contents libp2p-client dest-multiaddr agreement-string)
+             (def dest-peerID (get-peerID-from-pubsub sub: sub
+                                                      c: libp2p-client
+                                                      peer0x: dest-address)) ;;Multiaddr from the Eth addr using pubsub BLOCKS UNTIL ADDRESS IS FOUND
+             ;;
+             (dial-and-send-contents libp2p-client
+                                     (string-join `(circuit-relay dest-peerID) "/p2p-circuit/p2p/")
+                                     agreement-string)
              (displayln)
              (force-output))
 
            .send-contract-handshake: (lambda (_runtime handshake)
+
              (displayln MAGENTA "Sending handshake to multiaddr..." END)
              (def handshake-string (string<-json (json<- AgreementHandshake handshake)))
-             (def dest-multiaddr (get-multiaddr-db db: db hex-addr: dest-address)) ;;Multiaddr from the Eth addr
-             (dial-and-send-contents libp2p-client dest-multiaddr handshake-string)
+
+             (def dest-peerID (get-peerID-from-pubsub sub: sub
+                                                      c: libp2p-client
+                                                      peer0x: dest-address))
+
+             (dial-and-send-contents libp2p-client
+                                     (string-join `(circuit-relay dest-peerID) "/p2p-circuit/p2p/")
+                                     handshake-string)
              (displayln)
              (force-output))
 
-           .listen-for-handshake: (lambda (_runtime)
+           .listen-for-handshake: (lambda (_runtime) ;TODO: Make sure you are receiving messages only from people you want to talk to
              (displayln MAGENTA "Listening for handshake via libp2p ..." END)
              (def handshake-str (poll-buffer))
              (displayln MAGENTA "Received handshake" END)
@@ -911,7 +931,7 @@
              (def agreement (<-json InteractionAgreement (json<-string agreement-str)))
              agreement)
 
-            .close: (lambda () (stop-libp2p-daemon!))
+            .close: (lambda () (stop-libp2p-daemon!) (cancel) (thread-abort! pubsub-listen-thread))
            })))
 
 
@@ -979,7 +999,9 @@
      (def my-nickname (hash-ref options 'my-nickname))
      (def host-address (hash-ref options 'host-address))
      (def contacts (hash-ref options 'contacts))
-     (.call Libp2pChannel .make my-nickname host-address contacts)))
+     (def circuit-relay-address (hash-ref options 'circuit-relay-address))
+     (def pubsub-node (hash-ref options 'pubsub-node))
+     (.call Libp2pChannel .make my-nickname host-address contacts circuit-relay-address pubsub-node)))
     (else (error "Invalid off-chain channel selection"))))
 
 
@@ -991,20 +1013,60 @@
   ;; (for-each (lambda (contact) (displayln (.@ contact name))) contacts)
   (find (lambda (contact) (equal? (.@ contact name) nickname)) contacts))
 
-;; Database methods for Retreiving, Creating, and Adding data for ethaddr->multiaddr
+;; pubsub methods for Retreiving, Creating, and Adding data for ethaddr->multiaddr
 
-(def (connect-to-multiaddr-db filepath: filepath)
-  (let ((db (sql-connect sqlite-open filepath)))
-    (sql-eval db "CREATE TABLE IF NOT EXISTS nametoaddr (name TEXT NOT NULL UNIQUE PRIMARY KEY, addr TEXT NOT NULL)")
-    db))
 
-(def (update-multiaddr-db db: db hex-addr: hex-addr multi-addr: multi-addr)
-  (sql-eval db "INSERT INTO nametoaddr VALUES ($1, $2) ON CONFLICT (name) DO UPDATE SET addr=excluded.addr" hex-addr multi-addr))
+;;connect-to-multiaddr-pubsub
+;; pubsub-node: the multiaddr of a pubsub node to connect to
+;; c: a libp2p client object representing you
+;; connects to the provided pubsub node and subscribes to the "chat" pubsub
+;; also spawns a reader that will respond to identify requests
+;;
+;; returns (values pubsubchatchannel cancelprocforpubsubchannel readerthread)
+(def (connect-to-multiaddr-pubsub pubsub-node: pubsub-node c: c)
+  (libp2p-connect c (string->peer-info pubsub-node))
+  (let*-values (((sub cancel) (pubsub-subscribe c "chat"))
+                (reader (spawn subscription-reader sub c)))
+    (values sub cancel reader)))
 
-(def (get-multiaddr-db db: db hex-addr: hex-addr)
-  (vector-ref 
-    (car (sql-eval-query db "SELECT * FROM nametoaddr WHERE name = $1" hex-addr)) 
-    1))
+;; subscription-reader
+;; sub : the pubsub channel
+;; c : the libp2p client object
+;; my-0xaddr : the blockchain address of you
+;; will read the pubsub channel and when requested to identify itself, it will broadcast the client's identity
+;;
+;; TODO: Allow for specific identity requests
+(def (subscription-reader sub c my-0xaddr)
+
+ (let ((self (libp2p-identify c)))
+   (for (m sub)
+
+     ;;if message says "IDENTIFY" then publish your 0xaddr, else do nothing
+     (if (string=? "IDENTIFY" (bytes->string (vector-ref m 1)))
+       (pubsub-publish c "chat" (string->bytes my-0xaddr))))))
+
+;; get-peerID-from-pubsub
+;;
+;; sub : the pubsub chat channel
+;; c : your libp2p client
+;; peer0x : the peer you are waiting for to come online
+;;
+;; ask everyone in pubsub channel to IDENTIFY, then read messages until you see one matching peer0x
+;; block until peerID is found
+;; TODO: verify that peer0x comes from correct sender
+;; returns the peer-ID related to peer0x
+(def (get-peerID-from-pubsub sub: sub
+                             c: c
+                             peer0x: peer0x)
+  (pubsub-publish c "chat" (string->bytes "IDENTIFY"))
+
+  (let lp ()
+    (let ((m (channel-get sub)))
+
+      ;;if the message matches the peer0x you are requesting, return the peerID, else move on TODO: VERIFY FROM CORRECT SENDER AS WELL
+      (if (string=? peer0x (bytes->string (vector-ref m 1)))
+        (ID->string (vector-ref m 0)) ;;FIXME: Does this return the id??
+        (lp)))))
 
 
 ;; ------------------ Libp2p client methods
@@ -1050,7 +1112,7 @@
            (addr (string-append "/unix" path))
 
            (raw-cmd (escape-shell-tokens [bin "-q" "-listen" addr
-                                          (if host-addrs ["-hostAddrs" host-addrs] [])...
+                                          (if host-addrs ["-hostAddrs" host-addrs "-pubsub" "-connManager"] [])...
                                           options ...]))
            (cmd (format "{ echo ~a ; exec ~a ; } < /dev/null >> ~a 2>&1"
                  raw-cmd raw-cmd p2pd-log-path))

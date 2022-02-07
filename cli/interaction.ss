@@ -233,7 +233,8 @@
                      assets: (assets #f)
                      off-chain-channel-selection: (off-chain-channel-selection 'stdio)
                      host-address: (host-address #f)
-                     dest-address: (dest-address #f)
+                     circuit-relay-address: (circuit-relay-address #f)
+                     pubsub-node: (pubsub-node #f)
                      wait-for-agreement: (wait-for-agreement #f))
   (help: "Start an interaction based on an agreement"
    getopt: (make-options
@@ -269,6 +270,10 @@
                      help: "command to specify off-chain-channel")
              (option 'host-address "-O" "--host-address" default: #f
                      help: "host-address (only required if using libp2p as off-chain-channel)")
+             (option 'circuit-relay-address "-d" "--circuit-relay-address" default: #f
+                     help: "circuit-relay-address (only change if you want to use the address of a non-default circuit relay)")
+             (option 'pubsub-node "--pubsub-node" default: #f
+                     help: "the address of a pubsub node (only change if you want to use a none-default node)")
              (flag 'wait-for-agreement "-W" "--wait-for-agreement"
                    help: "wait for agreement via off-chain-channel")]
             [(lambda (opt) (hash-remove! opt 'test))]
@@ -306,7 +311,9 @@
      (off-chain-channel-selection (symbolify off-chain-channel-selection))
      (host-address host-address)
      (my-nickname my-nickname)
-     (contacts contacts)))
+     (contacts contacts)
+     (circuit-relay-address circuit-relay-address)
+     (pubsub-node pubsub-node)))
   (def off-chain-channel (init-off-chain-channel channel-options))
   (try
     ;; Start the interaction
