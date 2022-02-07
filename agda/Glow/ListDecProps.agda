@@ -485,36 +485,38 @@ BTF' (_ ∷ xs) = Maybe (BTF' xs)
 
 
 BTF : ∀ {ℓ} {A : Type ℓ} → List A → Type₀
-BTF [] = Unit
-BTF (x ∷ xs) = BTF xs ⊎ BTF' (x ∷ xs) 
+BTF [] = Empty
+BTF (x ∷ xs) = BTF xs ⊎ BTF' (xs) 
 
-mapTail : ∀ {ℓ} {A : Type ℓ} → (List A → List A) → List A → List A
-mapTail x [] = []
-mapTail x (x₁ ∷ x₂) = x₁ ∷ x x₂
+BTF-1 : BTF  (false ∷ [ true ]) → Empty
+BTF-1 (inl (inl ()))
+BTF-1 (inl (inr ()))
+BTF-1 (inr nothing) = {!!}
 
-pick' :  ∀ {ℓ} {A : Type ℓ} → ∀ a → ∀ l → BTF' (a ∷ l) → A × List A
-pick' x xs nothing = x , xs
-pick' x (x₁ ∷ xs) (just y) = map-prod (idfun _) (x₁ ∷_) (pick' x xs y)
-   
+-- pickH :  ∀ {ℓ} {A : Type ℓ} → ∀ l → BTF' l → A
+-- pickH (x₁ ∷ l) nothing = x₁
+-- pickH (x₁ ∷ l) (just x) = pickH l x
 
-pick :  ∀ {ℓ} {A : Type ℓ} → ∀ l → BTF' l → List A
-pick = {!!}
-
-btf :  ∀ {ℓ} {A : Type ℓ} → (l : List A) → BTF l → List A
-btf [] _ = []
-btf (x ∷ xs) (inl x₁) = x ∷ btf xs x₁
-btf (x ∷ xs) (inr x₁) = pick (x ∷ xs) x₁
+-- pickT :  ∀ {ℓ} {A : Type ℓ} → ∀ l → BTF' l → List A
+-- pickT (x₁ ∷ l) nothing = l
+-- pickT (x₁ ∷ l) (just x) = x₁ ∷ pickT l x
 
 
--- BTF'-step : ∀ {ℓ} {A : Type ℓ} → (l : List A) → (bb : BTF' l) → BTF' (pick l bb)
+-- btf :  ∀ {ℓ} {A : Type ℓ} → (l : List A) → BTF l → List A
+-- btf [] _ = []
+-- btf (x ∷ xs) (inl x₁) = x ∷ btf xs x₁
+-- btf l@(_ ∷ _) (inr x₁) = pickH l x₁ ∷ pickT l x₁
+
+
+-- BTF'-step : ∀ {ℓ} {A : Type ℓ} → (l : List A) → (bb : BTF' l) → BTF' (pick l bb) → BTF' (pick l bb)
 -- BTF'-step (x ∷ l) nothing = nothing
 -- BTF'-step (x ∷ l) (just x₁) = {!!}
 
 
--- BTF-step : ∀ {ℓ} {A : Type ℓ} → (l : List A) → (bb : BTF l) → BTF (btf l bb)
--- BTF-step [] bb = _
--- BTF-step (x ∷ l) (inl x₁) = inl (BTF-step l x₁)
--- BTF-step (x ∷ l) (inr x₁) = {!!}
+-- -- BTF-step : ∀ {ℓ} {A : Type ℓ} → (l : List A) → (bb : BTF l) → BTF (btf l bb)
+-- -- BTF-step [] bb = _
+-- -- BTF-step (x ∷ l) (inl x₁) = inl (BTF-step l x₁)
+-- -- BTF-step (x ∷ l) (inr x₁) = {!!}
 
--- btf-many : ∀ {ℓ} {A : Type ℓ} → (l : List A) → List (BTF l) → List A
--- btf-many = {!!}
+-- -- btf-many : ∀ {ℓ} {A : Type ℓ} → (l : List A) → List (BTF l) → List A
+-- -- btf-many = {!!}
