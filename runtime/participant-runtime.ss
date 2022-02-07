@@ -5,6 +5,7 @@
   :gerbil/gambit/bits :gerbil/gambit/bytes :gerbil/gambit/threads :gerbil/gambit/ports :std/net/bio
   :gerbil/gambit
   :std/assert :std/crypto :std/format :std/iter
+  :std/misc/threads
   :std/misc/hash :std/misc/list :std/misc/number :std/misc/uuid :std/misc/channel :std/text/utf8 :std/text/base64
   :std/os/pid :std/os/signal
   :std/pregexp
