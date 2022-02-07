@@ -2,7 +2,7 @@
 , addDemoScripts ? false
 }:
 let
-  pkgs = import ../pkgs.nix;
+  pkgs = import ../haskellPkgs.nix;
 
   cardano-node = import (pkgs.thunkSource ../dep/cardano-node) {};
   cardano-wallet = import (pkgs.thunkSource ../dep/cardano-wallet) {};

@@ -11,8 +11,10 @@
  (only-in :std/srfi/13 string-trim)
  :clan/multicall
  :drewc/ftw
- :std/format :std/getopt :std/iter :std/misc/hash :std/sugar :std/text/json
- ./db ./transactions)
+ :std/format :std/getopt :std/iter :std/misc/hash :std/net/uri :std/sugar :std/text/json
+ ./db ./transactions
+ ../compiler/multipass
+ ../runtime/glow-path)
 
 ;;; First, the client is just a bunch of static files we must serve.
 
@@ -170,6 +172,30 @@
                               (output output))))
         (catch _ (respond/JSON-error code: 404 "No such transaction"
                                      `((txid ,txid)))))))
+
+;; List available DApps.
+;; TODO: Maybe move to runtime/glow-path.ss
+(define-endpoint list-applications "^/contacts/applications$")
+(def (list-applications/GET)
+  (def apps (hash->list/sort (ensure-glow-dapps) string<?))
+  (respond/JSON (for/collect ((app apps))
+                  (match app
+                    ([name . path]
+                     (hash (name name)
+                           (path path)))))))
+
+;; Fetch the parameter & input schema for a DApp.
+;; TODO: Move to ??
+(define-endpoint schema "^/contacts/schema/(.*)$")
+(def (schema/GET path)
+  (respond/JSON
+   (with-output-to-string
+     (lambda ()
+       (run-passes (uri-decode path)
+                   strategy: 'schema
+                   pass: 'schema
+                   show?: #t
+                   show-path?: #f)))))
 
 (define-entry-point (start-server address: (address #f) port: (port #f))
   (help: "Start the contacts API server"

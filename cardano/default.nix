@@ -1,5 +1,5 @@
 let
-  pkgs = import ../pkgs.nix;
+  pkgs = import ../haskellPkgs.nix;
   glow-cardano = pkgs.skipDocs (pkgs.gerbilCardanoHaskellPackages.callCabal2nix "glow-cardano" ./haskell {});
   plutus = import (pkgs.thunkSource ../dep/plutus) {};
   plutus-scb = plutus.haskell.packages.plutus-scb.components.exes.plutus-scb;

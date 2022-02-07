@@ -774,14 +774,6 @@
      (displayln)
      result)))
 
-;; json-object-ref : JsonObject StringOrSymbol -> Json
-(def (json-object-ref j k)
-  (hash-ref/default j k
-    (lambda ()
-      (hash-ref j
-        (cond ((symbol? k) (symbol->string k))
-              (else        (string->symbol k)))))))
-
 
 ;; ---------------------------------------------------
 ;; ------------------ Off-chain communication channels
@@ -1121,7 +1113,8 @@
 (def (libp2p-connect/poll libp2p-client peer-multiaddr timeout: (timeout #f))
   (try (libp2p-connect libp2p-client peer-multiaddr)
     (catch (e)
-      (displayln "Unable to connect to client...")
+      (printf "Unable to connect to client ~a ...\n" (peer-info->string peer-multiaddr))
+      (display-exception e)
       (if (and timeout (> timeout 0))
           (let ()
             (displayln "Polling again in 1s...")

@@ -1,7 +1,10 @@
-{ ethereum ? true, thunk ? false, precompile ? false }:
+# Example uses:
+#   nix-shell --pure
+#   nix-shell --arg precompile true
+{ ethereum ? true, precompile ? false }:
 let
   pkgs = import ./pkgs.nix;
-  inherit (pkgs) lib glow-lang gerbil-support gerbilPackages-unstable nixpkgs thunkExe;
+  inherit (pkgs) lib glow-lang gerbil-support gerbilPackages-unstable nixpkgs;
   inherit (gerbilPackages-unstable) gerbil-ethereum gerbil-poo;
   inherit (gerbil-support) gerbilLoadPath;
 in
@@ -12,8 +15,6 @@ in
     buildInputs = with pkgs; (
       glow-lang.buildInputs ++
       lib.optional ethereum go-ethereum ++
-      # To speed this one up: nix path-info -f ./pkgs.nix -r thunkExe | cachix push mukn
-      lib.optional thunk thunkExe ++
       [ netcat go-libp2p-daemon ] # used by integration tests
                                   # TODO: Save at compile time
                                   # the path to the p2pd (go-libp2p-daemon) binary.

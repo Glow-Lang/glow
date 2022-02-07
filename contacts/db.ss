@@ -17,6 +17,7 @@
  (only-in :std/db/sqlite sqlite-open)
  (only-in :std/iter for for/collect)
  (only-in :std/misc/hash hash-ref-set!)
+ (only-in :std/sort sort)
  (only-in :std/srfi/1 append-map first)
  :std/sugar
  :std/text/json
@@ -187,9 +188,9 @@
 ;; List the known assets (tokens).
 (def (list-assets)
   (remove-duplicates
-   (append (hash-keys asset-table) ; includes non-native assets
-           (sql-eval-query (ensure-contact-db!)
-                           "SELECT native_token FROM network"))))
+   (sort (append (map symbol->string (hash-keys asset-table)) ; includes non-native assets
+                 (sql-eval-query (ensure-contact-db!) "SELECT native_token FROM network"))
+         string<?)))
 
 ;; List the known networks and their metadata.
 (def (list-networks)

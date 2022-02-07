@@ -212,9 +212,7 @@
   (def parse-context (.call ParseContext .make initial-code-block-label))
   (for-each! body (λ (statement)
     (match statement
-      (['participant:set-participant new-participant]
-        (set-participant parse-context new-participant))
-      (['consensus:set-participant new-participant]
+      (['set-participant new-participant]
         (set-participant parse-context new-participant))
       (else
         (add-statement parse-context statement)))))
