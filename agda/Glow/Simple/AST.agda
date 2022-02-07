@@ -463,7 +463,6 @@ module _ (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}
                , ExistFirstBy-WitchIsAlso-isProp _ (λ x₁ → isSetIdentifier _ _)
                   λ y → recMaybe-Empty-isProp ((λ x₁ → isSetIdentifier _ _)) (scope y)
 
-
         data PrivateSymbolOf (p : HonestParticipantId) : Type ℓ-zero where
           psof : (name : Identifier) → {isDefinedSymbolOf : PM ( IsPrivateSymbolOf p name ) } → PrivateSymbolOf p 
 
@@ -486,7 +485,17 @@ module _ (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}
         IsNotConsensus = caseMaybe (Empty , no (idfun _) , isProp⊥ ) (Unit , yes _ , λ x y i → tt)  scope'
 
 
+
+
       open Context public
+
+      IsPrivateSymbolOf→GType : (Γ : Context) → ∀ hp → ∀ nm
+                         → ⟨ IsPrivateSymbolOf Γ hp nm ⟩ → GType
+      IsPrivateSymbolOf→GType (con (ice scope name type ∷ entries₁) scope'') hp nm (inl x) = type
+      IsPrivateSymbolOf→GType (con (x₁ ∷ entries₁) scope'') hp nm (inr x) =
+        IsPrivateSymbolOf→GType (con (entries₁) scope'') hp nm (proj₂ x)
+
+
 
       IsNotConsensus→Participant : ∀ {Γ} → PM (IsNotConsensus Γ) → HonestParticipantId
       IsNotConsensus→Participant {con entries₁ nothing} x = empty-elim (toWitness' x)
@@ -612,6 +621,7 @@ module _ (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}
         map-ExistingFirstBy _ WitchIsAlso _ (Γ .entries) (toWitness' (psof-proof _ x)) 
            λ e _ _ → record e { scope = nothing }  
 
+      -- redefine to be triviialy indepontent on scope' field
       bindingMechanics' Γ (bindingS x) = record Γ { entries =  bindingMechanics x } 
       bindingMechanics' Γ (nonBindingS x) = Γ
 

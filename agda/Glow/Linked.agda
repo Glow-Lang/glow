@@ -11,7 +11,7 @@ open import Cubical.Foundations.Everything
 open import Cubical.Data.Nat
 open import Cubical.Data.Int
 open import Cubical.Data.Prod
-open import Cubical.Data.Sum
+open import Cubical.Data.Sum renaming (rec to sum-rec ; elim to sum-elim)
 open import Cubical.Data.List
 open import Cubical.Data.Empty
 
@@ -251,6 +251,70 @@ map-Linked'-map-Σ-Mb : {C C' : Type₀}
 map-Linked'-map-Σ-Mb {C' = C'} {D = D} {A} {A'} {fld = fld} fld-D {fld' = fld'} g f x d =
      fromLinked'-Maybe _ _ ∘ map-Linked'-map-Σ g f x d
 
+
+--------
+
+
+map-Linked'-map'-Mb* : {C C' : Type₀}
+                     { A : C → Type₀} {A' : C' → Type₀}
+                        {fld : ∀ c → A c → C}
+                        {fld' : ∀ c → A' c → C'}
+                   (g : ∀ c → A c →  C')
+                    → (f :  ∀ {c} → (a : A c) → ∀ h → (g (fld c a) h ≡ g c a) ⊎ Σ (A' (g c a))
+                          λ v → g (fld c a) h ≡ fld' (g c a) v )
+                   → {c : C} → (a : A c)
+                   → Linked' fld (fld _ a )
+                   → Linked' fld' (g c a) 
+                  
+map-Linked'-map'-Mb* g f a []L = []L
+map-Linked'-map'-Mb* {A = A} {fld' = fld'} g f a (h ∷L x₁) =
+ let t = map-Linked'-map'-Mb* {A = A} {fld' = fld'} g f h x₁
+ in  
+   sum-rec
+       (λ e → subst (Linked' fld') e t)
+       (λ x₂ → fst x₂ ∷L subst (Linked' fld') ((snd x₂)) t )
+       (f a h)
+
+
+
+Linked'-head : ∀ {C : Type₀} {A : C → Type₀} {fld} {c : C} → Linked' {A = A} fld c
+                                  → Maybe (A c)  
+Linked'-head []L = nothing
+Linked'-head (h ∷L x) = just h
+
+map-Linked'-map'-Mb : {C C' : Type₀}
+                     { A : C → Type₀} {A' : C' → Type₀}
+                        {fld : ∀ c → A c → C}
+                        {fld' : ∀ c → A' c → C'}
+                   (g₀ : C → C')
+                   (g : ∀ c → A c →  C')
+                    → (f :  ∀ {c} → (a : A c) → ∀ h → (g (fld c a) h ≡ g c a) ⊎ Σ (A' (g c a))
+                          λ v → g (fld c a) h ≡ fld' (g c a) v )
+                   → {c : C} 
+                   → (x : Linked' fld c) 
+                   → Linked' fld' (recMaybe (g₀ c) (g _) (Linked'-head x)) 
+                  
+map-Linked'-map'-Mb g₀ g f []L = []L
+map-Linked'-map'-Mb g₀ g f (h ∷L x) = map-Linked'-map'-Mb* g f h x
+
+-- map-Linked'-map'-Mb : {C C' : Type₀}
+--                      { A : C → Type₀} {A' : C' → Type₀}
+--                         {fld : ∀ c → A c → C}
+--                         {fld' : ∀ c → A' c → C'}
+--                    (g₀ : C → C')
+--                    (g : ∀ c → A c →  C')
+--                     → (f :  ∀ {c} → (a : A c) → (A' (g c a)) )
+--                     → ((c : C) (x : A c) →
+--                          {!!})
+--                    → {c : C}
+--                    → Linked' fld c → Linked' fld' (g₀ c) 
+                  
+-- map-Linked'-map'-Mb {A = A} gₒ g f x []L = []L
+-- map-Linked'-map'-Mb {C} {C'} {A = A} {fld = fld} {fld' = fld'} g₀ g f e (h ∷L t) =
+--     let t = map-Linked'-map'-Mb {C = C} {C' = C'} {fld = fld} {fld' = fld'} g₀ g f e t 
+--     in f h ∷L 
+--       subst (Linked' fld') (e _ h) t
+   
 
 
 

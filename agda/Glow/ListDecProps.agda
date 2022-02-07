@@ -52,6 +52,10 @@ map-List-∘ f g (x ∷ l) = cong ((g (f x)) ∷_) (map-List-∘ f g l)
 -- list-< : \al
 
 
+ForAllMember : ∀ {ℓ ℓ'} → {A : Type ℓ} → (B : A → Type ℓ') → List A → Type ℓ' 
+ForAllMember B = foldr (_×_ ∘ B) Unit* 
+
+
 ExistMemberAs : ∀ {ℓ ℓ'} → {A : Type ℓ} → (B : A → Type ℓ') → List A → Type ℓ' 
 ExistMemberAs B [] = Lift Empty
 ExistMemberAs B (x ∷ x₁) =
@@ -438,3 +442,79 @@ ExistMemberAs-mapExisting-help l u e f p l1 l2 =
             (λ x → _∙ sym (p _ _))
             u
          )
+
+
+-- module moveFrwrdChangedOrRemove
+--             {ℓ} (A : Type ℓ) (B : A → DecPropΣ)
+--               (makeNotB : (a : A) → ⟨ B a ⟩ → Σ _ (IsEmpty ∘ fst ∘ B)  )where
+
+--   -- MoveFrwrdChangedOrRemove : List A → Type₀
+--   -- MoveFrwrdChangedOrRemove [] = Unit
+--   -- MoveFrwrdChangedOrRemove (x ∷ xs) =
+--   --    (⟨ B x ⟩ × Maybe ℕ ) ⊎ IsEmpty ⟨ B x ⟩
+--   --   -- dec-rec ⟨ B x ⟩ {{proj₁ (snd (B x))}}
+--   --   --   (λ _ → Maybe ℕ)
+--   --   --   (λ _ → MoveFrwrdChangedOrRemove xs)
+
+
+-- injAtMany : ∀ {ℓ ℓ'} {A : Type ℓ} {B : A → Type ℓ'} → List (Maybe (Σ A B)) → List A →  List A
+-- injAtMany [] x₁ = x₁
+-- injAtMany (x ∷ x₂) [] = []
+-- injAtMany (nothing ∷ x₂) (x₁ ∷ x₃) = x₁ ∷ injAtMany x₂ x₃
+-- injAtMany (just x ∷ x₂) l@(_ ∷ _) = fst x ∷ injAtMany x₂ l
+
+
+-- pick : ∀ {ℓ} {A : Type ℓ} → ℕ → A → List A → (A × List A)
+-- pick zero x xs = x , xs
+-- pick (suc n) x [] = x , []
+-- pick (suc n) x (x₁ ∷ xs) =
+--   map-prod (idfun _) (x ∷_) (pick n x₁ xs)
+
+-- bringToFront : ∀ {ℓ} {A : Type ℓ} → ℕ → ℕ → List A → List A
+-- bringToFront x x₁ [] = []
+-- bringToFront zero k (x ∷ xs) =
+--   let z =  (pick k x xs)
+--    in proj₁ z ∷ proj₂ z
+-- bringToFront (suc n) k (x ∷ xs) =
+--      x ∷ bringToFront n k xs
+
+
+BTF' : ∀ {ℓ} {A : Type ℓ} → List A → Type₀
+BTF' [] = Empty
+BTF' (_ ∷ xs) = Maybe (BTF' xs)
+
+
+BTF : ∀ {ℓ} {A : Type ℓ} → List A → Type₀
+BTF [] = Unit
+BTF (x ∷ xs) = BTF xs ⊎ BTF' (x ∷ xs) 
+
+mapTail : ∀ {ℓ} {A : Type ℓ} → (List A → List A) → List A → List A
+mapTail x [] = []
+mapTail x (x₁ ∷ x₂) = x₁ ∷ x x₂
+
+pick' :  ∀ {ℓ} {A : Type ℓ} → ∀ a → ∀ l → BTF' (a ∷ l) → A × List A
+pick' x xs nothing = x , xs
+pick' x (x₁ ∷ xs) (just y) = map-prod (idfun _) (x₁ ∷_) (pick' x xs y)
+   
+
+pick :  ∀ {ℓ} {A : Type ℓ} → ∀ l → BTF' l → List A
+pick = {!!}
+
+btf :  ∀ {ℓ} {A : Type ℓ} → (l : List A) → BTF l → List A
+btf [] _ = []
+btf (x ∷ xs) (inl x₁) = x ∷ btf xs x₁
+btf (x ∷ xs) (inr x₁) = pick (x ∷ xs) x₁
+
+
+-- BTF'-step : ∀ {ℓ} {A : Type ℓ} → (l : List A) → (bb : BTF' l) → BTF' (pick l bb)
+-- BTF'-step (x ∷ l) nothing = nothing
+-- BTF'-step (x ∷ l) (just x₁) = {!!}
+
+
+-- BTF-step : ∀ {ℓ} {A : Type ℓ} → (l : List A) → (bb : BTF l) → BTF (btf l bb)
+-- BTF-step [] bb = _
+-- BTF-step (x ∷ l) (inl x₁) = inl (BTF-step l x₁)
+-- BTF-step (x ∷ l) (inr x₁) = {!!}
+
+-- btf-many : ∀ {ℓ} {A : Type ℓ} → (l : List A) → List (BTF l) → List A
+-- btf-many = {!!}
