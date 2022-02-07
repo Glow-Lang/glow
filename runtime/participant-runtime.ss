@@ -158,7 +158,7 @@
                        timer-start: #f
                        first-unprocessed-block: #f ; Initialized with contract-config
                        first-unprocessed-event-in-block: 0
-                       contract-balances: (make-vector (length balance-vars))
+                       contract-balances: (make-vector (length balance-vars) 0)
                        io-context
                        program
                        name
@@ -170,6 +170,15 @@
                (.call ConsensusCodeGenerator .generate (.@ self consensus-code-generator))
                (initialize-environment self)
                self))}))
+
+;; runtime-copy-clear : Runtime <- Runtime
+(def (runtime-copy-clear self)
+  (.call Runtime .make
+    role: (.@ self role)
+    agreement: (.@ self agreement)
+    io-context: (.@ self io-context)
+    program: (.@ self program) ; TODO: copy-clear program mutable state?
+    off-chain-channel: (.@ self off-chain-channel)))
 
 ;; <- Runtime
 (def (execute self)
@@ -312,11 +321,37 @@
 
 ;; Run the active participant's side of the interaction. Return value
 ;; indicates whether we should continue executing (#t) or stop now (#f).
+
+;; conservative assumption that the current code uses
+(def (block-ctx-contract-creation-allowed? bc) #f)
+
+;; Interpret, one of:
+;;  - Pre-contract, with NO first-code-block contract-creation problems:
+;;     * Create contract with code-block state.
+;;  - Pre-contract, with first-code-block contract-creation problems:
+;;     * Create contract with empty state,
+;;     * Call contract with code-block state.
+;;  - Post-contract:
+;;     * Call contract with code-block state.
+
 ;;
 ;; Bool <- Runtime
 (def (run-active-code-block self)
   (def role (.@ self role))
   (set! (.@ self block-ctx) (.call ActiveBlockCtx .make))
+  ;; Save initial (just in case we might rollback)
+  (def self-initial-copy
+    (and (not (.@ self contract-config)) (runtime-copy-clear self)))
+  (when (not (.@ self contract-config))
+    (set! (.@ self-initial-copy block-ctx) (.call ActiveBlockCtx .make)))
+  ;; Interpret
+  (when (.@ self contract-config)
+    (publish-frame-data self (.@ self block-ctx outbox)))
+  (interpret-current-code-block self)
+  (cond
+    ((and (not (.@ self contract-config)) (block-ctx-contract-creation-allowed? (.@ self block-ctx)))
+     (error "TODO: run-active-code-block branch block-ctx-contract-creation-allowed"))
+    (else (let ()
   ;; if the contract has not been created yet, create it first,
   ;; before running `interpret-current-code-block`
   ;; TODO: as an optimization, it could be possible to run interpret-current-code-block
@@ -324,15 +359,16 @@
   ;;       call it first-transaction-optimization
   (when (not (.@ self contract-config))
    (let ()
-    (deploy-contract self)
-    (def contract-config (.@ self contract-config))
-    (def agreement (.@ self agreement))
-    (def published-data (get-output-u8vector (.@ self block-ctx outbox)))
+    (deploy-contract self-initial-copy)
+    (def contract-config (.@ self-initial-copy contract-config))
+    (def agreement (.@ self-initial-copy agreement))
+    (def published-data (get-output-u8vector (.@ self-initial-copy block-ctx outbox)))
     (def handshake (.new AgreementHandshake agreement contract-config published-data))
+    (set! (.@ self timer-start) (.@ self-initial-copy timer-start))
+    (set! (.@ self contract-config) (.@ self-initial-copy contract-config))
+    (set! (.@ self first-unprocessed-block) (.@ self-initial-copy first-unprocessed-block))
     (def off-chain-channel (.@ self off-chain-channel))
     (.call off-chain-channel .send-contract-handshake self handshake)))
-  (publish-frame-data self (.@ self block-ctx outbox))
-  (interpret-current-code-block self)
   ;; TODO: Verify asset transfers using previous transaction and balances
   ;; recorded in Message's asset-transfer table during interpretation. Probably
   ;; requires getting TransactionInfo using the TransactionReceipt.
@@ -347,7 +383,7 @@
   (set! (.@ self timer-start) (.@ new-tx-receipt blockNumber))
   (set! (.@ self first-unprocessed-block) (1+ (.@ new-tx-receipt blockNumber)))
   (set! (.@ self first-unprocessed-event-in-block) 0)
-  #t)
+  #t))))
 
 ;; Pre-approve any deposits that the current block will need to perform
 ;; when we invoke the consensus.
@@ -532,7 +568,7 @@
 ;; <- (List DependentPair) BytesOutputPort
 (def (marshal-product-to fields port)
   (for ((p fields))
-    (with (([t . v] p)) (marshal t v port))))
+    (with (([t . v] p)) (marshal t (.call t .validate v) port))))
 
 ;; : Digest <- (List DependentPair)
 (def (digest-product-f fields)

@@ -1,7 +1,9 @@
 (export #t)
 
 (import
+  :std/sugar
   :std/misc/list
+  :gerbil/gambit/ports
   :clan/base :clan/pure/dict/assq
   :clan/poo/object :clan/poo/brace :clan/poo/io
   :mukn/ethereum/types :mukn/ethereum/assets)
@@ -11,6 +13,10 @@
 
 (define-type BlockCtx
   {
+   .copy: (lambda (self)
+            (cond ((.has? self inbox) (.call PassiveBlockCtx .copy self))
+                  (else               (.call ActiveBlockCtx .copy self))))
+    
    ;; Log a withdrawal. Takes the participant doing the withdrawal, the asset name,
    ;; and the amount.
    ;;
@@ -58,6 +64,12 @@
     .make: (lambda (in-bytes) {deposits: []
                                withdrawals: []
                                inbox: (open-input-u8vector in-bytes)})
+    .copy: (lambda (self)
+             ;; MUTABLE LVALUE (.@ self inbox) !!!
+             ;(def inbox-copy (bytes-input-port-clone! (.@ self inbox)))
+             {deposits: (.@ self deposits)
+              withdrawals: (.@ self withdrawals)
+              inbox: (.@ self inbox)})
     .expect-published: ;; : t <- Symbol t:Type
     (λ (self _name type)
       ;; ignore name: by order not by name
@@ -73,7 +85,30 @@
     .make: (lambda () {deposits: []
                        withdrawals: []
                        outbox: (open-output-u8vector)})
+    .copy: (lambda (self)
+             ;(def outbox-copy (bytes-output-port-copy (.@ self outbox)))
+             {deposits: (.@ self deposits)
+              withdrawals: (.@ self withdrawals)
+              outbox: (.@ self outbox)})
     .add-to-published: ;; <- @ Symbol t:Type t
     (λ (self _name type value)
       ;; for debugging, accumulate name and type in a parallel data structure?
       (marshal type value (.@ self outbox)))}))
+
+;; bytes-output-port-copy : BytesOutputPort -> BytesOutputPort
+(def (bytes-output-port-copy bop)
+  (open-output-u8vector (get-output-u8vector bop)))
+
+;; What would be nice using peeking-input-port:
+;(def (bytes-input-port-copy bip)
+;  (peeking-input-port bip))
+
+;; What to do instead:
+(def (bytes-input-port-destructive-clone! bip)
+  (def bs (list->u8vector (read-all bip read-u8)))
+  (values (open-input-u8vector bs) (open-input-u8vector bs)))
+
+(defrule (bytes-input-port-clone! lvalue-bip)
+  (let-values (((bip1 bip2) (bytes-input-port-destructive-clone! lvalue-bip)))
+    (set! lvalue-bip bip1)
+    bip2))
