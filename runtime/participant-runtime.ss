@@ -844,18 +844,24 @@
          (def my-0xaddr (0x<-address (.@ (car (.@ (lookup-contact nickname: my-nickname contacts: contacts) identities)) address) ) )
 
          ;;initialize the pubsub for peer discovery
+
+         (displayln "Connecting to the pubsub")
          (defvalues (sub cancel pubsub-listen-thread)
-           (if (pubsub-node)
-             (connect-to-multiaddr-pubsub pubsub-node: pubsub-node c: libp2p-client)
+           (if pubsub-node
+             (connect-to-multiaddr-pubsub pubsub-node: pubsub-node c: libp2p-client my-0xaddr: my-0xaddr)
              (error "Default pubsub-node connection has not been implemented yet")))
+         (displayln "Connected to the pubsub")
 
          ;;connect to the circuit-relay
 
-         (def circuit-relay (if (circuit-relay-address)
+         (displayln "Connecting to the circuit-relay")
+         (def circuit-relay (if circuit-relay-address
                               (string->peer-info circuit-relay-address)
                               (error "Default circuit-relay connection has not been implemented yet")))
 
          (libp2p-connect libp2p-client circuit-relay)
+
+         (displayln "Connected to the circuit-relay")
 
          ;; Get and Broadcast identity
          (def self (libp2p-identify libp2p-client))
@@ -892,14 +898,15 @@
                                (if (not (equal? my-0xaddr (0x<-address value)))
                                  (0x<-address value)))
                              (hash<-object (.@ agreement participants))))
-
+             (displayln "getting peerID")
              (def dest-peerID (get-peerID-from-pubsub sub: sub
                                                       c: libp2p-client
                                                       peer0x: dest-address)) ;;Multiaddr from the Eth addr using pubsub BLOCKS UNTIL ADDRESS IS FOUND
-             ;;
+             (displayln "peerID obtained")
              (dial-and-send-contents libp2p-client
-                                     (string-join `(circuit-relay dest-peerID) "/p2p-circuit/p2p/")
+                                     (string-join (list (peer-info->string circuit-relay) dest-peerID) "/p2p-circuit/p2p/")
                                      agreement-string)
+             (displayln "peer dialed")
              (displayln)
              (force-output))
 
@@ -913,7 +920,7 @@
                                                       peer0x: dest-address))
 
              (dial-and-send-contents libp2p-client
-                                     (string-join `(circuit-relay dest-peerID) "/p2p-circuit/p2p/")
+                                     (string-join (list (peer-info->string circuit-relay) dest-peerID) "/p2p-circuit/p2p/")
                                      handshake-string)
              (displayln)
              (force-output))
@@ -1024,10 +1031,12 @@
 ;; also spawns a reader that will respond to identify requests
 ;;
 ;; returns (values pubsubchatchannel cancelprocforpubsubchannel readerthread)
-(def (connect-to-multiaddr-pubsub pubsub-node: pubsub-node c: c)
+(def (connect-to-multiaddr-pubsub pubsub-node: pubsub-node c: c my-0xaddr: my-0xaddr)
   (libp2p-connect c (string->peer-info pubsub-node))
+  (displayln "connected to pubsub node")
   (let*-values (((sub cancel) (pubsub-subscribe c "chat"))
-                (reader (spawn subscription-reader sub c)))
+                (reader (spawn subscription-reader sub c my-0xaddr)))
+    (displayln "subscription reader spawned")
     (values sub cancel reader)))
 
 ;; subscription-reader
@@ -1038,7 +1047,7 @@
 ;;
 ;; TODO: Allow for specific identity requests
 (def (subscription-reader sub c my-0xaddr)
-
+ (displayln "Creating subscription Reader")
  (let ((self (libp2p-identify c)))
    (for (m sub)
 
