@@ -844,24 +844,22 @@
          (def my-0xaddr (0x<-address (.@ (car (.@ (lookup-contact nickname: my-nickname contacts: contacts) identities)) address) ) )
 
          ;;initialize the pubsub for peer discovery
-
-         (displayln "Connecting to the pubsub")
          (defvalues (sub cancel pubsub-listen-thread)
            (if pubsub-node
              (connect-to-multiaddr-pubsub pubsub-node: pubsub-node c: libp2p-client my-0xaddr: my-0xaddr)
-             (error "Default pubsub-node connection has not been implemented yet")))
-         (displayln "Connected to the pubsub")
+             ;;(error "Default pubsub-node connection has not been implemented yet")
+             (connect-to-multiaddr-pubsub pubsub-node: "/ip4/3.141.142.211/tcp/14024/p2p/QmaNfseieYheiaYhDKsZ9CJnFg7qjSTTootzjP6pUqbsrq" c: libp2p-client my-0xaddr: my-0xaddr)
+             ))
 
          ;;connect to the circuit-relay
-
-         (displayln "Connecting to the circuit-relay")
          (def circuit-relay (if circuit-relay-address
                               (string->peer-info circuit-relay-address)
-                              (error "Default circuit-relay connection has not been implemented yet")))
+
+                              ;;(error "Default circuit-relay connection has not been implemented yet")
+                              (string->peer-info "/ip4/3.141.142.211/tcp/14024/p2p/QmaNfseieYheiaYhDKsZ9CJnFg7qjSTTootzjP6pUqbsrq")
+                              ))
 
          (libp2p-connect libp2p-client circuit-relay)
-
-         (displayln "Connected to the circuit-relay")
 
          ;; Get and Broadcast identity
          (def self (libp2p-identify libp2p-client))
@@ -885,6 +883,7 @@
            sub
            cancel
            circuit-relay
+
            ;; FIXME: Get other participant addresses from contacts,
            ;; pass these in as a parameter,
            ;; instead of storing and using dest-address within the libp2p channel object.
@@ -939,7 +938,7 @@
              (def agreement (<-json InteractionAgreement (json<-string agreement-str)))
              agreement)
 
-            .close: (lambda () (stop-libp2p-daemon!) (cancel) (thread-abort! pubsub-listen-thread))
+            .close: (lambda () (stop-libp2p-daemon!) (cancel) (thread-abort! (car pubsub-listen-thread)))
            })))
 
 
@@ -1033,10 +1032,8 @@
 ;; returns (values pubsubchatchannel cancelprocforpubsubchannel readerthread)
 (def (connect-to-multiaddr-pubsub pubsub-node: pubsub-node c: c my-0xaddr: my-0xaddr)
   (libp2p-connect c (string->peer-info pubsub-node))
-  (displayln "connected to pubsub node")
   (let*-values (((sub cancel) (pubsub-subscribe c "chat"))
                 (reader (spawn subscription-reader sub c my-0xaddr)))
-    (displayln "subscription reader spawned")
     (values sub cancel reader)))
 
 ;; subscription-reader
@@ -1047,7 +1044,6 @@
 ;;
 ;; TODO: Allow for specific identity requests
 (def (subscription-reader sub c my-0xaddr)
- (displayln "Creating subscription Reader")
  (let ((self (libp2p-identify c)))
    (for (m sub)
 
