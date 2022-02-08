@@ -456,3 +456,18 @@ bindMaybe (just x) x₁ = x₁ x
 maybe-elim : ∀ {a} {A : Type a} {B : Maybe A  → Type a} → B nothing → (∀ a → B (just a)) → ∀ x → B x
 maybe-elim x x₁ nothing = x
 maybe-elim x x₁ (just x₂) = x₁ x₂
+
+bind-Maybe : ∀ {ℓ ℓ'} {A : Type ℓ} {B : Type ℓ'} → Maybe A → (A → Maybe B) → Maybe B
+bind-Maybe nothing x₁ = nothing
+bind-Maybe (just x) x₁ = x₁ x
+
+zip : ∀ {ℓ ℓ'} {A : Type ℓ} {B : Type ℓ'} → List A → List B → List (A × B)
+zip [] x₁ = []
+zip (x ∷ x₂) [] = []
+zip (x ∷ x₂) (x₁ ∷ x₃) = (x , x₁) ∷ zip x₂ x₃ 
+
+maybe-eqCase : ∀ {ℓ ℓ'} {A : Type ℓ} {B : Type ℓ'} → Maybe A → Maybe B → DecPropΣ
+maybe-eqCase nothing nothing = Unit-dp
+maybe-eqCase nothing (just x) = Empty-dp
+maybe-eqCase (just x) nothing = Empty-dp
+maybe-eqCase (just x) (just x₁) = Unit-dp

@@ -10,7 +10,7 @@ open import Cubical.Foundations.Everything
 open import Cubical.Data.Nat
 open import Cubical.Data.Int
 open import Cubical.Data.Prod renaming (map to map-prod)
-open import Cubical.Data.Sum renaming (elim to sum-elim ; map to map-sum)
+open import Cubical.Data.Sum renaming (elim to sum-elim ; map to map-sum ; rec to sum-rec)
 open import Cubical.Data.List renaming (map to map-List)
 
 
@@ -62,6 +62,16 @@ ExistMemberAs B (x ∷ x₁) =
   (B x)
     ⊎
   ((IsEmpty (B x)) × ExistMemberAs B x₁)
+
+ExistMemberAs→ : ∀ {ℓ ℓ'} → {A : Type ℓ} → {B B' : A → Type ℓ'} → {l : List A}
+                       → (∀ a → B a → B' a) → (∀ a → Dec (B' a))
+                       → ExistMemberAs B l → ExistMemberAs B' l 
+ExistMemberAs→ {l = x₃ ∷ l} x x₁ (inl x₂) = inl (x _ x₂)
+ExistMemberAs→ {l = x₃ ∷ l} x x₁ (inr x₂) =
+ dec-rec' _
+    inl
+    (inr ∘ (_, ExistMemberAs→ x x₁ (proj₂ x₂)))
+    (x₁ x₃)
 
 -- ExistMemberAs-map : ∀ {ℓ ℓ'} → {A : Type ℓ} → (B B' : A → Type ℓ')
 --                       → (∀ a → B a → B' a) 
@@ -488,35 +498,89 @@ BTF : ∀ {ℓ} {A : Type ℓ} → List A → Type₀
 BTF [] = Empty
 BTF (x ∷ xs) = BTF xs ⊎ BTF' (xs) 
 
-BTF-1 : BTF  (false ∷ [ true ]) → Empty
-BTF-1 (inl (inl ()))
-BTF-1 (inl (inr ()))
-BTF-1 (inr nothing) = {!!}
 
--- pickH :  ∀ {ℓ} {A : Type ℓ} → ∀ l → BTF' l → A
--- pickH (x₁ ∷ l) nothing = x₁
--- pickH (x₁ ∷ l) (just x) = pickH l x
+pick :  ∀ {ℓ} {A : Type ℓ} → ∀ l → BTF' l → A
+pick (a ∷ l) nothing = a
+pick (_ ∷ l) (just x) = pick l x
 
--- pickT :  ∀ {ℓ} {A : Type ℓ} → ∀ l → BTF' l → List A
--- pickT (x₁ ∷ l) nothing = l
--- pickT (x₁ ∷ l) (just x) = x₁ ∷ pickT l x
-
-
--- btf :  ∀ {ℓ} {A : Type ℓ} → (l : List A) → BTF l → List A
--- btf [] _ = []
--- btf (x ∷ xs) (inl x₁) = x ∷ btf xs x₁
--- btf l@(_ ∷ _) (inr x₁) = pickH l x₁ ∷ pickT l x₁
+updAt :  ∀ {ℓ} {A : Type ℓ} → A → ∀ l → BTF' l → List A
+updAt a (x ∷ l) y =
+  caseMaybe a x y
+  ∷
+  recMaybe l (updAt a l) y
+-- updAt a (_ ∷ l) nothing = a ∷ l
+-- updAt a (x ∷ l) (just y) = x ∷ updAt a l y
 
 
--- BTF'-step : ∀ {ℓ} {A : Type ℓ} → (l : List A) → (bb : BTF' l) → BTF' (pick l bb) → BTF' (pick l bb)
--- BTF'-step (x ∷ l) nothing = nothing
--- BTF'-step (x ∷ l) (just x₁) = {!!}
+btf :  ∀ {ℓ} {A : Type ℓ} → (l : List A) → BTF l → List A
+btf [] _ = []
+btf (x ∷ xs) y =
+   sum-rec (const x) (pick xs) y
+   ∷
+   sum-rec (btf xs) (updAt x xs) y
 
 
--- -- BTF-step : ∀ {ℓ} {A : Type ℓ} → (l : List A) → (bb : BTF l) → BTF (btf l bb)
--- -- BTF-step [] bb = _
--- -- BTF-step (x ∷ l) (inl x₁) = inl (BTF-step l x₁)
--- -- BTF-step (x ∷ l) (inr x₁) = {!!}
+haveSameL : ∀ {ℓ} {A : Type ℓ} → List A → List A → Type₀
+haveSameL [] [] = Unit
+haveSameL [] (x ∷ x₁) = Empty
+haveSameL (x ∷ x₁) [] = Empty
+haveSameL (x ∷ x₁) (x₂ ∷ x₃) = haveSameL x₁ x₃
 
--- -- btf-many : ∀ {ℓ} {A : Type ℓ} → (l : List A) → List (BTF l) → List A
--- -- btf-many = {!!}
+haveSameL-refl : ∀ {ℓ} {A : Type ℓ} → (l : List A) → haveSameL l l
+haveSameL-refl [] = tt
+haveSameL-refl (_ ∷ l) = haveSameL-refl l
+
+BTF-trans' : ∀ {ℓ} {A : Type ℓ} → {l l' : List A} → haveSameL l l' → BTF' l → BTF' l'
+BTF-trans' {l = _ ∷ _} {_ ∷ _} x  = map-Maybe (BTF-trans' x)
+
+BTF-trans : ∀ {ℓ} {A : Type ℓ} → {l l' : List A} → haveSameL l l' → BTF l → BTF l'
+BTF-trans {l = _ ∷ _} {_ ∷ _} y = map-sum (BTF-trans y) (BTF-trans' y) 
+
+
+updAt-sameL : ∀ {ℓ} {A : Type ℓ} → ∀ a → (l : List A) → (bb : BTF' l) → haveSameL l (updAt a l bb)
+updAt-sameL _ (x ∷ l) nothing = haveSameL-refl l
+updAt-sameL _ (x ∷ l) (just x₁) = updAt-sameL _ _ x₁
+
+btf-sameL : ∀ {ℓ} {A : Type ℓ} → (l : List A) → (bb : BTF l) → haveSameL l (btf l bb)
+btf-sameL (_ ∷ _) (inl x₁) = btf-sameL _ x₁
+btf-sameL (_ ∷ _) (inr x₁) = updAt-sameL _ _ x₁
+
+{-# TERMINATING #-}
+btf-more : ∀ {ℓ} {A : Type ℓ} → (l : List A) → List (BTF l) → List A
+btf-more l [] = l
+btf-more l (x ∷ x₁) = btf-more (btf l x) (map-List (BTF-trans (btf-sameL l x)) x₁)
+
+-- BTF'-step' : ∀ {ℓ} {A : Type ℓ} → ∀ a → (l : List A) → (bb : BTF' l) → BTF' l → BTF' (updAt a l bb)
+-- BTF'-step' _ (_ ∷ _) =
+--   map-Maybe ∘ 
+--    (maybe-elim {B = λ bb → BTF' _ → BTF' (recMaybe _ (updAt _ _) bb)}
+--       (idfun _)
+--       (BTF'-step' _ _))
+
+-- BTF'-step : ∀ {ℓ} {A : Type ℓ} → (l : List A) → (bb : BTF l) → BTF' l → BTF' (btf l bb)
+-- BTF'-step (_ ∷ _) =
+--    map-Maybe ∘
+--      ((sum-elim {C = λ y → BTF' _ → BTF' (sum-rec (btf _) (updAt _ _) y)}
+--        (BTF'-step _) (BTF'-step' _ _)))
+
+-- BTF-step : ∀ {ℓ} {A : Type ℓ} → (l : List A) → (bb : BTF l) → BTF l → BTF (btf l bb)
+-- BTF-step (x ∷ l) y =
+--   map-sum
+--     (sum-elim {C = λ y → BTF l → BTF (sum-rec (btf l) (updAt x l) y)}
+--       (BTF-step _)
+--       {!!}
+--        y)
+--     (sum-elim {C = λ y → BTF' l → BTF' (sum-rec (btf l) (updAt x l) y)}
+--       {!!}
+--       (BTF'-step' _ _)
+--       y)
+
+
+haveSameL-filter-lemma : ∀ {ℓ ℓ'} {A : Type ℓ} {B : Type ℓ'} → (f : A → Maybe B) → 
+                             (l l' : List A) →
+                             haveSameL l l' × ForAllMember (λ x → ⟨ maybe-eqCase (f (proj₁ x)) (f (proj₂ x)) ⟩) (zip l l' )
+                             → haveSameL (filterMap f l) (filterMap f l')
+haveSameL-filter-lemma f [] [] (x , x₁) = tt
+haveSameL-filter-lemma f (x₂ ∷ l) (x₃ ∷ l') (x , x₁) with (f x₂) | (f x₃) | proj₁ x₁
+... | nothing | nothing | _ = haveSameL-filter-lemma f l l' (x , (proj₂ x₁))
+... | just x₄ | just x₅ | _ = haveSameL-filter-lemma f l l' (x  , (proj₂ x₁))

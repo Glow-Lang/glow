@@ -582,7 +582,7 @@ module _ (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}
         
 
         -- this is temporary solution, this constructors cannot apear in code, and are introduced on some passes, this distinction must be typesafe in the future! 
-        receivePublished : DishonestParticipantId → GTypeAgdaRep Τ → {_ : PM (IsConsensus Γ) } → Expr Γ Τ
+        receivePublished : DishonestParticipantId → {_ : PM (IsConsensus Γ) } → Expr Γ Τ
 
         if_then_else_ : Expr Γ Bool → Expr Γ Τ → Expr Γ Τ → Expr Γ Τ
 
@@ -601,14 +601,14 @@ module _ (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}
 
       data NBStmnt Γ where
         NBS-require! : Expr Γ Bool → NBStmnt Γ
-        NBS-deposit! : ParticipantId → {_ : PM ( IsConsensus Γ ) } → Expr Γ Nat → NBStmnt Γ
-        NBS-withdraw! : ParticipantId → {_ : PM ( IsConsensus Γ ) } → Expr Γ Nat → NBStmnt Γ
+        NBS-deposit! : ParticipantId → Expr Γ Nat → NBStmnt Γ
+        NBS-withdraw! : ParticipantId → Expr Γ Nat → NBStmnt Γ
         -- this is temporary solution, this constructors cannot apear in code, and are introduced on some passes, this distinction must be typesafe in the future!
-        -- beter solution is commented, but needs additional coherence conditions to work
-        NBS-publishVal! : HonestParticipantId → Identifier → {_ : PM ( IsConsensus Γ ) } → NBStmnt Γ
+        
+        NBS-publishVal! : HonestParticipantId → Identifier → NBStmnt Γ
 
       data NBStmnt+Expr Γ where
-        stmntNBS : NBStmnt Γ → NBStmnt+Expr Γ
+        stmntNBS : NBStmnt Γ → {_ : PM ( IsConsensus Γ ) } →  NBStmnt+Expr Γ
         exprNBS : ∀ {Τ} → Expr Γ Τ → NBStmnt+Expr Γ
 
       Args Γ [] = Unit
@@ -645,7 +645,7 @@ module _ (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}
       -- Expr-eq? Γ Τ (lit x) (lit x₁) = {!!}
 
       blankStmnt : ∀ {Γ} → Stmnt Γ
-      blankStmnt = nonBindingS (stmntNBS (NBS-require! (lit true)))
+      blankStmnt = nonBindingS (exprNBS (lit tt))
 
       IsPureE : ∀ {Γ Τ} → Expr Γ Τ → DecPropΣ 
 
@@ -660,7 +660,7 @@ module _ (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}
          (×-dp (IsPureStmnts stmnts₁) (IsPureE expr₁))
       IsPureE (lit x) = Unit-dp
       IsPureE (input x) = Empty-dp
-      IsPureE (receivePublished _ _) = Empty-dp
+      IsPureE (receivePublished _) = Empty-dp
       IsPureE (if x then x₁ else x₂) = ×-dp (IsPureE x) (×-dp (IsPureE x₁) (IsPureE x₂))
       IsPureE (sign q) = Unit-dp
 
