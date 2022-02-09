@@ -847,16 +847,16 @@
          (defvalues (sub cancel pubsub-listen-thread)
            (if pubsub-node
              (connect-to-multiaddr-pubsub pubsub-node: pubsub-node c: libp2p-client my-0xaddr: my-0xaddr)
-             ;;(error "Default pubsub-node connection has not been implemented yet")
-             (connect-to-multiaddr-pubsub pubsub-node: "/ip4/3.141.142.211/tcp/14024/p2p/QmaNfseieYheiaYhDKsZ9CJnFg7qjSTTootzjP6pUqbsrq" c: libp2p-client my-0xaddr: my-0xaddr)
+             (error "Default pubsub-node connection has not been implemented yet")
+             ;;(connect-to-multiaddr-pubsub pubsub-node: "/ip4/192.168.0.7/tcp/10330/p2p/QmVUvjKcWxqa3dbfbdN5g1Tfh2khTrvhdpEjrLRj6f4Cj6" c: libp2p-client my-0xaddr: my-0xaddr) ;; TODO: IMPLEMENT BOOTSTRAP NODE
              ))
 
          ;;connect to the circuit-relay
          (def circuit-relay (if circuit-relay-address
                               (string->peer-info circuit-relay-address)
 
-                              ;;(error "Default circuit-relay connection has not been implemented yet")
-                              (string->peer-info "/ip4/3.141.142.211/tcp/14024/p2p/QmaNfseieYheiaYhDKsZ9CJnFg7qjSTTootzjP6pUqbsrq")
+                              (error "Default circuit-relay connection has not been implemented yet")
+                              ;;(string->peer-info "/ip4/192.168.0.7/tcp/10330/p2p/QmVUvjKcWxqa3dbfbdN5g1Tfh2khTrvhdpEjrLRj6f4Cj6") ;; TODO: IMPLEMENT BOOTSTRAP NODE
                               ))
 
          (libp2p-connect libp2p-client circuit-relay)
