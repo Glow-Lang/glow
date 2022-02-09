@@ -27,6 +27,7 @@
   (only-in :vyzo/libp2p/client make-client)
   :vyzo/libp2p/daemon
   (only-in ../compiler/alpha-convert/env symbol-refer)
+  (only-in ../compiler/checkpointify/checkpointify ci-outgoing-transitions ti-effects)
   ./program ./block-ctx ./consensus-code-generator ./terminal-codes
   ./pb/private-key
   ../compiler/method-resolve/method-resolve
@@ -158,7 +159,7 @@
                        timer-start: #f
                        first-unprocessed-block: #f ; Initialized with contract-config
                        first-unprocessed-event-in-block: 0
-                       contract-balances: (make-vector (length balance-vars))
+                       contract-balances: (make-vector (length balance-vars) 0)
                        io-context
                        program
                        name
@@ -299,16 +300,51 @@
      (set! (.@ self contract-config) contract-config)))
   #t)
 
+(def (run-passive-code-block/handshake self role)
+  (passive-participant-handshake self role)
+  (interpret-current-code-block self))
+
+;; Conservative assumption: "with first-code-block contract-creation problems"
+(def (on-first-code-block-contract-creation-allowed? self)
+  (def current-code-block-label (.@ self current-code-block-label))
+  ;; TODO: check against (.@ interaction-info initial-code-block-label)
+  (def program (.@ self program))
+  (def compiler-output (.@ program compiler-output))
+  (def cpitable2 (hash-kref compiler-output 'cpitable2.sexp))
+  (def cpicurrent (hash-kref cpitable2 current-code-block-label))
+  (def tiscurrent (ci-outgoing-transitions cpicurrent))
+  (def all-effects (flatten1 (map ti-effects tiscurrent)))
+  ;; TODO: Use all-effects to determine whether the first codeblock
+  ;;       doesn't have any withdraws or any non-native-asset deposits.
+  ;;       Be conservative: if there's any uncertainty, return #false.
+  #f)
+
 ;; Runs the passive participant's side of the interaction. Return value
 ;; indicates whether we should continue executing (#t) or stop now (#f).
 ;;
 ;; Bool <- Runtime
 (def (run-passive-code-block self)
   (def role (.@ self role))
-  ;; if the contract has not been created yet, do handshake first
-  (when (not (.@ self contract-config))
-    (passive-participant-handshake self role))
-  (run-passive-code-block/contract self role (.@ self contract-config)))
+  ;; one of:
+  ;; - Pre-contract, with NO first-code-block contract-creation problems:
+  ;;    * Handshake to ensure contract with code-block state.
+  ;; - Pre-contract, with first-code-block contract-creation problems:
+  ;;    * Handshake to ensure contract with empty state,
+  ;;    * Call contract with code-block state.
+  ;; - Post-contract:
+  ;;    * Call contract with code-block state.
+  (cond
+    ((and (not (.@ self contract-config)) (on-first-code-block-contract-creation-allowed? self))
+     (run-passive-code-block/handshake self role))
+    ((not (.@ self contract-config))
+     (let ()
+       ;; if the contract has not been created yet, do handshake first
+       (let ()
+         (passive-participant-handshake self role))
+       (run-passive-code-block/contract self role (.@ self contract-config))))
+    (else
+     (let ()
+       (run-passive-code-block/contract self role (.@ self contract-config))))))
 
 ;; Run the active participant's side of the interaction. Return value
 ;; indicates whether we should continue executing (#t) or stop now (#f).
@@ -317,37 +353,89 @@
 (def (run-active-code-block self)
   (def role (.@ self role))
   (set! (.@ self block-ctx) (.call ActiveBlockCtx .make))
-  ;; if the contract has not been created yet, create it first,
-  ;; before running `interpret-current-code-block`
-  ;; TODO: as an optimization, it could be possible to run interpret-current-code-block
-  ;;       before this, in the cases where it doesn't have side-effects such as withdraws
-  ;;       call it first-transaction-optimization
-  (when (not (.@ self contract-config))
-   (let ()
-    (deploy-contract self)
-    (def contract-config (.@ self contract-config))
-    (def agreement (.@ self agreement))
-    (def published-data (get-output-u8vector (.@ self block-ctx outbox)))
-    (def handshake (.new AgreementHandshake agreement contract-config published-data))
-    (def off-chain-channel (.@ self off-chain-channel))
-    (.call off-chain-channel .send-contract-handshake self handshake)))
-  (publish-frame-data self (.@ self block-ctx outbox))
-  (interpret-current-code-block self)
-  ;; TODO: Verify asset transfers using previous transaction and balances
-  ;; recorded in Message's asset-transfer table during interpretation. Probably
-  ;; requires getting TransactionInfo using the TransactionReceipt.
-  (def contract-address (.@ self contract-config contract-address))
-  (approve-deposits self contract-address)
-  (def message-pretx
-       (prepare-call-function-transaction
-         self
-         contract-address
-         (.@ self block-ctx outbox)))
-  (def new-tx-receipt (post-transaction message-pretx))
-  (set! (.@ self timer-start) (.@ new-tx-receipt blockNumber))
-  (set! (.@ self first-unprocessed-block) (1+ (.@ new-tx-receipt blockNumber)))
-  (set! (.@ self first-unprocessed-event-in-block) 0)
-  #t)
+  ;; one of:
+  ;; - Pre-contract, with NO first-code-block contract-creation problems:
+  ;;    * Create contract with code-block state.
+  ;; - Pre-contract, with first-code-block contract-creation problems:
+  ;;    * Create contract with empty state,
+  ;;    * Call contract with code-block state.
+  ;; - Post-contract:
+  ;;    * Call contract with code-block state.
+  (cond
+    ((and (not (.@ self contract-config)) (on-first-code-block-contract-creation-allowed? self))
+     (let ()
+       ;; Interpret before deploying contract
+       (interpret-current-code-block self)
+       (let ()
+         (deploy-contract self)
+         (def contract-config (.@ self contract-config))
+         (def agreement (.@ self agreement))
+         (def published-data (get-output-u8vector (.@ self block-ctx outbox)))
+         (def handshake (.new AgreementHandshake agreement contract-config published-data))
+         (def off-chain-channel (.@ self off-chain-channel))
+         (.call off-chain-channel .send-contract-handshake self handshake))
+       ;; TODO: Verify asset transfers using previous transaction and balances
+       ;; recorded in Message's asset-transfer table during interpretation. Probably
+       ;; requires getting TransactionInfo using the TransactionReceipt.
+       (def contract-address (.@ self contract-config contract-address))
+       (approve-deposits self contract-address)
+       (def message-pretx
+            (prepare-call-function-transaction
+              self
+              contract-address
+              (.@ self block-ctx outbox)))
+       (def new-tx-receipt (post-transaction message-pretx))
+       (set! (.@ self timer-start) (.@ new-tx-receipt blockNumber))
+       (set! (.@ self first-unprocessed-block) (1+ (.@ new-tx-receipt blockNumber)))
+       (set! (.@ self first-unprocessed-event-in-block) 0)
+       #t))
+    ((not (.@ self contract-config))
+     (let ()
+       (let ()
+         (deploy-contract self)
+         (def contract-config (.@ self contract-config))
+         (def agreement (.@ self agreement))
+         (def published-data (get-output-u8vector (.@ self block-ctx outbox)))
+         (def handshake (.new AgreementHandshake agreement contract-config published-data))
+         (def off-chain-channel (.@ self off-chain-channel))
+         (.call off-chain-channel .send-contract-handshake self handshake))
+       ;; Interpret after deploying contract
+       (publish-frame-data self (.@ self block-ctx outbox))
+       (interpret-current-code-block self)
+       ;; TODO: Verify asset transfers using previous transaction and balances
+       ;; recorded in Message's asset-transfer table during interpretation. Probably
+       ;; requires getting TransactionInfo using the TransactionReceipt.
+       (def contract-address (.@ self contract-config contract-address))
+       (approve-deposits self contract-address)
+       (def message-pretx
+            (prepare-call-function-transaction
+              self
+              contract-address
+              (.@ self block-ctx outbox)))
+       (def new-tx-receipt (post-transaction message-pretx))
+       (set! (.@ self timer-start) (.@ new-tx-receipt blockNumber))
+       (set! (.@ self first-unprocessed-block) (1+ (.@ new-tx-receipt blockNumber)))
+       (set! (.@ self first-unprocessed-event-in-block) 0)
+       #t))
+    (else
+     (let ()
+       (publish-frame-data self (.@ self block-ctx outbox))
+       (interpret-current-code-block self)
+       ;; TODO: Verify asset transfers using previous transaction and balances
+       ;; recorded in Message's asset-transfer table during interpretation. Probably
+       ;; requires getting TransactionInfo using the TransactionReceipt.
+       (def contract-address (.@ self contract-config contract-address))
+       (approve-deposits self contract-address)
+       (def message-pretx
+            (prepare-call-function-transaction
+              self
+              contract-address
+              (.@ self block-ctx outbox)))
+       (def new-tx-receipt (post-transaction message-pretx))
+       (set! (.@ self timer-start) (.@ new-tx-receipt blockNumber))
+       (set! (.@ self first-unprocessed-block) (1+ (.@ new-tx-receipt blockNumber)))
+       (set! (.@ self first-unprocessed-event-in-block) 0)
+       #t))))
 
 ;; Pre-approve any deposits that the current block will need to perform
 ;; when we invoke the consensus.
