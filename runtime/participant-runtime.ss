@@ -274,7 +274,7 @@
       (interpret-participant-statement self statement))
     (update-contract-balances self)))
 
-(def (passive-participant-handshake self role)
+(def (passive-participant-handshake self role next?: (next? #f))
   (nest
    (let (off-chain-channel (.@ self off-chain-channel)))
    (let (agreement-handshake (.call off-chain-channel .listen-for-handshake self)))
@@ -295,13 +295,13 @@
      (set! (.@ self timer-start) (.@ agreement options maxInitialBlock))
      (set! (.@ self first-unprocessed-block) (.@ contract-config creation-block))
      (void))
-   (let (create-pretx (prepare-create-contract-transaction self))
+   (let (create-pretx (prepare-create-contract-transaction self next?: next?))
      (verify-contract-config contract-config create-pretx)
      (set! (.@ self contract-config) contract-config)))
   #t)
 
 (def (run-passive-code-block/handshake self role)
-  (passive-participant-handshake self role)
+  (passive-participant-handshake self role next?: #t)
   (interpret-current-code-block self))
 
 ;; Conservative assumption: "with first-code-block contract-creation problems"
@@ -335,7 +335,8 @@
   ;;    * Call contract with code-block state.
   (cond
     ((and (not (.@ self contract-config)) (on-first-code-block-contract-creation-allowed? self))
-     (run-passive-code-block/handshake self role))
+     (let ()
+       (run-passive-code-block/handshake self role)))
     ((not (.@ self contract-config))
      (let ()
        ;; if the contract has not been created yet, do handshake first
@@ -355,11 +356,14 @@
   (set! (.@ self block-ctx) (.call ActiveBlockCtx .make))
   ;; one of:
   ;; - Pre-contract, with NO first-code-block contract-creation problems:
+  ;;    * Interpret before contract,
   ;;    * Create contract with code-block state.
   ;; - Pre-contract, with first-code-block contract-creation problems:
   ;;    * Create contract with empty state,
+  ;;    * Interpret after contract,
   ;;    * Call contract with code-block state.
   ;; - Post-contract:
+  ;;    * Interpret,
   ;;    * Call contract with code-block state.
   (cond
     ((and (not (.@ self contract-config)) (on-first-code-block-contract-creation-allowed? self))
@@ -367,27 +371,13 @@
        ;; Interpret before deploying contract
        (interpret-current-code-block self)
        (let ()
-         (deploy-contract self)
+         (deploy-contract self next?: #t)
          (def contract-config (.@ self contract-config))
          (def agreement (.@ self agreement))
          (def published-data (get-output-u8vector (.@ self block-ctx outbox)))
          (def handshake (.new AgreementHandshake agreement contract-config published-data))
          (def off-chain-channel (.@ self off-chain-channel))
          (.call off-chain-channel .send-contract-handshake self handshake))
-       ;; TODO: Verify asset transfers using previous transaction and balances
-       ;; recorded in Message's asset-transfer table during interpretation. Probably
-       ;; requires getting TransactionInfo using the TransactionReceipt.
-       (def contract-address (.@ self contract-config contract-address))
-       (approve-deposits self contract-address)
-       (def message-pretx
-            (prepare-call-function-transaction
-              self
-              contract-address
-              (.@ self block-ctx outbox)))
-       (def new-tx-receipt (post-transaction message-pretx))
-       (set! (.@ self timer-start) (.@ new-tx-receipt blockNumber))
-       (set! (.@ self first-unprocessed-block) (1+ (.@ new-tx-receipt blockNumber)))
-       (set! (.@ self first-unprocessed-event-in-block) 0)
        #t))
     ((not (.@ self contract-config))
      (let ()
@@ -419,6 +409,7 @@
        #t))
     (else
      (let ()
+       ;; Interpret, contract is already up
        (publish-frame-data self (.@ self block-ctx outbox))
        (interpret-current-code-block self)
        ;; TODO: Verify asset transfers using previous transaction and balances
@@ -471,7 +462,7 @@
   (hash-put! (.@ self environment) name value))
 
 ;; PreTransaction <- Runtime Block
-(def (prepare-create-contract-transaction self)
+(def (prepare-create-contract-transaction self next?: next?)
   (def sender-address (get-active-participant self))
   (def current-code-block-label (.@ self current-code-block-label))
   (def code-block (get-current-code-block self))
@@ -480,7 +471,7 @@
     (create-frame-variables
      self
      (.@ self agreement options maxInitialBlock)
-     current-code-block-label
+     (if next? (.@ code-block exit) current-code-block-label)
      participant))
   (def initial-state-digest
     (digest-product-f initial-state))
@@ -490,11 +481,11 @@
     value: (native-asset-deposit self)))
 
 ;; PreTransaction <- Runtime Block
-(def (deploy-contract self)
+(def (deploy-contract self next?: (next? #f))
   (def role (.@ self role))
   (def timer-start (.@ self agreement options maxInitialBlock))
   (set! (.@ self timer-start) timer-start)
-  (def pretx (prepare-create-contract-transaction self))
+  (def pretx (prepare-create-contract-transaction self next?: next?))
 
   ;; Pick a nonce now, and pre-compute the contract address, so we
   ;; can invoke approve-deposits before we create the contract. The
