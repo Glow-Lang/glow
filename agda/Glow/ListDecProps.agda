@@ -576,6 +576,9 @@ btf-more l (x ∷ x₁) = btf-more (btf l x) (map-List (BTF-trans (btf-sameL l x
 --       y)
 
 
+
+
+
 haveSameL-filter-lemma : ∀ {ℓ ℓ'} {A : Type ℓ} {B : Type ℓ'} → (f : A → Maybe B) → 
                              (l l' : List A) →
                              haveSameL l l' × ForAllMember (λ x → ⟨ maybe-eqCase (f (proj₁ x)) (f (proj₂ x)) ⟩) (zip l l' )
@@ -584,3 +587,65 @@ haveSameL-filter-lemma f [] [] (x , x₁) = tt
 haveSameL-filter-lemma f (x₂ ∷ l) (x₃ ∷ l') (x , x₁) with (f x₂) | (f x₃) | proj₁ x₁
 ... | nothing | nothing | _ = haveSameL-filter-lemma f l l' (x , (proj₂ x₁))
 ... | just x₄ | just x₅ | _ = haveSameL-filter-lemma f l l' (x  , (proj₂ x₁))
+
+
+
+mb-Pred : ∀ {ℓ ℓ'} → {A : Type ℓ} → (B : A → Type ℓ') → Maybe A → Type ℓ' 
+mb-Pred B = recMaybe Unit* B
+
+existFWIA-filter : ∀ {ℓ ℓ'} {A A' : Type ℓ} {B B* : A → Type ℓ'}
+                                 {B' B'* : A' → Type ℓ'} → {f : A → Maybe A'}
+                       → (∀ a → recMaybe (B a × B* a → Empty) (λ a' → (((B a × B* a) → (B' a' × B'* a')) × (B' a' → B a))) (f a))
+                       → {l : List A}
+                       → ExistFirstBy B WitchIsAlso B* l
+                       → ExistFirstBy B' WitchIsAlso B'* (filterMap f l)
+existFWIA-filter {f = f} x {a ∷ l} x₂ with (f a) | x₂ | x a  
+... | nothing | inl x₄ | x' = empty-elim (x' x₄)
+... | nothing | inr x₄ | x' = existFWIA-filter {f = f} x (proj₂ x₄) 
+... | just x₄ | inl x₅ | x' = inl (proj₁ x' x₅)
+... | just x₄ | inr x₅ | x' = inr ( proj₁ x₅ ∘ proj₂ x' , existFWIA-filter {f = f} x (proj₂ x₅))
+
+
+BTF-Ex : ∀ {ℓ} → {A : Type ℓ} → {B B' : A → Type ℓ} → {l : List A} → (ExistFirstBy B WitchIsAlso B' l) → Type₀
+BTF-Ex {l = x₁ ∷ l} (inl x) = Empty
+BTF-Ex {l = x₁ ∷ l} (inr x) = Maybe (BTF-Ex (proj₂ x))
+
+pick-Ex : ∀ {ℓ} → {A : Type ℓ} → {B B' : A → Type ℓ} → {l : List A} → (ex : ExistFirstBy B WitchIsAlso B' l) 
+                       → Σ A λ x → B x × B' x
+pick-Ex {l = x ∷ l} (inl x₁) = x , x₁
+pick-Ex {l = x ∷ l} (inr x₁) = pick-Ex (proj₂ x₁)
+
+rem-Ex : ∀ {ℓ} → {A : Type ℓ} → {B B' : A → Type ℓ} → {l : List A} → (ex : ExistFirstBy B WitchIsAlso B' l) 
+                       → List A
+rem-Ex {l = x ∷ l} (inl x₁) = l
+rem-Ex {l = x ∷ l} (inr x₁) = x ∷ rem-Ex (proj₂ x₁)
+
+
+
+bth-Ex : ∀ {ℓ} → {A C : Type ℓ} → {toC : A → C} → {B' : A → Type ℓ} → {l : List A} → {c : C}
+                                                → (ex : ExistFirstBy (c ≡_) ∘ toC WitchIsAlso B' l) 
+                       → Σ (List A) (λ l' → ∀ c → ExistFirstBy (c ≡_) ∘ toC  WitchIsAlso B' l
+                                                → ExistFirstBy (c ≡_) ∘ toC  WitchIsAlso B' l')
+bth-Ex l@{l = _ ∷ _} q = 
+  let z = pick-Ex q
+  in fst z ∷ rem-Ex q , λ c₁ x₁ → ?
+
+
+-- btf-Ex : ∀ {ℓ} → {A : Type ℓ} → {B B' : A → Type ℓ} → {l : List A} → (ex : ExistFirstBy B WitchIsAlso B' l) 
+--                        → BTF-Ex ex → Σ (List A) (ExistFirstBy B WitchIsAlso B')
+-- btf-Ex {l = x₂ ∷ l} (inr x₃) nothing = bth-Ex (inr x₃)
+-- btf-Ex {l = x₂ ∷ l} (inr x₃) (just x₁) =   
+--   let (z , q) = btf-Ex {l = l} (proj₂ x₃) x₁
+--   in (x₂ ∷ z) , (inr ((proj₁ x₃) , q))
+
+-- -- Ex-btfs : ∀ {ℓ} → {A D : Type ℓ} → {B B' : D → A → Type ℓ} → ℕ → (l : List A) → Type ℓ
+-- -- Ex-btfs zero _ = Unit*
+-- -- Ex-btfs {D = D} {B} {B'} (suc x) l =
+-- --   (Σ D λ d → (Σ (ExistFirstBy (B d) WitchIsAlso (B' d) l) BTF-Ex))
+-- --     × Ex-btfs {D = D} {B} {B'} x l
+
+-- -- ex-btfs : ∀ {ℓ} → {A D : Type ℓ} → {B B' : D → A → Type ℓ} → ∀ k → (l : List A) → Ex-btfs {D = D} {B} {B'} k l → List A
+-- -- ex-btfs zero l x = l
+-- -- ex-btfs (suc k) l ((fst₁ , fst₂ , snd₁) , x₁) =
+-- --    let z = (btf-Ex fst₂ snd₁)
+-- --    in {!fst z!}
