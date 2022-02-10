@@ -301,8 +301,9 @@
   #t)
 
 (def (run-passive-code-block/handshake self role)
-  (passive-participant-handshake self role next?: #t)
-  (interpret-current-code-block self))
+  (begin0
+    (passive-participant-handshake self role next?: #t)
+    (interpret-current-code-block self)))
 
 ;; Conservative assumption: "with first-code-block contract-creation problems"
 (def (on-first-code-block-contract-creation-allowed? self)
