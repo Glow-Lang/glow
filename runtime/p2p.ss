@@ -276,13 +276,22 @@
 ;; returns the peer-ID related to peer0x
 (def (get-peerID-from-pubsub sub: sub
                              c: c
-                             peer0x: peer0x)
+                             peer0x: peer0x
+                             timeout: (timeout #f))
   (pubsub-publish c "chat" (string->bytes "IDENTIFY"))
 
   (let lp ()
-    (let ((m (channel-get sub)))
+    (let ((m (channel-try-get sub)))
+      (if m
+        ;;if the message matches the peer0x you are requesting, return the peerID, else move on TODO: VERIFY FROM CORRECT SENDER AS WELL
+        (if (string=? peer0x (bytes->string (vector-ref m 1)))
+          (ID->string (vector-ref m 0)) ;;FIXME: Does this return the id??
+          (lp))
 
-      ;;if the message matches the peer0x you are requesting, return the peerID, else move on TODO: VERIFY FROM CORRECT SENDER AS WELL
-      (if (string=? peer0x (bytes->string (vector-ref m 1)))
-        (ID->string (vector-ref m 0)) ;;FIXME: Does this return the id??
-        (lp)))))
+        (if (and timeout (> timeout 0))
+          (begin
+            (thread-sleep! 1)
+            (set! timeout (- timeout 1))
+            (pubsub-publish c "chat" (string->bytes "IDENTIFY"))
+            (lp))
+          (error "Timeout when getting peerID from pubsub"))))))
