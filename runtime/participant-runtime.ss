@@ -848,16 +848,16 @@
          (defvalues (sub cancel pubsub-listen-thread)
            (if pubsub-node
              (connect-to-multiaddr-pubsub pubsub-node: pubsub-node c: libp2p-client my-0xaddr: my-0xaddr)
-             (error "Default pubsub-node connection has not been implemented yet")
-             ;;(connect-to-multiaddr-pubsub pubsub-node: "/ip4/192.168.0.7/tcp/10330/p2p/QmVUvjKcWxqa3dbfbdN5g1Tfh2khTrvhdpEjrLRj6f4Cj6" c: libp2p-client my-0xaddr: my-0xaddr) ;; TODO: IMPLEMENT BOOTSTRAP NODE
+             ;;(error "Default pubsub-node connection has not been implemented yet")
+             (connect-to-multiaddr-pubsub pubsub-node: "/ip4/127.0.0.1/tcp/10330/p2p/QmQJsoN8RzjPETDZiCT76kRbAUUxFpMKQWvHJbG7JpZJyi" c: libp2p-client my-0xaddr: my-0xaddr) ;; TODO: IMPLEMENT BOOTSTRAP NODE
              ))
 
          ;;connect to the circuit-relay
          (def circuit-relay (if circuit-relay-address
                               (string->peer-info circuit-relay-address)
 
-                              (error "Default circuit-relay connection has not been implemented yet")
-                              ;;(string->peer-info "/ip4/192.168.0.7/tcp/10330/p2p/QmVUvjKcWxqa3dbfbdN5g1Tfh2khTrvhdpEjrLRj6f4Cj6") ;; TODO: IMPLEMENT BOOTSTRAP NODE
+                              ;;(error "Default circuit-relay connection has not been implemented yet")
+                              (string->peer-info "/ip4/127.0.0.1/tcp/10330/p2p/QmQJsoN8RzjPETDZiCT76kRbAUUxFpMKQWvHJbG7JpZJyi") ;; TODO: IMPLEMENT BOOTSTRAP NODE
                               ))
 
          (libp2p-connect libp2p-client circuit-relay)
@@ -899,9 +899,10 @@
                                  (0x<-address value)))
                              (hash<-object (.@ agreement participants))))
              (displayln "getting peerID")
-             (def dest-peerID (get-peerID-from-pubsub sub: sub
-                                                      c: libp2p-client
-                                                      peer0x: dest-address)) ;;Multiaddr from the Eth addr using pubsub BLOCKS UNTIL ADDRESS IS FOUND
+             (def dest-peerID (get-peerID-from-pubsub sub
+                                                      libp2p-client
+                                                      dest-address
+                                                      10)) ;;Multiaddr from the Eth addr using pubsub BLOCKS UNTIL ADDRESS IS FOUND
              (displayln "peerID obtained")
              (dial-and-send-contents libp2p-client
                                      (string-join (list (peer-info->string circuit-relay) dest-peerID) "/p2p-circuit/p2p/")
@@ -915,9 +916,10 @@
              (displayln MAGENTA "Sending handshake to multiaddr..." END)
              (def handshake-string (string<-json (json<- AgreementHandshake handshake)))
 
-             (def dest-peerID (get-peerID-from-pubsub sub: sub
-                                                      c: libp2p-client
-                                                      peer0x: dest-address))
+             (def dest-peerID (get-peerID-from-pubsub sub
+                                                     libp2p-client
+                                                     dest-address
+                                                     10))
 
              (dial-and-send-contents libp2p-client
                                      (string-join (list (peer-info->string circuit-relay) dest-peerID) "/p2p-circuit/p2p/")

@@ -274,14 +274,14 @@
 ;; block until peerID is found
 ;; TODO: verify that peer0x comes from correct sender
 ;; returns the peer-ID related to peer0x
-(def (get-peerID-from-pubsub sub: sub
-                             c: c
-                             peer0x: peer0x
-                             timeout: (timeout #f))
+(def (get-peerID-from-pubsub sub
+                             c
+                             peer0x
+                             timeout)
   (pubsub-publish c "chat" (string->bytes "IDENTIFY"))
 
   (let lp ()
-    (let ((m (channel-try-get sub)))
+    (let ((m (channel-get sub 5)))
       (if m
         ;;if the message matches the peer0x you are requesting, return the peerID, else move on TODO: VERIFY FROM CORRECT SENDER AS WELL
         (if (string=? peer0x (bytes->string (vector-ref m 1)))
@@ -290,7 +290,7 @@
 
         (if (and timeout (> timeout 0))
           (begin
-            (thread-sleep! 1)
+            (displayln "Failed to find peer ... Trying again ...")
             (set! timeout (- timeout 1))
             (pubsub-publish c "chat" (string->bytes "IDENTIFY"))
             (lp))
