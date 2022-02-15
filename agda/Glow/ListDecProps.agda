@@ -251,6 +251,16 @@ ExistFirstBy-WitchIsAlso-FilterOut-lemma2' {B = B} {B' = B'} {{Dec-Pred-B}} (x�
 
 
 
+ExistFirstByWitchIsAlso-Match : ∀ {ℓ ℓ' ℓ''} → {A : Type ℓ} → {B B* : A → Type ℓ'} → {B' : A → Type ℓ''}
+                                                                                   → {B'* : A → Type ℓ''} →
+                                                 {l : List A} → 
+                                                  ExistFirstBy B WitchIsAlso B' l →
+                                                  ExistFirstBy B* WitchIsAlso B'* l → DecPropΣ
+ExistFirstByWitchIsAlso-Match {l = x₂ ∷ l} (inl x) (inl x₁) = Unit-dp
+ExistFirstByWitchIsAlso-Match {l = x₂ ∷ l} (inl x) (inr x₁) = Empty-dp
+ExistFirstByWitchIsAlso-Match {l = x₂ ∷ l} (inr x) (inl x₁) = Empty-dp
+ExistFirstByWitchIsAlso-Match {l = x₂ ∷ l} (inr x) (inr x₁) = ExistFirstByWitchIsAlso-Match (proj₂ x) (proj₂ x₁)
+
 -- ExistMemberAs-map-subst : ∀ {ℓ ℓ'} → {A : Type ℓ} → {B B' : A → Type ℓ'}
 --                      → (l : List A)
 --                      → (∀ {a} → B a → B' a) → (∀ {a} → B' a → B a)
@@ -622,30 +632,130 @@ rem-Ex {l = x ∷ l} (inr x₁) = x ∷ rem-Ex (proj₂ x₁)
 
 
 
+-- rem-Ex-property : ∀ {ℓ} → {A C : Type ℓ} → {toC : A → C} → {B' : A → Type ℓ} → {l : List A} → {c : C}
+--                                                 → (ex : ExistFirstBy (c ≡_) ∘ toC WitchIsAlso B' l) 
+--                        → (let l' = rem-Ex in ∀ c → ExistFirstBy (c ≡_) ∘ toC  WitchIsAlso B' l
+--                                                     → ExistFirstBy (c ≡_) ∘ toC  WitchIsAlso B' l')
+
+-- rem-Ex-property = ?
+
+rem-Ex-property : ∀ {ℓ} → {A C : Type ℓ} → {toC : A → C} → {B' : A → Type ℓ} → {l : List A} → {c : C}
+                                                → (ex : ExistFirstBy (c ≡_) ∘ toC WitchIsAlso B' l) 
+                       → (let l' = rem-Ex ex in ∀ c' → IsEmpty (c ≡ c') →
+                                                      ExistFirstBy (c' ≡_) ∘ toC  WitchIsAlso B' l
+                                                    → IsEmpty (c' ≡ toC (fst (pick-Ex ex))) × ExistFirstBy (c' ≡_) ∘ toC  WitchIsAlso B' l')
+
+rem-Ex-property {l = x₂ ∷ l} (inl x₁) c' x (inl x₃) = empty-elim (x (proj₁ x₁  ∙ sym (proj₁ x₃)))
+rem-Ex-property {l = x₂ ∷ l} (inl x₁) c' x (inr x₃) = x₃
+rem-Ex-property {l = x₂ ∷ l} (inr x₁) c' x (inl x₃) =
+   (λ x₄ → proj₁ x₁ (proj₁ (snd (pick-Ex (proj₂ x₁))) ∙ sym x₄ ∙ proj₁ x₃)) , (inl x₃)
+rem-Ex-property {l = x₂ ∷ l} (inr x₁) c' x (inr x₃) =
+  let z = rem-Ex-property (proj₂ x₁) c' x (proj₂ x₃)
+  in proj₁ z , inr (proj₁ x₃ , (proj₂ z))
+
+
+pick-Ex-property : ∀ {ℓ} → {A C : Type ℓ} → {toC : A → C} → {B' : A → Type ℓ} → {l : List A} → {c : C}
+                                                → (ex : ExistFirstBy (c ≡_) ∘ toC WitchIsAlso B' l) 
+                       → (let l' = rem-Ex ex in ∀ c' → (c ≡ c') →
+                                                      ExistFirstBy (c' ≡_) ∘ toC  WitchIsAlso B' l
+                                                    → (c' ≡ toC (fst (pick-Ex ex))) × B' ((fst (pick-Ex ex))))
+
+pick-Ex-property {l = x₂ ∷ l} (inl x₁) c' x (inl x₃) = x₃
+pick-Ex-property {l = x₂ ∷ l} (inl x₁) c' x (inr x₃) = empty-elim (proj₁ x₃ (sym x ∙ proj₁ x₁))
+pick-Ex-property {l = x₂ ∷ l} (inr x₁) c' x (inl x₃) = empty-elim (proj₁ x₁ (x ∙ proj₁ x₃))
+pick-Ex-property {l = x₂ ∷ l} (inr x₁) c' x (inr x₃) = pick-Ex-property (proj₂ x₁) c' x (proj₂ x₃)
+
 bth-Ex : ∀ {ℓ} → {A C : Type ℓ} → {toC : A → C} → {B' : A → Type ℓ} → {l : List A} → {c : C}
                                                 → (ex : ExistFirstBy (c ≡_) ∘ toC WitchIsAlso B' l) 
-                       → Σ (List A) (λ l' → ∀ c → ExistFirstBy (c ≡_) ∘ toC  WitchIsAlso B' l
-                                                → ExistFirstBy (c ≡_) ∘ toC  WitchIsAlso B' l')
-bth-Ex l@{l = _ ∷ _} q = 
-  let z = pick-Ex q
-  in fst z ∷ rem-Ex q , λ c₁ x₁ → ?
+                       → List A
+bth-Ex ex = fst (pick-Ex ex) ∷ rem-Ex ex
 
 
--- btf-Ex : ∀ {ℓ} → {A : Type ℓ} → {B B' : A → Type ℓ} → {l : List A} → (ex : ExistFirstBy B WitchIsAlso B' l) 
---                        → BTF-Ex ex → Σ (List A) (ExistFirstBy B WitchIsAlso B')
--- btf-Ex {l = x₂ ∷ l} (inr x₃) nothing = bth-Ex (inr x₃)
--- btf-Ex {l = x₂ ∷ l} (inr x₃) (just x₁) =   
---   let (z , q) = btf-Ex {l = l} (proj₂ x₃) x₁
---   in (x₂ ∷ z) , (inr ((proj₁ x₃) , q))
 
--- -- Ex-btfs : ∀ {ℓ} → {A D : Type ℓ} → {B B' : D → A → Type ℓ} → ℕ → (l : List A) → Type ℓ
--- -- Ex-btfs zero _ = Unit*
--- -- Ex-btfs {D = D} {B} {B'} (suc x) l =
--- --   (Σ D λ d → (Σ (ExistFirstBy (B d) WitchIsAlso (B' d) l) BTF-Ex))
--- --     × Ex-btfs {D = D} {B} {B'} x l
+bth-Ex-property : ∀ {ℓ} → {A C : Type ℓ} → {toC : A → C} → {B' : A → Type ℓ} → {l : List A} → {c : C}
+                                                → (ex : ExistFirstBy (c ≡_) ∘ toC WitchIsAlso B' l) 
+                       → (let l' = bth-Ex ex in ∀ c' → Dec (c ≡ c')
+                                                          → ExistFirstBy (c' ≡_) ∘ toC  WitchIsAlso B' l
+                                                          → ExistFirstBy (c' ≡_) ∘ toC  WitchIsAlso B' l')
+bth-Ex-property {l = x₁ ∷ l} (inl x₂) c _ x = x
+bth-Ex-property {l = x₁ ∷ []} (inr (x₂ , ())) c _ x
+bth-Ex-property {l = x₁ ∷ x ∷ l} (inr x₂) c _ (inl x₃) =
+  inr ((λ y → proj₁ x₂ (proj₁ (snd (pick-Ex (proj₂ x₂))) ∙ sym y ∙ proj₁ x₃)) , (inl x₃))
+bth-Ex-property {l = x₁ ∷ x ∷ l} (inr x₂) c (yes p) (inr x₃) =
+  inl (pick-Ex-property (inr x₂) c p (inr x₃))
+bth-Ex-property {l = x₁ ∷ x ∷ l} (inr x₂) c (no ¬p) (inr x₃) =
+  inr (rem-Ex-property (inr x₂) c ¬p (inr x₃))
 
--- -- ex-btfs : ∀ {ℓ} → {A D : Type ℓ} → {B B' : D → A → Type ℓ} → ∀ k → (l : List A) → Ex-btfs {D = D} {B} {B'} k l → List A
--- -- ex-btfs zero l x = l
--- -- ex-btfs (suc k) l ((fst₁ , fst₂ , snd₁) , x₁) =
--- --    let z = (btf-Ex fst₂ snd₁)
--- --    in {!fst z!}
+bth-Ex-property-BTF-Ex : ∀ {ℓ} → {A C : Type ℓ} → {toC : A → C} → {B' : A → Type ℓ} → {l : List A} → {c : C}
+                                                → (ex : ExistFirstBy (c ≡_) ∘ toC WitchIsAlso B' l) 
+                       → (let l' = bth-Ex ex in ∀ c' → (Dec-c≡c' : Dec (c ≡ c')) → ∀ ex'
+                                                          → BTF-Ex ex'
+                                    → (⟨ ExistFirstByWitchIsAlso-Match ex ex' ⟩) ⊎ BTF-Ex (bth-Ex-property ex c' Dec-c≡c' ex'))
+bth-Ex-property-BTF-Ex {l = x ∷ l} (inl x₂) c' Dec-c≡c' ex' x₁ = inr x₁
+bth-Ex-property-BTF-Ex {l = x ∷ []} (inr (x₂ , ())) c' Dec-c≡c' ex' x₁
+bth-Ex-property-BTF-Ex {l = x ∷ x₃ ∷ l} (inr x₂) c' (yes p) (inr x₄) x₁ = inl {!!}
+bth-Ex-property-BTF-Ex {l = x ∷ x₃ ∷ l} (inr x₂) c' (no ¬p) (inr x₄) x₁ = {!!}
+
+btf-Ex : ∀ {ℓ} → {A C : Type ℓ} → {{IsDiscrete C}} → {toC : A → C} → {B' : A → Type ℓ} → {l : List A} → ∀ {c}
+                      → (ex : ExistFirstBy ((c ≡_) ∘ toC) WitchIsAlso B' l) 
+                       → BTF-Ex ex
+                       → Σ (List A)
+                           λ l' →
+                            ∀ c' →
+                            Σ ( ExistFirstBy (c' ≡_) ∘ toC  WitchIsAlso B' l
+                                → ExistFirstBy (c' ≡_) ∘ toC  WitchIsAlso B' l')
+                                λ f → ∀ ex' → BTF-Ex ex' → (⟨ ExistFirstByWitchIsAlso-Match ex ex' ⟩) ⊎ (BTF-Ex (f ex'))
+btf-Ex {l = x₁ ∷ l} {c} (inr x₂) nothing =
+  
+  bth-Ex (inr x₂)  , λ c' → bth-Ex-property (inr x₂) c' (_ ≟ _)
+                                 , bth-Ex-property-BTF-Ex (inr x₂) c' (_ ≟ _) 
+btf-Ex {l = x₁ ∷ l} (inr x₂) (just x) =
+  let (z , q) = btf-Ex {l = l} (proj₂ x₂) x
+  in (x₁ ∷ z) , λ c' → map-sum (idfun _) (map-prod (idfun _) (fst (q c')))
+                     , sum-elim (λ _ ()) λ b →  recMaybe (inr nothing) (map-sum (idfun _) just ∘ snd (q c') (proj₂ b))
+                      -- ((map-Maybe ∘ (snd (q c') ∘ (proj₂))))
+
+
+
+Ex-btfs : ∀ {ℓ} → {A D : Type ℓ} → {B B' : D → A → Type ℓ} → ℕ → (l : List A) → Type ℓ
+Ex-btfs zero _ = Unit*
+Ex-btfs {D = D} {B} {B'} (suc x) l =
+  (Σ D λ d → (Σ (ExistFirstBy (B d) WitchIsAlso (B' d) l) BTF-Ex))
+    × Ex-btfs {D = D} {B} {B'} x l
+
+
+ex-btfs : ∀ {ℓ} → {A C : Type ℓ} → {{IsDiscrete C}} → {toC : A → C} → {B' : A → Type ℓ}
+              → ∀ k → (l : List A)
+              → Ex-btfs {D = C} {λ x x₁ → x ≡ (toC x₁)} {λ x x₁ → B' x₁} k l → List A
+
+ex-btfs-trans : ∀ {ℓ} → {A C : Type ℓ} → {{IsDiscrete-C : IsDiscrete C}} → {toC : A → C} → {B' : A → Type ℓ}
+                     → ∀ k → (l : List A)
+                      → (x : Ex-btfs {D = C} {λ x x₁ → x ≡ (toC x₁)} {λ x x₁ → B' x₁} k l)
+                      → Ex-btfs {D = C} {λ x x₁ → x ≡ (toC x₁)} {λ x x₁ → B' x₁} k (ex-btfs k l x)
+
+ex-btfs zero l x = l
+ex-btfs (suc k) [] (() , x₁)
+ex-btfs (suc k) (x₁ ∷ l) (x , x₂) = 
+   ex-btfs k {!!} {!!} 
+
+ex-btfs-trans = {!!}
+
+-- ex-btfs zero l x = l
+-- ex-btfs (suc k) l ((c , ex , btf-ex) , x₁) =
+--   let z = {!btf-Ex !}
+--   in ex-btfs k {!!} {!!}
+--   -- ex-btfs k (ex-btfs k l x₁) (ex-btfs-trans _ _ x₁)
+
+-- ex-btfs-trans zero l x = x
+-- ex-btfs-trans (suc k) [] (() , x₁)
+-- ex-btfs-trans (suc k) (x₁ ∷ l) (x , x₂) =
+--   {!!}
+--   -- ((fst x) , ({!fst (snd x)!} , {!!})) , {!!}
+
+
+-- btf-Ex-property : ∀ {ℓ} → {A C : Type ℓ} → {{IsDiscrete C}} → {toC : A → C} → {B' : C → A → Type ℓ} → {l : List A}
+--                                                 → ∀ k → (x : Ex-btfs {D = C} {λ x x₁ → x ≡ toC x₁} {B'} k l)
+--                        → (let l' = ex-btfs k l x in ∀ c' → ExistFirstBy (c' ≡_) ∘ toC  WitchIsAlso (B' c') l
+--                                                           → ExistFirstBy (c' ≡_) ∘ toC  WitchIsAlso (B' c') l')
+-- btf-Ex-property zero x c' x₁ = x₁
+-- btf-Ex-property (suc k) x c' x₁ = {!x₁!}
