@@ -838,7 +838,13 @@
 
          ;; Ensure libp2p-daemon client is running
          (displayln "Starting libp2p client")
-         (def libp2p-client (ensure-libp2p-client nickname: my-nickname host-address: host-address))
+
+         ;; If the a host address is specified, use that, if not, use default host address
+         (def libp2p-client
+           (if host-address
+             (ensure-libp2p-client nickname: my-nickname host-address: host-address)
+             (ensure-libp2p-client nickname: my-nickname host-address: "/ip4/0.0.0.0/tcp/10333")))
+
 
          ;; Find your Blockchain Addr from your Nickname
          ;; TODO: get better way for getting self's peerID
@@ -848,16 +854,16 @@
          (defvalues (sub cancel pubsub-listen-thread)
            (if pubsub-node
              (connect-to-multiaddr-pubsub pubsub-node: pubsub-node c: libp2p-client my-0xaddr: my-0xaddr)
-             ;;(error "Default pubsub-node connection has not been implemented yet")
-             (connect-to-multiaddr-pubsub pubsub-node: "/ip4/127.0.0.1/tcp/10330/p2p/QmQJsoN8RzjPETDZiCT76kRbAUUxFpMKQWvHJbG7JpZJyi" c: libp2p-client my-0xaddr: my-0xaddr) ;; TODO: IMPLEMENT BOOTSTRAP NODE
+             (error "Default pubsub-node connection has not been implemented yet")
+             ;;(connect-to-multiaddr-pubsub pubsub-node: "/ip4/127.0.0.1/tcp/10330/p2p/QmQJsoN8RzjPETDZiCT76kRbAUUxFpMKQWvHJbG7JpZJyi" c: libp2p-client my-0xaddr: my-0xaddr) ;; TODO: IMPLEMENT BOOTSTRAP NODE
              ))
 
          ;;connect to the circuit-relay
          (def circuit-relay (if circuit-relay-address
                               (string->peer-info circuit-relay-address)
 
-                              ;;(error "Default circuit-relay connection has not been implemented yet")
-                              (string->peer-info "/ip4/127.0.0.1/tcp/10330/p2p/QmQJsoN8RzjPETDZiCT76kRbAUUxFpMKQWvHJbG7JpZJyi") ;; TODO: IMPLEMENT BOOTSTRAP NODE
+                              (error "Default circuit-relay connection has not been implemented yet")
+                              ;;(string->peer-info "/ip4/127.0.0.1/tcp/10330/p2p/QmQJsoN8RzjPETDZiCT76kRbAUUxFpMKQWvHJbG7JpZJyi") ;; TODO: IMPLEMENT BOOTSTRAP NODE
                               ))
 
          (libp2p-connect libp2p-client circuit-relay)
