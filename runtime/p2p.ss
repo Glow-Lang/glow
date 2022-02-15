@@ -120,7 +120,6 @@
                            address: (sock #f)
                            wait: (timeo 0.4)
                            p2pd-log-path: (p2pd-log-path (log-path "p2pd.log")))
-  (displayln "starting our daemon")
   (cond
    ((current-libp2p-daemon)
     => values)

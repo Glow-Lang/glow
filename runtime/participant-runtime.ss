@@ -833,16 +833,18 @@
            (channel-put buffer received-data)
            (stream-close s))
 
+
          ;; ------------ Libp2p listening thread setup
 
 
          ;; Ensure libp2p-daemon client is running
          (displayln "Starting libp2p client")
+
          ;; If the a host address is specified, use that, if not, use default host address
          (def libp2p-client
            (if host-address
              (ensure-libp2p-client nickname: my-nickname host-address: host-address)
-             (ensure-libp2p-client nickname: my-nickname host-address: "/ip4/0.0.0.0/tcp/10333")))
+             (error "Default host-address has not been implemented yet")))
 
          ;; Get and Broadcast identity
          (def self (libp2p-identify libp2p-client))
@@ -854,21 +856,17 @@
          ;; TODO: get better way for getting self's peerID
          (def my-0xaddr (0x<-address (.@ (car (.@ (lookup-contact nickname: my-nickname contacts: contacts) identities)) address) ) )
 
-         ;;initialize the pubsub for peer discovery
+         ;;initialize the pubsub for peer discovery, if default value is #f throw error
          (defvalues (sub cancel pubsub-listen-thread)
            (if pubsub-node
              (connect-to-multiaddr-pubsub pubsub-node: pubsub-node c: libp2p-client my-0xaddr: my-0xaddr)
-             (error "Default pubsub-node connection has not been implemented yet")
-             ;;(connect-to-multiaddr-pubsub pubsub-node: "/ip4/127.0.0.1/tcp/10330/p2p/QmQJsoN8RzjPETDZiCT76kRbAUUxFpMKQWvHJbG7JpZJyi" c: libp2p-client my-0xaddr: my-0xaddr) ;; TODO: IMPLEMENT BOOTSTRAP NODE
-             ))
+             (error "Default pubsub-node connection has not been implemented yet")))
 
-         ;;connect to the circuit-relay
-         (def circuit-relay (if circuit-relay-address
-                              (string->peer-info circuit-relay-address)
-
-                              (error "Default circuit-relay connection has not been implemented yet")
-                              ;;(string->peer-info "/ip4/127.0.0.1/tcp/10330/p2p/QmQJsoN8RzjPETDZiCT76kRbAUUxFpMKQWvHJbG7JpZJyi") ;; TODO: IMPLEMENT BOOTSTRAP NODE
-                              ))
+         ;;connect to the circuit-relay, if default value is #f throw error
+         (def circuit-relay
+           (if circuit-relay-address
+             (string->peer-info circuit-relay-address)
+             (error "Default circuit-relay connection has not been implemented yet")))
 
          (libp2p-connect libp2p-client circuit-relay)
          
@@ -877,6 +875,7 @@
             (displayln "Listening for messages...")
             (spawn libp2p-listen libp2p-client [chat-proto] push-to-buffer)))
 
+         ;;----------------------------------------------------------
 
          (def dest-address #f)
 
@@ -889,9 +888,6 @@
            cancel
            circuit-relay
 
-           ;; FIXME: Get other participant addresses from contacts,
-           ;; pass these in as a parameter,
-           ;; instead of storing and using dest-address within the libp2p channel object.
            .send-contract-agreement: (lambda (agreement)
              (displayln MAGENTA "Sending agreement to multiaddr..." END)
              (def agreement-string (string<-json (json<- InteractionAgreement agreement)))
@@ -906,7 +902,7 @@
              (def dest-peerID (get-peerID-from-pubsub sub
                                                       libp2p-client
                                                       dest-address
-                                                      10)) ;;Multiaddr from the Eth addr using pubsub BLOCKS UNTIL ADDRESS IS FOUND
+                                                      10)) ;;Multiaddr from the Eth addr using pubsub BLOCKS UNTIL ADDRESS IS FOUND Or timeout
              (displayln "peerID obtained")
              (dial-and-send-contents libp2p-client
                                      (string-join (list (peer-info->string circuit-relay) dest-peerID) "/p2p-circuit/p2p/")
@@ -919,6 +915,7 @@
 
              (displayln MAGENTA "Sending handshake to multiaddr..." END)
              (def handshake-string (string<-json (json<- AgreementHandshake handshake)))
+
 
              (def dest-peerID (get-peerID-from-pubsub sub
                                                      libp2p-client
