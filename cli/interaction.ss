@@ -269,7 +269,7 @@
              (option 'off-chain-channel-selection "-C" "--off-chain-channel" default: 'stdio
                      help: "command to specify off-chain-channel")
              (option 'host-address "-O" "--host-address" default: #f
-                     help: "host-address (only required if using libp2p as off-chain-channel)")
+                     help: "host-address (only required if using libp2p as off-chain-channel) (not specifying will set this to /ip4/0.0.0.0/tcp/10333)")
              (option 'circuit-relay-address "-d" "--circuit-relay-address" default: #f
                      help: "circuit-relay-address (only change if you want to use the address of a non-default circuit relay)")
              (option 'pubsub-node "--pubsub-node" default: #f
