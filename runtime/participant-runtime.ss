@@ -838,13 +838,17 @@
 
          ;; Ensure libp2p-daemon client is running
          (displayln "Starting libp2p client")
-
          ;; If the a host address is specified, use that, if not, use default host address
          (def libp2p-client
            (if host-address
              (ensure-libp2p-client nickname: my-nickname host-address: host-address)
              (ensure-libp2p-client nickname: my-nickname host-address: "/ip4/0.0.0.0/tcp/10333")))
 
+         ;; Get and Broadcast identity
+         (def self (libp2p-identify libp2p-client))
+         (for (p (peer-info->string* self))
+
+           (displayln "I am " p))
 
          ;; Find your Blockchain Addr from your Nickname
          ;; TODO: get better way for getting self's peerID
@@ -867,12 +871,6 @@
                               ))
 
          (libp2p-connect libp2p-client circuit-relay)
-
-         ;; Get and Broadcast identity
-         (def self (libp2p-identify libp2p-client))
-         (for (p (peer-info->string* self))
-           
-            (displayln "I am " p))
          
          (def listening-thread
            (begin
