@@ -24,9 +24,7 @@
   :mukn/ethereum/evm-runtime :mukn/ethereum/contract-config :mukn/ethereum/assembly :mukn/ethereum/types
   :mukn/ethereum/nonce-tracker
   (only-in :mukn/glow/compiler/common hash-kref)
-  :vyzo/libp2p/peer :vyzo/libp2p/multiaddr
-  (only-in :vyzo/libp2p/daemon stop-libp2p-daemon!)
-  (only-in :vyzo/libp2p/client make-client libp2p-listen libp2p-connect libp2p-identify stream-close)
+  :vyzo/libp2p
   (only-in ../compiler/alpha-convert/env symbol-refer)
   ./program ./block-ctx ./consensus-code-generator ./terminal-codes
   ./pb/private-key
@@ -843,7 +841,7 @@
          ;; If the a host address is specified, use that, if not, use default host address
          (def libp2p-client
            (if host-address
-             (ensure-libp2p-client nickname: my-nickname host-address: host-address)
+             (open-libp2p-client host-addresses: host-address wait: 10 options: ["-q" "-pubsub" "-connManager"])
              (error "Default host-address has not been implemented yet")))
 
          ;; Get and Broadcast identity
@@ -854,8 +852,9 @@
 
          ;; Find your Blockchain Addr from your Nickname
          ;; TODO: get better way for getting self's peerID
-         (def my-0xaddr (0x<-address (.@ (car (.@ (lookup-contact nickname: my-nickname contacts: contacts) identities)) address) ) )
-
+         ;;(def my-0xaddr (0x<-address (.@ (car (.@ (lookup-contact nickname: my-nickname contacts: contacts) identities)) address) ) )
+         (def my-0xaddr (0x<-address (address<-nickname my-nickname)))
+         (displayln my-0xaddr)
          ;;initialize the pubsub for peer discovery, if default value is #f throw error
          (defvalues (sub cancel pubsub-listen-thread)
            (if pubsub-node
