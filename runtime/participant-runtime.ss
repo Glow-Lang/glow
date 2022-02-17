@@ -851,10 +851,9 @@
            (displayln "I am " p))
 
          ;; Find your Blockchain Addr from your Nickname
-         ;; TODO: get better way for getting self's peerID
-         ;;(def my-0xaddr (0x<-address (.@ (car (.@ (lookup-contact nickname: my-nickname contacts: contacts) identities)) address) ) )
          (def my-0xaddr (0x<-address (address<-nickname my-nickname)))
-         (displayln my-0xaddr)
+
+
          ;;initialize the pubsub for peer discovery, if default value is #f throw error
          (defvalues (sub cancel pubsub-listen-thread)
            (if pubsub-node
