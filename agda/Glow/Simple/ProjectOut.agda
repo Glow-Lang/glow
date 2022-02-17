@@ -268,106 +268,144 @@ module ProjectOut {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Id
            → ⟨ IsConsensus (ctxTrans {ih} {hp} c d) ⟩
   ctxTrans-IsConsensus (AST.con entries₁ nothing) d x = tt
 
- 
-  -- ctxTransFld-hon-pub-lemma : ∀ 
-  --                             {ih : AST.InteractionHead Identifier builtIns prop-mode}
-  --                             {hp : AST.HonestParticipantId' Identifier builtIns prop-mode}
-  --                             {entries = entries₁ : List (AST.ContextEntry ih)}
-  --                             {p : AST.HonestParticipantId ih}
-  --                             (x₁ : AST.PrivateSymbolOf (con {ih} entries₁ nothing) p)
-  --                             {_ = isCon
-  --                              : PropMode.PM prop-mode
-  --                                (AST.IsConsensus (con {ih} entries₁ nothing))}
-  --                             → ∀ k →
-  --                           BTFS
-  --                           (λ Τ y →
-  --                              fst (isNothing-dp (AST.scope y)) × (Τ ≡ AST.type y))
-  --                           AST.name k
-  --                           (filterMap (ctxTrans-hlp-CE {ih} hp) entries₁) →
-  --                           BTFS
-  --                           (λ Τ y →
-  --                              fst (isNothing-dp (AST.scope y)) × (Τ ≡ AST.type y))
-  --                           AST.name k
-  --                           (filterMap (ctxTrans-hlp-CE {ih} hp)
-  --                            (map-ExistingFirstBy
-  --                             (λ x₂ →
-  --                                AST.psof-name (con {ih} entries₁ nothing) x₁ ≡ AST.name x₂)
-  --                             WitchIsAlso
-  --                             (λ y →
-  --                                recMaybe Empty
-  --                                (λ p' → AST.pId-nameHon _ _ _ p ≡ AST.pId-nameHon _ _ _ p')
-  --                                (AST.scope y))
-  --                             entries₁ (AST.psof-proof (con {ih} entries₁ nothing) x₁)
-  --                             (λ e _ _ →
-  --                                record
-  --                                { scope = nothing ; name = AST.name e ; type = AST.type e })))
+  -- ctxTransFld-lem-1 : ∀ {ih : _} {hp} →  (a : AST.ContextEntry' Identifier builtIns one) →
+  --                           recMaybe (Lift Unit)
+  --                           (λ a' →
+  --                              (AST.name a ≡ AST.name a') ×
+  --                              ((b : GType) →
+  --                               (fst (isNothing-dp (AST.scope a)) × (b ≡ AST.type a) →
+  --                                fst (isNothing-dp (AST.scope a')) × (b ≡ AST.type a'))
+  --                               ×
+  --                               (fst (isNothing-dp (AST.scope a')) × (b ≡ AST.type a') →
+  --                                fst (isNothing-dp (AST.scope a)) × (b ≡ AST.type a))))
+  --                           (ctxTrans-hlp-CE {ih} hp a)
+  -- ctxTransFld-lem-1 {AST.interactionHead participantsWM₁ parameters₁} (AST.ice nothing name₁ type₁) =
+  --    refl , (λ b → (idfun _) , (idfun _))
+  -- ctxTransFld-lem-1 {AST.interactionHead [] parameters₁} (AST.ice (just (AST.pId name₂ {()})) name₁ type₁)
+  -- ctxTransFld-lem-1 {AST.interactionHead (x₁ ∷ participantsWM₁) parameters₁} {hp = hp} (AST.ice (just zz@(AST.pId name₂ {yy})) name₁ type₁) with (proj₁ (snd (CtxTrans' _ (just zz) hp )) )
+  -- ... | yes p = refl , (λ b → (idfun _) , (idfun _))
+  -- ... | no ¬p = _
 
-  -- ctxTransFld-hon-pub-lemma {entries = []} (AST.psof name₁ {()}) k x
-  -- ctxTransFld-hon-pub-lemma {ih} {hp = hp} {entries = AST.ice ww name₁ type₁ ∷ entries₁} (AST.psof name₂ {w}) zero x = zeroBTFS _ _
+
+
+  ctxTransFld-lem-1 : ∀ {ih : _} {hp} → (entries₁ : List (ContextEntry ih)) → ∀ p → ∀ x₁
+                                   -- → ∀ ( x₂ : ⟨ CtxTrans' (participantsWM ih) (just p) hp ⟩)
+                           → BTFS-⇒ {D = GType} name (λ b x₃ →  ⟨ CtxTrans' (participantsWM ih) (scope x₃) hp ⟩ × ((b ≡ AST.type x₃)))
+                                                    (λ b x₃ →  ⟨ CtxTrans' (participantsWM ih) (scope x₃) hp ⟩ × ((b ≡ AST.type x₃)))
+                              entries₁
+                              ((AST.entries
+                                (bindingMechanics' ih (AST.con entries₁ nothing)
+                                 (AST.Stmnt.bindingS
+                                  (AST.BStmnt.BS-publish! p x₁)))))
+  ctxTransFld-lem-1 [] p (AST.psof name₁ {()})
+  ctxTransFld-lem-1 {AST.interactionHead [] parameters₁} (x ∷ entries₁) (AST.pId name₂ {()}) (AST.psof name₁ {inl x₁})
+  ctxTransFld-lem-1 {AST.interactionHead (x₃ ∷ participantsWM₁) parameters₁} (x ∷ entries₁) (AST.pId name₂) (AST.psof name₁ {inl x₁}) = 
+      (refl , (λ _ → prod-map (const _) (idfun _))) , (PW-refl _ entries₁ λ a → refl , (λ _ → idfun _))
+  ctxTransFld-lem-1 {AST.interactionHead [] parameters₁} (x ∷ entries₁) (AST.pId name₂ {()}) (AST.psof name₁ {inr x₁}) 
+  ctxTransFld-lem-1 ih@{AST.interactionHead (x₃ ∷ participantsWM₁) parameters₁} (x ∷ entries₁) p (AST.psof name₁ {inr x₁}) =
+     (refl , (λ _ → idfun _)) ,
+       ctxTransFld-lem-1 {ih} (entries₁) p (AST.psof name₁ {proj₂ x₁}) 
+
+  ctxTransFld-lem-2 : ∀ {ih : _} {hp} → (entries₁ : List (ContextEntry ih)) → ∀ p → ∀ x₁
+                      → ∀ ( x₂ : ⟨ CtxTrans' (participantsWM ih) (just p) hp ⟩)
+                      → PW (λ x x₃ →  ⟨  (maybe-eqCase (ctxTrans-hlp-CE {ih} hp x) (ctxTrans-hlp-CE {ih} hp x₃)) ⟩ 
+                                  × recMaybe Unit* (λ x₄ → ((AST.name x ≡ AST.name x₄)) ×
+                                        (∀ b → ⟨ (isNothing-dp (AST.scope x₄)) ⟩ × (b ≡ AST.type x₄)
+                                             → ⟨ (CtxTrans' (participantsWM ih) (AST.scope x) hp) ⟩ × (b ≡ AST.type x)))
+                                     ( ctxTrans-hlp-CE {ih} hp x )
+                                  × recMaybe Unit* (λ x₄ → ((AST.name x₃ ≡ AST.name x₄)) ×
+                                        (∀ b → ⟨  (CtxTrans' (participantsWM ih) (AST.scope x₃) hp) ⟩ × (b ≡ AST.type x₃)
+                                             → ⟨ (isNothing-dp (AST.scope x₄)) ⟩  × (b ≡ AST.type x₄)))
+                                      (ctxTrans-hlp-CE {ih} hp x₃))
+                          entries₁
+                          ((AST.entries
+                                (bindingMechanics' ih (AST.con entries₁ nothing)
+                                 (AST.Stmnt.bindingS
+                                  (AST.BStmnt.BS-publish! p x₁)))))
+  ctxTransFld-lem-2 {AST.interactionHead [] parameters₁} entries₁ (AST.pId name₁ {()}) x₁ x₂ 
+  ctxTransFld-lem-2 {AST.interactionHead (x ∷ participantsWM₁) parameters₁} [] p (AST.psof name₁ {()}) x₂
+  ctxTransFld-lem-2 {AST.interactionHead (x ∷ participantsWM₁) parameters₁} {hp} (AST.ice nothing name₂ type₁ ∷ entries₁) p (AST.psof name₁ {inl (x₁ , ())}) x₂
+     -- (tt , ((refl , (λ b x₃ → x₃)) , (refl , (λ b x₃ → x₃)))) ,
+     --   (PW-refl _ entries₁ (λ a → maybe-eqCase-refl (ctxTrans-hlp-CE hp a)
+     --        , {!!}))
+  ctxTransFld-lem-2 {AST.interactionHead (x ∷ participantsWM₁) parameters₁} (AST.ice nothing name₂ type₁ ∷ entries₁) p (AST.psof name₁ {inr x₁}) x₂ =
+    {!!} , (ctxTransFld-lem-2 {AST.interactionHead (x ∷ participantsWM₁) parameters₁} (entries₁) p (AST.psof name₁ {proj₂ x₁}) x₂)
+  ctxTransFld-lem-2 {AST.interactionHead (x ∷ participantsWM₁) parameters₁} {AST.pId name₄ {yy}} (AST.ice (just (AST.pId name₃ {yyy})) name₂ type₁ ∷ entries₁) (AST.pId name₅) (AST.psof name₁ {inl x₁}) x₂ with (proj₁ (snd (CtxTrans' (x ∷ participantsWM₁) (just (pId name₃ {yyy})) (pId name₄ {yy}))))
+  ... | yes p₁ = (_ , ((refl , (λ b x₃ → empty-elim (proj₁ x₃))) , (refl , (λ b x₃ → x₃)))) ,
+                      (PW-refl _ entries₁
+                        (λ a → maybe-elim {B = λ mmm → fst
+                          (maybe-eqCase (ctxTrans-hlp-CE (pId name₄) a)
+                           mmm)
+                          ×
+                          recMaybe (Lift Unit)
+                          (λ x₄ →
+                             (AST.name a ≡ AST.name x₄) ×
+                             ((b : GType) →
+                              fst (maybe-eqCase nothing (AST.scope x₄)) × (b ≡ AST.type x₄) →
+                              fst (CtxTrans' (x ∷ participantsWM₁) (AST.scope a) (pId name₄)) ×
+                              (b ≡ AST.type a)))
+                          mmm
+                          ×
+                          recMaybe (Lift Unit)
+                          (λ x₄ →
+                             (AST.name a ≡ AST.name x₄) ×
+                             ((b : GType) →
+                              fst (CtxTrans' (x ∷ participantsWM₁) (AST.scope a) (pId name₄)) ×
+                              (b ≡ AST.type a) →
+                              fst (maybe-eqCase nothing (AST.scope x₄)) × (b ≡ AST.type x₄)))
+                          mmm} {!!} {!!} (ctxTrans-hlp-CE (pId name₄) a)))
+  ... | no ¬p = empty-elim (¬p {!x₂!})
+
+  ctxTransFld-lem-2 {AST.interactionHead (x ∷ participantsWM₁) parameters₁} (AST.ice (just (AST.pId name₃)) name₂ type₁ ∷ entries₁) p (AST.psof name₁ {inr x₁}) x₂ =
+    {!!} , (ctxTransFld-lem-2 {AST.interactionHead (x ∷ participantsWM₁) parameters₁} (entries₁) p (AST.psof name₁ {proj₂ x₁}) x₂)
+  -- ctxTransFld-lem-2 ih@{AST.interactionHead (x ∷ participantsWM₁) parameters₁} {hp} (x₃ ∷ entries₁) p (AST.psof name₁ {inr x₁}) x₂ with (ctxTrans-hlp-CE {ih} hp x₃)
+  -- ... | nothing = (_ , (_ , _)) , ctxTransFld-lem-2 {ih} {hp} entries₁ p (AST.psof name₁ {proj₂ x₁}) x₂
+  -- ... | just x₄ = (_ , (({!!} , {!!}) , {!!})) , (ctxTransFld-lem-2 {ih} {hp} entries₁ p (AST.psof name₁ {proj₂ x₁}) x₂)
+  --    -- (maybe-eqCase-refl (ctxTrans-hlp-CE hp x₃) , {!!}) , {!!}
+
+  -- ctxTransFld-lem-1 {AST.interactionHead participantsWM₁ parameters₁} (AST.ice nothing name₁ type₁) =
+  --    refl , (λ b → (idfun _) , (idfun _))
+  -- ctxTransFld-lem-1 {AST.interactionHead [] parameters₁} (AST.ice (just (AST.pId name₂ {()})) name₁ type₁)
+  -- ctxTransFld-lem-1 {AST.interactionHead (x₁ ∷ participantsWM₁) parameters₁} {hp = hp} (AST.ice (just zz@(AST.pId name₂ {yy})) name₁ type₁) with (proj₁ (snd (CtxTrans' _ (just zz) hp )) )
+  -- ... | yes p = refl , (λ b → (idfun _) , (idfun _))
+  -- ... | no ¬p = _
+
+
+
+  -- ctxTransFld-lem-22 : ∀ ih → ∀ hp → ∀ name₃ → ∀ scope₁ → ∀ type₁ → ⟨ CtxTrans' (participantsWM ih) scope₁ hp ⟩
+  --       → ⟨ maybe-eqCase (ctxTrans-hlp-CE {ih} hp (AST.ice scope₁ name₃ type₁))
+  --                 (ctxTrans-hlp-CE {ih} hp (AST.ice nothing name₃ type₁)) ⟩ 
+  -- ctxTransFld-lem-22 ih hp name₃ nothing type₁ x = _
+  -- ctxTransFld-lem-22 (AST.interactionHead [] parameters₁) hp name₃ (just (AST.pId name₁ {()})) type₁ x
+  -- ctxTransFld-lem-22 (AST.interactionHead (x₂ ∷ participantsWM₁) parameters₁) hp name₃ (just (AST.pId name₁ {yy})) type₁ x with (proj₁ (snd (CtxTrans' (x₂ ∷ participantsWM₁) (just (pId name₁ {yy})) hp)))
+  -- ... | yes p = _
+  -- ... | no ¬p = ¬p x
   
-  -- ctxTransFld-hon-pub-lemma {ih} {hp = hp} {entries = AST.ice nothing name₁ type₁ ∷ entries₁} (AST.psof name₂ {inl (x , ())}) (suc k)
-  -- ctxTransFld-hon-pub-lemma {ih} {hp = hp} {entries = AST.ice (just x₁) name₁ type₁ ∷ entries₁} (AST.psof name₂ {inl (x , x₂)}) (suc k) with (ctxTrans-hlp-CE {ih} hp (ice (just x₁) name₁ type₁))
-  -- ... | nothing = inl
-  -- ... | just x₃ = sum-map (idfun _) {!!}
-  --    -- sum-rec inl {!!}
+  -- ctxTransFld-lem-2 : ∀ {ih : _} {hp} → ∀ entries₁
+  --                                → (p : HonestParticipantId')
+  --                                → (x₁ : PrivateSymbolOf (AST.con entries₁ nothing) p) →
+  --                                   (x₂ : fst (CtxTrans' (participantsWM ih) (just p) hp))
+  --                                   → PW (λ x₃ x₄ →
+  --                                     Lift
+  --                                     ⟨(maybe-eqCase (ctxTrans-hlp-CE {ih} hp x₃) (ctxTrans-hlp-CE {ih} hp x₄))⟩)
+  --                                  entries₁ (bindingMechanics ih {AST.con entries₁ nothing} (BS-publish! p x₁))
+  -- ctxTransFld-lem-2 {AST.interactionHead [] parameters₁} {hp} (AST.ice scope₁ name₃ type₁ ∷ entries₁) (AST.pId name₂ {()}) (AST.psof name₁ {inl x₁}) x₂
+
+  -- ctxTransFld-lem-2 {ih@(AST.interactionHead (xx ∷ participantsWM₁) parameters₁)} {hp} (AST.ice nothing name₃ type₁ ∷ entries₁) (AST.pId name₂ {yy}) (AST.psof name₁ {inl (x , ())}) x₂
+  -- ctxTransFld-lem-2 {ih@(AST.interactionHead (xx ∷ participantsWM₁) parameters₁)} {hp} (AST.ice ss@(just (AST.pId name₄ {yy'})) name₃ type₁ ∷ entries₁) (AST.pId name₂ {yy}) (AST.psof name₁ {inl x₁}) x₂ = 
+  --   (lift (ctxTransFld-lem-22 ih hp name₃ ss type₁
+  --         -- {!x₂!} 
+  --       (subst {x = (pId name₂ {yy})} {y = (pId name₄ {yy'})}
+  --         (λ x → fst (CtxTrans' (xx ∷ participantsWM₁) (just x) hp)) (λ i → AST.pId (proj₂ x₁ i)
+  --                    {toPathP {A = λ i → fst (IsHonestParticipantId {participants = xx ∷ participantsWM₁} (proj₂ x₁ i))}
+  --                      {x = yy} {y = yy'}
+  --                       (proj₂ (snd (IsHonestParticipantId {xx ∷ participantsWM₁} (proj₂ x₁ i1))) _ _)
+  --                               i}) x₂ )
+  --      )) , PW-refl _ entries₁
+  --            λ a → lift (maybe-eqCase-refl (ctxTrans-hlp-CE hp a))
   
-  -- ctxTransFld-hon-pub-lemma {ih} {hp = hp} {entries = AST.ice ww name₁ type₁ ∷ entries₁} (AST.psof name₂ {inr x}) (suc k) = {!!}
-
--- with (AST.scope xx₁) | (ctxTrans-hlp-CE {ih} hp xx₁) | (AST.psof-proof (con {ih} (xx₁ ∷ entries₁) nothing) x₁)
---   ... | w | ww | www = {!w  www!}
-
-  ctxTransFld-lem-1 : ∀ {ih : _} {hp} →  (a : AST.ContextEntry' Identifier builtIns one) →
-                            recMaybe (Lift Unit)
-                            (λ a' →
-                               (AST.name a ≡ AST.name a') ×
-                               ((b : GType) →
-                                (fst (isNothing-dp (AST.scope a)) × (b ≡ AST.type a) →
-                                 fst (isNothing-dp (AST.scope a')) × (b ≡ AST.type a'))
-                                ×
-                                (fst (isNothing-dp (AST.scope a')) × (b ≡ AST.type a') →
-                                 fst (isNothing-dp (AST.scope a)) × (b ≡ AST.type a))))
-                            (ctxTrans-hlp-CE {ih} hp a)
-  ctxTransFld-lem-1 {AST.interactionHead participantsWM₁ parameters₁} (AST.ice nothing name₁ type₁) =
-     refl , (λ b → (idfun _) , (idfun _))
-  ctxTransFld-lem-1 {AST.interactionHead [] parameters₁} (AST.ice (just (AST.pId name₂ {()})) name₁ type₁)
-  ctxTransFld-lem-1 {AST.interactionHead (x₁ ∷ participantsWM₁) parameters₁} {hp = hp} (AST.ice (just zz@(AST.pId name₂ {yy})) name₁ type₁) with (proj₁ (snd (CtxTrans' _ (just zz) hp )) )
-  ... | yes p = refl , (λ b → (idfun _) , (idfun _))
-  ... | no ¬p = _
-
-  ctxTransFld-lem-22 : ∀ ih → ∀ hp → ∀ name₃ → ∀ scope₁ → ∀ type₁ → ⟨ CtxTrans' (participantsWM ih) scope₁ hp ⟩
-        → ⟨ maybe-eqCase (ctxTrans-hlp-CE {ih} hp (AST.ice scope₁ name₃ type₁))
-                  (ctxTrans-hlp-CE {ih} hp (AST.ice nothing name₃ type₁)) ⟩ 
-  ctxTransFld-lem-22 ih hp name₃ nothing type₁ x = _
-  ctxTransFld-lem-22 (AST.interactionHead [] parameters₁) hp name₃ (just (AST.pId name₁ {()})) type₁ x
-  ctxTransFld-lem-22 (AST.interactionHead (x₂ ∷ participantsWM₁) parameters₁) hp name₃ (just (AST.pId name₁ {yy})) type₁ x with (proj₁ (snd (CtxTrans' (x₂ ∷ participantsWM₁) (just (pId name₁ {yy})) hp)))
-  ... | yes p = _
-  ... | no ¬p = ¬p x
-  
-  ctxTransFld-lem-2 : ∀ {ih : _} {hp} → ∀ entries₁
-                                 → (p : HonestParticipantId')
-                                 → (x₁ : PrivateSymbolOf (AST.con entries₁ nothing) p) →
-                                    (x₂ : fst (CtxTrans' (participantsWM ih) (just p) hp))
-                                    → PW (λ x₃ x₄ →
-                                      Lift
-                                      ⟨(maybe-eqCase (ctxTrans-hlp-CE {ih} hp x₃) (ctxTrans-hlp-CE {ih} hp x₄))⟩)
-                                   entries₁ (bindingMechanics ih {AST.con entries₁ nothing} (BS-publish! p x₁))
-  ctxTransFld-lem-2 {AST.interactionHead [] parameters₁} {hp} (AST.ice scope₁ name₃ type₁ ∷ entries₁) (AST.pId name₂ {()}) (AST.psof name₁ {inl x₁}) x₂
-
-  ctxTransFld-lem-2 {ih@(AST.interactionHead (xx ∷ participantsWM₁) parameters₁)} {hp} (AST.ice nothing name₃ type₁ ∷ entries₁) (AST.pId name₂ {yy}) (AST.psof name₁ {inl (x , ())}) x₂
-  ctxTransFld-lem-2 {ih@(AST.interactionHead (xx ∷ participantsWM₁) parameters₁)} {hp} (AST.ice ss@(just (AST.pId name₄ {yy'})) name₃ type₁ ∷ entries₁) (AST.pId name₂ {yy}) (AST.psof name₁ {inl x₁}) x₂ = 
-    (lift (ctxTransFld-lem-22 ih hp name₃ ss type₁
-          -- {!x₂!} 
-        (subst {x = (pId name₂ {yy})} {y = (pId name₄ {yy'})}
-          (λ x → fst (CtxTrans' (xx ∷ participantsWM₁) (just x) hp)) (λ i → AST.pId (proj₂ x₁ i)
-                     {toPathP {A = λ i → fst (IsHonestParticipantId {participants = xx ∷ participantsWM₁} (proj₂ x₁ i))}
-                       {x = yy} {y = yy'}
-                        (proj₂ (snd (IsHonestParticipantId {xx ∷ participantsWM₁} (proj₂ x₁ i1))) _ _)
-                                i}) x₂ )
-       )) , PW-refl _ entries₁
-             λ a → lift (maybe-eqCase-refl (ctxTrans-hlp-CE hp a))
-  
-  ctxTransFld-lem-2 {hp = hp} (x ∷ entries₁) p (AST.psof name₁ {inr x₁}) x₂ =
-     lift (maybe-eqCase-refl (ctxTrans-hlp-CE hp x)) , (ctxTransFld-lem-2 (entries₁) p (AST.psof name₁ {proj₂ x₁}) x₂)
+  -- ctxTransFld-lem-2 {hp = hp} (x ∷ entries₁) p (AST.psof name₁ {inr x₁}) x₂ =
+  --    lift (maybe-eqCase-refl (ctxTrans-hlp-CE hp x)) , (ctxTransFld-lem-2 (entries₁) p (AST.psof name₁ {proj₂ x₁}) x₂)
 
   ctxTransFld : ∀ {ih : _} {hp} → (c : Context ih) (a : Stmnt ih c)
                     → CtxTrans hp c
@@ -391,11 +429,30 @@ module ProjectOut {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Id
        (proj₁ x) , 
       dec-rec' _
           (λ x₂ → (fst (proj₂ x))
-             ,  btfs-⇒ _ (BTFS-⇒-filterMap name name {f = (ctxTrans-hlp-CE hp)}
-                            {entries₁}
-                            {bindingMechanics ih (BS-publish! p x₁ {isCon})}
-                          (ctxTransFld-lem-2 entries₁ p x₁ x₂) (ctxTransFld-lem-1 {ih} {hp}) {!!})
-                                              (fst (proj₂ x)) (snd (proj₂ x))
+             , btfs-⇒ name
+                 (BTFS-⇒-filterMap name name
+                      -- {B' = {!λ z z₁ →
+                      --           Cubical.Syntax.⟨⟩.has-⟨⟩.⟨ TypeWithStr-has-⟨⟩ ⟩
+                      --           (CtxTrans' (participantsWM ih) (AST.scope z₁) hp)
+                      --           × (z ≡ AST.type z₁)!}}
+                      -- {B'' = {!!}} 
+                   (ctxTransFld-lem-2 {ih} {hp} entries₁ p x₁ x₂)
+                    ((ctxTransFld-lem-1 {ih} {hp} entries₁ p x₁)))
+                 (fst (proj₂ x)) (snd (proj₂ x))  
+                -- btfs-⇒ _
+                --       (btfs-map _ (BTFS-⇒-filterMap name name {f = (ctxTrans-hlp-CE hp)}
+                --             {entries₁}
+                --             {bindingMechanics ih (BS-publish! p x₁ {isCon})}
+                --           (ctxTransFld-lem-2 entries₁ p x₁ x₂)
+                --            {B' = λ x₃ x₄ → ⟨  CtxTrans' (participantsWM ih) (AST.scope x₄) hp  ⟩ × (x₃ ≡ AST.type x₄)}
+                --            {B'' = λ x₃ x₄ → ⟨ CtxTrans' (participantsWM
+                --                                           (makeDishonest (ih) hp)) (AST.scope x₄)
+                --                                              ({!ih!}) ⟩ × (x₃ ≡ AST.type x₄)}
+                --              -- {!!}
+                --            (ctxTransFld-lem-1 {ih} {hp})
+                --            {!(snd (proj₂ x))!}))
+                           
+                --                               (fst (proj₂ x)) (snd (proj₂ x))
              )
           {!!}
          -- (λ x₂ → map-List (BTF-trans
