@@ -219,6 +219,21 @@ String' : Type₀
 String' = String / λ x x₁ → Bool→Type (primStringEquality x x₁)
 
 
+record Is-⊎  {ℓa ℓb} (X : Type (ℓ-max ℓa ℓb)) : Type (ℓ-suc (ℓ-max ℓa ℓb))  where
+  field
+    ATy : Type ℓa
+    BTy : Type ℓb
+    X≡A⊎B : X ≡ (ATy ⊎ BTy)
+
+instance
+  Is-⊎-⊎ : ∀ {ℓa ℓb} → {A : Type ℓa} → {B : Type ℓb}  → Is-⊎ (A ⊎ B)
+  Is-⊎.ATy (Is-⊎-⊎ {A = A}) = A
+  Is-⊎.BTy (Is-⊎-⊎ {B = B}) = B
+  Is-⊎.X≡A⊎B Is-⊎-⊎ = refl
+
+
+Sum→B : ∀ {ℓa ℓb} (X : Type (ℓ-max ℓa ℓb)) → {{Is-⊎ {ℓa} {ℓb} X}} → Type ℓb
+Sum→B X ⦃ record { ATy = ATy ; BTy = BTy ; X≡A⊎B = X≡A⊎B } ⦄ = BTy
 
 
 -- castAA : ∀ {s} → AA s → Maybe (AA _/_.[ "zz" ] )
@@ -466,8 +481,20 @@ zip [] x₁ = []
 zip (x ∷ x₂) [] = []
 zip (x ∷ x₂) (x₁ ∷ x₃) = (x , x₁) ∷ zip x₂ x₃ 
 
+
+
 maybe-eqCase : ∀ {ℓ ℓ'} {A : Type ℓ} {B : Type ℓ'} → Maybe A → Maybe B → DecPropΣ
 maybe-eqCase nothing nothing = Unit-dp
 maybe-eqCase nothing (just x) = Empty-dp
 maybe-eqCase (just x) nothing = Empty-dp
 maybe-eqCase (just x) (just x₁) = Unit-dp
+
+maybe-eqCase-refl : ∀ {ℓ} {A : Type ℓ} → (x : Maybe A) → ⟨ maybe-eqCase x x ⟩ 
+maybe-eqCase-refl nothing = tt
+maybe-eqCase-refl (just x) = tt
+
+isJust-dp : ∀ {ℓ} {A : Type ℓ} → Maybe A → DecPropΣ
+isJust-dp = maybe-eqCase (just tt)
+
+isNothing-dp : ∀ {ℓ} {A : Type ℓ} → Maybe A → DecPropΣ
+isNothing-dp = maybe-eqCase (nothing {A = Unit})
