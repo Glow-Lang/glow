@@ -272,7 +272,7 @@
                      help: "host-address for libp2p")
              (option 'circuit-relay-address "-d" "--circuit-relay-address" default: #f ;;TODO: Add the default circuit relay address here
                      help: "circuit-relay-address (only change if you want to use a non-default circuit relay)")
-             (option 'pubsub-node "--pubsub-node" default: #f ;; TODO: add the default pubsub node address here
+             (option 'pubsub-node "--pubsub-node" default: #f;; TODO: add the default pubsub node address here
                      help: "the address of a pubsub node (only change if you want to use a none-default node)")
              (flag 'wait-for-agreement "-W" "--wait-for-agreement"
                    help: "wait for agreement via off-chain-channel")]

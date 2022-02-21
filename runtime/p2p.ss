@@ -170,3 +170,22 @@
             (pubsub-publish c "chat" (string->bytes "IDENTIFY"))
             (lp))
           (error "Timeout when getting peerID from pubsub"))))))
+
+
+
+
+;;~~~~~~~~~~~~~~~~~~~~~~~~~~ Glow Bootstrap Node Methods for testing ~~~~~~~~~~~~~~~~~~~
+
+
+
+;; do-bootstrap
+;; host-addresses: a string of the ip address in multiaddr format to start the bootstrap node at
+;;
+;; returns: a libp2p client object of the bootstrap node
+;; starts a bootstrap node
+(def (do-bootstrap host-addresses)
+ (let* ((boot-d (start-libp2p-daemon! host-addresses: host-addresses options: ["-relayHop" "-pubsub" "-connManager"] wait: 10))
+        (boot-c (open-libp2p-client host-addresses: host-addresses wait: 5)))
+
+   (pubsub-subscribe boot-c "chat")
+   (values boot-c boot-d)))
