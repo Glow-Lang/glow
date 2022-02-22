@@ -181,7 +181,7 @@
 ;; do-bootstrap
 ;; host-addresses: a string of the ip address in multiaddr format to start the bootstrap node at
 ;;
-;; returns: a libp2p client object of the bootstrap node
+;; returns: (values client-object-of-bootstrap-node daemon-object-of-bootstrap-node)
 ;; starts a bootstrap node
 (def (do-bootstrap host-addresses)
  (let* ((boot-d (start-libp2p-daemon! host-addresses: host-addresses options: ["-relayHop" "-pubsub" "-connManager"] wait: 10))
