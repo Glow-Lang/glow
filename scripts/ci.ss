@@ -151,7 +151,7 @@
   (test)
   (after-test))
 
-(def default-docker-image "mukn/glow:latest")
+(def default-docker-image "mukn/glow:devel")
 
 ;; TODO: local build on docker
 (define-entry-point (docker-all)
