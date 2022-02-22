@@ -232,7 +232,7 @@
                      participants: (participants #f)
                      assets: (assets #f)
                      off-chain-channel-selection: (off-chain-channel-selection 'stdio)
-                     host-address: (host-address #f)
+                     host-address: (host-address "/ip4/0.0.0.0/tcp/10333")
                      circuit-relay-address: (circuit-relay-address #f)
                      pubsub-node: (pubsub-node #f)
                      wait-for-agreement: (wait-for-agreement #f))
