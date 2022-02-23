@@ -87,7 +87,10 @@
 ;; See: https://docs.libp2p.io/concepts/protocols/#handler-functions
 (def chat-proto "/chat/1.0.0")
 
-;; This function reads the
+;; This function reads an entry in stream s.
+;; If entry is eof, then close stream
+;; If entry is empty string, then print "Received"
+;; else, return the stream entry
 (def (chat-reader s)
   (let lp ()
     (let (line (bio-read-line (stream-in s)))
