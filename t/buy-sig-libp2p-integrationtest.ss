@@ -33,7 +33,7 @@
 ;; NOTE: This was renamed accordingly to avoid being included in the integration test suite.
 ;; TODO: Uncomment the line below and rename file to `buy-sig-libp2p-integrationtest' to include in CI.
 ;; (def buy-sig-libp2p-integrationtest
-(def buy-sig-libp2p
+(def buy-sig-libp2p-integrationtest
   (test-suite "integration test for ethereum/buy-sig over libp2p channel"
     (test-case "buy sig over libp2p runs successfully"
       (setup-test-env)
