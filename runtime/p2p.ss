@@ -47,13 +47,13 @@
 ;; and send the contents over the opened connection.
 ;; If the other participant is not online,
 ;; it will poll until `timeout'.
-(def (dial-and-send-contents libp2p-client dest-address-str contents timeout: (timeout 10))
+(def (dial-and-send-contents libp2p-client dest-address-str contents max-retries: (max-retries 10))
   (let* ((self (libp2p-identify libp2p-client))
          (peer-multiaddr (string->peer-info dest-address-str)))
     (for (p (peer-info->string* self))
       (displayln "I am " p))
     (displayln "Connecting to " dest-address-str)
-    (libp2p-connect/poll libp2p-client peer-multiaddr timeout: timeout)
+    (libp2p-connect/poll libp2p-client peer-multiaddr max-retries: max-retries)
     (let (s (libp2p-stream libp2p-client peer-multiaddr [chat-proto]))
       (chat-writer s contents)
       (stream-close s))))
@@ -62,8 +62,8 @@
 ;; and send the contents over the opened connection.
 ;; If the other participant is not online,
 ;; it will poll until `timeout' seconds.
-(def (libp2p-connect/poll libp2p-client peer-multiaddr timeout: (timeout 10))
-  (retry retry-window: 1 max-window: 10 max-retries: timeout
+(def (libp2p-connect/poll libp2p-client peer-multiaddr max-retries: (max-retries 10))
+  (retry retry-window: 1 max-window: 10 max-retries: max-retries
          (lambda ()
            (displayln "Trying to connect to peer...")
            (libp2p-connect libp2p-client peer-multiaddr))))
