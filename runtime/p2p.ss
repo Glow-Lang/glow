@@ -63,7 +63,7 @@
 ;; If the other participant is not online,
 ;; it will poll until `timeout' seconds.
 (def (libp2p-connect/poll libp2p-client peer-multiaddr timeout: (timeout 10))
-  (retry retry-window: 5 max-window: timeout max-retries: +inf.0
+  (retry retry-window: 1 max-window: 10 max-retries: timeout
          (lambda ()
            (displayln "Trying to connect to peer...")
            (libp2p-connect libp2p-client peer-multiaddr))))
