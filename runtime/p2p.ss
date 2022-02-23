@@ -18,6 +18,7 @@
   :clan/path-config
   :clan/shell
   :clan/io
+  :clan/concurrency
   :gerbil/gambit/ports
   :mukn/ethereum/known-addresses
   ./pb/private-key
@@ -60,18 +61,12 @@
 ;; This is used to connect to a destination address of another participant,
 ;; and send the contents over the opened connection.
 ;; If the other participant is not online,
-;; it will poll until `timeout'.
-(def (libp2p-connect/poll libp2p-client peer-multiaddr timeout: (timeout #f))
-  (try (libp2p-connect libp2p-client peer-multiaddr)
-    (catch (e)
-      (printf "Unable to connect to client ~a ...\n" (peer-info->string peer-multiaddr))
-      (display-exception e)
-      (if (and timeout (> timeout 0))
-          (let ()
-            (displayln "Polling again in 1s...")
-            (thread-sleep! 1)
-            (libp2p-connect/poll libp2p-client peer-multiaddr timeout: (- timeout 1)))
-          (error "Timeout while trying to connect to client.")))))
+;; it will poll until `timeout' seconds.
+(def (libp2p-connect/poll libp2p-client peer-multiaddr timeout: (timeout 10))
+  (retry retry-window: 5 max-window: timeout max-retries: +inf.0
+         (lambda ()
+           (displayln "Trying to connect to peer...")
+           (libp2p-connect libp2p-client peer-multiaddr))))
 
 
 ;; This is a libp2p protocol spec.
