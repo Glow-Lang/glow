@@ -7,7 +7,7 @@ defaults:
     shell: bash
 
 jobs:
-  buildtest_job:
+  build_test_job:
     runs-on: ubuntu-latest
     container: mukn/glow:devel
     defaults:
