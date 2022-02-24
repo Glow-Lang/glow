@@ -17,11 +17,13 @@
   :mukn/ethereum/simple-apps :mukn/ethereum/network-config :mukn/ethereum/assets
   :mukn/ethereum/ethereum :mukn/ethereum/hex :mukn/ethereum/transaction :mukn/ethereum/types
   :mukn/ethereum/testing
+  :vyzo/libp2p
   ../compiler/passes
   ../compiler/multipass
   ../compiler/syntax-context
   ../runtime/program
   ../runtime/participant-runtime
+  ../runtime/p2p
   ../runtime/reify-contract-parameters
   ./cli-integration
   ./utils)
@@ -31,7 +33,7 @@
 ;; NOTE: This was renamed accordingly to avoid being included in the integration test suite.
 ;; TODO: Uncomment the line below and rename file to `buy-sig-libp2p-integrationtest' to include in CI.
 ;; (def buy-sig-libp2p-integrationtest
-(def buy-sig-libp2p
+(def buy-sig-libp2p-integrationtest
   (test-suite "integration test for ethereum/buy-sig over libp2p channel"
     (test-case "buy sig over libp2p runs successfully"
       (setup-test-env)
@@ -50,6 +52,11 @@
 
       (def proc-buyer #f)
       (def proc-seller #f)
+
+      ;;Start the glow Bootstrap node and store the client info
+
+      (defvalues (boot-c boot-d) (do-bootstrap "/ip4/127.0.0.1/tcp/10330"))
+      (def boot-addr (peer-info->string (libp2p-identify boot-c))) ;;get the addr of boot-c
 
       (DBG "Starting buyer thread")
 
@@ -75,7 +82,9 @@
                        "--evm-network" "pet"
                        "--test"
 
-                       "--host-address" "/ip4/127.0.0.1/tcp/10333"
+                       "--host-address" "/ip4/127.0.0.1/tcp/10331"
+                       "--circuit-relay-address" boot-addr
+                       "--pubsub-node" boot-addr
                        "--off-chain-channel" "libp2p"
                        "--wait-for-agreement"
                        ;; Similarly, specify one of the participants here. There are only two,
@@ -112,10 +121,11 @@
                        ;; other below.
                        "--params" (string-append "{\"price\": " (number->string price) "}")
 
-                       "--host-address" "/ip4/127.0.0.1/tcp/10300"
+                       "--host-address" "/ip4/127.0.0.1/tcp/10302"
+                       "--circuit-relay-address" boot-addr
+                       "--pubsub-node" boot-addr
                        "--off-chain-channel" "libp2p"
-                       ;; TODO: derive the peerid
-                       "--dest-address" "/ip4/127.0.0.1/tcp/10333/ipfs/16Uiu2HAmUXHHL7qEMNmwgynPF3GLGjo8n72TDnMPAgAFYPmnfpv8"
+
 
                        ;; Similarly, specify one of the participants here. There are only two,
                        ;; so this test doesn't excercise the logic to read this from stdin,
@@ -205,6 +215,8 @@
        (assert! (<= 0 (- (+ seller-balance-before price) seller-balance-after) gas-allowance))
 
        (finally
+        (libp2p-close boot-c)
+        (stop-libp2p-daemon! boot-d)
         (ignore-errors (close-port proc-buyer))
         (ignore-errors (close-port proc-seller))
         (ignore-errors (kill (process-pid proc-buyer)))

@@ -232,8 +232,9 @@
                      participants: (participants #f)
                      assets: (assets #f)
                      off-chain-channel-selection: (off-chain-channel-selection 'stdio)
-                     host-address: (host-address #f)
-                     dest-address: (dest-address #f)
+                     host-address: (host-address "/ip4/0.0.0.0/tcp/10333")
+                     circuit-relay-address: (circuit-relay-address #f)
+                     pubsub-node: (pubsub-node #f)
                      wait-for-agreement: (wait-for-agreement #f))
   (help: "Start an interaction based on an agreement"
    getopt: (make-options
@@ -267,13 +268,12 @@
              ;; enum off-chain-channel = 'stdio | 'libp2p
              (option 'off-chain-channel-selection "-C" "--off-chain-channel" default: 'stdio
                      help: "command to specify off-chain-channel")
-             (option 'host-address "-O" "--host-address" default: #f
-                     help: "host-address (only required if using libp2p as off-chain-channel)")
-             ;; FIXME: This should be stored and extracted from `contacts`.
-             ;; It is supplied here as a temporary workaround,
-             ;; until storing peerIds in `contacts` is supported.
-             (option 'dest-address "-d" "--dest-address" default: #f
-                     help: "dest-address (only required if using libp2p as off-chain-channel)")
+             (option 'host-address "-O" "--host-address" default: "/ip4/0.0.0.0/tcp/10333"
+                     help: "host-address for libp2p")
+             (option 'circuit-relay-address "-d" "--circuit-relay-address" default: #f ;;TODO: Add the default circuit relay address here
+                     help: "circuit-relay-address (only change if you want to use a non-default circuit relay)")
+             (option 'pubsub-node "--pubsub-node" default: #f;; TODO: add the default pubsub node address here
+                     help: "the address of a pubsub node (only change if you want to use a none-default node)")
              (flag 'wait-for-agreement "-W" "--wait-for-agreement"
                    help: "wait for agreement via off-chain-channel")]
             [(lambda (opt) (hash-remove! opt 'test))]
@@ -310,9 +310,10 @@
     (hash
      (off-chain-channel-selection (symbolify off-chain-channel-selection))
      (host-address host-address)
-     (dest-address dest-address)
      (my-nickname my-nickname)
-     (contacts contacts)))
+     (contacts contacts)
+     (circuit-relay-address circuit-relay-address)
+     (pubsub-node pubsub-node)))
   (def off-chain-channel (init-off-chain-channel channel-options))
   (try
     ;; Start the interaction

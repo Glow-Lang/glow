@@ -5,13 +5,14 @@
   :gerbil/gambit/bits :gerbil/gambit/bytes :gerbil/gambit/threads :gerbil/gambit/ports :std/net/bio
   :gerbil/gambit
   :std/assert :std/crypto :std/format :std/iter
-  :std/misc/hash :std/misc/list :std/misc/number :std/misc/uuid
+  :std/misc/threads
+  :std/misc/hash :std/misc/list :std/misc/number :std/misc/uuid :std/misc/channel :std/text/utf8 :std/text/base64
   :std/os/pid :std/os/signal
   :std/pregexp
   :std/sort
   :std/srfi/1 :std/srfi/13
   :std/sugar
-  :std/text/base64 :std/text/json
+  :std/text/base64 :std/text/json :std/text/csv :std/db/sqlite :std/db/dbi :std/iter
   (for-syntax :std/stxutil)
   :gerbil/gambit/exceptions
   :clan/base :clan/exception :clan/io :clan/json :clan/number :clan/pure/dict/assq
@@ -24,13 +25,12 @@
   :mukn/ethereum/nonce-tracker
   (only-in :mukn/glow/compiler/common hash-kref)
   :vyzo/libp2p
-  (only-in :vyzo/libp2p/client make-client)
-  :vyzo/libp2p/daemon
   (only-in ../compiler/alpha-convert/env symbol-refer)
   ./program ./block-ctx ./consensus-code-generator ./terminal-codes
   ./pb/private-key
   ../compiler/method-resolve/method-resolve
-  ../compiler/project/runtime-2)
+  ../compiler/project/runtime-2
+  ./p2p)
 
 ;; NB: Whichever function exports data end-users / imports from them should make sure to put in a Json array (Scheme list) prepend by the name of the type. And/or we may have a {"": "InteractionAgreement" ...} field with this asciibetically always-first name. Maybe such function belongs to gerbil-poo, too.
 
@@ -812,7 +812,7 @@
   )
 
 (define-type (Libp2pChannel @ [])
-    .make: (lambda (my-nickname host-address dest-address)
+    .make: (lambda (my-nickname host-address contacts circuit-relay-address pubsub-node)
        (let ()
 
          ;; ------------ Libp2p channel buffer setup
@@ -831,118 +831,118 @@
            (channel-put buffer received-data)
            (stream-close s))
 
+
          ;; ------------ Libp2p listening thread setup
 
 
          ;; Ensure libp2p-daemon client is running
          (displayln "Starting libp2p client")
-         (def libp2p-client (ensure-libp2p-client nickname: my-nickname host-address: host-address))
+
+         ;; If the a host address is specified, use that, if not, use default host address
+         (def libp2p-client
+           (if host-address
+             (open-libp2p-client host-addresses: host-address wait: 10 options: ["-q" "-pubsub" "-connManager"])
+             (error "Default host-address has not been implemented yet")))
 
          ;; Get and Broadcast identity
          (def self (libp2p-identify libp2p-client))
          (for (p (peer-info->string* self))
+
            (displayln "I am " p))
 
+         ;; Find your Blockchain Addr from your Nickname
+         (def my-0xaddr (0x<-address (address<-nickname my-nickname)))
+
+
+         ;;initialize the pubsub for peer discovery, if default value is #f throw error
+         (defvalues (sub cancel pubsub-listen-thread)
+           (if pubsub-node
+             (connect-to-multiaddr-pubsub pubsub-node: pubsub-node c: libp2p-client my-0xaddr: my-0xaddr)
+             (error "Default pubsub-node connection has not been implemented yet")))
+
+         ;;connect to the circuit-relay, if default value is #f throw error
+         (def circuit-relay
+           (if circuit-relay-address
+             (string->peer-info circuit-relay-address)
+             (error "Default circuit-relay connection has not been implemented yet")))
+
+         (libp2p-connect libp2p-client circuit-relay)
+         
          (def listening-thread
            (begin
             (displayln "Listening for messages...")
             (spawn libp2p-listen libp2p-client [chat-proto] push-to-buffer)))
 
+         ;;----------------------------------------------------------
 
-
+         (def dest-address #f)
 
          { libp2p-client
-           dest-address
            poll-buffer
            push-to-buffer
            _listening-thread: listening-thread
-           ;; FIXME: Get other participant addresses from contacts,
-           ;; pass these in as a parameter,
-           ;; instead of storing and using dest-address within the libp2p channel object.
+           pubsub-listen-thread
+           sub
+           cancel
+           circuit-relay
+
            .send-contract-agreement: (lambda (agreement)
              (displayln MAGENTA "Sending agreement to multiaddr..." END)
              (def agreement-string (string<-json (json<- InteractionAgreement agreement)))
-             (dial-and-send-contents libp2p-client dest-address agreement-string)
+
+             ;;Get the other participant from the agreement
+             (set! dest-address
+                  (hash-find (lambda (key value)
+                               (if (not (equal? my-0xaddr (0x<-address value)))
+                                 (0x<-address value)))
+                             (hash<-object (.@ agreement participants))))
+             (displayln "getting peerID")
+             (def dest-peerID (get-peerID-from-pubsub sub
+                                                      libp2p-client
+                                                      dest-address
+                                                      10)) ;;Multiaddr from the Eth addr using pubsub BLOCKS UNTIL ADDRESS IS FOUND Or timeout
+             (displayln "peerID obtained")
+             (dial-and-send-contents libp2p-client
+                                     (string-join (list (peer-info->string circuit-relay) dest-peerID) "/p2p-circuit/p2p/")
+                                     agreement-string)
+             (displayln "peer dialed")
              (displayln)
              (force-output))
 
            .send-contract-handshake: (lambda (_runtime handshake)
+
              (displayln MAGENTA "Sending handshake to multiaddr..." END)
              (def handshake-string (string<-json (json<- AgreementHandshake handshake)))
-             (dial-and-send-contents libp2p-client dest-address handshake-string)
+
+
+             (def dest-peerID (get-peerID-from-pubsub sub
+                                                     libp2p-client
+                                                     dest-address
+                                                     10))
+
+             (dial-and-send-contents libp2p-client
+                                     (string-join (list (peer-info->string circuit-relay) dest-peerID) "/p2p-circuit/p2p/")
+                                     handshake-string)
              (displayln)
              (force-output))
 
-           .listen-for-handshake: (lambda (_runtime)
-             (displayln MAGENTA "Listening for handshake via libp2p ...")
+           .listen-for-handshake: (lambda (_runtime) ;TODO: Make sure you are receiving messages only from people you want to talk to
+             (displayln MAGENTA "Listening for handshake via libp2p ..." END)
              (def handshake-str (poll-buffer))
-             (displayln MAGENTA "Received handshake")
+             (displayln MAGENTA "Received handshake" END)
              (def handshake (<-json AgreementHandshake (json<-string handshake-str)))
              handshake)
 
            .listen-for-agreement: (lambda ()
-             (displayln MAGENTA "Listening for agreement via libp2p ...")
+             (displayln MAGENTA "Listening for agreement via libp2p ..." END)
              (def agreement-str (poll-buffer))
-             (displayln MAGENTA "Received agreement")
+             (displayln MAGENTA "Received agreement" END)
              (def agreement (<-json InteractionAgreement (json<-string agreement-str)))
              agreement)
 
-            .close: (lambda () (stop-libp2p-daemon!))
+            .close: (lambda () (stop-libp2p-daemon!) (cancel) (thread-abort! (car pubsub-listen-thread)))
            })))
 
-
-(def (ensure-libp2p-client nickname: nickname host-address: host-address)
-    (new-libp2p-client nickname: nickname host-address: host-address))
-
-(def (new-libp2p-client nickname: nickname host-address: host-address)
-  (call-with-seckey-tempfile nickname: nickname
-    (lambda (seckey-filename)
-      (open-libp2p-client
-       host-addresses: host-address
-       wait: 5
-       options: ["-id" seckey-filename]))))
-
-(def (get-libp2p-client path: path)
-  (displayln "Path:")
-  (displayln path)
-  (and (file-exists? path)
-    (let ()
-      (def libp2p-daemon (use-libp2p-daemon! path))
-      (make-client libp2p-daemon (make-mutex 'libp2p-client) (make-hash-table) #f #f #f))))
-
-;; Creates a seckey temporary file,
-;; and passes its filename as an argument to f,
-;; purging the file after that.
-;; The seckey used is determined using the nickname.
-(def (call-with-seckey-tempfile nickname: nickname f)
-  (def file-name (make-seckey-tempfile nickname: nickname))
-  (with-unwind-protect (lambda () (f file-name))
-                       (lambda () (delete-file file-name))))
-
-(def (make-seckey-tempfile nickname: nickname
-                           filename: (filename (string-append "/tmp/glow-seckey-"
-                                                              (uuid->string (random-uuid)))))
-  (def seckey (get-my-seckey nickname: nickname))
-  (def seckey/bytes (export-secret-key/bytes seckey))
-  (def seckey/proto (make-seckey/proto seckey/bytes: seckey/bytes))
-  (write-seckey/proto filepath: filename seckey/proto: seckey/proto)
-  filename)
-
-(def (write-seckey/proto filepath: filepath seckey/proto: seckey/proto)
-  (def buf (open-file-output-buffer filepath))
-  (bio-write-PrivateKey seckey/proto buf)
-  (bio-force-output buf)
-  (close-file-input-buffer buf))
-
-;; TODO: accept other types of secret keys
-(def (make-seckey/proto seckey/bytes: seckey/bytes)
-  (make-PrivateKey Type: 'Secp256k1 Data: seckey/bytes))
-
-;; TODO: Upstream to gerbil-ethereum
-(def (get-my-seckey nickname: nickname)
-  (def my-address (address<-nickname nickname))
-  (def my-seckey (secret-key<-address my-address))
-  my-seckey)
 
 ;; ------------------ Initialize Off-chain channels
 
@@ -954,160 +954,11 @@
     ('libp2p (let ()
      (def my-nickname (hash-ref options 'my-nickname))
      (def host-address (hash-ref options 'host-address))
-     (def dest-address (hash-ref options 'dest-address))
-     (.call Libp2pChannel .make my-nickname host-address dest-address)))
+     (def contacts (hash-ref options 'contacts))
+     (def circuit-relay-address (hash-ref options 'circuit-relay-address))
+     (def pubsub-node (hash-ref options 'pubsub-node))
+     (.call Libp2pChannel .make my-nickname host-address contacts circuit-relay-address pubsub-node)))
     (else (error "Invalid off-chain channel selection"))))
-
-
-;; TODO: Eventually upstream changes to gerbil-libp2p to accept passing
-;; a seckey via an environment variable, instead of a file.
-
-
-(def (lookup-contact nickname: nickname contacts: contacts)
-  (for-each (lambda (contact) (displayln (.@ contact name))) contacts)
-  (find (lambda (contact) (equal? (.@ contact name) nickname)) contacts))
-
-
-;; ------------------ Libp2p client methods
-;;
-;; For a complete reference of libp2p API.
-;; See: https://github.com/vyzo/gerbil-libp2p#libp2p-api
-;;
-;; To understand what multiaddresses are,
-;; see: https://github.com/multiformats/multiaddr
-;;
-;; The implementation of client methods here are influenced by those found in:
-;; https://github.com/vyzo/gerbil-libp2p/blob/master/example/libp2p-chat.ss
-
-
-;; FIXME:
-;; In the upstream branch,
-;; the `start-libp2p-daemon!' procedure doesn't redirect output
-;; to a logfile, instead just directly outputs it to the terminal.
-;;
-;; To fix this we have to:
-;; 1. Upstream to gambit
-;;    Extend open-process to allow you to redirect to file or file descriptor.
-;;    (In our case this allows us to redirect the output / error messages to a log-file)
-;;    See how `run-program` in uiop does this:
-;;    https://common-lisp.net/project/asdf/uiop.html#UIOP_002fRUN_002dPROGRAM
-;;
-;; 2. Upstream to gerbil-libp2p
-;;    process-options to use the redirecting option
-;;    for writing the error logs to a file instead
-;;    of the console.
-;;
-;; In the short run we use the shell to redirect error logs to a file (see the implementation below).
-(def (start-libp2p-daemon! host-addresses: (host-addrs #f) daemon: (bin "p2pd")
-                           options: (options [])
-                           address: (sock #f)
-                           wait: (timeo 0.4)
-                           p2pd-log-path: (p2pd-log-path (log-path "p2pd.log")))
-  (cond
-   ((current-libp2p-daemon)
-    => values)
-   (else
-    (let* ((path (or sock (string-append "/tmp/p2pd." (number->string (getpid)) ".sock")))
-           (addr (string-append "/unix" path))
-
-           (raw-cmd (escape-shell-tokens [bin "-q" "-listen" addr
-                                          (if host-addrs ["-hostAddrs" host-addrs] [])...
-                                          options ...]))
-           (cmd (format "{ echo ~a ; exec ~a ; } < /dev/null >> ~a 2>&1"
-                 raw-cmd raw-cmd p2pd-log-path))
-
-           (proc (open-process [path: "/bin/sh" arguments: ["-c" cmd]]))
-
-           (d (daemon proc path)))
-      (cond
-       ((process-status proc timeo #f)
-        => (lambda (status)
-             (error "p2pd exited prematurely" status))))
-      (current-libp2p-daemon d)
-      d))))
-
-;; NOTE: This is needed to call initialize our version
-;; of the daemon process (by `start-libp2p-daemon!'),
-;; see the implementation above.
-;; TODO: Once the above changes are upstreamed for `start-libp2p-daemon!',
-;; this command can be made obsolete too.
-(def (open-libp2p-client host-addresses: (host-addresses #f) options: (args [])  address: (sock #f)  wait: (timeo 12) (path #f)) ;; Extra arguments host-address and options
-  (let (d (start-libp2p-daemon! host-addresses: host-addresses options: args address: sock wait: timeo)) ;; Should go with host-address/tranpsort/port
-    (make-client d (make-mutex 'libp2p-client) (make-hash-table) path #f #f)))
-
-;; `s' here is a stream between two peers,
-;; which is opened by the client.
-;; This writes contents to the stream.
-(def (chat-writer s contents)
-  (display "> ")
-  (bio-write-string contents (stream-out s))
-  (bio-write-char #\newline (stream-out s))
-  (bio-force-output (stream-out s)))
-
-;; peer-multiaddr-str: destination multiaddress,
-;; It has the additional constraint that it needs to contain a peerId,
-;; so we can verify the recipient's identity.
-;;
-;; host-addresses: Multi addresses this participant listens to on their host machine.
-;;
-;; contents: string
-;;
-;; This is used to connect to a destination address of another participant,
-;; and send the contents over the opened connection.
-;; If the other participant is not online,
-;; it will poll until `timeout'.
-(def (dial-and-send-contents libp2p-client dest-address-str contents timeout: (timeout 10))
-  (let* ((self (libp2p-identify libp2p-client))
-         (peer-multiaddr (string->peer-info dest-address-str)))
-    (for (p (peer-info->string* self))
-      (displayln "I am " p))
-    (displayln "Connecting to " dest-address-str)
-    (libp2p-connect/poll libp2p-client peer-multiaddr timeout: timeout)
-    (let (s (libp2p-stream libp2p-client peer-multiaddr [chat-proto]))
-      (chat-writer s contents)
-      (stream-close s))))
-
-;; This is used to connect to a destination address of another participant,
-;; and send the contents over the opened connection.
-;; If the other participant is not online,
-;; it will poll until `timeout'.
-(def (libp2p-connect/poll libp2p-client peer-multiaddr timeout: (timeout #f))
-  (try (libp2p-connect libp2p-client peer-multiaddr)
-    (catch (e)
-      (printf "Unable to connect to client ~a ...\n" (peer-info->string peer-multiaddr))
-      (display-exception e)
-      (if (and timeout (> timeout 0))
-          (let ()
-            (displayln "Polling again in 1s...")
-            (thread-sleep! 1)
-            (libp2p-connect/poll libp2p-client peer-multiaddr timeout: (- timeout 1)))
-          (error "Timeout while trying to connect to client.")))))
-
-
-;; This is a libp2p protocol spec.
-;; These protocols work on the application level.
-;; See: https://docs.libp2p.io/concepts/protocols/
-;;
-;; NOTE: This libp2p-protocol is a placeholder,
-;; it's not an actual libp2p protocol.
-;; It just falls back to plaintext messaging.
-;;
-;; When we want to have a specific protocol
-;; we will need to `register' handlers for them.
-;; See: https://docs.libp2p.io/concepts/protocols/#handler-functions
-(def chat-proto "/chat/1.0.0")
-
-;; This function reads the
-(def (chat-reader s)
-  (let lp ()
-    (let (line (bio-read-line (stream-in s)))
-      (cond
-       ((eof-object? line)
-        (displayln "*** STREAM CLOSED"))
-       ((string-empty? line)
-        (displayln "*** Received"))
-       (else
-        line)))))
 
 
 ;; ------------------ Misc
@@ -1125,3 +976,8 @@
   (if (string-contains agreement-string "'")
     agreement-string
     (string-append "'" agreement-string "'")))
+
+
+(def (lookup-contact nickname: nickname contacts: contacts)
+  ;; (for-each (lambda (contact) (displayln (.@ contact name))) contacts)
+  (find (lambda (contact) (equal? (.@ contact name) nickname)) contacts))
