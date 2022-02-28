@@ -1,4 +1,4 @@
-(export run run:terminal run:special-file run:command)
+(export run run:terminal run:special-file run:command run:tcp)
 (import
   :std/format :std/iter :std/pregexp :std/misc/string :std/text/json
   :clan/debug :clan/ffi :clan/json
@@ -96,6 +96,9 @@
 
 (def (run:special-file role a off-chain-channel)
   (run io-context:special-file role a off-chain-channel))
+
+(def (run:tcp role a off-chain-channel)
+  (run io-context:tcp role a off-chain-channel))
 
 ;; run : Symbol InteractionAgreement -> [Hashof Symbol TypeValuePair]
 ;; Produces an environment mapping surface names to type-value-pairs

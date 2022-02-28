@@ -265,7 +265,7 @@
              (option 'handshake "-H" "--handshake" default: #f
                      help: "command to use to transfer handshakes")
              ;; TODO: Abstract into Enum - See gerbil-poo
-             ;; enum off-chain-channel = 'stdio | 'libp2p
+             ;; enum off-chain-channel = 'stdio | 'tcp | 'libp2p
              (option 'off-chain-channel-selection "-C" "--off-chain-channel" default: 'stdio
                      help: "command to specify off-chain-channel")
              (option 'host-address "-O" "--host-address" default: "/ip4/0.0.0.0/tcp/10333"
@@ -287,9 +287,10 @@
   ;; 1. Update integration tests to answer prompts earlier,
   ;; 2. before agreements are generated / consumed (start-interaction/generate-agreement / start-interaction/with-agreement).
   ;; Once 1, 2 are done, we can remove the conditional for this.
+  (def off-chain-channel-symbol (symbolify off-chain-channel-selection))
   (def my-nickname
-    (match off-chain-channel-selection
-      ("libp2p" (or identity (prompt-identity)))
+    (match off-chain-channel-symbol
+      ('libp2p (or identity (prompt-identity)))
       (else identity)))
 
   (def options
@@ -304,11 +305,11 @@
          (role role)))
 
   ;; TODO: abstract into Poo object, especially if we have more local-runtime-options
-  ;; TODO: error out if off-chain-channel-selection is an invalid channel
+  ;; TODO: error out if off-chain-channel-symbol is an invalid channel
   ;; FIXME: Mark off-chain-channel as experimental, print it in a console prompt
   (def channel-options
     (hash
-     (off-chain-channel-selection (symbolify off-chain-channel-selection))
+     (off-chain-channel-selection off-chain-channel-symbol)
      (host-address host-address)
      (my-nickname my-nickname)
      (contacts contacts)
@@ -326,12 +327,18 @@
         (agreement-json-string
           (let (agreement (<-json InteractionAgreement (json<-string agreement-json-string)))
                (start-interaction/with-agreement options agreement)))
-        (else (start-interaction/generate-agreement options contacts off-chain-channel))))
+        (else (start-interaction/try-agreement options contacts off-chain-channel))))
     (def environment
       (let ((role (symbolify selected-role)))
-        (if handshake
-          (run:command ["/bin/sh" "-c" handshake] role agreement off-chain-channel)
-          (run:terminal role agreement off-chain-channel))))
+        (match off-chain-channel-symbol
+          ;; TODO: fix 'stdio branch, the io-context distinctions should be folded into off-chain-channel
+          ('stdio
+           (if handshake
+               (run:command ["/bin/sh" "-c" handshake] role agreement off-chain-channel)
+               (run:terminal role agreement off-chain-channel)))
+          ('tcp (run:tcp role agreement off-chain-channel))
+          ;; TODO: misnomer? fix by folding io-context distinctions into off-chain-channel variants
+          ('libp2p (run:terminal role agreement off-chain-channel)))))
     (displayln "Final environment:")
     ;; TODO: get run to include type t and pre-alpha-converted labels,
     ;; and output the entire thing as JSON omitting shadowed variables (rather than having conflicts)
@@ -368,8 +375,15 @@
          (selected-role (ask-role options role-names)))
   (values agreement selected-role)))
 
+;; try receiving first, if no one's sending, then generate and send
+(def (start-interaction/try-agreement options contacts off-chain-channel)
+  (def agreement (.call off-chain-channel .try-receive-agreement))
+  (cond
+    (agreement (start-interaction/with-agreement options agreement))
+    (else (start-interaction/generate-agreement options contacts off-chain-channel))))
+
 (def (start-interaction/generate-agreement options contacts off-chain-channel)
-  (displayln MAGENTA "Generating Agreement for other participants to join...")
+  (displayln MAGENTA "Generating Agreement for other participants to join..." END)
   (nest
     (let (application-name
             (get-or-ask options 'glow-app (λ () (ask-application)))))
@@ -430,8 +444,18 @@
                 maxInitialBlock: max-initial-block}}))
     (begin
       (.call InteractionAgreement .validate agreement)
-      (.call off-chain-channel .send-contract-agreement agreement)
-      (values agreement selected-role))))
+      ;; try-receive-agreement:
+      (def other-agreement (.call off-chain-channel .try-receive-agreement))
+      (cond 
+        ;;  - yes: check match, FOR NOW: error on mismatch, TODO LATER: possible negotiations on failure
+        (other-agreement 
+         (unless (equal? agreement other-agreement)
+           (error "start-interaction/generate-agreement: generated agreement doesn't match received agreement"))
+         (values agreement selected-role))
+        ;;  - no: send now
+        (else
+         (.call off-chain-channel .send-contract-agreement agreement)
+         (values agreement selected-role))))))
 
 ;; UTILS
 (def (flush-input port)
