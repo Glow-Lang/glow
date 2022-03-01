@@ -107,30 +107,10 @@
   teardown: void
   send-handshake:
   (λ (handshake)
-    (displayln "Writing agreement handshake to tcp server port ...")
-    (def listener (tcp-listen [local-port-number: 3232]))
-    (def port (tcp-accept listener))
-    (begin0
-      (write-json-ln (json<- AgreementHandshake handshake) port)
-      (force-output port)
-      (close-port port)
-      (tcp-close listener)
-      (displayln "Done writing agreement handshake.")))
+    (error "io-context:tcp send-handshake"))
   receive-handshake:
   (λ ()
-    (displayln "Waiting for agreement handshake from tcp client port ...")
-    (def port
-      (tcp-connect/retry [address: "localhost" port-number: 3232]
-        (lambda ()
-          (displayln "Timeout while waiting for handshake!")
-          (error "Timeout while waiting for handshake"))
-        retry-window: 1
-        max-window: 10
-        max-retries: 10))
-    (begin0
-      (<-json AgreementHandshake (parameterize ((json-symbolic-keys #f)) (read-json port)))
-      (close-output-port port)
-      (close-input-port port))))
+    (error "io-context:tcp receive-handshake")))
 
 ;; PARTICIPANT RUNTIME
 
@@ -845,12 +825,12 @@
 
 (define-type (TcpChannel self [])
   .make:
-  (lambda ()
+  (lambda (tcp-options)
     { 
       .send-contract-agreement:
       (lambda (agreement)
         (displayln MAGENTA "Sending agreement via tcp..." END)
-        (def listener (tcp-listen [local-port-number: 8000]))
+        (def listener (tcp-listen (or (json-object-get tcp-options "listen") 10333)))
         (def port (tcp-accept listener))
         (begin0
           (write-json-ln (json<- InteractionAgreement agreement) port)
@@ -862,7 +842,10 @@
       .try-receive-agreement:
       (lambda ()
         (displayln MAGENTA "Listening briefly for agreement via tcp..." END)
-        (def port (try-tcp-connect [address: "localhost" port-number: 8000] (lambda () #f)))
+        (def port
+          (try-tcp-connect
+            (or (json-object-get tcp-options "connect") "localhost:10333")
+            (lambda () #f)))
         (and
           port
           (begin0
@@ -873,7 +856,8 @@
       (lambda ()
         (displayln MAGENTA "Listening intently for agreement via tcp..." END)
         (def port
-          (tcp-connect/retry [address: "localhost" port-number: 8000]
+          (tcp-connect/retry
+            (or (json-object-get tcp-options "connect") "localhost:10333")
             (lambda ()
               (displayln "Timeout while waiting for agreement!")
               (error "Timeout while waiting for agreement"))
@@ -887,14 +871,32 @@
 
       .send-contract-handshake:
       (lambda (runtime handshake)
-        (def io-context (.@ runtime io-context))
-        (.call io-context send-handshake handshake))
+        (displayln "Writing agreement handshake to tcp server port ...")
+        (def listener (tcp-listen (or (json-object-get tcp-options "listen") 10333)))
+        (def port (tcp-accept listener))
+        (begin0
+          (write-json-ln (json<- AgreementHandshake handshake) port)
+          (force-output port)
+          (close-port port)
+          (tcp-close listener)
+          (displayln "Done writing agreement handshake.")))
 
       .listen-for-handshake:
       (lambda (runtime)
-        (displayln MAGENTA "Listening for handshake via tcp ..." END)
-        (def io-context (.@ runtime io-context))
-        (.call io-context receive-handshake))
+        (displayln "Waiting for agreement handshake from tcp client port ...")
+        (def port
+          (tcp-connect/retry
+            (or (json-object-get tcp-options "connect") "localhost:10333")
+            (lambda ()
+              (displayln "Timeout while waiting for handshake!")
+              (error "Timeout while waiting for handshake"))
+            retry-window: 1
+            max-window: 10
+            max-retries: 10))
+        (begin0
+          (<-json AgreementHandshake (parameterize ((json-symbolic-keys #f)) (read-json port)))
+          (close-output-port port)
+          (close-input-port port)))
 
       .close: (lambda () #f)
     })
@@ -1042,7 +1044,10 @@
   (def off-chain-channel-selection (hash-get options 'off-chain-channel-selection))
   (match off-chain-channel-selection
     ('stdio (.call IoChannel .make)) ; TODO: Initialize io:context object here
-    ('tcp (.call TcpChannel .make))
+    ('tcp 
+     (let ()
+       (def tcp-options (hash-ref options 'tcp-options))
+       (.call TcpChannel .make tcp-options)))
     ('libp2p (let ()
      (def my-nickname (hash-ref options 'my-nickname))
      (def host-address (hash-ref options 'host-address))

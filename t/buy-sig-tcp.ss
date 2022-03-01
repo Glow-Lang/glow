@@ -30,14 +30,14 @@
 ;; To run manually:
 ;; Open 2 terminals, Buyer and Seller
 ;; On Buyer:
-;;   ./glow start-interaction --evm-network pet --test --off-chain-channel tcp --params '{"price": 1}' --participants '{"Seller": "0xb0bb1ed229f5Ed588495AC9739eD1555f5c3aabD"}' --assets '{"DefaultToken": "PET"}'
+;;   ./glow start-interaction --evm-network pet --test --off-chain-channel tcp --params '{"price": 1}' --participants '{"Seller": "0xb0bb1ed229f5Ed588495AC9739eD1555f5c3aabD"}' --tcp '{"listen": 10337, "connect": "localhost:10338"}' --assets '{"DefaultToken": "PET"}'
 ;;   Choose application: 2 = buy_sig
 ;;   Choose identity: 1 = alice
 ;;   Choose role: 1 = Buyer
 ;;   Enter digest: 0x7a6f737e43d8df6b957106ab38e3ee7356f9640efbd029c659cfb25aa1f033a1
 ;;   Enter initial-block: exsting plus at least 1000
 ;; On Seller:
-;;   ./glow start-interaction --evm-network pet --database /tmp/alt-glow-db --test --off-chain-channel tcp --wait-for-agreement
+;;   ./glow start-interaction --evm-network pet --database /tmp/alt-glow-db --test --off-chain-channel tcp --tcp '{"connect": "localhost:10337", "listen": 10338}'
 ;;   Choose identity: 2 = bob
 ;;   Choose role: 2 = Seller
 
@@ -81,6 +81,7 @@
                        ;;
                        ;; N.B. this is bob's id.
                        "--participants" "{\"Seller\": \"0xb0bb1ed229f5Ed588495AC9739eD1555f5c3aabD\"}"
+                       "--tcp" "{\"listen\": 10337, \"connect\": \"localhost:10338\"}"
                        "--assets" "{\"DefaultToken\": \"PET\"}"
                        ]]))
 
@@ -116,6 +117,7 @@
                       " --glow-path " (source-path "dapps")
                       " --test"
                       " --off-chain-channel " "tcp"
+                      " --tcp " "'{\"connect\": \"localhost:10337\", \"listen\": 10338}'"
                       ;" --wait-for-agreement"
                       "")]]))
 

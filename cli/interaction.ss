@@ -232,6 +232,7 @@
                      participants: (participants #f)
                      assets: (assets #f)
                      off-chain-channel-selection: (off-chain-channel-selection 'stdio)
+                     tcp: (tcp-options #f)
                      host-address: (host-address "/ip4/0.0.0.0/tcp/10333")
                      circuit-relay-address: (circuit-relay-address #f)
                      pubsub-node: (pubsub-node #f)
@@ -268,6 +269,8 @@
              ;; enum off-chain-channel = 'stdio | 'tcp | 'libp2p
              (option 'off-chain-channel-selection "-C" "--off-chain-channel" default: 'stdio
                      help: "command to specify off-chain-channel")
+             (option 'tcp "--tcp" default: #f
+                     help: "mapping of tcp addresses and ports as JSON")
              (option 'host-address "-O" "--host-address" default: "/ip4/0.0.0.0/tcp/10333"
                      help: "host-address for libp2p")
              (option 'circuit-relay-address "-d" "--circuit-relay-address" default: #f ;;TODO: Add the default circuit relay address here
@@ -312,6 +315,7 @@
      (off-chain-channel-selection off-chain-channel-symbol)
      (host-address host-address)
      (my-nickname my-nickname)
+     (tcp-options (and tcp-options (json<-string tcp-options)))
      (contacts contacts)
      (circuit-relay-address circuit-relay-address)
      (pubsub-node pubsub-node)))
