@@ -81,25 +81,15 @@
 (def (special-file:handshake) (transient-path "agreement-handshake.json"))
 (def (handshake-timeout-in-seconds) (* 15 (ethereum-timeout-in-blocks)))
 
-(.def io-context:special-file
-  setup: delete-agreement-handshake
-  teardown: delete-agreement-handshake
-  send-handshake:
-  (λ (handshake)
-    (error "io-context:special-file send-handshake"))
-  receive-handshake:
-  (λ ()
-    (error "io-context:special-file receive-handshake")))
+(def (write-json-handshake handshake port)
+  (write-json-ln (json<- AgreementHandshake handshake) port)
+  (force-output port))
 
-(.def io-context:tcp
-  setup: void
-  teardown: void
-  send-handshake:
-  (λ (handshake)
-    (error "io-context:tcp send-handshake"))
-  receive-handshake:
-  (λ ()
-    (error "io-context:tcp receive-handshake")))
+(def (read-json-handshake port)
+  (def handshake-json (json<-port port))
+  (when (eof-object? handshake-json)
+    (error "read-json-handshake: expected JSON, got EOF from port" port))
+  (<-json AgreementHandshake handshake-json))
 
 ;; PARTICIPANT RUNTIME
 
@@ -124,7 +114,6 @@
     first-unprocessed-event-in-block: [UInt8] ; Index of unprocessed event in a block.
                                               ; NOTE: UInt8 was selected to be reasonably large.
     contract-balances: [(Vector UInt256)]
-    io-context: [IOContext]
     program: [Program]
     name: [Symbol]
     consensus-code-generator: [ConsensusCodeGenerator]
@@ -132,7 +121,6 @@
    )
    {.make: (lambda (role: role
                     agreement: agreement
-                    io-context: (io-context io-context:special-file)
                     program: program
                     off-chain-channel: off-chain-channel)
              (let* (((values modpath surface-name)
@@ -158,7 +146,6 @@
                        first-unprocessed-block: #f ; Initialized with contract-config
                        first-unprocessed-event-in-block: 0
                        contract-balances: (make-vector (length balance-vars))
-                       io-context
                        program
                        name
                        consensus-code-generator: (.call ConsensusCodeGenerator .make program name (.@ agreement options timeoutInBlocks) (.@ agreement assets))
@@ -783,18 +770,19 @@
 
 (define-type (IoChannel self [])
   .make: (lambda ()
+    (assert! (input-port? (current-input-port)))
     { .try-receive-agreement: (lambda () #f)
 
       .listen-for-agreement: (lambda ()
         (displayln MAGENTA "Listening for agreement via stdin ...")
-        (def agreement-json (parameterize ((json-symbolic-keys #f)) (read-json)))
+        (def agreement-json (json<-port (current-input-port)))
         (def agreement (<-json InteractionAgreement agreement-json))
         agreement)
 
       .listen-for-handshake: (lambda (runtime)
-        (displayln MAGENTA "Listening for handshake via stdin ...")
-        (def io-context (.@ runtime io-context))
-        (.call io-context receive-handshake))
+        (displayln MAGENTA "Listening for handshake via stdin ..." END)
+        (displayln MAGENTA "\nPaste below the handshake sent by the other participant:" END)
+        (read-json-handshake (current-input-port)))
 
       .send-contract-agreement: (lambda (agreement)
         (displayln MAGENTA "One line command for other participants to generate the same agreement:" END)
@@ -805,8 +793,8 @@
         (force-output))
 
       .send-contract-handshake: (lambda (runtime handshake)
-        (def io-context (.@ runtime io-context))
-        (.call io-context send-handshake handshake))
+        (displayln MAGENTA "\nSend the handshake below to the other participant:" END)
+        (write-json-handshake handshake (current-output-port)))
 
       .close: (lambda () #f)
     })
@@ -872,7 +860,7 @@
         (and
           port
           (begin0
-            (<-json InteractionAgreement (parameterize ((json-symbolic-keys #f)) (read-json port)))
+            (<-json InteractionAgreement (json<-port port))
             (close-input-port port))))
 
       .listen-for-agreement:
@@ -888,7 +876,7 @@
             max-window: 10
             max-retries: 10))
         (begin0
-          (<-json InteractionAgreement (parameterize ((json-symbolic-keys #f)) (read-json port)))
+          (<-json InteractionAgreement (json<-port port))
           (close-output-port port)
           (close-input-port port)))
 
@@ -898,8 +886,7 @@
         (def listener (tcp-listen (or (json-object-get tcp-options "listen") 10333)))
         (def port (tcp-accept listener))
         (begin0
-          (write-json-ln (json<- AgreementHandshake handshake) port)
-          (force-output port)
+          (write-json-handshake handshake port)
           (close-port port)
           (tcp-close listener)
           (displayln "Done writing agreement handshake.")))
@@ -917,7 +904,7 @@
             max-window: 10
             max-retries: 10))
         (begin0
-          (<-json AgreementHandshake (parameterize ((json-symbolic-keys #f)) (read-json port)))
+          (read-json-handshake port)
           (close-output-port port)
           (close-input-port port)))
 

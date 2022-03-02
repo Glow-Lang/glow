@@ -331,12 +331,7 @@
         (else (start-interaction/try-agreement options contacts off-chain-channel))))
     (def environment
       (let ((role (symbolify selected-role)))
-        (match off-chain-channel-symbol
-          ;; TODO: fix 'stdio branch, the io-context distinctions should be folded into off-chain-channel
-          ('stdio (run:terminal role agreement off-chain-channel))
-          ('tcp (run:tcp role agreement off-chain-channel))
-          ;; TODO: misnomer? fix by folding io-context distinctions into off-chain-channel variants
-          ('libp2p (run:terminal role agreement off-chain-channel)))))
+        (run role agreement off-chain-channel)))
     (displayln "Final environment:")
     ;; TODO: get run to include type t and pre-alpha-converted labels,
     ;; and output the entire thing as JSON omitting shadowed variables (rather than having conflicts)
