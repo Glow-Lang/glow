@@ -58,7 +58,6 @@
                        "--glow-path" (source-path "dapps")
                        "--evm-network" "pet"
                        "--test"
-                       ;"--handshake" "nc -l 3232"
                        "--max-initial-block" "%10"
                        "--timeout-in-blocks" "1"
                        "--glow-app" "buy_sig"

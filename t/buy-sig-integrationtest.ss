@@ -54,7 +54,7 @@
                        "--glow-path" (source-path "dapps")
                        "--evm-network" "pet"
                        "--test"
-                       "--handshake" "nc -l 3232"
+                       "--tcp" "{\"listen\": 10337}"
                        ;; For the sake of testing both the cli flag and the
                        ;; console prompt, we supply one parameter here and the
                        ;; other below.
@@ -101,7 +101,7 @@
                       " --database /tmp/alt-glow-db"
                       " --glow-path " (source-path "dapps")
                       " --test"
-                      " --handshake 'nc localhost 3232'")]]))
+                      " --tcp " "'{\"connect\": \"localhost:10337\"}'")]]))
 
        (def seller-environment
          (with-io-port proc-seller

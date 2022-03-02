@@ -227,7 +227,6 @@
                      max-initial-block: (max-initial-block #f)
                      timeout-in-blocks: (timeout-in-blocks #f)
                      contacts: (contacts-file #f)
-                     handshake: (handshake #f)
                      params: (params #f)
                      participants: (participants #f)
                      assets: (assets #f)
@@ -263,8 +262,6 @@
                      help: "maximum block number the contract can begin at")
              (option 'timeout-in-blocks "-T" "--timeout-in-blocks" default: #f
                      help: "number of blocks after which to time out")
-             (option 'handshake "-H" "--handshake" default: #f
-                     help: "command to use to transfer handshakes")
              ;; TODO: Abstract into Enum - See gerbil-poo
              ;; enum off-chain-channel = 'stdio | 'tcp | 'libp2p
              (option 'off-chain-channel-selection "-C" "--off-chain-channel" default: 'stdio
@@ -336,10 +333,7 @@
       (let ((role (symbolify selected-role)))
         (match off-chain-channel-symbol
           ;; TODO: fix 'stdio branch, the io-context distinctions should be folded into off-chain-channel
-          ('stdio
-           (if handshake
-               (run:command ["/bin/sh" "-c" handshake] role agreement off-chain-channel)
-               (run:terminal role agreement off-chain-channel)))
+          ('stdio (run:terminal role agreement off-chain-channel))
           ('tcp (run:tcp role agreement off-chain-channel))
           ;; TODO: misnomer? fix by folding io-context distinctions into off-chain-channel variants
           ('libp2p (run:terminal role agreement off-chain-channel)))))

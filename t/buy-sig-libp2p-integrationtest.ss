@@ -115,7 +115,6 @@
                        "--glow-path" (source-path "dapps")
                        "--evm-network" "pet"
                        "--test"
-                       ;; "--handshake" "nc -l 3232"
                        ;; For the sake of testing both the cli flag and the
                        ;; console prompt, we supply one parameter here and the
                        ;; other below.

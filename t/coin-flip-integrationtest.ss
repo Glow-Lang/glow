@@ -50,7 +50,7 @@
                        "--glow-path" (source-path "dapps")
                        "--evm-network" "pet"
                        "--test"
-                       "--handshake" "nc -l 3232"]]))
+                       "--tcp" "{\"listen\": 10337}"]]))
 
        (def peer-command
          (with-io-port proc-a
@@ -82,7 +82,7 @@
                       " --evm-network pet"
                       " --database /tmp/alt-glow-db"
                       " --test"
-                      " --handshake 'nc localhost 3232'")]]))
+                      " --tcp '{\"connect\": \"localhost:10337\"}'")]]))
 
        (def b-environment
          (with-io-port proc-b

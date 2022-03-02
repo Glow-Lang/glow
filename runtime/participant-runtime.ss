@@ -86,21 +86,10 @@
   teardown: delete-agreement-handshake
   send-handshake:
   (λ (handshake)
-    (def file (special-file:handshake))
-    (displayln "Writing agreement handshake to file " file " ...")
-    (create-directory* (path-parent file))
-    (write-file-json (special-file:handshake) (json<- AgreementHandshake handshake)))
+    (error "io-context:special-file send-handshake"))
   receive-handshake:
   (λ ()
-    (def file (special-file:handshake))
-    (def deadline (+ (current-unix-time) (handshake-timeout-in-seconds)))
-    (displayln "Waiting for agreement handshake file " file " ...")
-    (until (file-exists? file)
-      (when (> (current-unix-time) deadline)
-        (displayln "Timeout while waiting for handshake!")
-        (error "Timeout while waiting for handshake"))
-      (thread-sleep! 1))
-    (<-json AgreementHandshake (read-file-json file))))
+    (error "io-context:special-file receive-handshake")))
 
 (.def io-context:tcp
   setup: void
@@ -823,6 +812,40 @@
     })
   )
 
+(define-type (IoSpecialFileChannel self [])
+  .make: (lambda ()
+    (delete-agreement-handshake)
+    (def io-channel (.call IoChannel .make))
+    { .try-receive-agreement: (.@ io-channel .try-receive-agreement)
+      .listen-for-agreement: (.@ io-channel .listen-for-agreement)
+      .send-contract-agreement: (.@ io-channel .send-contract-agreement)
+
+      .listen-for-handshake:
+      (lambda (runtime)
+        (def file (special-file:handshake))
+        (def deadline (+ (current-unix-time) (handshake-timeout-in-seconds)))
+        (displayln "Waiting for agreement handshake file " file " ...")
+        (until (file-exists? file)
+          (when (> (current-unix-time) deadline)
+            (displayln "Timeout while waiting for handshake!")
+            (error "Timeout while waiting for handshake"))
+          (thread-sleep! 1))
+        (<-json AgreementHandshake (read-file-json file)))
+
+      .send-contract-handshake:
+      (lambda (runtime handshake)
+        (def file (special-file:handshake))
+        (displayln "Writing agreement handshake to file " file " ...")
+        (create-directory* (path-parent file))
+        (write-file-json (special-file:handshake) (json<- AgreementHandshake handshake)))
+
+      .close:
+      (lambda ()
+        (delete-agreement-handshake)
+        (.call io-channel .close))
+    })
+  )
+
 (define-type (TcpChannel self [])
   .make:
   (lambda (tcp-options)
@@ -901,6 +924,23 @@
       .close: (lambda () #f)
     })
   )
+
+(define-type (IoTcpChannel @ [])
+  .make:
+  (lambda (tcp-options)
+    (def io-channel (.call IoChannel .make))
+    (def tcp-channel (.call TcpChannel .make tcp-options))
+    { .try-receive-agreement: (.@ io-channel .try-receive-agreement)
+      .listen-for-agreement: (.@ io-channel .listen-for-agreement)
+      .send-contract-agreement: (.@ io-channel .send-contract-agreement)
+
+      .send-contract-handshake: (.@ tcp-channel .send-contract-handshake)
+      .listen-for-handshake: (.@ tcp-channel .listen-for-handshake)
+
+      .close:
+      (lambda ()
+        (.call io-channel .close)
+        (.call tcp-channel .close)) }))
 
 (define-type (Libp2pChannel @ [])
     .make: (lambda (my-nickname host-address contacts circuit-relay-address pubsub-node)
@@ -1043,7 +1083,11 @@
 (def (init-off-chain-channel options)
   (def off-chain-channel-selection (hash-get options 'off-chain-channel-selection))
   (match off-chain-channel-selection
-    ('stdio (.call IoChannel .make)) ; TODO: Initialize io:context object here
+    ('stdio 
+     (let ()
+       (def tcp-options (hash-ref options 'tcp-options))
+       (cond (tcp-options (.call IoTcpChannel .make tcp-options))
+             (else        (.call IoChannel .make)))))
     ('tcp 
      (let ()
        (def tcp-options (hash-ref options 'tcp-options))

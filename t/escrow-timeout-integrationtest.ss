@@ -44,8 +44,7 @@
                        "--timeout-in-blocks" "5"
                        "--glow-path" (source-path "dapps")
                        "--evm-network" "pet"
-                       "--test"
-                       "--handshake" "nc -l 3232"]]))
+                       "--test"]]))
 
        (with-io-port proc
          (lambda ()
