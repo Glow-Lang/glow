@@ -262,7 +262,7 @@
 (def (passive-participant-handshake self role)
   (nest
    (let (off-chain-channel (.@ self off-chain-channel)))
-   (let (agreement-handshake (.call off-chain-channel .listen-for-handshake self)))
+   (let (agreement-handshake (.call off-chain-channel .receive-handshake self)))
    (begin
      (force-current-outputs))
    (with-slots (agreement contract-config published-data) agreement-handshake)
@@ -316,7 +316,7 @@
     (def published-data (get-output-u8vector (.@ self block-ctx outbox)))
     (def handshake (.new AgreementHandshake agreement contract-config published-data))
     (def off-chain-channel (.@ self off-chain-channel))
-    (.call off-chain-channel .send-contract-handshake self handshake)))
+    (.call off-chain-channel .send-handshake self handshake)))
   (publish-frame-data self (.@ self block-ctx outbox))
   (interpret-current-code-block self)
   ;; TODO: Verify asset transfers using previous transaction and balances
@@ -765,6 +765,48 @@
 ;; ------------------ Off-chain communication channels
 ;; ---------------------------------------------------
 
+;; An OffChainChannelType is a Poo object with the method:
+;;   .make : (Fun ConstructorInputs ... -> OffChainChannel)
+
+;; An OffChainChannel is a Poo object with the methods:
+;;   .send-agreement : (Fun InteractionAgreement -> Void)
+;;   .try-receive-agreement : (Fun -> (Or #f InteractionAgreement))
+;;   .receive-agreement : (Fun -> InteractionAgreement)
+;;   .send-handshake : (Fun Runtime AgreementHandshake -> Void)
+;;   .receive-handshake : (Fun Runtime -> AgreementHandshake)
+;;   .close : (Fun -> Any)
+
+;; Possible usage sequence of OffChainChannel,
+;; assuming that A is the first to start and the first active participant:
+;;             A                               B
+;;             |                               |
+;;           .make                           .make
+;;             |                               |
+;; .try-receive-agreement failure              |
+;;             |                               |
+;;      .send-agreement ----------> .try-receive-agreement success
+;;             |                               |
+;;      .send-handshake ------------> .receive-handshake
+;;             |                               |
+;;          .close                          .close
+;; The agreement send/receive might be reversed if B is the first to start,
+;; The handshake send/receive might be reversed if B is the first active participant.
+;; If they start near the same time, more .try-receive-agrement failures before eventual success:
+;;             A                               B
+;;             |                               |
+;;           .make                           .make
+;;             |                               |
+;; .try-receive-agreement failure   .try-receive-agreement failure
+;;             |                               |
+;; .try-receive-agreement failure              |
+;;             |                               |
+;;      .send-agreement ----------> .try-receive-agreement success
+;;             |                               |
+;;      .send-handshake ------------> .receive-handshake
+;;             |                               |
+;;          .close                          .close
+;; The --wait-for-agreement option triggers .receive-agreement instead of .try-receive-agreement,
+;; and prevents that side from prompting to generate an agreement to send.
 
 ;; ------------------ Channel types
 
@@ -773,18 +815,18 @@
     (assert! (input-port? (current-input-port)))
     { .try-receive-agreement: (lambda () #f)
 
-      .listen-for-agreement: (lambda ()
-        (displayln MAGENTA "Listening for agreement via stdin ...")
+      .receive-agreement: (lambda ()
+        (displayln MAGENTA "Waiting for agreement via stdin ...")
         (def agreement-json (json<-port (current-input-port)))
         (def agreement (<-json InteractionAgreement agreement-json))
         agreement)
 
-      .listen-for-handshake: (lambda (runtime)
-        (displayln MAGENTA "Listening for handshake via stdin ..." END)
+      .receive-handshake: (lambda (runtime)
+        (displayln MAGENTA "Waiting for handshake via stdin ..." END)
         (displayln MAGENTA "\nPaste below the handshake sent by the other participant:" END)
         (read-json-handshake (current-input-port)))
 
-      .send-contract-agreement: (lambda (agreement)
+      .send-agreement: (lambda (agreement)
         (displayln MAGENTA "One line command for other participants to generate the same agreement:" END)
         (def agreement-string (string<-json (json<- InteractionAgreement agreement)))
         (def escaped-agreement-string (escape-agreement-string/shell agreement-string))
@@ -792,7 +834,7 @@
         (displayln full-cmd-string)
         (force-output))
 
-      .send-contract-handshake: (lambda (runtime handshake)
+      .send-handshake: (lambda (runtime handshake)
         (displayln MAGENTA "\nSend the handshake below to the other participant:" END)
         (write-json-handshake handshake (current-output-port)))
 
@@ -805,10 +847,10 @@
     (delete-agreement-handshake)
     (def io-channel (.call IoChannel .make))
     { .try-receive-agreement: (.@ io-channel .try-receive-agreement)
-      .listen-for-agreement: (.@ io-channel .listen-for-agreement)
-      .send-contract-agreement: (.@ io-channel .send-contract-agreement)
+      .receive-agreement: (.@ io-channel .receive-agreement)
+      .send-agreement: (.@ io-channel .send-agreement)
 
-      .listen-for-handshake:
+      .receive-handshake:
       (lambda (runtime)
         (def file (special-file:handshake))
         (def deadline (+ (current-unix-time) (handshake-timeout-in-seconds)))
@@ -820,7 +862,7 @@
           (thread-sleep! 1))
         (<-json AgreementHandshake (read-file-json file)))
 
-      .send-contract-handshake:
+      .send-handshake:
       (lambda (runtime handshake)
         (def file (special-file:handshake))
         (displayln "Writing agreement handshake to file " file " ...")
@@ -838,7 +880,7 @@
   .make:
   (lambda (tcp-options)
     { 
-      .send-contract-agreement:
+      .send-agreement:
       (lambda (agreement)
         (displayln MAGENTA "Sending agreement via tcp..." END)
         (def listener (tcp-listen (or (json-object-get tcp-options "listen") 10333)))
@@ -852,7 +894,7 @@
 
       .try-receive-agreement:
       (lambda ()
-        (displayln MAGENTA "Listening briefly for agreement via tcp..." END)
+        (displayln MAGENTA "Trying briefly to receive agreement via tcp..." END)
         (def port
           (try-tcp-connect
             (or (json-object-get tcp-options "connect") "localhost:10333")
@@ -863,9 +905,9 @@
             (<-json InteractionAgreement (json<-port port))
             (close-input-port port))))
 
-      .listen-for-agreement:
+      .receive-agreement:
       (lambda ()
-        (displayln MAGENTA "Listening intently for agreement via tcp..." END)
+        (displayln MAGENTA "Waiting to receive agreement via tcp..." END)
         (def port
           (tcp-connect/retry
             (or (json-object-get tcp-options "connect") "localhost:10333")
@@ -880,7 +922,7 @@
           (close-output-port port)
           (close-input-port port)))
 
-      .send-contract-handshake:
+      .send-handshake:
       (lambda (runtime handshake)
         (displayln "Writing agreement handshake to tcp server port ...")
         (def listener (tcp-listen (or (json-object-get tcp-options "listen") 10333)))
@@ -891,7 +933,7 @@
           (tcp-close listener)
           (displayln "Done writing agreement handshake.")))
 
-      .listen-for-handshake:
+      .receive-handshake:
       (lambda (runtime)
         (displayln "Waiting for agreement handshake from tcp client port ...")
         (def port
@@ -918,11 +960,11 @@
     (def io-channel (.call IoChannel .make))
     (def tcp-channel (.call TcpChannel .make tcp-options))
     { .try-receive-agreement: (.@ io-channel .try-receive-agreement)
-      .listen-for-agreement: (.@ io-channel .listen-for-agreement)
-      .send-contract-agreement: (.@ io-channel .send-contract-agreement)
+      .receive-agreement: (.@ io-channel .receive-agreement)
+      .send-agreement: (.@ io-channel .send-agreement)
 
-      .send-contract-handshake: (.@ tcp-channel .send-contract-handshake)
-      .listen-for-handshake: (.@ tcp-channel .listen-for-handshake)
+      .send-handshake: (.@ tcp-channel .send-handshake)
+      .receive-handshake: (.@ tcp-channel .receive-handshake)
 
       .close:
       (lambda ()
@@ -1004,7 +1046,7 @@
            cancel
            circuit-relay
 
-           .send-contract-agreement: (lambda (agreement)
+           .send-agreement: (lambda (agreement)
              (displayln MAGENTA "Sending agreement to multiaddr..." END)
              (def agreement-string (string<-json (json<- InteractionAgreement agreement)))
 
@@ -1027,7 +1069,7 @@
              (displayln)
              (force-output))
 
-           .send-contract-handshake: (lambda (_runtime handshake)
+           .send-handshake: (lambda (_runtime handshake)
 
              (displayln MAGENTA "Sending handshake to multiaddr..." END)
              (def handshake-string (string<-json (json<- AgreementHandshake handshake)))
@@ -1044,7 +1086,7 @@
              (displayln)
              (force-output))
 
-           .listen-for-handshake: (lambda (_runtime) ;TODO: Make sure you are receiving messages only from people you want to talk to
+           .receive-handshake: (lambda (_runtime) ;TODO: Make sure you are receiving messages only from people you want to talk to
              (displayln MAGENTA "Listening for handshake via libp2p ..." END)
              (def handshake-str (poll-buffer))
              (displayln MAGENTA "Received handshake" END)
@@ -1053,7 +1095,7 @@
 
            .try-receive-agreement: (lambda () #f)
 
-           .listen-for-agreement: (lambda ()
+           .receive-agreement: (lambda ()
              (displayln MAGENTA "Listening for agreement via libp2p ..." END)
              (def agreement-str (poll-buffer))
              (displayln MAGENTA "Received agreement" END)

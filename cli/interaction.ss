@@ -323,7 +323,7 @@
     (defvalues (agreement selected-role)
       (cond
         (wait-for-agreement
-          (let (agreement (.call off-chain-channel .listen-for-agreement))
+          (let (agreement (.call off-chain-channel .receive-agreement))
                (start-interaction/with-agreement options agreement)))
         (agreement-json-string
           (let (agreement (<-json InteractionAgreement (json<-string agreement-json-string)))
@@ -447,7 +447,7 @@
          (values agreement selected-role))
         ;;  - no: send now
         (else
-         (.call off-chain-channel .send-contract-agreement agreement)
+         (.call off-chain-channel .send-agreement agreement)
          (values agreement selected-role))))))
 
 ;; UTILS
