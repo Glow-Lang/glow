@@ -41,7 +41,7 @@
 ;;   Choose identity: 2 = bob
 ;;   Choose role: 2 = Seller
 
-(def buy-sig-tcp
+(def buy-sig-tcp-integrationtest
   (test-suite "integration test for ethereum/buy-sig via tcp"
     (test-case "buy sig runs successfully via tcp"
       (setup-test-env)
