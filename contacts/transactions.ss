@@ -63,12 +63,12 @@
             (participants (hash-ref args 'participants))
             (my-identity (hash-ref participants (string->symbol my-role)))
             (params (hash-ref args 'params))
-            (handshake (if (string=? my-role
-                                     (first (sort (map symbol->string
-                                                       (hash-keys participants))
-                                                  string<?)))
-                           "nc -l 3141"
-                           "nc localhost 3141"))
+            (tcp-options (if (string=? my-role
+                                       (first (sort (map symbol->string
+                                                         (hash-keys participants))
+                                                    string<?)))
+                             "{\"listen\": 10337, \"connect\": \"localhost:10338\"}"
+                             "{\"connect\": \"localhost:10337\", \"listen\": 10338}"))
             (input (hash-ref args 'input)))
        (when (string? input)
          (setenv "INPUT" input))
@@ -80,7 +80,7 @@
          "--database" ,my-role
          "--evm-network" ,(hash-ref my-identity 'network)
          "--my-identity" ,(hash-ref my-identity 'nickname)
-         "--handshake" ,handshake
+         "--tcp" ,tcp-options
          "--assets" ,(json-object->string assets)
          "--participants" ,(json-object->string
                             (list->hash-table
