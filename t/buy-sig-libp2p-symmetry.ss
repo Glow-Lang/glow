@@ -76,9 +76,6 @@
       (defvalues (boot-c boot-d) (do-bootstrap "/ip4/127.0.0.1/tcp/10330"))
       (def boot-addr (peer-info->string (libp2p-identify boot-c))) ;;get the addr of boot-c
 
-      (DBG "Starting buyer thread")
-
-
       ;; FIXME: Test for polling
       ;; If we try to poll when running the buy_sig interaction via cli,
       ;; it works just fine.
@@ -90,43 +87,8 @@
       ;;
       ;; The following test steps start the seller first to avoid this problem.
       (try
-       (DBG "Spawning seller proc")
+       (DBG "Starting buyer thread")
 
-       (set! proc-seller
-         (open-process
-          [path: "./glow"
-           arguments: ["start-interaction"
-                       "--glow-path" (source-path "dapps")
-                       "--evm-network" "pet"
-                       "--test"
-
-                       "--host-address" "/ip4/127.0.0.1/tcp/10331"
-                       "--circuit-relay-address" boot-addr
-                       "--pubsub-node" boot-addr
-                       "--off-chain-channel" "libp2p"
-                       ;; Similarly, specify one of the participants here. There are only two,
-                       ;; so this test doesn't excercise the logic to read this from stdin,
-                       ;; but the other integration tests do.
-                       ;;
-                       ;; N.B. this is bob's id.
-                       "--participants" "{\"Seller\": \"0xb0bb1ed229f5Ed588495AC9739eD1555f5c3aabD\"}"
-                       "--assets" "{\"DefaultToken\": \"PET\"}"
-
-                       "--database" "/tmp/alt-glow-db"
-                       ]]))
-
-       (DBG "Filling up seller prompt")
-
-       ;; reply to seller prompts
-       (with-io-port proc-seller
-         (lambda ()
-           (answer-questions
-             [["Choose your identity:"
-               (lambda (id) (string-prefix? "t/bob " id))]])))
-
-       (thread-sleep! 20)
-
-       ;; Start buyer
        (set! proc-buyer
          (open-process
           [path: "./glow"
@@ -177,6 +139,42 @@
                                        ;
                                        ; Also used for regression testing against:
                                        ; https://gitlab.com/mukn/glow/-/issues/195
+
+       (thread-sleep! 20)
+
+       (DBG "Spawning seller proc")
+
+       (set! proc-seller
+         (open-process
+          [path: "./glow"
+           arguments: ["start-interaction"
+                       "--glow-path" (source-path "dapps")
+                       "--evm-network" "pet"
+                       "--test"
+
+                       "--host-address" "/ip4/127.0.0.1/tcp/10331"
+                       "--circuit-relay-address" boot-addr
+                       "--pubsub-node" boot-addr
+                       "--off-chain-channel" "libp2p"
+                       ;; Similarly, specify one of the participants here. There are only two,
+                       ;; so this test doesn't excercise the logic to read this from stdin,
+                       ;; but the other integration tests do.
+                       ;;
+                       ;; N.B. this is bob's id.
+                       "--participants" "{\"Seller\": \"0xb0bb1ed229f5Ed588495AC9739eD1555f5c3aabD\"}"
+                       "--assets" "{\"DefaultToken\": \"PET\"}"
+
+                       "--database" "/tmp/alt-glow-db"
+                       ]]))
+
+       (DBG "Filling up seller prompt")
+
+       ;; reply to seller prompts
+       (with-io-port proc-seller
+         (lambda ()
+           (answer-questions
+             [["Choose your identity:"
+               (lambda (id) (string-prefix? "t/bob " id))]])))
 
        (DBG "Choosing role")
 
