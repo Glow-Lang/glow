@@ -47,13 +47,25 @@
 ;;   Enter initial-block: exsting plus at least 1000
 ;; On Seller:
 ;;   BOOT_ADDR=<boot-addr>
-;;   ./glow start-interaction --evm-network pet --database /tmp/alt-glow-db --test --host-address /ip4/127.0.0.1/tcp/10302 --off-chain-channel libp2p --circuit-relay-address $BOOT_ADDR --pubsub-node $BOOT_ADDR
+;;   ./glow start-interaction --evm-network pet --database /tmp/alt-glow-db --test --host-address /ip4/127.0.0.1/tcp/10302 --off-chain-channel libp2p --params '{"price": 1}' --participants '{"Seller": "0xb0bb1ed229f5Ed588495AC9739eD1555f5c3aabD"}' --assets '{"DefaultToken": "PET"}' --circuit-relay-address $BOOT_ADDR --pubsub-node $BOOT_ADDR
 ;;   Choose identity: 2 = bob
+;;   Choose application: 2 = buy_sig
 ;;   Choose role: 2 = Seller
+;;   Choose address for Buyer: 1 = alice
+;;   Enter digest: 0x7a6f737e43d8df6b957106ab38e3ee7356f9640efbd029c659cfb25aa1f033a1
+;;   Enter initial-block: same as other one
 
-(def buy-sig-libp2p-symmetry
+;; Current Error:
+;; ```
+;; Listening briefly for agreement via libp2p ...
+;; Received agreement
+;; Glow v0.3.2-190-g7d5cf27 on Gerbil-ethereum v0.0-352-g36e4cfc, Gerbil-persist v0.0-20-ge9b7fe9, Gerbil-crypto v0.0-17-g1559606, Gerbil-poo v0.0-98-g7fa3ea0, Gerbil-utils v0.2-174-gcf03878, Gerbil v0.17.0-24-gee14c66f, Gambit 4.9.4-6-ga21c41ab
+;; *** ERROR IN mukn/glow/cli/interaction#start-interaction/generate-agreement -- start-interaction/generate-agreement: generated agreement doesn't match received agreement
+;; ```
+
+(def buy-sig-libp2p-both-generate
   (test-suite "integration test for ethereum/buy-sig over libp2p channel without wait-for-agreement"
-    (test-case "buy sig over libp2p runs successfully without wait-for-agreement"
+    (test-case "buy sig over libp2p runs successfully with both generating an agreement"
       (setup-test-env)
 
       (def buyer-address alice)
@@ -76,16 +88,6 @@
       (defvalues (boot-c boot-d) (do-bootstrap "/ip4/127.0.0.1/tcp/10330"))
       (def boot-addr (peer-info->string (libp2p-identify boot-c))) ;;get the addr of boot-c
 
-      ;; FIXME: Test for polling
-      ;; If we try to poll when running the buy_sig interaction via cli,
-      ;; it works just fine.
-      ;; In integration tests however, if we start the buyer's interaction first,
-      ;; and poll until seller comes online, we get the following error message
-      ;; when sending the agreement over the channel:
-      ;;
-      ;;   ERROR IN vyzo/libp2p/client#libp2p-stream__% -- libp2p-request: [libp2p-error] protocol not supported
-      ;;
-      ;; The following test steps start the seller first to avoid this problem.
       (try
        (DBG "Starting buyer thread")
 
@@ -117,31 +119,6 @@
                        ]
            ]))
 
-       (DBG "Filling up buyer prompt")
-
-       ;; Fill up buyer prompt
-       (with-io-port proc-buyer
-         (lambda ()
-           (answer-questions
-            [["Choose your identity:"
-              (lambda (id)
-                (string-prefix? "t/alice " id))]
-             ["Choose application:"
-              "buy_sig"]
-             ["Choose your role:"
-              "Buyer"]])
-            (supply-parameters
-              [["digest" (string-append "0x" (hex-encode digest))]])
-            (set-initial-block 1000))) ; Provides an offset from the current-block,
-                                       ; so we have ample time (in blocks) to create a contract
-                                       ; and for other active participants to run side
-                                       ; of the interaction before timeout.
-                                       ;
-                                       ; Also used for regression testing against:
-                                       ; https://gitlab.com/mukn/glow/-/issues/195
-
-       (thread-sleep! 20)
-
        (DBG "Spawning seller proc")
 
        (set! proc-seller
@@ -167,6 +144,23 @@
                        "--database" "/tmp/alt-glow-db"
                        ]]))
 
+       (DBG "Filling up buyer prompt")
+
+       ;; Fill up buyer prompt
+       (with-io-port proc-buyer
+         (lambda ()
+           (answer-questions
+            [["Choose your identity:"
+              (lambda (id)
+                (string-prefix? "t/alice " id))]
+             ["Choose application:"
+              "buy_sig"]
+             ["Choose your role:"
+              "Buyer"]])
+            (supply-parameters
+              [["digest" (string-append "0x" (hex-encode digest))]])
+            (set-initial-block/round-up 1000)))
+
        (DBG "Filling up seller prompt")
 
        ;; reply to seller prompts
@@ -174,7 +168,14 @@
          (lambda ()
            (answer-questions
              [["Choose your identity:"
-               (lambda (id) (string-prefix? "t/bob " id))]])))
+               (lambda (id) (string-prefix? "t/bob " id))]
+              ["Choose application:"
+               "buy_sig"]
+              ["Choose your role:"
+               "Buyer"]])
+           (supply-parameters
+              [["digest" (string-append "0x" (hex-encode digest))]])
+           (set-initial-block/round-up 1000)))
 
        (DBG "Choosing role")
 
