@@ -985,6 +985,13 @@
              (begin (thread-sleep! t)
                     (poll-buffer t))))
 
+         (def (try-buffer)
+           (or
+             (channel-try-get buffer)
+             (begin (thread-sleep! 2)
+                    (channel-try-get buffer))))
+
+         ;; s : Stream
          (def (push-to-buffer s)
            (def received-data (chat-reader s))
            ; NOTE: This blocks indefinitely if channel buffer is full
@@ -1093,7 +1100,16 @@
              (def handshake (<-json AgreementHandshake (json<-string handshake-str)))
              handshake)
 
-           .try-receive-agreement: (lambda () #f)
+           .try-receive-agreement:
+           (lambda ()
+             (displayln MAGENTA "Listening briefly for agreement via libp2p ..." END)
+             (def agreement-str (try-buffer))
+             (and
+               agreement-str
+               (let ()
+                 (displayln MAGENTA "Received agreement" END)
+                 (def agreement (<-json InteractionAgreement (json<-string agreement-str)))
+                 agreement)))
 
            .receive-agreement: (lambda ()
              (displayln MAGENTA "Listening for agreement via libp2p ..." END)
