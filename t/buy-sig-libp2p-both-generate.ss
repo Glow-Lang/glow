@@ -153,7 +153,9 @@
        (DBG "Filling up buyer prompt")
 
        ;; Fill up buyer prompt
-       (with-io-port proc-buyer
+       ;; TODO: negotiations on initial-block, check their within a range and then take the higher one
+       (def initial-block
+        (with-io-port proc-buyer
          (lambda ()
            (answer-questions
             [["Choose application:"
@@ -162,9 +164,9 @@
               "Buyer"]])
             (supply-parameters
               [["digest" (string-append "0x" (hex-encode digest))]])
-            (set-initial-block/round-up 1000)))
+            (set-initial-block/round-up 1000))))
 
-       (DBG "Filling up seller prompt")
+       (DBG "Filling up seller prompt" initial-block)
 
        ;; reply to seller prompts
        (with-io-port proc-seller
@@ -178,7 +180,7 @@
                (lambda (id) (string-prefix? "t/alice " id))]])
            (supply-parameters
               [["digest" (string-append "0x" (hex-encode digest))]])
-           (set-initial-block/round-up 1000)))
+           (set-initial-block/exact initial-block)))
 
        (DBG "Reading end environment for seller")
 

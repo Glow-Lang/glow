@@ -977,6 +977,8 @@
 
          ;; ------------ Libp2p channel buffer setup
 
+         ;; TODO: better synchronization between threads
+
          (def buffer (make-channel 10)) ;; TODO: Do we need a larger buffer?
 
          (def (poll-buffer (t 2)) ; poll every 2s by default

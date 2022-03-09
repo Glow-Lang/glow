@@ -4,6 +4,7 @@
   supply-parameters
   set-initial-block
   set-initial-block/round-up
+  set-initial-block/exact
   read-peer-command
   read-environment)
 ;; Utility module for using Glow's command line interface programmatically,
@@ -179,7 +180,16 @@
   (def prompt-expr
     (with-input-from-string (string-append "(" prompt ")") read))
   (def current-block (car (filter number? (flatten prompt-expr))))
-  (displayln-now (* (1+ (inexact->exact (ceiling (/ current-block offset)))) offset)))
+  (def initial-block (* (1+ (inexact->exact (ceiling (/ current-block offset)))) offset))
+  (displayln-now initial-block)
+  initial-block)
+
+(def (set-initial-block/exact initial-block)
+  ;; Replies to the prompt "Max initial block [...]" with exactly initial-block
+  (def prompt
+    (find-first-line
+      (lambda (line) (string-prefix? "Max initial block [" line))))
+  (displayln-now initial-block))
 
 (def (read-peer-command)
   ;; Scans the input for the command to run on the other side.
