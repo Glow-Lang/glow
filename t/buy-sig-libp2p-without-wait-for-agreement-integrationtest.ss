@@ -51,7 +51,7 @@
 ;;   Choose identity: 2 = bob
 ;;   Choose role: 2 = Seller
 
-(def buy-sig-libp2p-without-wait-for-agreement
+(def buy-sig-libp2p-without-wait-for-agreement-integrationtest
   (test-suite "integration test for ethereum/buy-sig over libp2p channel without wait-for-agreement"
     (test-case "buy sig over libp2p runs successfully without wait-for-agreement"
       (setup-test-env)
@@ -132,13 +132,7 @@
               "Buyer"]])
             (supply-parameters
               [["digest" (string-append "0x" (hex-encode digest))]])
-            (set-initial-block 1000))) ; Provides an offset from the current-block,
-                                       ; so we have ample time (in blocks) to create a contract
-                                       ; and for other active participants to run side
-                                       ; of the interaction before timeout.
-                                       ;
-                                       ; Also used for regression testing against:
-                                       ; https://gitlab.com/mukn/glow/-/issues/195
+            (set-initial-block/round-up 1000)))
 
        (thread-sleep! 30)
 

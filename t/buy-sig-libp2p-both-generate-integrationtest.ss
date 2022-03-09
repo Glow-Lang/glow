@@ -55,9 +55,9 @@
 ;;   Enter digest: 0x7a6f737e43d8df6b957106ab38e3ee7356f9640efbd029c659cfb25aa1f033a1
 ;;   Enter initial-block: same as other one
 
-(def buy-sig-libp2p-both-generate
-  (test-suite "integration test for ethereum/buy-sig over libp2p channel without wait-for-agreement"
-    (test-case "buy sig over libp2p runs successfully with both generating an agreement"
+(def buy-sig-libp2p-both-generate-integrationtest
+  (test-suite "integration test for ethereum/buy-sig over libp2p channel with both generating an agreement"
+    (test-case "buy sig over libp2p runs successfully with both generating the same agreement"
       (setup-test-env)
 
       (def buyer-address alice)
