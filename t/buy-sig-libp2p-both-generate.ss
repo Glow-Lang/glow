@@ -132,6 +132,7 @@
                        "--circuit-relay-address" boot-addr
                        "--pubsub-node" boot-addr
                        "--off-chain-channel" "libp2p"
+                       "--params" (string-append "{\"price\": " (number->string price) "}")
                        ;; Similarly, specify one of the participants here. There are only two,
                        ;; so this test doesn't excercise the logic to read this from stdin,
                        ;; but the other integration tests do.
