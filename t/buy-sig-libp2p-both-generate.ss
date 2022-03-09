@@ -55,14 +55,6 @@
 ;;   Enter digest: 0x7a6f737e43d8df6b957106ab38e3ee7356f9640efbd029c659cfb25aa1f033a1
 ;;   Enter initial-block: same as other one
 
-;; Current Error:
-;; ```
-;; Listening briefly for agreement via libp2p ...
-;; Received agreement
-;; Glow v0.3.2-190-g7d5cf27 on Gerbil-ethereum v0.0-352-g36e4cfc, Gerbil-persist v0.0-20-ge9b7fe9, Gerbil-crypto v0.0-17-g1559606, Gerbil-poo v0.0-98-g7fa3ea0, Gerbil-utils v0.2-174-gcf03878, Gerbil v0.17.0-24-gee14c66f, Gambit 4.9.4-6-ga21c41ab
-;; *** ERROR IN mukn/glow/cli/interaction#start-interaction/generate-agreement -- start-interaction/generate-agreement: generated agreement doesn't match received agreement
-;; ```
-
 (def buy-sig-libp2p-both-generate
   (test-suite "integration test for ethereum/buy-sig over libp2p channel without wait-for-agreement"
     (test-case "buy sig over libp2p runs successfully with both generating an agreement"
@@ -119,6 +111,13 @@
                        ]
            ]))
 
+       (with-io-port proc-buyer
+         (lambda ()
+           (answer-questions
+            [["Choose your identity:"
+              (lambda (id)
+                (string-prefix? "t/alice " id))]])))
+
        (DBG "Spawning seller proc")
 
        (set! proc-seller
@@ -144,16 +143,19 @@
                        "--database" "/tmp/alt-glow-db"
                        ]]))
 
+       (with-io-port proc-seller
+         (lambda ()
+           (answer-questions
+             [["Choose your identity:"
+               (lambda (id) (string-prefix? "t/bob " id))]])))
+
        (DBG "Filling up buyer prompt")
 
        ;; Fill up buyer prompt
        (with-io-port proc-buyer
          (lambda ()
            (answer-questions
-            [["Choose your identity:"
-              (lambda (id)
-                (string-prefix? "t/alice " id))]
-             ["Choose application:"
+            [["Choose application:"
               "buy_sig"]
              ["Choose your role:"
               "Buyer"]])
@@ -167,23 +169,15 @@
        (with-io-port proc-seller
          (lambda ()
            (answer-questions
-             [["Choose your identity:"
-               (lambda (id) (string-prefix? "t/bob " id))]
-              ["Choose application:"
+             [["Choose application:"
                "buy_sig"]
               ["Choose your role:"
-               "Buyer"]])
+               "Seller"]
+              ["Select address for Buyer:"
+               (lambda (id) (string-prefix? "t/alice " id))]])
            (supply-parameters
               [["digest" (string-append "0x" (hex-encode digest))]])
            (set-initial-block/round-up 1000)))
-
-       (DBG "Choosing role")
-
-       (with-io-port proc-seller
-         (lambda ()
-           (answer-questions
-             [["Choose your role:"
-               "Seller"]])))
 
        (DBG "Reading end environment for seller")
 

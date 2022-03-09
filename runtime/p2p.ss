@@ -30,6 +30,7 @@
   :vyzo/libp2p/daemon)
 
 
+(def POLL_MAX_WINDOW 5)
 
 
 ;;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Direct p2p communication methods
@@ -63,7 +64,7 @@
 ;; If the other participant is not online,
 ;; it will poll until `timeout' seconds.
 (def (libp2p-connect/poll libp2p-client peer-multiaddr max-retries: (max-retries 10))
-  (retry retry-window: 1 max-window: 10 max-retries: max-retries
+  (retry retry-window: 1 max-window: POLL_MAX_WINDOW max-retries: max-retries
          (lambda ()
            (displayln "Trying to connect to peer...")
            (libp2p-connect libp2p-client peer-multiaddr))))
