@@ -77,16 +77,6 @@
       (defvalues (boot-c boot-d) (do-bootstrap "/ip4/127.0.0.1/tcp/10330"))
       (def boot-addr (peer-info->string (libp2p-identify boot-c))) ;;get the addr of boot-c
 
-      ;; FIXME: Test for polling
-      ;; If we try to poll when running the buy_sig interaction via cli,
-      ;; it works just fine.
-      ;; In integration tests however, if we start the buyer's interaction first,
-      ;; and poll until seller comes online, we get the following error message
-      ;; when sending the agreement over the channel:
-      ;;
-      ;;   ERROR IN vyzo/libp2p/client#libp2p-stream__% -- libp2p-request: [libp2p-error] protocol not supported
-      ;;
-      ;; The following test steps start the seller first to avoid this problem.
       (try
        (DBG "Starting buyer thread")
 
