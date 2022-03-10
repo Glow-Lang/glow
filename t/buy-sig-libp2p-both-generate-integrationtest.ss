@@ -58,6 +58,7 @@
 (def buy-sig-libp2p-both-generate-integrationtest
   (test-suite "integration test for ethereum/buy-sig over libp2p channel with both generating an agreement"
     (test-case "buy sig over libp2p runs successfully with both generating the same agreement"
+     (parameterize ((current-libp2p-daemon #f))
       (setup-test-env)
 
       (def buyer-address alice)
@@ -234,4 +235,4 @@
         (ignore-errors (close-port proc-buyer))
         (ignore-errors (close-port proc-seller))
         (ignore-errors (kill (process-pid proc-buyer)))
-        (ignore-errors (kill (process-pid proc-seller))))))))
+        (ignore-errors (kill (process-pid proc-seller)))))))))

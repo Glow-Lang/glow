@@ -1120,7 +1120,12 @@
              (def agreement (<-json InteractionAgreement (json<-string agreement-str)))
              agreement)
 
-            .close: (lambda () (stop-libp2p-daemon!) (cancel) (thread-abort! (car pubsub-listen-thread)))
+            .close:
+            (lambda ()
+              (stop-libp2p-daemon!)
+              (current-libp2p-daemon #f)
+              (cancel)
+              (thread-abort! (car pubsub-listen-thread)))
            })))
 
 
