@@ -1062,8 +1062,8 @@
              ;;Get the other participant from the agreement
              (set! dest-address
                   (hash-find (lambda (key value)
-                               (if (not (equal? my-0xaddr (0x<-address value)))
-                                 (0x<-address value)))
+                               (and (not (equal? my-0xaddr (0x<-address value)))
+                                    (0x<-address value)))
                              (hash<-object (.@ agreement participants))))
              (displayln "getting peerID")
              (def dest-peerID (get-peerID-from-pubsub sub
