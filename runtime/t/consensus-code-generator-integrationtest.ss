@@ -5,6 +5,7 @@
   :clan/assert
   :clan/poo/object
   :mukn/ethereum/json-rpc
+  :mukn/ethereum/assets
   :mukn/ethereum/test-contracts
   ../../compiler/multipass
   ../consensus-code-generator
@@ -31,7 +32,7 @@
               interaction-name
               ;; arbitrary timeout:
               100
-              (.o DefaultToken: PET ))))
+              (.o DefaultToken: (lookup-asset 'PET) ))))
     (.call ConsensusCodeGenerator .generate code-generator)
     (assert-equal! (.@ code-generator params-end)
                    expected-value)))
