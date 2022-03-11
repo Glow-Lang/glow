@@ -61,6 +61,11 @@
    contract-config: [ContractConfig]
    published-data: [Bytes])) ;; Variables published by the first active participant inside the first code block.
 ;; timer-start = (.@ agreement-handshake agreement options maxInitialBlock)
+(def (agreement-handshake-json-fields? j)
+  (and (json-object-get j "agreement")
+       (json-object-get j "contract-config")
+       (json-object-get j "published-data")
+       #t))
 
 (define-type IOContext
   (instance Class
@@ -1097,10 +1102,18 @@
 
            .receive-handshake: (lambda (_runtime) ;TODO: Make sure you are receiving messages only from people you want to talk to
              (displayln MAGENTA "Listening for handshake via libp2p ..." END)
-             (def handshake-str (poll-buffer))
-             (displayln MAGENTA "Received handshake" END)
-             (def handshake (<-json AgreementHandshake (json<-string handshake-str)))
-             handshake)
+             ;; TODO: refine the agreement and handshake protocols to make it so that
+             ;;       the sender never sends an agreement when the receiver is expecting a handshake,
+             ;;       then error on receiving an agreement here instead of retrying
+             (let loop ((handshake-str (poll-buffer)))
+               (def handshake-json (json<-string handshake-str))
+               (cond
+                 ((agreement-handshake-json-fields? handshake-json)
+                  (displayln MAGENTA "Received handshake" END)
+                  (<-json AgreementHandshake handshake-json))
+                 (else
+                  (displayln RED "Expected an AgreementHandshake, received somthing else (possibly an InteractionAgreement), retrying..." END)
+                  (loop (poll-buffer))))))
 
            .try-receive-agreement:
            (lambda ()
