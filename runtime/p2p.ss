@@ -30,7 +30,7 @@
   :vyzo/libp2p/daemon)
 
 
-(def POLL_MAX_WINDOW 5)
+(def POLL_MAX_WINDOW 10)
 
 
 ;;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Direct p2p communication methods

@@ -999,6 +999,7 @@
                     (poll-buffer t))))
 
          (def (try-buffer)
+           ;; TODO: wait until libp2p is ready to receive
            (or
              (channel-try-get buffer)
              (begin (thread-sleep! 2)
