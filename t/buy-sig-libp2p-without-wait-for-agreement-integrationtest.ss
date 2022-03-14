@@ -151,6 +151,8 @@
                        "--database" "/tmp/alt-glow-db"
                        ]]))
 
+       (thread-sleep! 15)
+
        (DBG "Filling up seller prompt")
 
        ;; reply to seller prompts
