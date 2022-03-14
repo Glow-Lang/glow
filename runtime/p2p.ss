@@ -142,18 +142,19 @@
 ;;
 ;; sub : the pubsub chat channel
 ;; c : your libp2p client
-;; peer0x : the peer you are waiting for to come online
+;; peeraddr : the peer you are waiting for to come online
 ;;
 ;; ask everyone in pubsub channel to IDENTIFY, then read messages until you see one matching peer0x
 ;; block until peerID is found
 ;; TODO: verify that peer0x comes from correct sender
-;; returns the peer-ID related to peer0x
+;; returns the peer-ID related to peeraddr
 (def (get-peerID-from-pubsub sub
                              c
-                             peer0x
+                             peeraddr
                              timeout)
   (pubsub-publish c "chat" (string->bytes "IDENTIFY"))
 
+  (def peer0x (0x<-address peeraddr))
   (let lp ()
     (let ((m (channel-get sub 5)))
       (if m

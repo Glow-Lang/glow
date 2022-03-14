@@ -67,6 +67,12 @@
        (json-object-get j "published-data")
        #t))
 
+;; find-other-address : (MonomorphicObject Address) Address -> Address | #f
+(def (find-other-address participants my-addr)
+  (hash-find (lambda (key value)
+               (and (not (equal? my-addr value)) value))
+             (hash<-object participants)))
+
 (define-type IOContext
   (instance Class
     slots: (.o send-handshake: (.o type: (Fun Unit <- AgreementHandshake))
@@ -1025,7 +1031,8 @@
            (displayln "I am " p))
 
          ;; Find your Blockchain Addr from your Nickname
-         (def my-0xaddr (0x<-address (address<-nickname my-nickname)))
+         (def my-addr (address<-nickname my-nickname))
+         (def my-0xaddr (0x<-address my-addr))
 
 
          ;;initialize the pubsub for peer discovery, if default value is #f throw error
@@ -1062,14 +1069,11 @@
 
            .send-agreement: (lambda (agreement)
              (displayln MAGENTA "Sending agreement to multiaddr..." END)
+             (force-output)
              (def agreement-string (string<-json (json<- InteractionAgreement agreement)))
 
              ;;Get the other participant from the agreement
-             (set! dest-address
-                  (hash-find (lambda (key value)
-                               (and (not (equal? my-0xaddr (0x<-address value)))
-                                    (0x<-address value)))
-                             (hash<-object (.@ agreement participants))))
+             (set! dest-address (find-other-address (.@ agreement participants) my-addr))
              (displayln "getting peerID")
              (def dest-peerID (get-peerID-from-pubsub sub
                                                       libp2p-client
@@ -1089,6 +1093,9 @@
              (def handshake-string (string<-json (json<- AgreementHandshake handshake)))
 
 
+             ;;Get the other participant from the agreement, if it's not initialized already
+             (unless dest-address
+               (set! dest-address (find-other-address (.@ handshake agreement participants) my-addr)))
              (def dest-peerID (get-peerID-from-pubsub sub
                                                      libp2p-client
                                                      dest-address
@@ -1113,6 +1120,7 @@
                   (<-json AgreementHandshake handshake-json))
                  (else
                   (displayln RED "Expected an AgreementHandshake, received somthing else (possibly an InteractionAgreement), retrying..." END)
+                  ;(error (format "Expected an AgreementHandshake, received ~a" handshake-str))
                   (loop (poll-buffer))))))
 
            .try-receive-agreement:

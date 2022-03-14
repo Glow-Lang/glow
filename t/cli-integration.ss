@@ -1,5 +1,6 @@
 (export
   with-io-port
+  find-first-line
   answer-questions
   supply-parameters
   set-initial-block

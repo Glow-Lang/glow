@@ -4,7 +4,7 @@
   :gerbil/gambit/os :gerbil/gambit/ports :gerbil/gambit/threads
   :std/assert :std/format :std/iter
   :std/misc/ports :std/misc/process
-  :std/srfi/1
+  :std/srfi/1 :std/srfi/13
   :std/sugar :std/test
   :std/text/hex :std/text/json
   :clan/base :clan/concurrency :clan/debug :clan/decimal :clan/exception
@@ -123,9 +123,8 @@
               "Buyer"]])
             (supply-parameters
               [["digest" (string-append "0x" (hex-encode digest))]])
-            (set-initial-block/round-up 1000)))
-
-       (thread-sleep! 30)
+            (set-initial-block/round-up 1000)
+            (find-first-line (cut string-contains <> "Sending agreement to multiaddr..."))))
 
        (DBG "Spawning seller proc")
 
