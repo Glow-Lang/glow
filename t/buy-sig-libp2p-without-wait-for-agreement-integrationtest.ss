@@ -108,24 +108,6 @@
                        ]
            ]))
 
-       (DBG "Filling up buyer prompt")
-
-       ;; Fill up buyer prompt
-       (with-io-port proc-buyer
-         (lambda ()
-           (answer-questions
-            [["Choose your identity:"
-              (lambda (id)
-                (string-prefix? "t/alice " id))]
-             ["Choose application:"
-              "buy_sig"]
-             ["Choose your role:"
-              "Buyer"]])
-            (supply-parameters
-              [["digest" (string-append "0x" (hex-encode digest))]])
-            (set-initial-block/round-up 1000)
-            (find-first-line (cut string-contains <> "Sending agreement to multiaddr..."))))
-
        (DBG "Spawning seller proc")
 
        (set! proc-seller
@@ -150,6 +132,26 @@
 
                        "--database" "/tmp/alt-glow-db"
                        ]]))
+
+       (DBG "Filling up buyer prompt")
+
+       ;; Fill up buyer prompt
+       (with-io-port proc-buyer
+         (lambda ()
+           (answer-questions
+            [["Choose your identity:"
+              (lambda (id)
+                (string-prefix? "t/alice " id))]
+             ["Choose application:"
+              "buy_sig"]
+             ["Choose your role:"
+              "Buyer"]])
+            (supply-parameters
+              [["digest" (string-append "0x" (hex-encode digest))]])
+            (set-initial-block/round-up 1000)
+            (find-first-line (cut string-contains <> "Sending agreement to multiaddr..."))))
+
+       (DBG "Filled up buyer prompt")
 
        (thread-sleep! 30)
 
