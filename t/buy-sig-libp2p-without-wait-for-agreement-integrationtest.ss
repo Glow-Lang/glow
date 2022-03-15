@@ -151,10 +151,6 @@
             (set-initial-block/round-up 1000)
             (find-first-line (cut string-contains <> "Sending agreement to multiaddr..."))))
 
-       (DBG "Filled up buyer prompt")
-
-       (thread-sleep! 30)
-
        (DBG "Filling up seller prompt")
 
        ;; reply to seller prompts

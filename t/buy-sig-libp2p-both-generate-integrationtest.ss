@@ -112,13 +112,6 @@
                        ]
            ]))
 
-       (with-io-port proc-buyer
-         (lambda ()
-           (answer-questions
-            [["Choose your identity:"
-              (lambda (id)
-                (string-prefix? "t/alice " id))]])))
-
        (DBG "Spawning seller proc")
 
        (set! proc-seller
@@ -145,11 +138,32 @@
                        "--database" "/tmp/alt-glow-db"
                        ]]))
 
+       (DBG "Buyer start prompt")
+
+       (with-io-port proc-buyer
+         (lambda ()
+           (answer-questions
+            [["Choose your identity:"
+              (lambda (id)
+                (string-prefix? "t/alice " id))]
+             ["Choose application:"
+              "buy_sig"]
+             ["Choose your role:"
+              "Buyer"]])))
+
+       (DBG "Seller start prompt")
+
        (with-io-port proc-seller
          (lambda ()
            (answer-questions
              [["Choose your identity:"
-               (lambda (id) (string-prefix? "t/bob " id))]])))
+               (lambda (id) (string-prefix? "t/bob " id))]
+              ["Choose application:"
+               "buy_sig"]
+              ["Choose your role:"
+               "Seller"]
+              ["Select address for Buyer:"
+               (lambda (id) (string-prefix? "t/alice " id))]])))
 
        (DBG "Filling up buyer prompt")
 
@@ -158,11 +172,6 @@
        (def initial-block
         (with-io-port proc-buyer
          (lambda ()
-           (answer-questions
-            [["Choose application:"
-              "buy_sig"]
-             ["Choose your role:"
-              "Buyer"]])
             (supply-parameters
               [["digest" (string-append "0x" (hex-encode digest))]])
             (set-initial-block/round-up 1000))))
@@ -172,13 +181,6 @@
        ;; reply to seller prompts
        (with-io-port proc-seller
          (lambda ()
-           (answer-questions
-             [["Choose application:"
-               "buy_sig"]
-              ["Choose your role:"
-               "Seller"]
-              ["Select address for Buyer:"
-               (lambda (id) (string-prefix? "t/alice " id))]])
            (supply-parameters
               [["digest" (string-append "0x" (hex-encode digest))]])
            (set-initial-block/exact initial-block)))

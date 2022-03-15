@@ -12,6 +12,7 @@
   :std/sugar
   :std/format
   :std/os/pid
+  :std/srfi/13
   :clan/debug
   :clan/exception
   :gerbil/gambit/exceptions
@@ -172,6 +173,10 @@
           (error "Timeout when getting peerID from pubsub"))))))
 
 
+;; libp2p-error:dial-to-self-attempted? : Any -> Bool
+(def (libp2p-error:dial-to-self-attempted? e)
+  (and (libp2p-error? e)
+       (string-contains (error-message e) "dial to self attempted")))
 
 
 ;;~~~~~~~~~~~~~~~~~~~~~~~~~~ Glow Bootstrap Node Methods for testing ~~~~~~~~~~~~~~~~~~~

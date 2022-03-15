@@ -818,6 +818,20 @@
 ;;          .close                          .close
 ;; The --wait-for-agreement option triggers .receive-agreement instead of .try-receive-agreement,
 ;; and prevents that side from prompting to generate an agreement to send.
+;; When agreement negotiation is implemented, it may send agreements both directions and check equality:
+;;             A                               B
+;;             |                               |
+;;           .make                           .make
+;;             |                               |
+;; .try-receive-agreement failure              |
+;;             |                               |
+;;      .send-agreement ----------> .try-receive-agreement success
+;;             |                               |
+;;    .receive-agreement equal <------- .send-agreement
+;;             |                               |
+;;      .send-handshake ------------> .receive-handshake
+;;             |                               |
+;;          .close                          .close
 
 ;; ------------------ Channel types
 
@@ -992,18 +1006,27 @@
 
          (def buffer (make-channel 10)) ;; TODO: Do we need a larger buffer?
 
+         (def ready? #f)
+         (def (ensure-ready!)
+           (unless ready?
+              (try
+                (dial-and-send-contents
+                  libp2p-client
+                  (string-join (list (peer-info->string circuit-relay) (ID->string (peer-info-id self))) "/p2p-circuit/p2p/")
+                  "")
+                (catch (libp2p-error:dial-to-self-attempted? e)
+                  (displayln "dial to self attempted")
+                  (set! ready? #t)))))
+
          (def (poll-buffer (t 2)) ; poll every 2s by default
            (def res (channel-try-get buffer))
-           (or res
-             (begin (thread-sleep! t)
-                    (poll-buffer t))))
+           (cond (res (set! ready? #t) res)
+                 (else (thread-sleep! t) (poll-buffer t))))
 
          (def (try-buffer)
-           ;; TODO: wait until libp2p is ready to receive
-           (or
-             (channel-try-get buffer)
-             (begin (thread-sleep! 2)
-                    (channel-try-get buffer))))
+           (def res (channel-try-get buffer))
+           (cond (res (set! ready? #t) res)
+                 (else (ensure-ready!) (channel-try-get buffer))))
 
          ;; s : Stream
          (def (push-to-buffer s)
