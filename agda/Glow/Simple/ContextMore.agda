@@ -36,6 +36,7 @@ open import Cubical.HITs.Interval
 
 open import Glow.ListDecProps
 
+open import Cubical.Categories.Category
 
 module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}}
             {BuilitInsIndex : Type₀} {{IsDiscrete-BuilitInsIndex : IsDiscrete BuilitInsIndex}}
@@ -75,6 +76,13 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
 
     remSubst : ∀ Γ → Subst Γ → Context
     remSubst Γ x = record Γ { entries = remSubst' (Γ .entries) x }
+
+    isSet-Subst : ∀ Γ → isSet (Subst Γ)
+    isSet-Subst (AST.con [] scope'') = isProp→isSet isProp⊥
+    isSet-Subst (AST.con (x ∷ entries₁) scope'') = isSet⊎ (snd (AhSet x)) (isSet-Subst (AST.con (entries₁) scope'') )
+
+    -- SUBST : Category ℓ-zero ℓ-zero
+    -- SUBST = FreeCategory' remSubst isSet-Context isSet-Subst
 
 
     -- remSubst*' : Scope → ∀ l → Subst*' l → List ContextEntry

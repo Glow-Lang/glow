@@ -12,6 +12,7 @@ open import Cubical.Data.Nat
 open import Cubical.Data.Unit
 open import Cubical.Data.Int
 open import Cubical.Data.Prod
+open import Cubical.Data.Sigma renaming (_×_ to _Σ×_)
 open import Cubical.Data.Sum renaming (elim to sum-elim)
 open import Cubical.Data.List
 open import Cubical.Data.Empty renaming (elim to empty-elim ; rec to empty-rec)
@@ -498,3 +499,14 @@ isJust-dp = maybe-eqCase (just tt)
 
 isNothing-dp : ∀ {ℓ} {A : Type ℓ} → Maybe A → DecPropΣ
 isNothing-dp = maybe-eqCase (nothing {A = Unit})
+
+
+Σconst-≡-Prod : ∀ {ℓ ℓ'} {A : Type ℓ} {B : A → Type ℓ'}
+                     → {a : A}
+                     → (∀ a' → B a ≡ B a')
+                     → (A × B a) ≡ (Σ A B) 
+Σconst-≡-Prod p = A×B≡A×ΣB ∙ cong (Σ _) (funExt p)
+
+
+
+

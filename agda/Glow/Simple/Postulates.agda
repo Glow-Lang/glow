@@ -10,9 +10,13 @@ open import Cubical.Data.Bool
 data Dig : Type₀ where
   dig : ℕ → Dig 
 
+postulate isSet-Dig : isSet Dig
+-- isSet-Dig (dig x) (dig x₂) x₁ y₁ i i₁ = {!dig ?!}
 
 data Sig : Type₀ where
   sigPrim : ℕ → Sig 
+
+postulate isSet-Sig : isSet Sig
 
 postulate digestPrim : {A : Type₀} → A → Dig
 

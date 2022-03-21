@@ -37,7 +37,8 @@ open import Glow.Simple.AST
 -- open import Glow.Simple.ParamsSubst
 
 open import Glow.Simple.ASTDef
-  
+
+
 
 open AST-String zero
 
@@ -79,25 +80,26 @@ open AST-String zero
 
 someInteraction : Interaction
 someInteraction =  
-   interaction⟨   "A" ∷ "B" ∷ [] , [] ⟩ (
+   interaction⟨   ("A" , honest) ∷ ("B" , honest) ∷ [] , "b2" ∶ Bool ∷  [] ⟩ (
         set "x" ∶ Bool ≔ < true > ;
         at "B" set "y" ∶ Bool ≔ input "enter choice 0" ;
         publish! "B" ⟶ "y" ;        
 
         at "A" set "xx" ∶ Bool ≔
-         -- ( if (bi "and") $' ((var-a (dsot "y")) , var-a (dsot "b2"))
-        ( if (v "y")
+         ( if (bi "and") $' ((var-a (dsot "y")) , var-a (dsot "b2"))
+        -- ( if (v "y")
            then
               (
               set "z" ∶ Bool ≔ input "enter choice 1" ;₁ ;b
               v "z"
             )
            else (
-            require! v "x" ;'
+            set "q" ∶ Bool ≔ < false > ;'
+            -- require! v "x" ;'
             -- publish! "B" ⟶ "y" ;
             -- withdraw! "B" ⟵ < 3 > ;'
             -- deposit! "B" ⟶ < 2 > ;
-            set "z" ∶ Bool ≔ < false > ;b
+            set "z" ∶ Bool ≔  "and" $ (va "q" , va "q") ;b
             < true >
             )) ;
         deposit! "B" ⟶ < 2 > ;
@@ -129,6 +131,8 @@ someCode : Linked'
              (AST.Interaction.emptyContext
               (toProofs String Basic-BuiltIns someInteraction)) 
 someCode = AST.Interaction.code (toProofs _ _ someInteraction) 
+
+
 
 -- -- someInteraction' : AST.Interaction String one
 -- -- AST.Interaction.head someInteraction' = transp (λ i → AST.InteractionHead String (seg i)) i0

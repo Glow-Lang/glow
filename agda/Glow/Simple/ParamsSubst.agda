@@ -98,12 +98,12 @@ module ParamsSubst {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete I
 
            zz : NBStmnt _ _ → NBStmnt _ _ 
            zz (NBS-require! x) = NBS-require! (h-expr x)
-           zz (NBS-deposit! p {y} x) = NBS-deposit! p {y} (h-expr x)
-           zz (NBS-withdraw! p {y} x) = NBS-withdraw! p {y} (h-expr x)
-           zz (NBS-publishVal! x y {z}) = NBS-publishVal! x y {z}
+           zz (NBS-deposit! p x) = NBS-deposit! p (h-expr x)
+           zz (NBS-withdraw! p x) = NBS-withdraw! p (h-expr x)
+           zz (NBS-publishVal! x y) = NBS-publishVal! x y
 
            z : NBStmnt+Expr ih _ → NBStmnt+Expr (stripParamsHead ih) _
-           z (stmntNBS x) =  stmntNBS (zz x)
+           z (stmntNBS x {q}) =  stmntNBS (zz x) {q}
            z (exprNBS x) = exprNBS (h-expr x)
 
       h-expr (var (dsot x {y})) =
@@ -126,7 +126,7 @@ module ParamsSubst {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete I
       -- h-expr (receivePublished x {y}) = publishVal x {y}
       h-expr (if b then t else f) = if (h-expr b) then (h-expr t) else (h-expr f)
       h-expr (AST.sign q {y} {w}) = (AST.sign (h-arg q) {y} {w})
-      h-expr (AST.receivePublished x x₁ {y}) = AST.receivePublished x x₁ {y}
+      h-expr (AST.receivePublished x {y}) = AST.receivePublished x {y}
 
       hh : (Γ : Context ih) (x : Stmnt _ Γ) →
          stripParamsCtx (bindingMechanics' _ Γ x) ≡

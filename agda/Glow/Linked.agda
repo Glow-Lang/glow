@@ -11,9 +11,11 @@ open import Cubical.Foundations.Everything
 open import Cubical.Data.Nat
 open import Cubical.Data.Int
 open import Cubical.Data.Prod
+open import Cubical.Data.Sigma renaming (_×_ to _Σ×_)
 open import Cubical.Data.Sum renaming (rec to sum-rec ; elim to sum-elim)
 open import Cubical.Data.List
 open import Cubical.Data.Empty
+open import Cubical.Data.Unit
 
 
 open import Cubical.Data.Maybe renaming (rec to recMaybe)
@@ -25,7 +27,19 @@ open import Cubical.Relation.Nullary.Base renaming (¬_ to IsEmpty)
 
 open import Cubical.Relation.Binary
 
+open import Cubical.Categories.Category
+open import Cubical.Categories.Functor
 
+open import Cubical.Foundations.CartesianKanOps
+
+-- open import Glow.CategoriesMore
+
+
+isSet-cong-subst : ∀ {ℓ ℓ′} {A : Type ℓ} (B : A → Type ℓ′)
+                → (isSet-A : isSet A)
+                → ∀ {a a' : A}
+                → (p q : a ≡ a') → (x : B a) → subst B p x ≡ subst B q x
+isSet-cong-subst B isSet-A p q x = cong (λ a → subst B a x) (isSet-A _ _ _ _)
 
 data Linked {C : Type₀} {A : C → Type₀} (fld : ∀ c → A c → C) (c : C) : Type₀
 
@@ -137,6 +151,7 @@ map-Linked'-map-fold {fld = fld} {fld' = fld'} g f e {c} (h ∷L l) =
   map-Linked'-map-fold {fld' = fld'} g f e l ∙   
         -- {!!}
       λ i → foldLinked' (transp (λ i₁ → Linked' fld' (e c h (i ∧ i₁ ))) (~ i) (map-Linked'-map g f e l)) --λ i → {!!}
+
 
 
 
@@ -296,6 +311,353 @@ map-Linked'-map'-Mb : {C C' : Type₀}
                   
 map-Linked'-map'-Mb g₀ g f []L = []L
 map-Linked'-map'-Mb g₀ g f (h ∷L x) = map-Linked'-map'-Mb* g f h x
+
+
+
+module LinkedPathHLevel {C : Type₀} {A : C → Type₀} (fld : ∀ c → A c → C) where
+  Li = Linked' fld
+
+  Cover : ∀ c → Li c → Li c → Type₀
+  Cover c []L []L = Unit
+  Cover c []L (h ∷L x₁) = ⊥
+  Cover c (h ∷L x) []L = ⊥
+  Cover c (h ∷L x) (h₁ ∷L x₁) = Σ (h₁ ≡ h) λ p → Cover (fld _ h) x (subst Li (cong (fld c) p) x₁)
+     --λ p → PathP (λ i → Li (fld _ (p i))) x x₁
+
+  reflCode : ∀ c → ∀ xs → Cover c xs xs
+  reflCode _ []L = tt
+  reflCode c (h ∷L xs) = refl , subst (Cover (fld _ h) xs) ((sym (substRefl {B = Li} xs))) (reflCode _ xs)
+
+
+  encode : ∀ c → ∀ xs ys → (p : xs ≡ ys) → Cover c xs ys
+  encode c xs _ = J (λ ys _ → Cover c xs ys) (reflCode c xs)
+
+  encodeRefl : ∀ c xs → encode c xs xs refl ≡ reflCode c xs
+  encodeRefl c xs = JRefl (λ ys _ → Cover c xs ys) (reflCode c xs)
+
+  decode : ∀ c → ∀ xs ys → Cover c xs ys → xs ≡ ys
+  decode c []L []L x = refl
+  decode c (h ∷L xs) (h₁ ∷L ys) x i =
+     fst x (~ i) ∷L toPathP {A = λ x₁ → Linked' fld (fld c (fst x (x₁)))} {x = ys}
+     (sym (decode _ _ _ (snd x))) 
+     (~ i)
+
+  decodeRefl : ∀ c → ∀ xs → decode c xs xs (reflCode c xs) ≡ refl
+  decodeRefl _ []L = refl
+  decodeRefl c (x ∷L xs) = cong (cong₂ _∷L_ refl) (sq ∙ decodeRefl _ xs )
+   where
+
+     -- pp : PathP {!!} ≡ decode (fld c x) xs xs (reflCode (fld c x) xs)
+     -- pp = {!!}
+
+     sq : Square (λ i → _)
+                     (decode (fld c x) xs xs (reflCode (fld c x) xs))
+                     refl refl
+     sq i j =
+        hcomp (λ l → λ {
+             (i = i1) → decodeRefl (fld c x) xs (~ l) j
+           ; (j = i1) → xs
+           ; (j = i0) → decode (fld c x) xs
+                  (transport (λ _ → Li (fld c x)) xs)
+                  (transport (λ ii → Cover (fld c x) xs (transportRefl xs (~ ii))) (reflCode (fld c x) xs))
+                  ((~ l) ∧ (~ i) )
+           }) 
+             (hcomp
+              ((λ l → λ {
+             (i = i0) → transportRefl xs (j ∨ (~ l)) 
+           ; (i = i1) → xs
+           ; (j = i0) →
+                   decode (fld c x) xs (transportRefl xs ((~ l)))
+                     ((transp (λ jj → cong (Cover (fld c x) xs) (λ i₁ → transportRefl xs ((~ l) ∨ (~ i₁))) jj) (~ l) (reflCode (fld c x) xs)))
+                     (~ i)
+           ; (j = i1) → xs
+           })) (decodeRefl (fld c x) xs j (~ i)) )
+
+  decodeEncode : ∀ c → ∀ xs ys → (p : xs ≡ ys) → decode c xs ys (encode c xs ys p) ≡ p
+  decodeEncode c xs _ =
+    J (λ ys p → decode c xs ys (encode c xs ys p) ≡ p)
+      (cong (decode c xs xs) (encodeRefl c xs) ∙ decodeRefl c xs)
+
+  isOfHLevelCover : ∀ c → (n : HLevel) (p : ∀ {c'} → isOfHLevel (suc (suc n)) (A c'))
+    (xs ys : Li c) → isOfHLevel (suc n) (Cover c xs ys)
+  isOfHLevelCover c n _ []L []L = (isProp→isOfHLevelSuc n isPropUnit)
+  isOfHLevelCover c n _ []L (h ∷L ys) = (isProp→isOfHLevelSuc n isProp⊥)
+  isOfHLevelCover c n _ (h ∷L xs) []L = (isProp→isOfHLevelSuc n isProp⊥)
+  isOfHLevelCover c n p (h ∷L xs) (h₁ ∷L ys) = isOfHLevelΣ (suc n) (p h₁ h) λ y → isOfHLevelCover (fld c h) n p xs (subst Li (λ i → fld c (y i)) ys) 
+
+  isOfHLevelLinked : ∀ c → (n : HLevel) 
+    → (∀ {c'} → isOfHLevel (suc (suc n)) (A c')) → isOfHLevel (suc (suc n)) (Li c)
+  isOfHLevelLinked c n ofLevel xs ys =
+    isOfHLevelRetract (suc n)
+      (encode c xs ys)
+      (decode c xs ys)
+      (decodeEncode c xs ys)
+      (isOfHLevelCover c n ofLevel xs ys)
+
+
+-- module FreeCategoryJ {C : Type₀} {A : C → Type₀} (fld : ∀ c → A c → C) where
+
+
+
+--   Li = Linked' fld
+
+--   foldLinked'-subst : ∀ {c c'} → (p : c ≡ c') → ∀ x →  foldLinked' x ≡ foldLinked' (subst Li p x)
+--   foldLinked'-subst {c} {c'} =
+--     J {_} {C} {c} (λ y p → ∀ x → foldLinked' x ≡ foldLinked' (subst Li p x)) λ x →  cong foldLinked' (sym (substRefl {B = Li} x))  
+
+
+--   _++L_ : ∀ {c₀} → (f : Li c₀) → Li (foldLinked' f) → Li c₀ 
+--   []L ++L g = g
+--   (h ∷L f) ++L g = h ∷L (f ++L g)
+
+--   ++L-coh : ∀ {c₀} → (f : Li c₀) → (g : Li (foldLinked' f)) → foldLinked' g ≡ foldLinked' (f ++L g) 
+--   ++L-coh []L g = refl
+--   ++L-coh (h ∷L f) g = ++L-coh f g
+
+--   ++L-rUnit : ∀ {c₀} → (f : Li c₀) → (f ++L []L) ≡ f
+--   ++L-rUnit []L = refl
+--   ++L-rUnit (h ∷L f) = cong (h ∷L_) (++L-rUnit f)
+
+
+--   ++L-assoc : ∀ {c₀} → (f : Li c₀) → (g : Li (foldLinked' f)) → (h : Li (foldLinked' (f ++L g))) → ((f ++L g) ++L h) ≡ (f ++L (g ++L (subst⁻ Li (++L-coh f g) h))) 
+--   ++L-assoc []L g h = cong (g ++L_) (sym (substRefl {B = Li} h))
+--   ++L-assoc (h₁ ∷L f) g h = cong (h₁ ∷L_) (++L-assoc f g h)
+
+
+--   -- FreeCategory : Category ℓ-zero ℓ-zero
+--   -- Category.ob FreeCategory = C
+--   -- Category.Hom[_,_] FreeCategory s t = Σ (Li s) ((t ≡_ ) ∘ foldLinked') 
+--   -- Category.id FreeCategory = []L , refl
+--   -- Category._⋆_ FreeCategory f g = (fst f ++L subst Li (snd f) (fst g)) , (snd g ∙ foldLinked'-subst (fst g) (snd f)) ∙ ++L-coh (fst f) (subst Li (snd f) (fst g))
+--   -- Category.⋆IdL FreeCategory {c₀} {c₁} f = ΣPathP (substRefl {B = Li} (fst f) , toPathP (IdL-coh {c₀} {c₁} (fst f) (snd f)))
+--   -- Category.⋆IdR FreeCategory = {!!}
+--   -- Category.⋆Assoc FreeCategory = {!!}
+--   -- Category.isSetHom FreeCategory = {!!}
+
+--   lem1 : ∀ {c₀ c₁} → (f : Li c₀) → (p : c₀ ≡ c₁) → (g : Li (foldLinked' (subst Li p f)))
+--      → (subst Li p f) ++L g ≡ subst Li p (f ++L subst Li (sym (foldLinked'-subst p f)) g)
+--   lem1 f p g = {!!}
+--   -- lem1 (h ∷L f) p g = {!!}
+
+
+
+-- --   -- FreeCategory : isGroupoid C → (∀ c → isSet (A c)) → Category ℓ-zero ℓ-zero
+-- --   -- Category.ob (FreeCategory _ _) = C
+-- --   -- Category.Hom[_,_] (FreeCategory _ _) s t = Σ (Li s) ((t ≡_ ) ∘ foldLinked') 
+-- --   -- Category.id (FreeCategory _ _) = []L , refl
+-- --   -- Category._⋆_ (FreeCategory _ _) f g = (fst f ++L subst Li (snd f) (fst g)) , snd g ∙∙ foldLinked'-subst (fst g) (snd f) ∙∙ ++L-coh (fst f) (subst Li (snd f) (fst g))
+-- --   -- Category.⋆IdL (FreeCategory isSet-C _) {x₁} {y = y} f = ΣPathP (substRefl {B = Li} _ , {!!})
+-- --   --           -- symP (toPathP ({!!}
+-- --   --           --   ∙ fromPathP ( (doubleCompPath-filler (snd f) (foldLinked'-subst (fst f) (λ _ → x₁))  (λ _ → foldLinked' (subst Li (λ _ → x₁) (fst f)))))) ))
+-- --   -- Category.⋆IdR (FreeCategory isSet-C _) {x₁} {y} f = ΣPathP (++L-rUnit _  , {!symP (doubleCompPath-filler (refl {x = y}) (snd f) (++L-coh (fst f) (subst Li (snd f) []L)))!} )
+-- --   --   --        symP (( {!doubleCompPath-filler (refl {x = y}) (snd f) (++L-coh (fst f) (subst Li (snd f) []L))!}))) 
+-- --   -- Category.⋆Assoc (FreeCategory isSet-C _) f g h = 
+-- --   --    ΣPathP (++L-assoc (fst f) _ _ ∙ cong ((fst f) ++L_)
+-- --   --      pp
+-- --   --      , toPathP {!!})
+-- --   --  where
+-- --   --    pp : _
+-- --   --    pp = lem1 (fst g) _ _ ∙ {!!} 
+-- --   --         -- cong (subst Li (snd f) )
+-- --   --         --   (cong (fst g ++L_) (sym (substComposite Li _ _ (fst h) ∙ substComposite Li _ _ (subst Li (
+-- --   --         --                                                                                                    ((snd g ∙ foldLinked'-subst (fst g) (snd f)) ∙
+-- --   --         --                                                                                                     ++L-coh (fst f) (subst Li (snd f) (fst g)))
+-- --   --         --                                                                                                    ) (fst h))) ∙ cong (λ a → subst Li a (fst h)) {!!}))
+
+-- --   -- Category.isSetHom (FreeCategory isSet-C isSet-A) = 
+-- --   --   isOfHLevelΣ 2 (LinkedPathHLevel.isOfHLevelLinked fld _ 0 (isSet-A _)) λ x₃ → (isSet-C _ _) --{!LinkedPathHLevel.isOfHLevelLinked!}
+
+
+
+--   FreeCategory' : isSet C → (∀ c → isSet (A c)) → Category ℓ-zero ℓ-zero
+--   Category.ob (FreeCategory' _ _) = C
+--   Category.Hom[_,_] (FreeCategory' _ _) s t = Σ (Li s) ((t ≡_ ) ∘ foldLinked') 
+--   Category.id (FreeCategory' _ _) = []L , refl
+--   Category._⋆_ (FreeCategory' _ _) f g = (fst f ++L subst Li (snd f) (fst g)) , snd g ∙∙ foldLinked'-subst (snd f) (fst g)  ∙∙ ++L-coh (fst f) (subst Li (snd f) (fst g))
+--   Category.⋆IdL (FreeCategory' isSet-C _) _ = Σ≡Prop (λ _ → isSet-C _ _) (substRefl {B = Li} _)
+--   Category.⋆IdR (FreeCategory' isSet-C _) f = Σ≡Prop (λ _ → isSet-C _ _) (++L-rUnit _) 
+--   Category.⋆Assoc (FreeCategory' isSet-C _) f g h = 
+--      Σ≡Prop (λ _ → isSet-C _ _)
+--          (++L-assoc (fst f) _ _ ∙ {!pp!})
+
+--      where
+--        pp : _
+--        pp = lem1 (fst g) _ _ ∙ (cong ((subst Li (snd f)) ∘ (fst g ++L_))
+--           (sym (cong (λ a → subst Li a (fst h)) (isSet-C _ _ _ _) ∙∙ substComposite Li (snd g ∙∙ _ ∙∙ _) _ (fst h) ∙∙ substComposite Li _ _ (subst Li _ (fst h))  )))
+     
+
+--   Category.isSetHom (FreeCategory' isSet-C isSet-A) =
+--     isOfHLevelΣ 2 (LinkedPathHLevel.isOfHLevelLinked fld _ 0 (isSet-A _)) λ x₃ → isProp→isSet (isSet-C _ _) --{!LinkedPathHLevel.isOfHLevelLinked!}
+
+
+module FreeCategory {C : Type₀} {A : C → Type₀} (fld : ∀ c → A c → C) where
+
+
+
+  Li = Linked' fld
+
+  foldLinked'-subst : ∀ {c c'} → ∀ x → (p : c ≡ c')  →  foldLinked' x ≡ foldLinked' (subst Li p x)
+  foldLinked'-subst []L p = p
+  foldLinked'-subst (_ ∷L x) _ = foldLinked'-subst x _
+
+
+  _++L_ : ∀ {c₀} → (f : Li c₀) → Li (foldLinked' f) → Li c₀ 
+  []L ++L g = g
+  (h ∷L f) ++L g = h ∷L (f ++L g)
+
+
+  ++L-coh : ∀ {c₀} → (f : Li c₀) → (g : Li (foldLinked' f)) → foldLinked' g ≡ foldLinked' (f ++L g) 
+  ++L-coh []L g = refl
+  ++L-coh (h ∷L f) g = ++L-coh f g
+
+  ++L-rUnit : ∀ {c₀} → (f : Li c₀) → (f ++L []L) ≡ f
+  ++L-rUnit []L = refl
+  ++L-rUnit (h ∷L f) = cong (h ∷L_) (++L-rUnit f)
+
+
+  ++L-assoc : ∀ {c₀} → (f : Li c₀) → (g : Li (foldLinked' f)) → (h : Li (foldLinked' (f ++L g))) → ((f ++L g) ++L h) ≡ (f ++L (g ++L (subst⁻ Li (++L-coh f g) h))) 
+  ++L-assoc []L g h = cong (g ++L_) (sym (substRefl {B = Li} h))
+  ++L-assoc (h₁ ∷L f) g h = cong (h₁ ∷L_) (++L-assoc f g h)
+
+
+  -- FreeCategory : Category ℓ-zero ℓ-zero
+  -- Category.ob FreeCategory = C
+  -- Category.Hom[_,_] FreeCategory s t = Σ (Li s) ((t ≡_ ) ∘ foldLinked') 
+  -- Category.id FreeCategory = []L , refl
+  -- Category._⋆_ FreeCategory f g = (fst f ++L subst Li (snd f) (fst g)) , (snd g ∙ foldLinked'-subst (fst g) (snd f)) ∙ ++L-coh (fst f) (subst Li (snd f) (fst g))
+  -- Category.⋆IdL FreeCategory {c₀} {c₁} f = ΣPathP (substRefl {B = Li} (fst f) , toPathP (IdL-coh {c₀} {c₁} (fst f) (snd f)))
+  -- Category.⋆IdR FreeCategory = {!!}
+  -- Category.⋆Assoc FreeCategory = {!!}
+  -- Category.isSetHom FreeCategory = {!!}
+
+  lem1 : ∀ {c₀ c₁} → (f : Li c₀) → (p : c₀ ≡ c₁) → (g : Li (foldLinked' (subst Li p f)))
+     → (subst Li p f) ++L g ≡ subst Li p (f ++L subst Li (sym (foldLinked'-subst f p)) g)
+  lem1 []L p g = sym (transportTransport⁻ (cong Li p) _)
+  lem1 (h ∷L f) p g = cong (_ ∷L_) (lem1 f _ g)
+
+
+
+  -- FreeCategory : isGroupoid C → (∀ c → isSet (A c)) → Category ℓ-zero ℓ-zero
+  -- Category.ob (FreeCategory _ _) = C
+  -- Category.Hom[_,_] (FreeCategory _ _) s t = Σ (Li s) ((t ≡_ ) ∘ foldLinked') 
+  -- Category.id (FreeCategory _ _) = []L , refl
+  -- Category._⋆_ (FreeCategory _ _) f g = (fst f ++L subst Li (snd f) (fst g)) , snd g ∙∙ foldLinked'-subst (fst g) (snd f) ∙∙ ++L-coh (fst f) (subst Li (snd f) (fst g))
+  -- Category.⋆IdL (FreeCategory isSet-C _) {x₁} {y = y} f = ΣPathP (substRefl {B = Li} _ , {!!})
+  --           -- symP (toPathP ({!!}
+  --           --   ∙ fromPathP ( (doubleCompPath-filler (snd f) (foldLinked'-subst (fst f) (λ _ → x₁))  (λ _ → foldLinked' (subst Li (λ _ → x₁) (fst f)))))) ))
+  -- Category.⋆IdR (FreeCategory isSet-C _) {x₁} {y} f = ΣPathP (++L-rUnit _  , {!symP (doubleCompPath-filler (refl {x = y}) (snd f) (++L-coh (fst f) (subst Li (snd f) []L)))!} )
+  --   --        symP (( {!doubleCompPath-filler (refl {x = y}) (snd f) (++L-coh (fst f) (subst Li (snd f) []L))!}))) 
+  -- Category.⋆Assoc (FreeCategory isSet-C _) f g h = 
+  --    ΣPathP (++L-assoc (fst f) _ _ ∙ cong ((fst f) ++L_)
+  --      pp
+  --      , toPathP {!!})
+  --  where
+  --    pp : _
+  --    pp = lem1 (fst g) _ _ ∙ {!!} 
+  --         -- cong (subst Li (snd f) )
+  --         --   (cong (fst g ++L_) (sym (substComposite Li _ _ (fst h) ∙ substComposite Li _ _ (subst Li (
+  --         --                                                                                                    ((snd g ∙ foldLinked'-subst (fst g) (snd f)) ∙
+  --         --                                                                                                     ++L-coh (fst f) (subst Li (snd f) (fst g)))
+  --         --                                                                                                    ) (fst h))) ∙ cong (λ a → subst Li a (fst h)) {!!}))
+
+  -- Category.isSetHom (FreeCategory isSet-C isSet-A) = 
+  --   isOfHLevelΣ 2 (LinkedPathHLevel.isOfHLevelLinked fld _ 0 (isSet-A _)) λ x₃ → (isSet-C _ _) --{!LinkedPathHLevel.isOfHLevelLinked!}
+
+
+
+  FreeCategory' : isSet C → (∀ c → isSet (A c)) → Category ℓ-zero ℓ-zero
+  Category.ob (FreeCategory' _ _) = C
+  Category.Hom[_,_] (FreeCategory' _ _) s t = Σ (Li s) ((t ≡_ ) ∘ foldLinked') 
+  Category.id (FreeCategory' _ _) = []L , refl
+  Category._⋆_ (FreeCategory' _ _) f g = (fst f ++L subst Li (snd f) (fst g)) , snd g ∙∙ foldLinked'-subst (fst g) (snd f) ∙∙ ++L-coh (fst f) (subst Li (snd f) (fst g))
+  Category.⋆IdL (FreeCategory' isSet-C _) _ = Σ≡Prop (λ _ → isSet-C _ _) (substRefl {B = Li} _)
+  Category.⋆IdR (FreeCategory' isSet-C _) f = Σ≡Prop (λ _ → isSet-C _ _) (++L-rUnit _) 
+  Category.⋆Assoc (FreeCategory' isSet-C _) f g h =
+     Σ≡Prop (λ _ → isSet-C _ _)
+         (++L-assoc (fst f) _ _ ∙ cong ((fst f) ++L_) pp)
+
+     where
+       pp : _
+       pp = lem1 (fst g) _ _ ∙ (cong ((subst Li (snd f)) ∘ (fst g ++L_))
+          (sym (isSet-cong-subst Li isSet-C _ _ (fst h) ∙∙ substComposite Li (snd g ∙∙ _ ∙∙ _) _ (fst h) ∙∙ substComposite Li _ _ (subst Li _ (fst h))  )))
+     
+
+  Category.isSetHom (FreeCategory' isSet-C isSet-A) =
+    isOfHLevelΣ 2 (LinkedPathHLevel.isOfHLevelLinked fld _ 0 (isSet-A _)) λ x₃ → isProp→isSet (isSet-C _ _) --{!LinkedPathHLevel.isOfHLevelLinked!}
+
+FreeCategory' = FreeCategory.FreeCategory'
+
+
+
+
+
+module FreCatFunct {C C' : Type₀} { A : C → Type₀} {A' : C' → Type₀} {fld : ∀ c → A c → C} {fld' : ∀ c → A' c → C'}
+                     (isSet-C : isSet C) (isSet-A : ∀ c → isSet (A c))
+                     (isSet-C' : isSet C') (isSet-A' : ∀ c' → isSet (A' c'))
+                   (g : C → C') (f :  ∀ {c} → A c → A' (g c) ) (coh : ∀ c → (x : A c) → g (fld _ x) ≡ (fld' _ (f x)) )
+                    
+                      where
+  
+  map-Linked'-map-fold-++ : 
+                       {c cT : C}
+                      → (l : Linked' fld c) → (p : cT ≡ foldLinked' l) → (m : Linked' fld cT)
+                      →  map-Linked'-map {fld = fld} g f coh (FreeCategory._++L_ fld l (subst (Linked' fld) p m))
+                          ≡ FreeCategory._++L_ fld' (map-Linked'-map {fld = fld} g f coh l) (subst (Linked' fld')
+                            ( refl ∙∙ cong g p ∙∙ (map-Linked'-map-fold g f coh l))
+                            ((map-Linked'-map {fld = fld} g f coh m)))
+  map-Linked'-map-fold-++ {c} {cT} []L = 
+     J (λ c p → (m : Linked' fld cT) →
+                    map-Linked'-map g f coh (subst (Linked' fld) p m) ≡
+                    subst (Linked' fld') (refl ∙∙ cong g p ∙∙ refl) (map-Linked'-map g f coh m))
+                     w
+     where
+       w : _
+       w m = cong ( map-Linked'-map g f coh ) (transportRefl _) ∙ sym (isSet-subst {B = (Linked' fld')} isSet-C' (refl ∙∙ refl ∙∙ refl) (map-Linked'-map g f coh m))
+     
+  map-Linked'-map-fold-++ {c = c} (h ∷L l) p m =
+    (cong
+      ( (f h ∷L_) ∘ (subst Li pp )) (map-Linked'-map-fold-++ l _ m))
+         ∙ cong (f h ∷L_)
+             (cong (subst Li pp ∘ (map-Linked'-map g f coh l ++L_)) (isSet-cong-subst Li isSet-C' _ _ ll ∙ substComposite Li _ _ ll)
+                ∙ sym (lem1 (map-Linked'-map g f coh l) pp _))
+     where
+       open FreeCategory fld'
+
+       pp = coh c h
+
+       ll = (map-Linked'-map g f coh m)
+      
+
+
+  map-Linked'-map-functor : Functor (FreeCategory' fld isSet-C isSet-A) (FreeCategory' fld' isSet-C' isSet-A')
+  Functor.F-ob map-Linked'-map-functor = g
+  fst (Functor.F-hom map-Linked'-map-functor (x , _)) = map-Linked'-map g f coh x
+  snd (Functor.F-hom map-Linked'-map-functor (x , p)) = cong g p ∙ map-Linked'-map-fold g f coh x
+  Functor.F-id map-Linked'-map-functor = Σ≡Prop (λ _ → isSet-C' _ _) refl
+  Functor.F-seq map-Linked'-map-functor f g = Σ≡Prop (λ _ → isSet-C' _ _) (map-Linked'-map-fold-++ (fst f) (snd f) (fst g) ) 
+
+module UnnamedRelFree {C : Type₀} { A : C → Type₀} {A' : C → Type₀} {fld : ∀ c → A c → C} {fld' : ∀ c → A' c → C}
+                     (isSet-C : isSet C) (isSet-A : ∀ c → isSet (A c)) (isSet-A' : ∀ c' → isSet (A' c'))
+                   (g : C → C) (f :  ∀ {c} → A c → A' (g c) ) (coh : ∀ c → (x : A c) → g (fld _ x) ≡ (fld' _ (f x))) where
+
+
+  
+
+  -- map-Linked'-map-unnamedRel : UnnamedRel (FreeCategory' fld isSet-C isSet-A) (FreeCategory' fld' isSet-C' isSet-A')
+  -- map-Linked'-map-unnamedRel =  w
+  --   where
+  --     w : UnnamedRel (FreeCategory' fld isSet-C isSet-A)
+  --           (FreeCategory' fld' isSet-C' isSet-A')
+  --     UnnamedRel.ob-≡ w = {!idfun!}
+  --     UnnamedRel.wO w = {!!}
+  --     UnnamedRel.wC w = {!!}
+  --     UnnamedRel.wD w = {!!}
+
+
+
+
+
+
 
 -- map-Linked'-map'-Mb : {C C' : Type₀}
 --                      { A : C → Type₀} {A' : C' → Type₀}
