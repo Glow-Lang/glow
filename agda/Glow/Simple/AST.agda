@@ -36,6 +36,7 @@ open import Glow.Simple.Postulates
 
 open import Glow.ListDecProps
 
+open import Cubical.Categories.Category
 
 data GType : Type₀ where
   Bool : GType 
@@ -120,30 +121,31 @@ record IsGlowTy (A : Type₀) : Type₀ where
     glowRep : GType
     -- glowRep-coh : A ≡ GTypeAgdaRep glowRep
     cast : A → GTypeAgdaRep glowRep
-
+    isSet-A : isSet A
+    
 instance
   Bool-IsGlowTy : IsGlowTy 𝟚
-  Bool-IsGlowTy = record { glowRep = Bool ; cast = idfun _}
+  Bool-IsGlowTy = record { glowRep = Bool ; cast = idfun _ ; isSet-A = isSetBool}
 
 instance
   ℤ-IsGlowTy : IsGlowTy ℤ
-  ℤ-IsGlowTy = record { glowRep = Int  ; cast = idfun _ }
+  ℤ-IsGlowTy = record { glowRep = Int  ; cast = idfun _  ; isSet-A = isSetℤ}
 
 instance
   ℕ-IsGlowTy : IsGlowTy ℕ
-  ℕ-IsGlowTy = record { glowRep = Nat  ; cast = idfun _ }
+  ℕ-IsGlowTy = record { glowRep = Nat  ; cast = idfun _  ; isSet-A = isSetℕ}
 
 instance
   Unit-IsGlowTy : IsGlowTy Unit
-  Unit-IsGlowTy = record { glowRep = Unitᵍ  ; cast = idfun _ }
+  Unit-IsGlowTy = record { glowRep = Unitᵍ  ; cast = idfun _  ; isSet-A = λ x y x₁ y₁ i i₁ → _}
 
 instance
   Dig-IsGlowTy : IsGlowTy Dig
-  Dig-IsGlowTy = record { glowRep = Digest  ; cast = idfun _ }
+  Dig-IsGlowTy = record { glowRep = Digest  ; cast = idfun _  ; isSet-A = isSet-Dig}
 
 instance
   Sig-IsGlowTy : IsGlowTy Sig
-  Sig-IsGlowTy = record { glowRep = Signature  ; cast = idfun _ }
+  Sig-IsGlowTy = record { glowRep = Signature  ; cast = idfun _  ; isSet-A = isSet-Sig}
 
 
 GTypeAgdaRep' : (Τ : GType) → IsGlowTy (GTypeAgdaRep Τ) 
@@ -153,6 +155,7 @@ GTypeAgdaRep' Nat = ℕ-IsGlowTy
 GTypeAgdaRep' Unitᵍ = Unit-IsGlowTy
 GTypeAgdaRep' Digest = Dig-IsGlowTy
 GTypeAgdaRep' Signature = Sig-IsGlowTy
+
 
 
 subst-GTypeAgdaRep : ∀ {Τ₀ Τ₁} → Τ₀ ≡ Τ₁ → GTypeAgdaRep Τ₀ → GTypeAgdaRep Τ₁
@@ -202,7 +205,6 @@ ParticipantModality = 𝟚
 honest dishonest : ParticipantModality 
 honest = true
 dishonest = false
-
 
 
 module _ (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}}
@@ -407,6 +409,9 @@ module _ (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}
       AType : ContextEntry → Type₀
       AType ce = GTypeAgdaRep (ce .type)
 
+      AhSet : ContextEntry → hSet ℓ-zero
+      AhSet ce = GTypeAgdaRep (ce .type) , IsGlowTy.isSet-A (GTypeAgdaRep' (ce .type))
+
       ce-name : ContextEntry → Identifier
       ce-name = ContextEntry'.name
 
@@ -488,6 +493,12 @@ module _ (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}
 
 
       open Context public
+
+      postulate isSet-Context : isSet Context
+      -- isSet-Context (con entries₁ scope'') (con entries₁* scope''*) p q i i₁ =
+      --    con (isOfHLevelList 0 {!!} _ _ (cong entries p) (cong entries q) i i₁ )
+      --        (isOfHLevelMaybe 0 {!!} _ _ (cong scope' p) (cong scope' q) i i₁)
+
 
       IsPrivateSymbolOf→GType : (Γ : Context) → ∀ hp → ∀ nm
                          → ⟨ IsPrivateSymbolOf Γ hp nm ⟩ → GType
@@ -615,6 +626,15 @@ module _ (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}
       Args Γ (x ∷ []) = Arg Γ x
       Args Γ (x ∷ x₁ ∷ Τs) = Arg Γ x × Args Γ (x₁ ∷ Τs)
 
+      data CtxChange (Γ : _) : Type₀ where
+                      -- warning: scope in "ce" is interpreted in unusual way!
+                      -- (TODO : consider speical type here)
+        CC-extend : (ce : ContextEntry) → (asn : PM  (AllowedScopeNarrowing Γ (scope ce) ))  → CtxChange Γ    
+        CC-makePublic : (p : HonestParticipantId) → (PrivateSymbolOf Γ p)
+                               → (PM ( IsConsensus Γ ) ) → CtxChange Γ 
+
+      postulate ctxChange : ∀ Γ → CtxChange Γ → Context
+      -- ctxChange = {!!}
 
       bindingMechanics {Γ} (BS-let ce _) = ce ∷ Γ .entries
       bindingMechanics {Γ} (BS-publish! p x) = 
@@ -672,7 +692,15 @@ module _ (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}
       IsPureStmnts []L = Unit-dp
       IsPureStmnts (h ∷L x) = ×-dp (IsPureS h) (IsPureStmnts x)
 
+      postulate isSet-Stmnt : (c : Context) → isSet (Stmnt c)
 
+
+      STMNTS : Category ℓ-zero ℓ-zero
+      STMNTS = FreeCategory' bindingMechanics' isSet-Context isSet-Stmnt
+
+
+
+ 
     toParamValue : ∀ (l : List IdentifierWithType)  → ParametersValue l →
                    ∀ Τ s → 
                    IsMemberOf (iwt s Τ) l →

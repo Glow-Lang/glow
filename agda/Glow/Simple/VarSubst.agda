@@ -11,6 +11,7 @@ open import Cubical.Foundations.Everything
 open import Cubical.Data.Nat
 open import Cubical.Data.Int
 open import Cubical.Data.Prod
+open import Cubical.Data.Sigma renaming (_×_ to _Σ×_)
 open import Cubical.Data.Sum renaming (elim to sum-elim ; rec to sum-rec ; map to sum-map)
 open import Cubical.Data.List renaming (map to map-List)
 
@@ -19,7 +20,7 @@ open import Cubical.Data.Maybe renaming (rec to recMaybe )
 open import Cubical.Data.Bool hiding (if_then_else_)  renaming (Bool to 𝟚)
 
 open import Cubical.Data.Empty renaming (elim to empty-elim ; rec to empty-rec ;  ⊥ to Empty )
-
+open import Cubical.Data.Unit
 
 open import Cubical.Data.Nat.Order.Recursive
 -- open import Cubical.Functions.Logic
@@ -41,6 +42,51 @@ open import Glow.ListDecProps
 
 open import Cubical.HITs.Interval
 
+open import Cubical.Categories.Category
+open import Cubical.Categories.Functor
+open import Cubical.Categories.Instances.Categories
+open import Cubical.Categories.Constructions.Slice
+open import Cubical.HITs.S1
+
+-- open import Glow.CategoriesMore
+-- module functorIsNotASet where
+--   isNotSet : ∀ {ℓ} → (A : Type ℓ) → Type ℓ
+--   isNotSet A = Σ A λ a → Σ ((a ≡ a) Σ× (a ≡ a)) λ x → fst x ≡ snd x → Empty
+
+--   isNotSet-S1 : isNotSet S¹
+--   fst isNotSet-S1 = base
+--   fst (snd isNotSet-S1) = refl , loop
+--   snd (snd isNotSet-S1) x = znots (injPos (cong winding x))
+
+
+--   TERMINAL : ∀ {ℓ} → Type ℓ → Category ℓ ℓ-zero
+--   Category.ob (TERMINAL A) = A
+--   Category.Hom[_,_] (TERMINAL A) _ _ = Unit
+--   Category.id (TERMINAL A) = tt
+--   Category._⋆_ (TERMINAL A) _ _ = tt
+--   Category.⋆IdL (TERMINAL A) _ = refl
+--   Category.⋆IdR (TERMINAL A) _ = refl
+--   Category.⋆Assoc (TERMINAL A) _ _ _ = refl
+--   Category.isSetHom (TERMINAL A) = isSetUnit
+
+
+--   PointFunctor : ∀ {ℓ} → (A : Type ℓ) → A → (Functor (TERMINAL A) (TERMINAL A))
+--   Functor.F-ob (PointFunctor A x) = const x
+--   Functor.F-hom (PointFunctor A x) = idfun _
+--   Functor.F-id (PointFunctor A x) = refl
+--   Functor.F-seq (PointFunctor A x) _ _ = refl
+
+--   isNotSet-Functor : ∀ {ℓ} → (A : Type ℓ) → (isNotSet A) → isNotSet (Functor (TERMINAL A) (TERMINAL A))
+--   fst (isNotSet-Functor A x) = PointFunctor _ (fst x)
+--   Functor.F-ob (fst (fst (snd (isNotSet-Functor A x))) i) _ = fst (fst (snd x)) i
+--   Functor.F-hom (fst (fst (snd (isNotSet-Functor A x))) i) = idfun _
+--   Functor.F-id (fst (fst (snd (isNotSet-Functor A x))) i) = refl
+--   Functor.F-seq (fst (fst (snd (isNotSet-Functor A x))) i) _ _ = refl
+--   Functor.F-ob (snd (fst (snd (isNotSet-Functor A x))) i) _ = snd (fst (snd x)) i
+--   Functor.F-hom (snd (fst (snd (isNotSet-Functor A x))) i) = idfun _
+--   Functor.F-id (snd (fst (snd (isNotSet-Functor A x))) i) = refl
+--   Functor.F-seq (snd (fst (snd (isNotSet-Functor A x))) i) _ _ = refl
+--   snd (snd (isNotSet-Functor A x)) x₁ = snd (snd x) λ i i₁ → Functor.F-ob ( x₁ i i₁ ) (fst x)
 
 module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}}
             {BuilitInsIndex : Type₀} {{IsDiscrete-BuilitInsIndex : IsDiscrete BuilitInsIndex}}
@@ -97,12 +143,12 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
 
              zz : NBStmnt _ → NBStmnt _ 
              zz (NBS-require! x) = NBS-require! (h-expr x)
-             zz (NBS-deposit! p {y} x) = NBS-deposit! p {y} (h-expr x)
-             zz (NBS-withdraw! p {y} x) = NBS-withdraw! p {y} (h-expr x)
-             zz (NBS-publishVal! x x₁ {y}) = (NBS-publishVal! x x₁ {y})
+             zz (NBS-deposit! p x) = NBS-deposit! p (h-expr x)
+             zz (NBS-withdraw! p x) = NBS-withdraw! p (h-expr x)
+             zz (NBS-publishVal! x x₁) = (NBS-publishVal! x x₁)
 
              z : NBStmnt+Expr _ → NBStmnt+Expr _
-             z (stmntNBS x) =  stmntNBS (zz x)
+             z (stmntNBS x {z}) =  stmntNBS (zz x) {z}
              z (exprNBS x) = exprNBS (h-expr x)
 
 
@@ -136,7 +182,7 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
           (map-Linked'-map-fold ((prependContext ce)) _ _ stmnts₁ ) (h-expr x)
         h-expr (lit x) = (AST.lit x)
         h-expr (input msg {y}) = input msg {y}
-        h-expr (receivePublished p x {y}) = receivePublished p x {y}
+        h-expr (receivePublished p {y}) = receivePublished p {y}
         h-expr (if b then t else f) = if (h-expr b) then (h-expr t) else (h-expr f)
         h-expr (AST._$'_ f xs) = AST._$'_ f (substOneArgs xs)
         h-expr (AST.sign q {y} {z}) = AST.sign (substOneArg q) {y} {z}
@@ -159,6 +205,8 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
     open AST.InteractionHead {Identifier} {builtIns = builtIns} {one} (AST.interactionHead ptps [] {_} {uniquePtps}) 
 
 
+    SUBST : Category ℓ-zero ℓ-zero
+    SUBST = FreeCategory' remSubst isSet-Context isSet-Subst
 
 
     bindingMechanics'* : (c : Σ Context Subst) → Statement* c → Σ Context Subst
@@ -174,13 +222,16 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
     bindingMechanics'-Subst r (AST.bindingS (AST.BS-publish! p x {z})) = publish-substlemma r p x z   
        
 
-
     bindingMechanics'-Subst r (AST.nonBindingS x) = r
 
     -- move as more general property to Glow.Linked' module
     mkStatements* : ∀ {Γ r} → Statements Γ → Statements* (Γ , r)
     mkStatements* []L = []L
     mkStatements* (h ∷L x) = h ∷L mkStatements*  x
+
+    fromStatements* : ∀ {Γ r} → Statements* (Γ , r) → Statements Γ
+    fromStatements* []L = []L
+    fromStatements* (h ∷L x) = h ∷L fromStatements*  x
 
 
     fold*-lemma : ∀ {Γ : Context}
@@ -252,19 +303,21 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
     substOneStmnt r (AST.bindingS (AST.BS-publish! p (AST.psof name {w}) {y})) =
       sum-elim
          (λ w → (AST.bindingS (AST.BS-publish! p (AST.psof name {proj₂ w}) {y})))
-         (λ _ → (AST.nonBindingS (AST.stmntNBS (AST.NBS-publishVal! p name {y}))))
+         (λ _ → (AST.nonBindingS (AST.stmntNBS (AST.NBS-publishVal! p name) {y})))
         (ExistFirstBy-WitchIsAlso-remSubs-lemm {p = p} _ r w) 
 
    
-    
-    substOneStmnt r (AST.nonBindingS (AST.stmntNBS (AST.NBS-require! x))) =
-                      (AST.nonBindingS (AST.stmntNBS (AST.NBS-require! (substOneExpr r x))))
-    substOneStmnt r (AST.nonBindingS (AST.stmntNBS (AST.NBS-deposit! x {z} x₁ ))) =
-                     (AST.nonBindingS (AST.stmntNBS (AST.NBS-deposit! x {z} (substOneExpr r x₁))))
-    substOneStmnt r (AST.nonBindingS (AST.stmntNBS (AST.NBS-withdraw! x {z} x₁))) =
-                    (AST.nonBindingS (AST.stmntNBS (AST.NBS-withdraw! x {z} (substOneExpr r x₁))))
-    substOneStmnt r (AST.nonBindingS (AST.stmntNBS (AST.NBS-publishVal! x y {z}))) =
-                    (AST.nonBindingS (AST.stmntNBS (AST.NBS-publishVal! x y {z})))
+    substOneStmnt r (AST.nonBindingS (stmntNBS q {z})) = (AST.nonBindingS (stmntNBS (h q) {z}))
+       where
+         h : NBStmnt _ → _
+         h (AST.NBS-require! x) =
+             (AST.NBS-require! (substOneExpr r x))
+         h (AST.NBS-deposit! x x₁) =
+             (AST.NBS-deposit! x (substOneExpr r x₁))
+         h (AST.NBS-withdraw! x x₁) =
+             (AST.NBS-withdraw! x (substOneExpr r x₁))         
+         h (AST.NBS-publishVal! x x₁) =
+             (AST.NBS-publishVal! x x₁)
     
     substOneStmnt r (AST.nonBindingS (AST.exprNBS x)) = (AST.nonBindingS (AST.exprNBS (substOneExpr r x))) 
 
@@ -286,7 +339,7 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
            ) e'
     substOneExpr r (AST.lit x) = (AST.lit x)
     substOneExpr r (AST.input x {y}) = (AST.input x {y})
-    substOneExpr r (AST.receivePublished p x {y}) = (AST.receivePublished p x {y})
+    substOneExpr r (AST.receivePublished p {y}) = (AST.receivePublished p {y})
     substOneExpr r (AST.if x then x₁ else x₂) = (AST.if (substOneExpr r x) then (substOneExpr r x₁) else (substOneExpr r x₂))
     substOneExpr r (AST._$'_ f xs) = AST._$'_ f (substOneArgs r xs)
     substOneExpr r (AST.sign q {y} {z}) = (AST.sign (substOneArg r q) {y} {z})
@@ -318,6 +371,73 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
     substOneStmnts-coh-list {Γ} r stmnts₁ =
        map-Linked'-map-fold {fld' = bindingMechanics'} (λ v → remSubst (fst v) (snd v)) (λ {ΓRec} → substOneStmnt (snd ΓRec))
                          (λ ΓRec →  substOneStmnts-coh (fst ΓRec) (snd ΓRec)) (mkStatements* {_} {r} stmnts₁)
+
+    substOneStmnts-coh-list' : ∀ {Γ} → (r : Subst Γ) → (ss : Statements* (Γ , r)) → _
+    substOneStmnts-coh-list' {Γ} r stmnts₁ =
+       map-Linked'-map-fold {fld' = bindingMechanics'} (λ v → remSubst (fst v) (snd v)) (λ {ΓRec} → substOneStmnt (snd ΓRec))
+                         (λ ΓRec →  substOneStmnts-coh (fst ΓRec) (snd ΓRec)) (stmnts₁)
+
+
+    SUBST* : Category ℓ-zero ℓ-zero
+    SUBST* = FreeCategory' bindingMechanics'* (isSetΣ isSet-Context isSet-Subst) (isSet-Stmnt ∘ fst)
+
+
+    subst-functor' : Functor _ _ -- SUBST* STMNTS
+    subst-functor' = FreCatFunct.map-Linked'-map-functor {fld = bindingMechanics'*} {fld' = bindingMechanics'}
+                       (isSetΣ isSet-Context isSet-Subst) (isSet-Stmnt ∘ fst {B = Subst}) isSet-Context isSet-Stmnt
+                          (λ v → remSubst (fst v) (snd v))
+                           (λ {ΓRec} → substOneStmnt {Γ = fst ΓRec} (snd ΓRec))
+                         (λ ΓRec →  substOneStmnts-coh (fst ΓRec) (snd ΓRec))
+
+
+    -- UR : UnnamedRel SUBST STMNTS
+    -- UR = {!!}
+      
+
+  --   -- CoSliceCat : {ℓ ℓ' : Level} (C : Category ℓ ℓ') (c₁ : C .Category.ob) → Category (ℓ-max ℓ ℓ') ℓ'
+  --   -- CoSliceCat C c = (SliceCat C c ^op) ^op
+
+  --   -- postulate isSet-SliceOb-STMNTS : ∀ x → isSet (SliceOb STMNTS x)
+
+  --   -- subst-functor : Functor SUBST (CAT ℓ-zero ℓ-zero)
+  --   -- Functor.F-ob subst-functor c = (CoSliceCat STMNTS c ) , isSet-SliceOb-STMNTS _ 
+  --   -- Functor.F-hom subst-functor {Γx} {Γy} c = w
+  --   --   where
+  --   --     w : Functor (fst (Functor.F-ob subst-functor Γx)) (fst (Functor.F-ob subst-functor Γy)) 
+  --   --     Functor.F-ob w (sliceob S-arr₁) = sliceob ({!!} , {!!})
+  --   --     Functor.F-hom w = {!!}
+  --   --     Functor.F-id w = {!!}
+  --   --     Functor.F-seq w = {!!}
+  --   -- Functor.F-id subst-functor = {!!}
+  --   -- Functor.F-seq subst-functor = {!!}
+    
+  --   -- subst*-functor-forget : Functor SUBST* STMNTS
+  --   -- Functor.F-ob subst*-functor-forget = fst
+  --   -- Functor.F-hom subst*-functor-forget x = {! (fst x)!} , {!!}
+  --   -- Functor.F-id subst*-functor-forget = {!!}
+  --   -- Functor.F-seq subst*-functor-forget = {!!}
+
+  --   -- SubstUnderFunctor : Functor {!!} {!CAT!}
+  --   -- SubstUnderFunctor = {!!}
+
+  --   -- subst-functor : Functor SUBST* STMNTS
+  --   -- Functor.F-ob subst-functor (Γ , r) = remSubst Γ r
+  --   -- fst (Functor.F-hom subst-functor {x = (_ , r)} (l , _)) = substOneStmnts r l        
+  --   -- snd (Functor.F-hom subst-functor {x = (_ , r)} (l , p)) = cong₂ remSubst (cong fst p) (cong snd p) ∙ substOneStmnts-coh-list' r l 
+  --   -- Functor.F-id subst-functor = ΣPathP (refl , (sym (doubleCompPath-filler refl refl refl)))
+  --   -- Functor.F-seq subst-functor (fst₁ , snd₁) g = ΣPathP ({!!}  , {!!})
+
+
+  --   -- subst-functor : Functor SUBST STMNTS
+  --   -- Functor.F-ob subst-functor = idfun _
+  --   -- fst (Functor.F-hom subst-functor (fst₁ , _)) = qq fst₁
+  --   --   where
+  --   --    qq : Linked' remSubst _ → Linked' bindingMechanics' _
+  --   --    qq x = {!x!}
+       
+  --   -- snd (Functor.F-hom subst-functor (fst₁ , snd₁)) = {!!}
+  --   -- Functor.F-id subst-functor = {!!}
+  --   -- Functor.F-seq subst-functor = {!!}
 
   module SubstAll {ptps : List (Identifier × ParticipantModality)} {uniquePtps : _} where
 
@@ -390,3 +510,4 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
         subst-GTypeAgdaRep p (signPrim (AST.pId-nameHon _ _ _ (IsNotConsensus→Participant
            {con [] sc}
              z)) (evalPureArg q))
+

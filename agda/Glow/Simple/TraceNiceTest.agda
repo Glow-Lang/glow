@@ -43,45 +43,80 @@ module TestTraceNice where
   -- open AST String {{String-Discrete-postulated}} one
 
 
-  open TraceNice {String} {String} {Basic-BuiltIns} {ptps =  "A" ∷ "B" ∷ []}
+  open TraceNice {String} {String} {Basic-BuiltIns} {ptps =  ("A" , honest) ∷ ("B" , honest) ∷ []}
 
-  traceTestTy : EState → Type₀
-  traceTestTy = (Trace nothing (someCode))
 
-  -- tyEvalTest : Type₀
-  -- tyEvalTest = traceTestTy (2 , (false , (true , tt)))
+  
 
-  tyEvalTest : EState → Type₀
+  module test1 where
+
+  traceTestTy : 𝟚 × Unit → EState → Type₀
+  traceTestTy = snd (genTracesType ((toProofs _ _ someInteraction))) 
+     -- (Trace nothing {!(someCode)!})
+
+  -- -- tyEvalTest : Type₀
+  -- -- tyEvalTest = traceTestTy (2 , (false , (true , tt)))
+
+  tyEvalTest : 𝟚 × Unit → EState → Type₀
     -- traceTestTy es
-  tyEvalTest es = 
-                  ΣM (Input "B" Bool)
-                    (λ x →
-                       ×M (Publish "B" "y")
-                       (ΣM
-                        (λ es →
-                           Branch (Input "A" Bool es) (Require true es)
-                           (ok-input-elim "B" Bool x))
-                        (λ x₁ →
-                           ×M (Deposit "B" 2)
-                           (ΣM (Input "A" Bool)
-                            (λ x₂ →
-                               ×M (Withdraw "A" 3) (×M (Deposit "A" 3) (Publish "A" "xx")))))))
-                    es
+  tyEvalTest (p1 , p2) es = ΣM (Input "B" Bool)
+                              (λ x →
+                                 ×M (Publish "B" "y")
+                                 (ΣM
+                                  (λ es →
+                                     Branch (Input "A" Bool es) Unit (ok-input-elim "B" Bool x and p1))
+                                  (λ x₁ →
+                                     ×M (Deposit "B" 2)
+                                     (ΣM (Input "A" Bool)
+                                      (λ x₂ →
+                                         ×M (Withdraw "A" 3) (×M (Deposit "A" 3) (Publish "A" "xx")))))))
+                              es
+
+  tyEvalTestOk : 𝟚 × Unit → Type₀
+  tyEvalTestOk (p1 , p2) = ΣM (Input "B" Bool)
+                             (λ x →
+                                ×M (Publish "B" "y")
+                                (ΣM
+                                 (λ es →
+                                    Branch (Input "A" Bool es) Unit (ok-input-elim "B" Bool x and p1))
+                                 (λ x₁ →
+                                    ×M (Deposit "B" 2)
+                                    (ΣM (Input "A" Bool)
+                                     (λ x₂ →
+                                        ×M (Withdraw "A" 3) (×M (Deposit "A" 3) (Publish "A" "xx")))))))
+                             ok
+
+  tyEvalTestFail : 𝟚 × Unit → Type₀
+  tyEvalTestFail = {!!}
+
+  --                 -- ΣM (Input "B" Bool)
+  --                 --   (λ x →
+  --                 --      ×M (Publish "B" "y")
+  --                 --      (ΣM
+  --                 --       (λ es →
+  --                 --          Branch (Input "A" Bool es) (Require true es)
+  --                 --          (ok-input-elim "B" Bool x))
+  --                 --       (λ x₁ →
+  --                 --          ×M (Deposit "B" 2)
+  --                 --          (ΣM (Input "A" Bool)
+  --                 --           (λ x₂ →
+  --                 --              ×M (Withdraw "A" 3) (×M (Deposit "A" 3) (Publish "A" "xx")))))))
+  --                 --   es
 
 
-  -- someTrace :  Σ _ (tyEvalTest)
-  -- someTrace = 
-  --     ok ,   "B" inp true
-  --           ↦ p! "B" ⤇ "y"
-  --           ↦ br-T refl 
-  --                 ("A" inp false)
-  --           ↦ d! "B" ⤇ 2
-  --           ↦ "A" inp false
-  --           ↦ w! "A" ⤆ 3
-  --           ↦ d! "A" ⤇ 3
-  --           ↦ p! "A" ⤇ "xx"
+  -- -- someTrace :  Σ _ (tyEvalTest)
+  -- -- someTrace = 
+  -- --     ok ,   "B" inp true
+  -- --           ↦ p! "B" ⤇ "y"
+  -- --           ↦ br-T refl 
+  -- --                 ("A" inp false)
+  -- --           ↦ d! "B" ⤇ 2
+  -- --           ↦ "A" inp false
+  -- --           ↦ w! "A" ⤆ 3
+  -- --           ↦ d! "A" ⤇ 3
+  -- --           ↦ p! "A" ⤇ "xx"
 
-  -- traceTestCases : tyEvalTest ok → Unit 
-  -- traceTestCases ((."B" inp x₁) ↦ (p! ."B" ⤇ ."y") ↦ br-T prf-T (."A" inp x) ↦ (d! ."B" ⤇ .2) ↦ (."A" inp x₃) ↦ (w! ."A" ⤆ .3) ↦ (d! ."A" ⤇ .3) ↦ (p! ."A" ⤇ ."xx")) = {!!}
-  -- traceTestCases ((."B" inp x₁) ↦ (p! ."B" ⤇ ."y") ↦ br-F prf-F (r! .true) ↦ (d! ."B" ⤇ .2) ↦ (."A" inp x₂) ↦ (w! ."A" ⤆ .3) ↦ (d! ."A" ⤇ .3) ↦ (p! ."A" ⤇ ."xx")) = {!!}
+  -- -- traceTestCases : tyEvalTest ok → Unit 
+  -- -- traceTestCases ((."B" inp x₁) ↦ (p! ."B" ⤇ ."y") ↦ br-T prf-T (."A" inp x) ↦ (d! ."B" ⤇ .2) ↦ (."A" inp x₃) ↦ (w! ."A" ⤆ .3) ↦ (d! ."A" ⤇ .3) ↦ (p! ."A" ⤇ ."xx")) = {!!}
+  -- -- traceTestCases ((."B" inp x₁) ↦ (p! ."B" ⤇ ."y") ↦ br-F prf-F (r! .true) ↦ (d! ."B" ⤇ .2) ↦ (."A" inp x₂) ↦ (w! ."A" ⤆ .3) ↦ (d! ."A" ⤇ .3) ↦ (p! ."A" ⤇ ."xx")) = {!!}
 

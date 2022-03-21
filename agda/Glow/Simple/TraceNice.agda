@@ -126,9 +126,9 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
               {builtIns : BuiltIns' BuilitInsIndex {{IsDiscrete-BuilitInsIndex}}} where
 
 
-  module TraceNice {ptps : List Identifier}  where
+  module TraceNice {ptps : List (Identifier × ParticipantModality)} {uniquePtps : _} where
 
-    open AST.InteractionHead {Identifier} {builtIns = builtIns} {one} (AST.interactionHead ptps []) 
+    open AST.InteractionHead {Identifier} {builtIns = builtIns} {one} (AST.interactionHead ptps [] {_} {uniquePtps}) 
 
 
     open SubstAll {Identifier} {builtIns = builtIns} {ptps = ptps}
@@ -232,7 +232,7 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
     TraceE sc (AST.body (AST.bodyR (h ∷L stmnts₁) expr₁)) x = TraceB sc h (bodyR stmnts₁ expr₁) x
     TraceE sc (AST.lit x₁) x = empty-elim (x tt)
     TraceE (just (AST.pId name)) {Τ} (AST.input x₁) x = Input name Τ  , ok-input-elim _ _
-    TraceE sc {Τ} (AST.receivePublished (AST.pId name) x₁) x = ReceivePublished name Τ  , ok-rec-elim _ _
+    TraceE sc {Τ} (AST.receivePublished (AST.pId name)) x = ReceivePublished name Τ  , ok-rec-elim _ _
     TraceE sc (AST.if e then e₁ else e₂) x = h (proj₁ (snd (IsPureE e₁))) (proj₁ (snd (IsPureE e₂)))
       where
         h' : Σ (EState → Type) (λ x₁ → x₁ ok → GTypeAgdaRep _)
@@ -300,7 +300,7 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
     genTracesType : AST.Interaction Identifier builtIns one → Σ Type₀ λ x → x → EState → Type₀ 
     genTracesType (AST.interaction head code) =
        AST.ParametersValue Identifier builtIns one (AST.InteractionHead.parameters head) ,
-          λ paramsV → TraceNice.Trace {(AST.InteractionHead.participants head)} nothing (paramSubst paramsV code)
+          λ paramsV → TraceNice.Trace {(AST.InteractionHead.participantsWM head)} nothing (paramSubst paramsV code)
 
 
   open Helpers public
