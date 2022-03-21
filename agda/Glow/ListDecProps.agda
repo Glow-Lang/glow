@@ -644,6 +644,7 @@ module _ {ℓ} {A C D : Type ℓ} (B' : D → A → Type ℓ) {{IsDiscrete-C : I
         λ (c , d) → Sum→B (ExistFirstBy ((c ≡_) ∘ toC) WitchIsAlso (B' d) (x ∷ l)))
            λ x₁ → BTFS k (rem-Ex (inr (snd x₁)))
 
+
   tailBTFS : ∀ {k l} → ∀ {a} → BTFS k l  → BTFS k (a ∷ l)  
   tailBTFS {zero} {l} = const _
   tailBTFS {suc k} {l} = inl 
