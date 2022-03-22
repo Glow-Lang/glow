@@ -13,16 +13,17 @@
 
 (def pure-stmt list)
 
-;; project : ModuleStx UnusedTable CheckpointInfoTable -> ModuleStx
+;; project : ModuleStx UnusedTable CheckpointInfoTable TypeTable -> (values ModuleStx TypeTable)
 ;; Expect:
 ;;   exactly 1 (def id (@make-interacation ((@list participant ...)) . _))
 ;;   any number of non-def-interaction staments
-(def (project prog unused cpit)
+(def (project prog unused cpit tytbl)
   (parameterize ((current-unused-table unused))
     (syntax-case prog (@module)
       ((@module begin-end stmt ...)
        (let ((stmts (syntax->list #'(stmt ...))))
-         (retail-stx prog (cons #'begin-end (project-body stmts cpit #f))))))))
+         (values (retail-stx prog (cons #'begin-end (project-body stmts cpit #f)))
+                 tytbl))))))
 
 ;; --------------------------------------------------------
 

@@ -92,6 +92,8 @@
 (define-layer schema.sexp read-sexp-module write equal?)
 (define-layer schema.json read write-json equal?)
 
+(define-layer finaltypetable.sexp read-type-table-file write-type-table type-table=?)
+
 ;;; Passes
 
 ;; TODO: *Parsing*: transform the original source code into syntax objects.
@@ -149,7 +151,7 @@
 ;; *Safety properties*:
 
 ;; *Projection*: contract and participants in a single file
-(define-pass project (checkpointify.sexp Unused cpitable2.sexp) (project.sexp))
+(define-pass project (checkpointify.sexp Unused cpitable2.sexp typetable.sexp) (project.sexp finaltypetable.sexp))
 
 ;; *User Interface Integration*: extract UI schema from contract
 (define-pass schema (project.sexp albatable.sexp typetable.sexp) (schema.json))

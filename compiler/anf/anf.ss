@@ -51,7 +51,7 @@
 (def (tmp-var tag) (hash-ensure-ref (current-tmp) tag (cut identifier-fresh 'tmp)))
 (def (deftmp tag expr)
   (with-syntax ((v (tmp-var tag)) (e expr))
-    (set-has-type! #'v (get-has-type #'e))
+    (has-same-type! #'v #'e)
     (restx1 tag #'(def v e))))
 
 (def (anf-kontinue-expr k x acc)
@@ -121,7 +121,7 @@
 (def (anf-tmpify expr stmts)
   (def stmts2 (anf-stmt (restx1 expr [#'new expr]) expr stmts))
   (def t (tmp-var expr))
-  (set-has-type! t (get-has-type expr))
+  (has-same-type! t expr)
   (values t stmts2))
 
 ;; anf-arg-exprs : [Listof ExprStx] [Listof StmtStx] -> [Listof TrivialExprStx] [Listof StmtStx]
@@ -163,7 +163,7 @@
     ((return)
      (with-syntax ((t (identifier-fresh #'tmp))
                    (e expr))
-       (set-has-type! #'t (get-has-type #'e))
+       (has-same-type! #'t #'e)
        (cons* #'(return t) #'(def t e) acc)))
     ((x ...) (anf-kontinue-expr k expr acc))))
 

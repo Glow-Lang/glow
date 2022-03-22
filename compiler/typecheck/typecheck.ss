@@ -1209,7 +1209,7 @@
 (def (tc-switch-cases part env valts stxs)
   (with (((typing-scheme valnenv valty) valts)
          ([nenvs ntypes ptypes]
-          (transpose/nlist 3 (map (cut tc-switch-case part env <>) stxs))))
+          (transpose/nlist 3 (map (cut tc-switch-case part env valts <>) stxs))))
     (def ntype (types-meet ntypes))
     (def ptype (types-join ptypes))
     (def nenv (menvs-meet (cons valnenv nenvs)))
@@ -1219,12 +1219,14 @@
     (def bity (biunify [(constraint:subtype valty ntype)] empty-symdict))
     (typing-scheme-bisubst bity before-ts)))
 
-;; tc-switch-case : MPart Env SwitchCaseStx -> (list MonoEnv NType PType)
-(def (tc-switch-case part env stx)
+;; tc-switch-case : MPart Env TypingScheme SwitchCaseStx -> (list MonoEnv NType PType)
+(def (tc-switch-case part env valts stx)
   (syntax-case stx ()
     ((pat body ...)
-     (with (((pat-typing-scheme nenv1 ntype pattys)
+     (with (((typing-scheme valnenv valty) valts)
+            ((pat-typing-scheme nenv1 ntype pattys)
              (tc-pat part env #'pat)))
+       (def patrecordtype (type:record (list->symdict pattys)))
        (def xs (map car pattys))
        ;; each pattern-variable gets unknown
        (def env/patvars
@@ -1232,17 +1234,27 @@
           env
           (map (cut cons <> (entry:unknown part)) xs)))
        (with (((typing-scheme nenv2 ptype) (tc-body part env/patvars #'(body ...))))
-         (def nenv3 (menv-meet nenv1 nenv2))
+         (def nenv3 (menvs-meet [valnenv nenv1 nenv2]))
          ;; unify pattys with their respective tys in nenv3
-         (def bity (biunify (for/collect ((e pattys))
+         (def bity (biunify (cons
+                             (constraint:subtype valty ntype)
+                             (for/collect ((e pattys))
                               (with (((cons x ty) e))
-                                (constraint:subtype ty (symdict-get nenv3 x ntype:top))))
+                                (constraint:subtype ty (symdict-get nenv3 x ntype:top)))))
                             empty-symdict))
          ;; remove the pattys before passing the final nenv up
          (def nenv (for/fold (acc nenv3) ((x xs))
                      (symdict-remove acc x)))
          ;; apply the bisubstitution to the final nenv, the ntype, and the ptype
-         [(menv-bisubst bity nenv) (ntype-bisubst bity ntype) (ptype-bisubst bity ptype)])))))
+         (def nenv* (menv-bisubst bity nenv))
+         (def ntype* (ntype-bisubst bity ntype))
+         (def ptype* (ptype-bisubst bity ptype))
+         (def patrecordtype* (ptype-bisubst bity patrecordtype))
+         (set-has-typing-scheme stx (typing-scheme nenv* (type:arrow [ntype*] (type:tuple [patrecordtype* ptype*]))))
+         ;(for ((e pattys))
+         ;  (with (((cons x ty) e))
+         ;    (set-has-typing-scheme x (typing-scheme nenv* (ptype-bisubst bity ty)))))
+         [nenv* ntype* ptype*])))))
 
 ;; tc-pat : MPart Env PatStx -> PatTypingScheme
 ;; Produces the most permissive type for the pattern

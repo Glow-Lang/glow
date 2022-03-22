@@ -8,9 +8,11 @@
         make-has-type-table
         current-has-type-table
         set-has-type!
-        get-has-type)
+        get-has-type
+        has-same-type!)
 
-(import <expander-runtime>)
+(import <expander-runtime>
+        :std/format)
 
 (def is-type-table (make-hash-table-eq weak-keys: #t))
 (def has-typing-scheme-table (make-hash-table-eq weak-keys: #t))
@@ -50,7 +52,11 @@
 (def (make-has-type-table) (make-hash-table))
 (def current-has-type-table (make-parameter (make-has-type-table)))
 (def (set-has-type! e t)
+  (unless t (error (format "set-has-type!: #f for ~s" (syntax->datum e))))
   (hash-put! (current-has-type-table) (syntax->datum e) t))
 (def (get-has-type e)
   (hash-get (current-has-type-table) (syntax->datum e)))
 
+(def (has-same-type! new old)
+  (def t (get-has-type old))
+  (when t (set-has-type! new t)))

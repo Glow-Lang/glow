@@ -461,7 +461,8 @@
     ((@app-ctor f a ...)
      (ac-pat-app-ctor env stx))
     ((f a ...) (and (identifier? #'f) (bound-as-ctor? env (syntax-e #'f)))
-     (ac-pat-app-ctor env (intro-app-ctor stx)))))
+     (ac-pat-app-ctor env (intro-app-ctor stx)))
+    (_ (error (format "alpha-convert-pat: unknown pattern ~s" (syntax->datum stx))))))
 
 ;; ac-pat-var-pat : Env PatStx -> (values Env PatStx)
 (def (ac-pat-var-pat env stx)
@@ -478,7 +479,10 @@
     ((_ f a ...) (and (identifier? #'f) (bound-as-ctor? env (syntax-e #'f)))
      (with-syntax ((f2 (identifier-refer env #'f)))
        (let-values (((env2 ps2) (ac-pats-meet env (syntax->list #'(a ...)))))
-         (values env2 (retail-stx stx (cons #'f2 ps2))))))))
+         (values env2 (retail-stx stx (cons #'f2 ps2))))))
+    ((_ f a ...) (identifier? #'f)
+     (error (format "ac-pat-app-ctor: expected ~a bound-as-ctor, given ~s" (syntax-e #'f) (symdict-get env (syntax-e #'f)))))
+    (_ (error (format "ac-pat-app-ctor: unknown pattern ~s" (syntax->datum stx))))))
 
 ;; ac-pat-simple-seq : Env PatStx -> (values Env PatStx)
 ;; the env result contains only the new symbols introduced by the pattern
