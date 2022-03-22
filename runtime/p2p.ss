@@ -12,6 +12,7 @@
   :std/sugar
   :std/format
   :std/os/pid
+  :std/srfi/13
   :clan/debug
   :clan/exception
   :gerbil/gambit/exceptions
@@ -30,6 +31,7 @@
   :vyzo/libp2p/daemon)
 
 
+(def POLL_MAX_WINDOW 10)
 
 
 ;;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Direct p2p communication methods
@@ -63,7 +65,7 @@
 ;; If the other participant is not online,
 ;; it will poll until `timeout' seconds.
 (def (libp2p-connect/poll libp2p-client peer-multiaddr max-retries: (max-retries 10))
-  (retry retry-window: 1 max-window: 10 max-retries: max-retries
+  (retry retry-window: 1 max-window: POLL_MAX_WINDOW max-retries: max-retries
          (lambda ()
            (displayln "Trying to connect to peer...")
            (libp2p-connect libp2p-client peer-multiaddr))))
@@ -141,18 +143,19 @@
 ;;
 ;; sub : the pubsub chat channel
 ;; c : your libp2p client
-;; peer0x : the peer you are waiting for to come online
+;; peeraddr : the peer you are waiting for to come online
 ;;
 ;; ask everyone in pubsub channel to IDENTIFY, then read messages until you see one matching peer0x
 ;; block until peerID is found
 ;; TODO: verify that peer0x comes from correct sender
-;; returns the peer-ID related to peer0x
+;; returns the peer-ID related to peeraddr
 (def (get-peerID-from-pubsub sub
                              c
-                             peer0x
+                             peeraddr
                              timeout)
   (pubsub-publish c "chat" (string->bytes "IDENTIFY"))
 
+  (def peer0x (0x<-address peeraddr))
   (let lp ()
     (let ((m (channel-get sub 5)))
       (if m
@@ -170,6 +173,10 @@
           (error "Timeout when getting peerID from pubsub"))))))
 
 
+;; libp2p-error:dial-to-self-attempted? : Any -> Bool
+(def (libp2p-error:dial-to-self-attempted? e)
+  (and (libp2p-error? e)
+       (string-contains (error-message e) "dial to self attempted")))
 
 
 ;;~~~~~~~~~~~~~~~~~~~~~~~~~~ Glow Bootstrap Node Methods for testing ~~~~~~~~~~~~~~~~~~~

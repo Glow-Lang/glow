@@ -106,6 +106,7 @@
        (def b-pet-after (eth_getBalance b-address 'latest))
 
        ;; TODO: balances in both assets PET and QASPET
+       (def PET (lookup-asset 'PET))
        (DDT "DApp completed"
             (.@ PET .string<-) a-pet-before
             (.@ PET .string<-) b-pet-before

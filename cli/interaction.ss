@@ -442,8 +442,12 @@
       (cond 
         ;;  - yes: check match, FOR NOW: error on mismatch, TODO LATER: possible negotiations on failure
         (other-agreement 
-         (unless (equal? agreement other-agreement)
-           (error "start-interaction/generate-agreement: generated agreement doesn't match received agreement"))
+         (unless (equal? (json<- InteractionAgreement agreement)
+                         (json<- InteractionAgreement other-agreement))
+           (DDT "agreements-mismatch: generated agreement doesn't match received agreement"
+             InteractionAgreement agreement
+             InteractionAgreement other-agreement)
+           (error "start-interaction/generate-agreement: generated agreement doesn't match received agreement" agreement other-agreement))
          (values agreement selected-role))
         ;;  - no: send now
         (else
