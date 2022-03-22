@@ -36,7 +36,8 @@
   (def modstx (hash-ref state 'checkpointify.sexp))
   (def unused (hash-ref state 'Unused))
   (def cpit (hash-ref state 'cpitable2.sexp))
-  (def scmstx (project modstx unused cpit))
+  (def tytbl1 (hash-ref state 'typetable.sexp))
+  (defvalues (scmstx tytbl2) (project modstx unused cpit tytbl1))
   (printf "~y" (syntax->datum scmstx))
   #t)
 

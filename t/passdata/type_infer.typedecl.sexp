@@ -31,7 +31,7 @@
                              (@list (type:var 'v1))
                              (ntype:intersection
                               (@list (type:var 'p1) (type:name 'Bool))))))
-                    (ntype:intersection (@list (type:var 'v0) (type:var 'v1) (type:var 'v2)))
+                    (ntype:intersection (@list (type:var 'v2) (type:var 'v0) (type:var 'v1)))
                     (type:var 'd0))
              (ptype:union (@list (type:var 'v2) (type:var 'd0)))))))
          ('pick_one

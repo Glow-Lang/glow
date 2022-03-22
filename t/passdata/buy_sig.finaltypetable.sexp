@@ -5,6 +5,7 @@
       (isValidSignature (type:arrow (@list (type:name 'Participant) (type:name 'Digest) (type:name 'Signature)) (type:name 'Bool)))
       (price (type:name-subtype 'Nat (type:name 'Int)))
       (signature (type:name 'Signature))
+      (tmp (type:name 'Bool))
       ((@app isValidSignature Seller digest0 signature) (type:name 'Bool))
       ((@make-interaction
         ((@record (participants (@list Buyer Seller)) (assets (@list DefaultToken))))

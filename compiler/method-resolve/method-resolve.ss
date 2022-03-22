@@ -30,6 +30,7 @@
         :mukn/glow/compiler/syntax-context
         (for-template :mukn/glow/compiler/syntax-context)
         :mukn/glow/compiler/alpha-convert/fresh
+        (only-in :mukn/glow/compiler/alpha-convert/alpha-convert pattern-variable-symbols)
         :mukn/glow/compiler/typecheck/type
         :mukn/glow/compiler/typecheck/stx-prop
         :mukn/glow/compiler/common)
@@ -115,7 +116,7 @@
   (syntax-case stx ()
     ((d x mt expr)
      (let ((expr* (mr-expr #'expr)))
-       (set-has-type! #'x (get-has-type expr*))
+       (has-same-type! #'x expr*)
        [(retail-stx stx [#'x expr*])]))))
 
 ;; get/compute-has-type : ExprStx -> (U Type #f)
@@ -123,13 +124,15 @@
   (or (get-has-type stx)
       (let ((ts (get-has-typing-scheme stx)))
         (unless ts (raise-syntax-error #f "typing scheme not found" stx))
-        (resolve-type/scheme ts))))
+        (def t (resolve-type/scheme ts))
+        (when t (set-has-type! stx t))
+        t)))
 
 ;; mr-expr : ExprStx -> ExprStx
 (def (mr-expr stx)
   (def t (get/compute-has-type stx))
   (def stx* (mr-expr* stx))
-  (set-has-type! stx* t)
+  (when t (set-has-type! stx* t))
   stx*)
 (def (mr-expr* stx)
   (syntax-case stx (ann @make-interaction @tuple @list @record @dot @dot/type block splice if switch λ == input require! assert! deposit! withdraw! digest sign @app-ctor @app)
@@ -171,12 +174,10 @@
         body
         ...)
      (let ((xs (mr-params #'params)))
+       (def pxs (append (syntax->list #'(p ...)) (syntax->list xs)))
        (def t (get/compute-has-type stx))
        (def pxts (arg-types t))
-       (for-each set-has-type!
-                 (append (syntax->list #'(p ...))
-                         (syntax->list xs))
-                 pxts)
+       (for-each set-has-type! pxs pxts)
        (def r
          (retail-stx stx
            (cons* #'((@record (participants (@list p ...)) (assets (@list a ...))))
@@ -228,7 +229,10 @@
 
 ;; mr-switch-case : SwCaseStx -> SwCaseStx
 (def (mr-switch-case stx)
-  (retail-stx stx (mr-body (stx-cdr stx))))
+  (with (((type:arrow [_] (type:tuple [(type:record b) _])) (get/compute-has-type stx)))
+    (for ((x (symdict-keys b)))
+      (set-has-type! x (symdict-ref b x)))
+    (retail-stx stx (mr-body (stx-cdr stx)))))
 
 ;; --------------------------------------------------------
 
@@ -248,7 +252,8 @@
        (flatten1 (map type-vars other-ts)))
      (def t-vars (type-vars t))
      (cond
-       ((andmap (lambda (v) (not (member v other-t-vars))) t-vars)
+       ((and (andmap (lambda (v) (not (member v other-t-vars))) t-vars)
+             (andmap get-has-type var-xs))
         (type-subst (list->symdict
                      (for/collect ((x var-xs))
                        (cons (type:var-sym (symdict-ref menv x))

@@ -444,7 +444,8 @@
                                    (symdict-keys flds))))
     ((type:arrow as b) (cons '-> (append1 (map type->sexpr as) (type->sexpr b))))
     ((ptype:union ts) (cons '∪ (map type->sexpr ts)))
-    ((ntype:intersection ts) (cons '∩ (map type->sexpr ts)))))
+    ((ntype:intersection ts) (cons '∩ (map type->sexpr ts)))
+    (_ (error (format "type->sexpr: unknown type ~r" t)))))
 
 ;; type-variance-pair->sexpr : TypeVariancePair -> Sexpr
 ;; A human-readable form, no disciction between covariant and contravariant
@@ -474,7 +475,8 @@
     ((type:record flds) `(type:record ,((symdict->repr-sexpr type->repr-sexpr) flds)))
     ((type:arrow as b) `(type:arrow ,(list->repr-sexpr as type->repr-sexpr) ,(type->repr-sexpr b)))
     ((ptype:union ts) `(ptype:union ,(list->repr-sexpr ts type->repr-sexpr)))
-    ((ntype:intersection ts) `(ntype:intersection ,(list->repr-sexpr ts type->repr-sexpr)))))
+    ((ntype:intersection ts) `(ntype:intersection ,(list->repr-sexpr ts type->repr-sexpr)))
+    (_ (error (format "type->repr-sexpr: unknown type ~a" (type->string t))))))
 
 ;; type-variance-pair->repr-sexpr : TypeVariancePair -> Sexpr
 ;; A lossless s-expression representation in "repr" style
