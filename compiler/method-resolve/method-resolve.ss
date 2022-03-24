@@ -176,14 +176,13 @@
      (let ((xs (mr-params #'params)))
        (def pxs (append (syntax->list #'(p ...)) (syntax->list xs)))
        (def t (get/compute-has-type stx))
-       (def pxts (arg-types t))
-       (for-each set-has-type! pxs pxts)
+       (when t (for-each set-has-type! pxs (arg-types t)))
        (def r
          (retail-stx stx
            (cons* #'((@record (participants (@list p ...)) (assets (@list a ...))))
                   xs
                   (mr-body (syntax->list #'(body ...))))))
-       (set-has-type! r t)
+       (when t (set-has-type! r t))
        r))))
 
 ;; mr-expr-lambda : ExprStx -> ExprStx
@@ -192,10 +191,9 @@
     ((_ params out-type body ...)
      (let ((xs (mr-params #'params)))
        (def t (get/compute-has-type stx))
-       (def xts (arg-types t))
-       (for-each set-has-type! (syntax->list xs) xts)
+       (when t (for-each set-has-type! (syntax->list xs) (arg-types t)))
        (def r (retail-stx stx (cons* xs (mr-body (syntax->list #'(body ...))))))
-       (set-has-type! r t)
+       (when t (set-has-type! r t))
        r))))
 
 ;; mr-params : ParamsStx -> [StxListof Id]
@@ -229,14 +227,16 @@
 
 ;; mr-switch-case : SwCaseStx -> SwCaseStx
 (def (mr-switch-case stx)
-  (with (((type:arrow [_] (type:tuple [(type:record b) _])) (get/compute-has-type stx)))
-    (for ((x (symdict-keys b)))
-      (set-has-type! x (symdict-ref b x)))
-    (retail-stx stx (mr-body (stx-cdr stx)))))
+  (def t (get/compute-has-type stx))
+  (when t
+    (with (((type:arrow [_] (type:tuple [(type:record b) _])) t))
+      (for ((x (symdict-keys b)))
+        (set-has-type! x (symdict-ref b x)))))
+  (retail-stx stx (mr-body (stx-cdr stx))))
 
 ;; --------------------------------------------------------
 
-;; resolve-type/scheme : TypingScheme -> Type
+;; resolve-type/scheme : TypingScheme -> Type | #f
 (def (resolve-type/scheme ts)
   (def ts* (typing-scheme-simplify ts))
   (match ts*
@@ -260,11 +260,7 @@
                              (get-has-type x))))
                     t))
        (else
-        (printf "resolve-type/scheme: TODO ~a\n"
-                (filter (cut member <> other-t-vars) t-vars))
-        (print-typing-scheme ts*)
-        (newline)
-        t)))))
+        #f)))))
 
 ;; arg-types : Type -> [Listof Type]
 (def (arg-types t)

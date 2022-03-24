@@ -8,6 +8,7 @@
         :mukn/glow/compiler/syntax-context
         :mukn/glow/compiler/common
         :mukn/glow/compiler/alpha-convert/fresh
+        :mukn/glow/compiler/typecheck/stx-prop
         :mukn/glow/compiler/checkpointify/checkpointify
         :clan/base)
 
@@ -22,8 +23,9 @@
     (syntax-case prog (@module)
       ((@module begin-end stmt ...)
        (let ((stmts (syntax->list #'(stmt ...))))
-         (values (retail-stx prog (cons #'begin-end (project-body stmts cpit #f)))
-                 tytbl))))))
+         (def proj (retail-stx prog (cons #'begin-end (project-body stmts cpit #f))))
+         (values proj
+                 (relevant-type-table proj tytbl)))))))
 
 ;; --------------------------------------------------------
 
@@ -133,3 +135,14 @@
      (restx stx
             (cons #'pat
                   (project-body #'(body ...) cpit this-p))))))
+
+;; --------------------------------------------------------
+
+;; relevant-type-table : Stx TypeTable -> TypeTable
+(def (relevant-type-table stx old)
+  (def new (make-has-type-table))
+  (let loop ((stx stx))
+    (def t (get-has-type stx table: old))
+    (when t (set-has-type! stx t table: new))
+    (on-substx stx loop))
+  new)
