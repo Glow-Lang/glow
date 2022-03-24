@@ -39,7 +39,7 @@ open import Glow.Simple.VarSubst
 open import Glow.Simple.ParamsSubst
 
 -- open import Glow.Simple.Monad
-
+open import Glow.ListDecProps
 
 open import Cubical.HITs.Interval
 
