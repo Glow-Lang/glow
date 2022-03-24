@@ -120,6 +120,14 @@
          (else
           (stx-sexpr=?/recur a b stx-deep-source=?)))))
 
+;; on-substx : Stx [Stx -> Any] -> Void
+(def (on-substx stx f)
+  (cond
+    ((stx-list? stx) (stx-for-each f stx))
+    ((stx-pair? stx) (f (stx-car stx)) (f (stx-cdr stx)) (void))
+    ((stx-leaf? stx) (void))
+    (else (error "on-substx: unknown syntax structure" (syntax->datum stx)))))
+
 ;; TODO: do we need to properly parameterize the context (?)
 (def (read-sexp-module file)
   ; (first-and-only (read-syntax-from-file file)))
