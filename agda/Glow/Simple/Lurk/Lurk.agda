@@ -25,7 +25,7 @@ open import Cubical.Data.Empty renaming (elim to empty-elim ; rec to empty-rec ;
 
 
 
-module Abstract where
+module Safe where
 
   postulate Program : Type₀
 
@@ -34,15 +34,15 @@ module Abstract where
   postulate Verifier : Program → Type₀
   postulate Prover : Program → Type₀
 
-  postulate Proof : (p : Program) → Arguments p → Type₀
+  postulate Proof : {p : Program} → Arguments p → Type₀
 
-  postulate verify : (p : Program)  → Verifier p → Arguments p → 𝟚
-
-
-
-module Concrete where
+  postulate verify : {p : Program}  → Verifier p → Arguments p → 𝟚
 
 
+
+module Unsafe where
+
+-- TODO : rename arguments to input
   postulate Program : Type₀
 
   postulate Arguments : Type₀
