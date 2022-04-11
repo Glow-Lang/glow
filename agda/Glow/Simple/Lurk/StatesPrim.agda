@@ -1,5 +1,5 @@
 {-# OPTIONS --cubical  #-}
-module Glow.Simple.Lurk.States where
+module Glow.Simple.Lurk.StatesPrim where
 
 open import Agda.Builtin.String
 open import Agda.Builtin.Char
@@ -62,6 +62,7 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
       open AST.InteractionHead {Identifier} {builtIns = builtIns} {one} (AST.interactionHead ptps [] {_} {uniquePtps}) 
 
 
+
       open SubstAll {Identifier} {builtIns = builtIns} {ptps = ptps}
       open SubstOne {Identifier} {builtIns = builtIns} {ptps = ptps}
 
@@ -85,13 +86,12 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
       record TranslationReady : Type₀ where
         field
           numberOfStates : ℕ
-        StateId = Fin (suc numberOfStates)
-        StateId' = Fin (numberOfStates)
+        StateId = Fin (numberOfStates)
 
         field
-          stateInfo : StateId' → StateInfo
+          stateInfo : StateId → StateInfo
         stateContextVarsAll : StateId → List (GType × Identifier)
-        stateContextVarsAll = sum-rec (const []) (stateContextVars ∘ stateInfo) ∘  (Iso.fun (Fin+≅Fin⊎Fin 1 numberOfStates))
+        stateContextVarsAll = (stateContextVars ∘ stateInfo)
         -- ... | inl x₁ = []
         -- ... | inr x = let si = stateInfo x
         --               in (stateContextVars si)
@@ -116,21 +116,30 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
       stateInfo emptyTranslationReady = empty-rec ∘ ¬Fin0
       reachableStates emptyTranslationReady _ = []
       
+      TRS = Σ TranslationReady OpenStates
+
+      compTRS : List TRS → TRS → TRS
+      compTRS hs t = {!!}
+
+      postulate never : Empty 
 
 
       {-# TERMINATING #-}
       foldTR : Statements (con [] nothing) → TranslationReady
 
-      foldTRB : Σ TranslationReady OpenStates
-                      → ∀ {Τ} → (s : Stmnt (con [] nothing))
-                      → (bd : Body (bindingMechanics' _ s ) Τ)
-                      → IsEmpty ⟨ IsPureE (body (AST.bodyR (s ∷L (stmnts bd)) (expr bd))) ⟩ 
-                      → Σ TranslationReady OpenStates
+      foldTRB : ∀ {Τ} → (s : Stmnt (con [] nothing))
+                → (bd : Body (bindingMechanics' _ s ) Τ)
+                → IsEmpty ⟨ IsPureE (body (AST.bodyR (s ∷L (stmnts bd)) (expr bd))) ⟩ 
+                → TRS
+
+      foldTRE : ∀ {Τ} → (e : Expr (con [] nothing) Τ)
+                → IsEmpty ⟨ IsPureE e ⟩ 
+                → TRS
 
 
       foldTR []L = emptyTranslationReady
       foldTR (h ∷L x) with proj₁ (snd (IsPureS h))
-      ... | no ¬p = {!!}
+      ... | no ¬p = fst (foldTRB h (AST.bodyR x (lit tt)) (¬p ∘ proj₁ ∘ proj₁))
       ... | yes p with h
       ... | AST.bindingS (AST.BS-let ce x₁) =
                   let y = (substOneStmnts (inl (evalPureExpr x₁ p)) (mkStatements* x))
@@ -138,20 +147,22 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
       ... | AST.nonBindingS x₁ = foldTR x
 
 
-      foldTRB _ {Τ} (AST.bindingS (AST.BS-let ce x₁)) bo@(AST.bodyR stmnts₁ expr₁) xx with (proj₁ (snd (IsPureE x₁)))
+      foldTRB {Τ} (AST.bindingS (AST.BS-let ce x₁)) bo@(AST.bodyR stmnts₁ expr₁) xx with (proj₁ (snd (IsPureE x₁)))
       ... | yes p =
          let v = evalPureExpr x₁ p
-         in {!!}
+         in foldTRE ((substOneExpr (inl v) (body bo))) λ _ → never
       ... | no ¬p with (proj₁ (snd (IsPureE (body bo))))
       ... | yes p = {!!}
       ... | no ¬p₁ = {!!}
 
-      foldTRB _ (AST.bindingS (AST.BS-publish! p (AST.psof name {()}))) (AST.bodyR stmnts₁ expr₁) x₁
+      foldTRB (AST.bindingS (AST.BS-publish! p (AST.psof name {()}))) (AST.bodyR stmnts₁ expr₁) x₁
 
-      foldTRB _ s@(AST.nonBindingS y) bo@(AST.bodyR stmnts₁ expr₁) xx with (proj₁ (snd (IsPureS s))) | (proj₁ (snd (IsPureE (body bo)))) 
+      foldTRB s@(AST.nonBindingS y) bo@(AST.bodyR stmnts₁ expr₁) xx with (proj₁ (snd (IsPureS s))) | (proj₁ (snd (IsPureE (body bo)))) 
       ... | yes p | _ = {!!}
       ... | no ¬p | yes p = {!!}
       ... | no ¬p | no ¬p₁ = {!!}
 
+  
+      foldTRE e x = {!!}
 
 

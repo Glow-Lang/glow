@@ -40,6 +40,7 @@ open import Glow.Simple.ASTDef
 
 
 
+
 open AST-String zero
 
 -- module AST' = AST-String one
@@ -131,6 +132,106 @@ someCode : Linked'
              (AST.Interaction.emptyContext
               (toProofs String Basic-BuiltIns someInteraction)) 
 someCode = AST.Interaction.code (toProofs _ _ someInteraction) 
+
+-- (let ((xx (if (and y b2) (let ((z nil)) z) (let ((q nil)) t)))) xx)
+
+coinFlip : Interaction
+coinFlip =  
+   interaction⟨   ("A" , honest) ∷ ("B" , honest) ∷ [] , "wagerAmount" ∶ Nat ∷ "escrowAmount" ∶ Nat ∷  [] ⟩ (
+        at "A" set "randA" ∶ Nat ≔ input "enter random value" ;
+        at "A" set "commitment" ∶ Digest ≔  "digestNat" $ var-a (dsot "randA")  ;
+        publish! "A" ⟶ "commitment" ;
+        deposit! "A" ⟶ ("+ℕ" $ (var-a (dsot "wagerAmount") , var-a (dsot "escrowAmount"))) ;
+        at "B" set "randB" ∶ Nat ≔ input "enter random value" ;        
+        publish! "B" ⟶ "randB" ;
+        deposit! "B" ⟶ (v "wagerAmount") ;
+        publish! "A" ⟶ "randA" ;
+        set "mbCommitment" ∶ Digest ≔  "digestNat" $ var-a (dsot "randA")  ;
+        require! ("==Digest" $ (var-a (dsot "commitment") , var-a (dsot "mbCommitment"))) ;
+        set "n0" ∶ Nat ≔ ("^^^" $ (va "randA" , va "randB")) ;
+        set "n1" ∶ Nat ≔ ("&&&" $ (va "n0" , lit-a 1)) ;'
+        nonBindingS (exprNBS (( if "==Nat" $ ((va "n1") , lit-a 0) 
+           then
+              (
+               set "w1" ∶ Nat ≔ ("*ℕ" $ (lit-a 2 , va "wagerAmount")) ;
+               set "w2" ∶ Nat ≔ ("+ℕ" $ (va "w1" , va "escrowAmount")) ;'             
+               withdraw! "A" ⟵ v "w2" ;b
+               < tt >
+            )
+           else (
+               set "w1" ∶ Nat ≔ ("*ℕ" $ (lit-a 2 , va "wagerAmount")) ;
+               withdraw! "B" ⟵ v "w1" ;'
+               withdraw! "A" ⟵ v "escrowAmount" ;b
+               < tt >
+            ))))
+        )
+
+
+coinFlipConsensus : Interaction
+coinFlipConsensus =  
+   interaction⟨   ("A" , dishonest) ∷ ("B" , dishonest) ∷ [] , "wagerAmount" ∶ Nat ∷ "escrowAmount" ∶ Nat ∷  [] ⟩ (
+        set "commitment" ∶ Digest ≔ receivePublished (pId "A") ;
+        deposit! "A" ⟶ ("+ℕ" $ (var-a (dsot "wagerAmount") , var-a (dsot "escrowAmount"))) ;
+        set "randB" ∶ Nat ≔ receivePublished (pId "B")  ;                
+        deposit! "B" ⟶ (v "wagerAmount") ;
+        set "randA" ∶ Nat ≔  receivePublished (pId "A")   ;
+        set "mbCommitment" ∶ Digest ≔  "digestNat" $ var-a (dsot "randA")  ;
+        require! ("==Digest" $ (var-a (dsot "commitment") , var-a (dsot "mbCommitment"))) ;
+        set "n0" ∶ Nat ≔ ("^^^" $ (va "randA" , va "randB")) ;
+        set "n1" ∶ Nat ≔ ("&&&" $ (va "n0" , lit-a 1)) ;'
+        nonBindingS (exprNBS (( if "==Nat" $ ((va "n1") , lit-a 0) 
+           then
+              (
+               set "w1" ∶ Nat ≔ ("*ℕ" $ (lit-a 2 , va "wagerAmount")) ;
+               set "w2" ∶ Nat ≔ ("+ℕ" $ (va "w1" , va "escrowAmount")) ;'             
+               withdraw! "A" ⟵ v "w2" ;b
+               < tt >
+            )
+           else (
+               set "w1" ∶ Nat ≔ ("*ℕ" $ (lit-a 2 , va "wagerAmount")) ;
+               withdraw! "B" ⟵ v "w1" ;'
+               withdraw! "A" ⟵ v "escrowAmount" ;b
+               < tt >
+            ))))
+        )
+
+coinFlipConsensusCode : _ 
+coinFlipConsensusCode = AST.Interaction.code (toProofs _ _ coinFlipConsensus) 
+
+
+
+        -- at "B" set "y" ∶ Bool ≔ input "enter choice 0" ;
+        -- publish! "B" ⟶ "y" ;        
+
+        -- at "A" set "xx" ∶ Bool ≔
+        --  ( if (bi "and") $' ((var-a (dsot "y")) , var-a (dsot "b2"))
+        -- -- ( if (v "y")
+        --    then
+        --       (
+        --       set "z" ∶ Bool ≔ input "enter choice 1" ;₁ ;b
+        --       v "z"
+        --     )
+        --    else (
+        --     set "q" ∶ Bool ≔ < false > ;'
+        --     -- require! v "x" ;'
+        --     -- publish! "B" ⟶ "y" ;
+        --     -- withdraw! "B" ⟵ < 3 > ;'
+        --     -- deposit! "B" ⟶ < 2 > ;
+        --     set "z" ∶ Bool ≔  "and" $ (va "q" , va "q") ;b
+        --     < true >
+        --     )) ;
+        -- deposit! "B" ⟶ < 2 > ;
+        -- at "A" set "yq" ∶ Bool ≔ input "enter choice 2" ;
+        -- withdraw! "A" ⟵ < 3 > ;
+        -- deposit! "A" ⟶ < 3 > ;
+        -- -- withdraw! "A" ⟵ < 3 > ;
+        -- -- withdraw! "B" ⟵ < 3 > ;'
+        -- publish! "A" ⟶ "xx" ;'
+                
+        -- set "yy" ∶ Bool ≔ < false >
+        -- )
+
+
 
 
 

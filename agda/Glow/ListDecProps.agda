@@ -63,6 +63,10 @@ ExistMemberAs B (x ∷ x₁) =
     ⊎
   ((IsEmpty (B x)) × ExistMemberAs B x₁)
 
+where?-ExistMemberAs : ∀ {ℓ ℓ'} → {A : Type ℓ} → {B : A → Type ℓ'} → {l : List A} → ExistMemberAs B l → ℕ 
+where?-ExistMemberAs {l = x₁ ∷ l} (inl x) = zero
+where?-ExistMemberAs {l = x₁ ∷ l} (inr x) = suc (where?-ExistMemberAs (proj₂ x))
+
 ExistMemberAs→ : ∀ {ℓ ℓ'} → {A : Type ℓ} → {B B' : A → Type ℓ'} → {l : List A}
                        → (∀ a → B a → B' a) → (∀ a → Dec (B' a))
                        → ExistMemberAs B l → ExistMemberAs B' l 

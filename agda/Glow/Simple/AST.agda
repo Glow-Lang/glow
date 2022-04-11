@@ -322,7 +322,6 @@ module _ (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}
       pId : (name : Identifier) → {isIn :  PM ( IsDishonestParticipantId {participants} name ) } → DishonestParticipantId'
 
 
-
     pId-name : ∀ {ptps} → ParticipantId' {ptps} → Identifier
     pId-name (pId name₁) = name₁
 
@@ -404,6 +403,10 @@ module _ (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}
 
       DishonestParticipantId : Type₀
       DishonestParticipantId = DishonestParticipantId' {participantsWM}
+
+
+      DishonestParticipantId→ℕ : DishonestParticipantId → ℕ
+      DishonestParticipantId→ℕ (pId _ {x}) = where?-ExistMemberAs (toWitness' x)
 
 
       Scope : Type₀
@@ -704,7 +707,6 @@ module _ (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}
       STMNTS = FreeCategory' bindingMechanics' isSet-Context isSet-Stmnt
 
 
-
  
     toParamValue : ∀ (l : List IdentifierWithType)  → ParametersValue l →
                    ∀ Τ s → 
@@ -792,6 +794,11 @@ module _ (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}
   toProofs : Interaction zero  →
                 Interaction one
   toProofs = transport (λ i → Interaction (seg i))
+
+  toProofsE : ∀ {Τ} → Σ[ ih ∈ InteractionHead zero ] Σ[ Γ ∈ _ ] Expr {prop-mode = zero} ih Γ Τ
+                    → Σ[ ih ∈ InteractionHead one ] Σ[ Γ ∈ _ ] Expr {prop-mode = one} ih Γ Τ 
+  toProofsE {Τ} = transport (λ i → Σ[ ih ∈ InteractionHead (seg i) ] Σ[ Γ ∈ _ ] Expr {prop-mode = (seg i)} ih Γ Τ)
+
 
   fromProofs : Interaction one  →
                 Interaction zero

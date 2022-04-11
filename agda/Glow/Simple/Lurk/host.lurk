@@ -1,0 +1,136 @@
+;-*-Lisp-*-
+
+
+
+(letrec
+    (
+     ;; parametrise this names, or introduce less generic ones (mb some prefix?))
+     (action (lambda (i pid a) (cons 'action (cons i (cons pid (cons a ()))))))
+     (withdraw (lambda (n) (cons 'action (cons n ()))))
+     (deposit (lambda (n) (cons 'deposit (cons n ()))))
+
+     (publish (lambda (i pid) (cons 'publish (cons i (cons pid ())))))
+     (require (lambda (v) (cons 'require (cons v ()))))
+
+     
+     (mk-pure (lambda (a) (cons 'pure (cons a ()))))
+     (mk-bind (lambda (a b) (cons 'bind (cons a (cons b ())))))
+     (mk-next (lambda (a b) (cons 'next (cons a (cons b ())))))
+     (bind mk-bind)
+     (next mk-next)
+
+     
+     (digestPrim (lambda (a) (cons 'digest (cons a ()) )))
+
+     (eqPrim (lambda (a b) (eq a b)))
+
+     
+     ;;TODO handle those on transpiler level! make configurable
+     (DIGESTNAT digestPrim)
+     (==Digest eqPrim)
+     (==Nat eqPrim)
+     
+      
+     (sucNat (lambda (x) ( if (eq x ())
+			      '(t)
+			      (if (car x) (cons nil (sucNat (cdr x))) (cons t (cdr x)))
+			       )))
+     
+     (+ℕh (lambda (a b carry)
+            (if (eq a ()) (if carry (sucNat b) b)
+		(if (eq b ()) (if carry (sucNat a) a)
+		    (if (car a)
+			(if (car b) (cons carry (+ℕh (cdr a) (cdr b) t)) (cons (if carry () t) (+ℕh (cdr a) (cdr b) carry)))
+			(if (car b) (cons (if carry () t) (+ℕh (cdr a) (cdr b) carry)) (cons carry (+ℕh (cdr a) (cdr b) ())))
+		     )))
+     	    ))
+     (+ℕ (lambda (a b) (+ℕh a b ())))
+     (+Nat +ℕ)
+
+     ;; consider soemthing more efficeint here
+     (*ℕ (lambda (a b) (if a (+Nat (if (car a) b ()) (cons () (*ℕ (cdr a) b))) () ) ))
+     
+     ;; ONLY make sense for small numbers!!, my be helpful for testing but shuld NOT be used in prod version, unles in provably safe context
+     (PF->Nat (lambda (a) (if (eq 0 a) () (sucNat (PF->Nat (- a 1))))))
+     
+     (Nat->PF (lambda (a) (if a (+ (if (car a) 1 0) (* 2 (Nat->PF (cdr a)))) 0)))
+
+     
+     (^^^ (lambda (a b) 
+		    (if (eq a ()) b
+			(if (eq b ()) a
+			    (cons ( if (car a) (if (car b) NIL t ) b ) (^^^ (cdr a) (cdr b) ) )))))
+
+     (&&& (lambda (a b) 
+		    (if (eq a ()) ()
+			(if (eq b ()) ()
+			  (cons ( if (car a) (car b) NIL ) (&&& (cdr a) (cdr b) ) )))))
+
+     (atomic-action-rec (lambda (code case-bind case-next case-pure case-require case-atom)
+			  (if (eq (car code) 'bind)
+			      (case-bind (car (cdr code)) (car (cdr (cdr code))))
+			      (if (eq (car code) 'next) (case-next (car (cdr code)) (car (cdr (cdr code))))
+			      (if (eq (car code) 'pure) (case-pure (car (cdr code)))
+				  (if (eq (car code) 'require) (case-require (car (cdr code)))
+				      (case-atom code (car (cdr code)) (car code)))))
+
+			   )))
+     ;; returns : ((pubs start) result) or t or NIL
+     (run-glow (lambda (pubs code start target)
+		 (atomic-action-rec code
+				    (lambda (code-a fun-b)
+				      (let ((result-a (run-glow pubs code-a start target)))
+					   
+					(if (atom result-a) result-a
+					    (let ((pubs2 (car (car result-a)))
+						  (code2 (fun-b (car (cdr result-a))))
+						  (start2 (car (cdr (car result-a)))))
+					           (run-glow pubs2 code2 start2 target)
+						   ))))
+				    (lambda (code-a code-b)
+				      (let ((result-a (run-glow pubs code-a start target)))
+					   
+					(if (atom result-a) result-a
+					    (let ((pubs2 (car (car result-a)))
+						  (start2 (car (cdr (car result-a)))))
+					           (run-glow pubs2 code-b start2 target)
+						  ))))
+				    (lambda (x) (cons (cons pubs (cons start ())) (cons x ())))
+				    (lambda (x) (if x (cons (cons pubs (cons start ())) (cons x ())) 'require-fail))
+				    (lambda (a id h)
+				                  ( if start
+                                                          (let ((new-start (if (eq start id) NIL start ))
+								(new-pubs (if (eq h 'publish) (cdr pubs) pubs))
+								(result (if (eq h 'publish) (car pubs) 'glow-unit-lit)))
+							       (cons (cons new-pubs (cons new-start ())) (cons result ())))
+						             
+						  (eq a target) )
+					    )
+				    )
+
+		))
+
+     ;; :load "/Users/marcin/glow/agda/Glow/Simple/Lurk/host.lurk"
+     (false nil)
+     (call1 '( (t t)
+               2
+	       (3 (deposit 1 2))
+              ))
+
+     ;; (glow-code (bind (action 0 0 (withdraw 11)) (lambda (nobind) (action 1 1 (deposit 22))))
+     ;; 			    )
+     
+     (glow-code (bind (bind (bind (action 0 0 (withdraw (cons nil (cons t nil)))) (lambda (nobind) (action 1 1 (deposit (cons nil (cons t nil)))))) (lambda (nobind) (mk-pure (cons nil (cons nil (cons t nil)))))) (lambda (z) (bind (publish 2 0) (lambda (zz) (action 3 1 (withdraw (cons t (cons t nil)))))))))
+     (cf-code (lambda (wagerAmount escrowAmount) (bind (publish 0 0) (lambda (commitment) (next (action 1 0 (deposit (+ℕ wagerAmount escrowAmount))) (bind (publish 2 1) (lambda (randB) (next (action 3 1 (deposit wagerAmount)) (bind (publish 4 0) (lambda (randA) (bind (mk-pure (digestNat randA)) (lambda (mbCommitment) (next (require (==Digest commitment mbCommitment)) (bind (mk-pure (^^^ randA randB)) (lambda (n0) (bind (mk-pure (&&& n0 (cons t nil))) (lambda (n1) (next (next (if (==Nat n1 nil) (bind (mk-pure (*ℕ (cons nil (cons t nil)) wagerAmount)) (lambda (w1) (bind (mk-pure (+ℕ w1 escrowAmount)) (lambda (w2) (next (action 5 0 (withdraw w2)) (mk-pure (quote glow-unit-lit))))))) (bind (mk-pure (*ℕ (cons nil (cons t nil)) wagerAmount)) (lambda (w1) (next (action 6 1 (withdraw w1)) (next (action 7 0 (withdraw escrowAmount)) (mk-pure (quote glow-unit-lit))))))) (mk-pure (quote glow-unit-lit))) (mk-pure (quote glow-unit-lit))))))))))))))))))))
+     (test1 (lambda () (run-glow '(111) glow-code 0 (action 1 1 (deposit (cons nil (cons t nil)))))))
+     
+     ;; (test (runglow call1 glowcode))
+     (pubTest1 (cons (digestPrim (PF->Nat 7) ) (cons (PF->Nat 8) (cons (PF->Nat 7) ())) ))
+     (runall (lambda (x) (run-glow pubTest1 x 100 ())))
+     (test2 (lambda () (runall (cf-code (PF->Nat 10) (PF->Nat 2)))))
+     (test+Nat (lambda (a b) (Nat->PF (+Nat (PF->Nat a) (PF->Nat b)))))
+     (test*Nat (lambda (a b) (Nat->PF (*ℕ (PF->Nat a) (PF->Nat b)))))
+     )
+  (current-env)
+  
+  )

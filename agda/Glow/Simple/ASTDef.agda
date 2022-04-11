@@ -38,6 +38,7 @@ open import Glow.Simple.Postulates
 
 
 
+
 instance
   String-Discrete-postulated-unsafe : IsDiscrete String
   String-Discrete-postulated-unsafe = String-Discrete-postulated
@@ -61,8 +62,11 @@ BuiltIns'.getBi Basic-BuiltIns = h
     h "==Nat" = (Nat ∷ Nat ∷ [] , Bool) , (builitIn (λ x x₁ → Dec→Bool (x ≟ x₁)))
     h _ = ([] , Unitᵍ) , builitIn _
 
-
-
+-- toLurkBIName : String -> String
+-- toLurkBIName x = h (primStringToList x) 
+--   where
+--    h : List Char → String
+--    h x = {!x!}
 
 module AST-String = AST String Basic-BuiltIns 
 

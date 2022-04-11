@@ -406,6 +406,11 @@ module PropMode (b : Interval) where
   _PM≡_ : ∀ {A} {{IsDiscrete-A : IsDiscrete A}} → (x y : A) → Type₀
   x PM≡ y = PM ( x DP≡ y )
 
+
+toWitnessDP : (dp : DecPropΣ) → PropMode.PM zero dp → PropMode.PM one dp
+toWitnessDP dp = transport λ i → PropMode.PM (seg i) dp
+
+
 ⊎-isProp : ∀ {ℓ ℓ'} → {A : Type ℓ} → {B : Type ℓ'} → isProp A → isProp B → (A → B → ⊥) → isProp (A ⊎ B)
 ⊎-isProp x x₁ y (inl x₃) (inl x₄) = cong inl (x _ _)
 ⊎-isProp x x₁ y (inl x₃) (inr x₄) = empty-elim (y x₃ x₄)
@@ -510,3 +515,11 @@ isNothing-dp = maybe-eqCase (nothing {A = Unit})
 
 
 
+mbDec : (A : DecPropΣ) → Maybe ⟨ A ⟩
+mbDec A with proj₁ (snd A)
+... | yes p = just p
+... | no ¬p = nothing
+
+fromJust : ∀ {ℓ} {A : Type ℓ} → (x : Maybe A) → caseMaybe Unit* A x
+fromJust nothing = tt*
+fromJust (just x) = x
