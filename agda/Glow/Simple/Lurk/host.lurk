@@ -50,7 +50,7 @@
      ;; consider soemthing more efficeint here
      (*ℕ (lambda (a b) (if a (+Nat (if (car a) b ()) (cons () (*ℕ (cdr a) b))) () ) ))
      
-     ;; ONLY make sense for small numbers!!, my be helpful for testing but shuld NOT be used in prod version, unles in provably safe context
+     ;; ONLY make sense for small numbers!!, may be helpful for testing but shuld NOT be used in prod version, unles in provably safe context
      (PF->Nat (lambda (a) (if (eq 0 a) () (sucNat (PF->Nat (- a 1))))))
      
      (Nat->PF (lambda (a) (if a (+ (if (car a) 1 0) (* 2 (Nat->PF (cdr a)))) 0)))
@@ -59,12 +59,19 @@
      (^^^ (lambda (a b) 
 		    (if (eq a ()) b
 			(if (eq b ()) a
-			    (cons ( if (car a) (if (car b) NIL t ) b ) (^^^ (cdr a) (cdr b) ) )))))
+			    (let ((hd ( if (car a) (if (car b) NIL t ) b )) 
+				  (tail (^^^ (cdr a) (cdr b) )))
+			      (if tail (cons hd tail) hd)
+			      )))))
 
      (&&& (lambda (a b) 
 		    (if (eq a ()) ()
 			(if (eq b ()) ()
-			  (cons ( if (car a) (car b) NIL ) (&&& (cdr a) (cdr b) ) )))))
+			    ( let ((hd ( if (car a) (car b) NIL ) )
+				   (tail (&&& (cdr a) (cdr b) )))
+			       (if tail (cons hd tail) hd)
+			      )
+			    ))))
 
      (atomic-action-rec (lambda (code case-bind case-next case-pure case-require case-atom)
 			  (if (eq (car code) 'bind)
@@ -104,7 +111,8 @@
 								(result (if (eq h 'publish) (car pubs) 'glow-unit-lit)))
 							       (cons (cons new-pubs (cons new-start ())) (cons result ())))
 						             
-						  (eq a target) )
+							  (eq a target)
+							  )
 					    )
 				    )
 
@@ -125,8 +133,8 @@
      (test1 (lambda () (run-glow '(111) glow-code 0 (action 1 1 (deposit (cons nil (cons t nil)))))))
      
      ;; (test (runglow call1 glowcode))
-     (pubTest1 (cons (digestPrim (PF->Nat 7) ) (cons (PF->Nat 8) (cons (PF->Nat 7) ())) ))
-     (runall (lambda (x) (run-glow pubTest1 x 100 ())))
+     (pubTest1 (cons (digestPrim (PF->Nat 11) ) (cons (PF->Nat 7) (cons (PF->Nat 7) ())) ))
+     (runall (lambda (x) (run-glow pubTest1 x 4 (action 5 0 (withdraw (PF->Nat 22))))))
      (test2 (lambda () (runall (cf-code (PF->Nat 10) (PF->Nat 2)))))
      (test+Nat (lambda (a b) (Nat->PF (+Nat (PF->Nat a) (PF->Nat b)))))
      (test*Nat (lambda (a b) (Nat->PF (*ℕ (PF->Nat a) (PF->Nat b)))))
