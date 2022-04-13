@@ -53,6 +53,12 @@ open import Glow.Simple.Lurk.Translation
 
 open import Glow.Simple.Example
 
+data LabeledValue {ℓ} (A : Type ℓ) : String → Type ℓ where
+  labeledValue[_][_]labeledValueEnd : (label : String) → A → LabeledValue A label 
+
+addLabel : ∀ {ℓ label} {A : Type ℓ} → A → LabeledValue A label
+addLabel {label = label} a = labeledValue[ label ][ a ]labeledValueEnd
+
 module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}}
             {BuilitInsIndex : Type₀} {{IsDiscrete-BuilitInsIndex : IsDiscrete BuilitInsIndex}}
               {builtIns : BuiltIns' BuilitInsIndex {{IsDiscrete-BuilitInsIndex}}} where
@@ -164,47 +170,59 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
       FreeExpr = Expr (con [] nothing)
 
       PID = DishonestParticipantId
+      
+      -- TODO : try to parametrise be all definitions from AST
+      module _ {Expr : Context → GType → Type₀} {IsPureE : ∀ {Γ Τ} → Expr Γ Τ → DecPropΣ} where
+  
+        data Action' (Γ : Context) : Type₀ where
+          withdrawA : (e : Expr Γ Nat) → (⟨ IsPureE e ⟩) → Action' Γ
+          depositA : (e : Expr Γ Nat) → (⟨ IsPureE e ⟩) → Action' Γ 
 
-      data Action (Γ : Context) : Type₀ where
-        withdrawA : (e : Expr Γ Nat) → (⟨ IsPureE e ⟩) → Action Γ
-        depositA : (e : Expr Γ Nat) → (⟨ IsPureE e ⟩) → Action Γ 
+        _,_⦂_ : Context → Identifier → GType → Context
+        Γ , x ⦂ Τ = addToContext Γ (AST.ice nothing x Τ)
 
-      _,_⦂_ : Context → Identifier → GType → Context
-      Γ , x ⦂ Τ = addToContext Γ (AST.ice nothing x Τ)
+        data LMonad' (A : Type₀) (Γ : Context) (Τ : GType) : Type₀ where
+          action : A → PID → Action' Γ → Τ ≡ Unitᵍ → LMonad' A Γ Τ
+          require : (e : Expr Γ Bool) → (⟨ IsPureE e ⟩) → Τ ≡ Unitᵍ → LMonad' A Γ Τ
+          expectPub : A → PID → LMonad' A Γ Τ
+          bind : ∀ {x Τ'} → LMonad' A Γ Τ' → LMonad' A (Γ , x ⦂ Τ') Τ → LMonad' A Γ Τ
+          next : ∀ {Τ'} → LMonad' A Γ Τ' → LMonad' A Γ Τ → LMonad' A Γ Τ
+          pure : (e : Expr Γ Τ) → (⟨ IsPureE e ⟩) → LMonad' A Γ Τ
+          branch : (e : Expr Γ Bool) → (⟨ IsPureE e ⟩) → LMonad' A Γ Τ → LMonad' A Γ Τ → LMonad' A Γ Τ
 
-      data LMonad (A : Type₀) (Γ : Context) (Τ : GType) : Type₀ where
-        action : A → PID → Action Γ → Τ ≡ Unitᵍ → LMonad A Γ Τ
-        require : (e : Expr Γ Bool) → (⟨ IsPureE e ⟩) → Τ ≡ Unitᵍ → LMonad A Γ Τ
-        expectPub : A → PID → LMonad A Γ Τ
-        bind : ∀ {x Τ'} → LMonad A Γ Τ' → LMonad A (Γ , x ⦂ Τ') Τ → LMonad A Γ Τ
-        next : ∀ {Τ'} → LMonad A Γ Τ' → LMonad A Γ Τ → LMonad A Γ Τ
-        pure : (e : Expr Γ Τ) → (⟨ IsPureE e ⟩) → LMonad A Γ Τ
-        branch : (e : Expr Γ Bool) → (⟨ IsPureE e ⟩) → LMonad A Γ Τ → LMonad A Γ Τ → LMonad A Γ Τ
-     
+        labelStates : ∀ {A Γ Τ} → ℕ → LMonad' A Γ Τ → (Σ ℕ λ _ → LMonad' ℕ Γ Τ) 
+        labelStates n (action x x₁ x₂ x₃) = (suc n) , (action n x₁ x₂ x₃)
+        labelStates n (require e x x₁) = n , (require e x x₁)
+        labelStates n (expectPub x x₁) = (suc n) , (expectPub n x₁)
+        labelStates n (bind x x₁) =
+          let (n₁ , x') = labelStates n x
+              (n₂ , x₁') = labelStates n₁ x₁
+          in (n₂ , bind x' x₁')
+        labelStates n (next x x₁) =
+          let (n₁ , x') = labelStates n x
+              (n₂ , x₁') = labelStates n₁ x₁
+          in (n₂ , next x' x₁')
+        labelStates n (pure e x) = n , pure e x
+        labelStates n (branch e y x x₁) =
+          let (n₁ , x') = labelStates n x
+              (n₂ , x₁') = labelStates n₁ x₁
+          in (n₂ , (branch e y x' x₁'))
+
+        labelStates' : ∀ {A Γ Τ} → LMonad' A Γ Τ → (LMonad' ℕ Γ Τ)  
+        labelStates' = snd ∘ labelStates 1
+
+      Action = Action' {Expr} {IsPureE}
+      LMonad = LMonad' {Expr} {IsPureE}
+
+      UAction = Action' {λ _ _ → Unsafe.Expr} {λ _ → Unit-dp }
+      ULMonad = LMonad' {λ _ _ → Unsafe.Expr} {λ _ → Unit-dp }
+
+
       everyIsDishonest : ParticipantId → PID
       everyIsDishonest (AST.pId name {x}) = AST.pId name {everyIsDishonest-lem _ _ x}
 
-      -- TODO : use state monad here
-      labelStates : ∀ {A Γ Τ} → ℕ → LMonad A Γ Τ → (Σ ℕ λ _ → LMonad ℕ Γ Τ) 
-      labelStates n (action x x₁ x₂ x₃) = (suc n) , (action n x₁ x₂ x₃)
-      labelStates n (require e x x₁) = n , (require e x x₁)
-      labelStates n (expectPub x x₁) = (suc n) , (expectPub n x₁)
-      labelStates n (bind x x₁) =
-        let (n₁ , x') = labelStates n x
-            (n₂ , x₁') = labelStates n₁ x₁
-        in (n₂ , bind x' x₁')
-      labelStates n (next x x₁) =
-        let (n₁ , x') = labelStates n x
-            (n₂ , x₁') = labelStates n₁ x₁
-        in (n₂ , next x' x₁')
-      labelStates n (pure e x) = n , pure e x
-      labelStates n (branch e y x x₁) =
-        let (n₁ , x') = labelStates n x
-            (n₂ , x₁') = labelStates n₁ x₁
-        in (n₂ , (branch e y x' x₁'))
 
-      labelStates' : ∀ {A Γ Τ} → LMonad A Γ Τ → (LMonad ℕ Γ Τ)  
-      labelStates' = snd ∘ labelStates 0
+
 
       module tryTranslation where
         private       
@@ -262,9 +280,66 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
         toLMonad : ∀ Γ → Statements Γ → Maybe (LMonad Unit Γ Unitᵍ)
         toLMonad Γ x = toLMonadE Γ Unitᵍ (body (AST.bodyR x (lit tt)))
 
-        -- toLMonadS Γ (AST.bindingS (AST.BS-let ce x)) = {!!}
-        -- toLMonadS Γ (AST.bindingS (AST.BS-publish! p x)) = nothing
-        -- toLMonadS Γ (AST.nonBindingS x) = {!!}
+
+      module tryTranslationUnsafe where
+        private       
+          _>>=_ = bind-Maybe
+
+        module U = Unsafe
+
+        mbIsPureE : (e : U.Expr) → Maybe ⟨ Unit-dp ⟩
+        mbIsPureE e = just _
+
+
+        toLMonadE : ∀ Γ Τ → (e : U.Expr) → Maybe (ULMonad Unit Γ Τ)
+        toLMonadNBS : ∀ Γ → U.NBStmnt+Expr → Maybe (ULMonad Unit Γ Unitᵍ)
+
+        toLMonadNBS Γ (U.stmntNBS (U.NBS-require! x)) =  do
+          ispure-x ← mbIsPureE x
+          just ((require x ispure-x refl))
+        toLMonadNBS Γ (U.stmntNBS (U.NBS-deposit! x x₁)) = do
+          ispure-x₁ ← mbIsPureE x₁
+          just ((action tt (everyIsDishonest x) (depositA x₁ ispure-x₁) refl))
+        toLMonadNBS Γ (U.stmntNBS (U.NBS-withdraw! x x₁)) = do
+          ispure-x₁ ← mbIsPureE x₁
+          just ((action tt (everyIsDishonest x) (withdrawA x₁ ispure-x₁) refl))
+
+        toLMonadNBS Γ (U.stmntNBS (U.NBS-publishVal! x x₁)) = nothing
+        toLMonadNBS Γ (U.exprNBS x) = do
+          e ←  (toLMonadE _ (U.Τ? x) x) 
+          just (next e (pure (U.lit (record { gType = Unitᵍ ; gValue = tt })) tt))
+
+
+        toLMonadE Γ Τ (U.var t x) = just (pure (U.var t x) tt)
+        
+        toLMonadE Γ Τ (U.body (U.bodyR [] expr₁)) = toLMonadE Γ Τ expr₁
+        toLMonadE Γ Τ (U.body (U.bodyR (U.bindingS (U.BS-let nothing name type x) ∷ stmnts₁) expr₁)) = 
+          do e' ← toLMonadE _ type x
+             es' ← toLMonadE _ _ (U.body (U.bodyR stmnts₁ expr₁ ))
+             just (bind {x = name} e' es')
+
+        toLMonadE Γ Τ (U.body (U.bodyR (U.bindingS (U.BS-let (just x₁) name type x) ∷ stmnts₁) expr₁)) = nothing
+        toLMonadE Γ Τ (U.body (U.bodyR (U.bindingS (U.BS-publish! p x) ∷ stmnts₁) expr₁)) = nothing
+        toLMonadE Γ Τ (U.body (U.bodyR (U.nonBindingS x ∷ stmnts₁) expr₁)) =
+          do e' ← toLMonadNBS _ x
+             es' ← toLMonadE _ _ (U.body (U.bodyR stmnts₁ expr₁ ))
+             just (next e' es')
+        
+        toLMonadE Γ Τ (U.lit x) = just (pure (U.lit x) tt)
+        toLMonadE Γ Τ (x U.$' x₁) = just (pure (x U.$' x₁) tt)
+        toLMonadE Γ Τ (U.input _ x) = nothing
+        toLMonadE Γ Τ (U.sign x) = nothing
+        toLMonadE Γ Τ (U.receivePublished t x) = just (expectPub _ x)
+        toLMonadE Γ Τ (U.if e then e₁ else e₂) = do
+          ispure-e ← mbIsPureE e
+          e₁' ← toLMonadE Γ _ e₁
+          e₂' ← toLMonadE Γ _ e₂
+          just (branch e ispure-e e₁' e₂')
+
+        toLMonad : ∀ Γ → List (U.Stmnt) → Maybe (ULMonad Unit Γ Unitᵍ)
+        toLMonad Γ x = toLMonadE Γ Unitᵍ (U.body (U.bodyR x (U.lit (record { gType = Unitᵍ ; gValue = _ }))))
+
+
 
 module ToLurkCF (ptpsIds : List (String)) (prms : _) (uniquePrms : _) (uniquePtpnts : _) where
 
@@ -283,40 +358,47 @@ module ToLurkCF (ptpsIds : List (String)) (prms : _) (uniquePrms : _) (uniquePtp
 
   module T = Translate.unsafe {String} {builtIns = Basic-BuiltIns} {ptpsIds} {prms} {uniquePrms} {uniquePtpnts}
                 tt "cons" bi-renderer
- 
-  PID→LExpr : PID → L.Expr
-  PID→LExpr z = L.ExFieldElem _ (DishonestParticipantId→ℕ ih'' z)
-  
-
-  toLurkGlowcode : ∀ {Γ Τ} → LMonad ℕ Γ Τ → L.Expr
-  toLurkGlowcode (action x x₁ x₂ Τ≡Unitᵍ) =
-     T.appS "action" (L.ExFieldElem _ x ∷ PID→LExpr x₁ ∷ [ h x₂ ])
-     where
-       h : Action _ → L.Expr
-       h (withdrawA x _) = T.appS "withdraw" [ T.translateE x ]
-       h (depositA x _) = T.appS "deposit" [ T.translateE x ]
-
-  toLurkGlowcode (expectPub x x₁) = T.appS "publish" (L.ExFieldElem _ x ∷ [ PID→LExpr x₁ ])
-  toLurkGlowcode (next x x₁) = T.appS "next" (toLurkGlowcode x ∷ [ toLurkGlowcode x₁ ])
-  toLurkGlowcode (bind {x = s} x x₁) =
-     T.appS "bind" (toLurkGlowcode x ∷ [ h ])
-     where
-       h : L.Expr
-       h = L.ExLambda _
-               [ L.SymbolC s ]
-               (toLurkGlowcode x₁)
-  toLurkGlowcode (pure x _) = T.appS "mk-pure" [ T.translateE x ]
-  toLurkGlowcode (branch x _ x₁ x₂) = L.ExIf _ (T.translateE x) (toLurkGlowcode x₁) (toLurkGlowcode x₂)
-  toLurkGlowcode (require e x x₁) = T.appS "require" ([ T.translateE e ])
 
   module LH = LurkAST AList String Unit
 
+  module safeAST where
+    module T' = T.safeAST
 
-  fixListImp : L.Expr →  LH.Expr
-  fixListImp = LurkASTchangeListImp.mapLiImp List AList map-List toAList
 
-  toLurkGlowcode' : ∀ {Γ Τ} → LMonad ℕ Γ Τ → LH.Expr
-  toLurkGlowcode' = fixListImp ∘ T.addSignature ∘ toLurkGlowcode
+    PID→LExpr : PID → L.Expr
+    PID→LExpr z = L.ExFieldElem _ (DishonestParticipantId→ℕ ih'' z)
+
+
+    toLurkGlowcode : ∀ {Γ Τ} → LMonad ℕ Γ Τ → L.Expr
+    toLurkGlowcode (action x x₁ x₂ Τ≡Unitᵍ) =
+       T.appS "action" (L.ExFieldElem _ x ∷ PID→LExpr x₁ ∷ [ h x₂ ])
+       where
+         h : Action _ → L.Expr
+         h (withdrawA x _) = T.appS "withdraw" [ T'.translateE x ]
+         h (depositA x _) = T.appS "deposit" [ T'.translateE x ]
+
+    toLurkGlowcode (expectPub x x₁) = T.appS "publish" (L.ExFieldElem _ x ∷ [ PID→LExpr x₁ ])
+    toLurkGlowcode (next x x₁) = T.appS "next" (toLurkGlowcode x ∷ [ toLurkGlowcode x₁ ])
+    toLurkGlowcode (bind {x = s} x x₁) =
+       T.appS "bind" (toLurkGlowcode x ∷ [ h ])
+       where
+         h : L.Expr
+         h = L.ExLambda _
+                 [ L.SymbolC s ]
+                 (toLurkGlowcode x₁)
+    toLurkGlowcode (pure x _) = T.appS "mk-pure" [ T'.translateE x ]
+    toLurkGlowcode (branch x _ x₁ x₂) = L.ExIf _ (T'.translateE x) (toLurkGlowcode x₁) (toLurkGlowcode x₂)
+    toLurkGlowcode (require e x x₁) = T.appS "require" ([ T'.translateE e ])
+
+
+
+    fixListImp : L.Expr →  LH.Expr
+    fixListImp = LurkASTchangeListImp.mapLiImp List AList map-List toAList
+
+    toLurkGlowcode' : ∀ {Γ Τ} → LMonad ℕ Γ Τ → LH.Expr
+    toLurkGlowcode' = fixListImp ∘ T.addSignature ∘ toLurkGlowcode
+
+  
 
 module examplesAB where
 
@@ -350,7 +432,7 @@ module examplesAB where
                        (action 3 idB (withdrawA < 3 > tt) refl))
 
     testLGC : LH.Expr
-    testLGC = (toLurkGlowcode' testLM)
+    testLGC = (safeAST.toLurkGlowcode' testLM)
 
 
     testOutput : {!!}
@@ -375,9 +457,10 @@ module examplesAB where
 
 
     testOutput : LH.Expr
-    testOutput = fromJust (map-Maybe (toLurkGlowcode' ∘ labelStates') (tryTranslation.toLMonad _ coinFlipConsensusCode))
+    testOutput = fromJust (map-Maybe (safeAST.toLurkGlowcode' ∘ labelStates') (tryTranslation.toLMonad _ coinFlipConsensusCode))
 
-    zz = {!testOutput!}
+    zz : LabeledValue LH.Expr "coinFlip"
+    zz = {!addLabel testOutput!}
 
 -- module output where
 --   open ToLurkCF

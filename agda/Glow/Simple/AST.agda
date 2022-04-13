@@ -552,8 +552,85 @@ module _ (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}
       narrow : (Γ : Context) → (s : Scope)  → (PM  (AllowedScopeNarrowing Γ s) ) → Context
       narrow Γ a x = record Γ { scope' = narrowScope Γ a x }
 
+      -- TODO : put type annotations in special additional , parametrized field
+      module Unsafe where
 
 
+        data Stmnt : Type₀
+
+        data BStmnt : Type₀
+
+
+        data NBStmnt : Type₀
+
+        data NBStmnt+Expr : Type₀
+
+        data Expr : Type₀
+
+        data Arg : Type₀
+
+        Args = List Arg
+
+
+        record Body : Type₀ where
+          pattern
+          inductive
+          constructor bodyR
+          field
+            stmnts : List (Stmnt)
+            expr : Expr
+
+        open Body public
+
+        data Arg where
+          var-a : Identifier → Arg
+          lit-a : GlowValue → Arg
+
+
+        data Expr where
+          var : GType → Identifier → Expr
+          body : Body → Expr
+          lit : GlowValue → Expr
+          _$'_ : BuilitInsIndex → Args → Expr
+          input : GType → String → Expr
+          sign : Arg → Expr 
+
+
+          -- -- this is temporary solution, this constructors cannot apear in code, and are introduced on some passes, this distinction must be typesafe in the future! 
+          receivePublished : GType → DishonestParticipantId →  Expr
+
+          if_then_else_ : Expr → Expr → Expr → Expr
+
+        data Stmnt where
+          -- -- not necessary binding, but rather context changing
+          bindingS : BStmnt → Stmnt
+          nonBindingS : NBStmnt+Expr → Stmnt
+
+        data BStmnt where
+          BS-let : Maybe HonestParticipantId → Identifier → GType → Expr → BStmnt    
+          BS-publish! : HonestParticipantId → Identifier →  BStmnt
+
+        data NBStmnt where
+          NBS-require! : Expr → NBStmnt
+          NBS-deposit! : ParticipantId → Expr → NBStmnt
+          NBS-withdraw! : ParticipantId → Expr → NBStmnt
+          -- this is temporary solution, this constructors cannot apear in code, and are introduced on some passes, this distinction must be typesafe in the future!
+
+          NBS-publishVal! : HonestParticipantId → Identifier → NBStmnt
+
+        data NBStmnt+Expr where
+          stmntNBS : NBStmnt → NBStmnt+Expr
+          exprNBS : Expr → NBStmnt+Expr
+
+        Τ? : Expr → GType
+        Τ? (var x x₁) = x
+        Τ? (body (bodyR _ e)) = Τ? e
+        Τ? (lit record { gType = gType ; gValue = gValue }) = gType
+        Τ? (x $' x₁) = proj₂ (fst (getBi x))
+        Τ? (input x x₁) = x
+        Τ? (sign x) = Signature
+        Τ? (receivePublished x x₁) = x
+        Τ? (if x then x₁ else x₂) = Τ? x₁
 
       data Stmnt (Γ : Context) : Type₀
 
@@ -641,7 +718,7 @@ module _ (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}
         CC-makePublic : (p : HonestParticipantId) → (PrivateSymbolOf Γ p)
                                → (PM ( IsConsensus Γ ) ) → CtxChange Γ 
 
-      postulate ctxChange : ∀ Γ → CtxChange Γ → Context
+      -- postulate ctxChange : ∀ Γ → CtxChange Γ → Context
       -- ctxChange = {!!}
 
       bindingMechanics {Γ} (BS-let ce _) = ce ∷ Γ .entries
@@ -706,6 +783,51 @@ module _ (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}
       STMNTS : Category ℓ-zero ℓ-zero
       STMNTS = FreeCategory' bindingMechanics' isSet-Context isSet-Stmnt
 
+      module ToUnsafe where
+        module U = Unsafe
+
+        exprF : ∀ {Γ Τ} → Expr Γ Τ → U.Expr
+        bodyF : ∀ {Γ Τ} → Body Γ Τ → U.Body
+        stmntF : ∀ {Γ} → Stmnt Γ → U.Stmnt
+        argsF : ∀ {Γ S} → Args Γ S → U.Args
+        argF : ∀ {Γ Τ} → Arg Γ Τ → U.Arg  
+       
+
+        exprF {Τ = Τ} (var (dsot name₁)) = U.var Τ name₁
+        exprF (body b) = (U.body (bodyF b))
+        exprF (lit x) = U.lit (record { gType = _ ; gValue = x })
+        exprF (bi' bIndex $' x₁) = bIndex U.$' argsF x₁
+        exprF {Τ = Τ} (input x) = U.input Τ x
+        exprF (sign x) = U.sign (argF x)
+        exprF {Τ = Τ} (receivePublished p) = U.receivePublished Τ p
+        exprF (if x then x₁ else x₂) = U.if exprF x then exprF x₁ else exprF x₂
+        
+        stmntF (bindingS (BS-let (ice scope₁ name₁ type₁) x)) = 
+              U.bindingS (U.BS-let scope₁ name₁ type₁ (exprF x))
+
+        stmntF (bindingS (BS-publish! p (psof name₂ {y}))) = 
+               U.bindingS (U.BS-publish! p name₂) 
+        stmntF (nonBindingS (stmntNBS x)) = (U.nonBindingS (U.stmntNBS (h x)))
+           where
+             h : NBStmnt _ → U.NBStmnt
+             h (NBS-require! x) = U.NBS-require! (exprF x)
+             h (NBS-deposit! p x₁) = U.NBS-deposit! p (exprF x₁)
+             h (NBS-withdraw! p x₁) = U.NBS-withdraw! p (exprF x₁)
+             h (NBS-publishVal! p x₁) = U.NBS-publishVal! p x₁
+             
+        stmntF (nonBindingS (exprNBS x)) = (U.nonBindingS (U.exprNBS (exprF x)))
+
+        bodyF (bodyR []L expr₁) = U.bodyR [] (exprF expr₁)
+        bodyF (bodyR (h ∷L stmnts₁) expr₁) =
+           let U.bodyR xs e = bodyF (bodyR (stmnts₁) expr₁)
+           in  U.bodyR (stmntF h ∷ xs) e 
+
+        argF (var-a (dsot name₁)) = U.var-a name₁
+        argF (lit-a x) = U.lit-a (record { gType = _ ; gValue = x })
+        
+        argsF {S = []} x = []
+        argsF {S = _ ∷ []} x = [ argF x ]
+        argsF {S = _ ∷ _ ∷ _} x = argF (proj₁ x) ∷ argsF (proj₂ x) 
 
  
     toParamValue : ∀ (l : List IdentifierWithType)  → ParametersValue l →

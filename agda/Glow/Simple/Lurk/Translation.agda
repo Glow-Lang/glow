@@ -118,6 +118,7 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
       appS : Identifier → List HExpr → HExpr
       appS f xs = ExApply a (symEx f ) xs
 
+
       translateLit : ∀ Τ → GTypeAgdaRep Τ → HExpr
       translateLit Bool false = ExNil a
       translateLit Bool true = ExT a
@@ -142,73 +143,63 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
       translateLit Signature x = ni "not-implemented-glow-signature-literal"
 
 
-      translateArg :  ∀ {Γ Τ} → Arg Γ Τ → HExpr
-      translateArg (AST.var-a (AST.dsot name)) = ExSymbol a (SymbolC name)
-      translateArg {Τ = Τ} (AST.lit-a x) = translateLit _ x
-
-      translateArgs : ∀ {Γ Τ} → Args Γ Τ → Cubical.Data.List.List HExpr
-      translateArgs {Τ = []} x = []
-      translateArgs {Τ = x₁ ∷ []} x = [ translateArg x ]
-      translateArgs {Τ = x₁ ∷ x₂ ∷ Τ} x = translateArg (proj₁ x) ∷ translateArgs (proj₂ x)
-
-      {-# TERMINATING #-}
-      -- TODO add proof of purity to arguments
-      translateE : ∀ {Γ Τ} → (e : Expr Γ Τ) → HExpr 
-      translateE (AST.var (AST.dsot name)) = ExSymbol a (SymbolC name)
-      translateE (AST.body (AST.bodyR []L e)) = translateE e 
-      translateE (AST.body (AST.bodyR (h ∷L stmnts) e)) with h
-      ... | AST.bindingS (AST.BS-let (AST.ice _ name _) e') =
-              ExLet a (LetC ( [ (BindingC a (SymbolC name) (translateE e')) ]) (translateE e)) -- (BindingC a name (translateE e'))
-      ... | AST.bindingS (AST.BS-publish! p x₁) = ni "fatal-error-publish"
-      ... | AST.nonBindingS x₁ = translateE (AST.body (AST.bodyR (stmnts) e))
-      translateE (AST.lit x₁) = translateLit _ x₁
-      translateE (x₁ AST.$' x₂) = ExApply a (ExSymbol a (SymbolC (bi-render _ x₁))) ( (translateArgs x₂))
-      translateE (AST.sign x₁) = ni "fatal-error-sign"
-      translateE (AST.if e then e₁ else e₂) = ExIf a (translateE e) (translateE e₁) (translateE e₂)
-      translateE (AST.input x) = ni "fatal-error-input"
-      translateE (AST.receivePublished x) = ni "fatal-error-recivePub"
-
-
       addSignature : HExpr → HExpr 
       addSignature = ExLambda a (map-List (λ x → SymbolC (AST.IdentifierWithType.name x)) prms)
-    -- module unsafeNoRec {uniquePtps : _} {A : Type₀} (a : A) (undefI : Identifier)
-    --           (bi-render : ∀ Τ → AST.BI Identifier builtIns one Τ → Identifier) where
-    
-    --   open AST.InteractionHead {Identifier} {builtIns = builtIns} {one} (AST.interactionHead ptps [] {_} {uniquePtps}) 
 
 
+      module safeAST where
 
-    --   open SubstAll {Identifier} {builtIns = builtIns} {ptps = ptps}
-    --   open SubstOne {Identifier} {builtIns = builtIns} {ptps = ptps}
+        translateArg :  ∀ {Γ Τ} → Arg Γ Τ → HExpr
+        translateArg (AST.var-a (AST.dsot name)) = ExSymbol a (SymbolC name)
+        translateArg {Τ = Τ} (AST.lit-a x) = translateLit _ x
 
-      
-    --   open LurkASTnoRecords Identifier A renaming (Expr to HExpr)
+        translateArgs : ∀ {Γ Τ} → Args Γ Τ → Cubical.Data.List.List HExpr
+        translateArgs {Τ = []} x = []
+        translateArgs {Τ = x₁ ∷ []} x = [ translateArg x ]
+        translateArgs {Τ = x₁ ∷ x₂ ∷ Τ} x = translateArg (proj₁ x) ∷ translateArgs (proj₂ x)
 
-    --   translateArg :  ∀ {Γ Τ} → Arg Γ Τ → HExpr
-    --   translateArg (AST.var-a (AST.dsot name)) = ExSymbol a (SymbolC name)
-    --   translateArg {Τ = Bool} (AST.lit-a false) = ExNil a
-    --   translateArg {Τ = Bool} (AST.lit-a true) = ExT a
-    --   translateArg {Τ = Τ} (AST.lit-a x) = ExSymbol a (SymbolC undefI)
+        {-# TERMINATING #-}
+        -- TODO add proof of purity to arguments
+        translateE : ∀ {Γ Τ} → (e : Expr Γ Τ) → HExpr 
+        translateE (AST.var (AST.dsot name)) = ExSymbol a (SymbolC name)
+        translateE (AST.body (AST.bodyR []L e)) = translateE e 
+        translateE (AST.body (AST.bodyR (h ∷L stmnts) e)) with h
+        ... | AST.bindingS (AST.BS-let (AST.ice _ name _) e') =
+                ExLet a (LetC ( [ (BindingC a (SymbolC name) (translateE e')) ]) (translateE e)) -- (BindingC a name (translateE e'))
+        ... | AST.bindingS (AST.BS-publish! p x₁) = ni "fatal-error-publish"
+        ... | AST.nonBindingS x₁ = translateE (AST.body (AST.bodyR (stmnts) e))
+        translateE (AST.lit x₁) = translateLit _ x₁
+        translateE (x₁ AST.$' x₂) = ExApply a (ExSymbol a (SymbolC (bi-render _ x₁))) ( (translateArgs x₂))
+        translateE (AST.sign x₁) = ni "fatal-error-sign"
+        translateE (AST.if e then e₁ else e₂) = ExIf a (translateE e) (translateE e₁) (translateE e₂)
+        translateE (AST.input x) = ni "fatal-error-input"
+        translateE (AST.receivePublished x) = ni "fatal-error-recivePub"
 
-    --   translateArgs : ∀ {Γ Τ} → Args Γ Τ → Cubical.Data.List.List HExpr
-    --   translateArgs {Τ = []} x = []
-    --   translateArgs {Τ = x₁ ∷ []} x = [ translateArg x ]
-    --   translateArgs {Τ = x₁ ∷ x₂ ∷ Τ} x = translateArg (proj₁ x) ∷ translateArgs (proj₂ x)
 
-    --   {-# TERMINATING #-}
-    --   translateE : ∀ {Γ Τ} → (e : Expr Γ Τ) → HExpr 
-    --   translateE (AST.var (AST.dsot name)) = ExSymbol a (SymbolC name)
-    --   translateE (AST.body (AST.bodyR []L e)) = translateE e 
-    --   translateE (AST.body (AST.bodyR (h ∷L stmnts) e)) with h
-    --   ... | AST.bindingS (AST.BS-let (AST.ice _ name _) e') =
-    --           ExLet a (LetC (toList [ (BindingC a (SymbolC name) (translateE e')) ]) (translateE e)) -- (BindingC a name (translateE e'))
-    --   ... | AST.bindingS (AST.BS-publish! p x₁) = ExSymbol a (SymbolC undefI) 
-    --   ... | AST.nonBindingS x₁ = translateE (AST.body (AST.bodyR (stmnts) e))
-    --   translateE {Τ = Bool} (AST.lit false) = ExNil a
-    --   translateE {Τ = Bool} (AST.lit true) = ExT a
-    --   translateE (AST.lit x₁) = ExSymbol a (SymbolC undefI)
-    --   translateE (x₁ AST.$' x₂) = ExApply a (ExSymbol a (SymbolC (bi-render _ x₁))) (toList (translateArgs x₂))
-    --   translateE (AST.sign x₁) = ExSymbol a (SymbolC undefI)
-    --   translateE (AST.if e then e₁ else e₂) = ExIf a (translateE e) (translateE e₁) (translateE e₂)
-    --   translateE (AST.input x) = ExSymbol a (SymbolC undefI)
-    --   translateE (AST.receivePublished x) = ExSymbol a (SymbolC undefI) 
+      module unsafeAST where
+
+        module U = Unsafe
+
+        translateArg : U.Arg → HExpr
+        translateArg (U.var-a name) = ExSymbol a (SymbolC name)
+        translateArg (U.lit-a x) = translateLit _ (GlowValue.gValue x)
+
+        translateArgs : U.Args → Cubical.Data.List.List HExpr
+        translateArgs = map-List translateArg
+
+        {-# TERMINATING #-}
+        -- TODO add proof of purity to arguments
+        translateE : (e : U.Expr) → HExpr 
+        translateE (U.var _ name) = ExSymbol a (SymbolC name)
+        translateE (U.body (U.bodyR [] e)) = translateE e 
+        translateE (U.body (U.bodyR (h ∷ stmnts) e)) with h
+        ... | U.bindingS (U.BS-let _ name _ e') =
+                ExLet a (LetC ( [ (BindingC a (SymbolC name) (translateE e')) ]) (translateE e)) -- (BindingC a name (translateE e'))
+        ... | U.bindingS (U.BS-publish! p x₁) = ni "fatal-error-publish"
+        ... | U.nonBindingS x₁ = translateE (U.body (U.bodyR (stmnts) e))
+        translateE (U.lit x) = translateLit _ (GlowValue.gValue x)
+        translateE (x₁ U.$' x₂) = ExApply a (ExSymbol a (SymbolC (bi-render _ (AST.bi _  _  _ x₁)) )) ( (translateArgs x₂))
+        translateE (U.sign x₁) = ni "fatal-error-sign"
+        translateE (U.if e then e₁ else e₂) = ExIf a (translateE e) (translateE e₁) (translateE e₂)
+        translateE (U.input t x) = ni "fatal-error-input"
+        translateE (U.receivePublished t x) = ni "fatal-error-recivePub"

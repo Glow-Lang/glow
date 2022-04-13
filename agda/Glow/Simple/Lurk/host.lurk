@@ -6,7 +6,7 @@
     (
      ;; parametrise this names, or introduce less generic ones (mb some prefix?))
      (action (lambda (i pid a) (cons 'action (cons i (cons pid (cons a ()))))))
-     (withdraw (lambda (n) (cons 'action (cons n ()))))
+     (withdraw (lambda (n) (cons 'withdraw (cons n ()))))
      (deposit (lambda (n) (cons 'deposit (cons n ()))))
 
      (publish (lambda (i pid) (cons 'publish (cons i (cons pid ())))))
@@ -129,12 +129,13 @@
      ;; 			    )
      
      (glow-code (bind (bind (bind (action 0 0 (withdraw (cons nil (cons t nil)))) (lambda (nobind) (action 1 1 (deposit (cons nil (cons t nil)))))) (lambda (nobind) (mk-pure (cons nil (cons nil (cons t nil)))))) (lambda (z) (bind (publish 2 0) (lambda (zz) (action 3 1 (withdraw (cons t (cons t nil)))))))))
-     (cf-code (lambda (wagerAmount escrowAmount) (bind (publish 0 0) (lambda (commitment) (next (action 1 0 (deposit (+ℕ wagerAmount escrowAmount))) (bind (publish 2 1) (lambda (randB) (next (action 3 1 (deposit wagerAmount)) (bind (publish 4 0) (lambda (randA) (bind (mk-pure (digestNat randA)) (lambda (mbCommitment) (next (require (==Digest commitment mbCommitment)) (bind (mk-pure (^^^ randA randB)) (lambda (n0) (bind (mk-pure (&&& n0 (cons t nil))) (lambda (n1) (next (next (if (==Nat n1 nil) (bind (mk-pure (*ℕ (cons nil (cons t nil)) wagerAmount)) (lambda (w1) (bind (mk-pure (+ℕ w1 escrowAmount)) (lambda (w2) (next (action 5 0 (withdraw w2)) (mk-pure (quote glow-unit-lit))))))) (bind (mk-pure (*ℕ (cons nil (cons t nil)) wagerAmount)) (lambda (w1) (next (action 6 1 (withdraw w1)) (next (action 7 0 (withdraw escrowAmount)) (mk-pure (quote glow-unit-lit))))))) (mk-pure (quote glow-unit-lit))) (mk-pure (quote glow-unit-lit))))))))))))))))))))
+     (cf-code (lambda (wagerAmount escrowAmount) (bind (publish 1 0) (lambda (commitment) (next (action 2 0 (deposit (+ℕ wagerAmount escrowAmount))) (bind (publish 3 1) (lambda (randB) (next (action 4 1 (deposit wagerAmount)) (bind (publish 5 0) (lambda (randA) (bind (mk-pure (digestNat randA)) (lambda (mbCommitment) (next (require (==Digest commitment mbCommitment)) (bind (mk-pure (^^^ randA randB)) (lambda (n0) (bind (mk-pure (&&& n0 (cons t nil))) (lambda (n1) (next (next (if (==Nat n1 nil) (bind (mk-pure (*ℕ (cons nil (cons t nil)) wagerAmount)) (lambda (w1) (bind (mk-pure (+ℕ w1 escrowAmount)) (lambda (w2) (next (action 6 0 (withdraw w2)) (mk-pure (quote glow-unit-lit))))))) (bind (mk-pure (*ℕ (cons nil (cons t nil)) wagerAmount)) (lambda (w1) (next (action 7 1 (withdraw w1)) (next (action 8 0 (withdraw escrowAmount)) (mk-pure (quote glow-unit-lit))))))) (mk-pure (quote glow-unit-lit))) (mk-pure (quote glow-unit-lit))))))))))))))))))))
      (test1 (lambda () (run-glow '(111) glow-code 0 (action 1 1 (deposit (cons nil (cons t nil)))))))
      
      ;; (test (runglow call1 glowcode))
-     (pubTest1 (cons (digestPrim (PF->Nat 11) ) (cons (PF->Nat 7) (cons (PF->Nat 7) ())) ))
-     (runall (lambda (x) (run-glow pubTest1 x 4 (action 5 0 (withdraw (PF->Nat 22))))))
+     (pubTest1 (cons (digestPrim (PF->Nat 7) ) (cons (PF->Nat 7) (cons (PF->Nat 7) ())) ))
+     ;; (runall (lambda (x) (run-glow pubTest1 x 5 (action 6 0 (withdraw (PF->Nat 22)))))) ;; valid
+     (runall (lambda (x) (run-glow pubTest1 x () (publish 1 0))))     
      (test2 (lambda () (runall (cf-code (PF->Nat 10) (PF->Nat 2)))))
      (test+Nat (lambda (a b) (Nat->PF (+Nat (PF->Nat a) (PF->Nat b)))))
      (test*Nat (lambda (a b) (Nat->PF (*ℕ (PF->Nat a) (PF->Nat b)))))
