@@ -195,7 +195,7 @@ module _ {Identifier : Type₀} {{IsDiscrete-Identifier : IsDiscrete Identifier}
         translateE (U.body (U.bodyR (h ∷ stmnts) e)) with h
         ... | U.bindingS (U.BS-let _ name _ e') =
                 ExLet a (LetC ( [ (BindingC a (SymbolC name) (translateE e')) ]) (translateE e)) -- (BindingC a name (translateE e'))
-        ... | U.bindingS (U.BS-publish! p x₁) = ni "fatal-error-publish"
+        ... | U.bindingS (U.BS-publish! p _ x₁) = ni "fatal-error-publish"
         ... | U.nonBindingS x₁ = translateE (U.body (U.bodyR (stmnts) e))
         translateE (U.lit x) = translateLit _ (GlowValue.gValue x)
         translateE (x₁ U.$' x₂) = ExApply a (ExSymbol a (SymbolC (bi-render _ (AST.bi _  _  _ x₁)) )) ( (translateArgs x₂))

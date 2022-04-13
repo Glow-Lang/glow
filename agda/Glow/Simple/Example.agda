@@ -166,6 +166,9 @@ coinFlip =
             ))))
         )
 
+coinFlipCode : _ 
+coinFlipCode = AST.Interaction.code (toProofs _ _ coinFlip) 
+
 
 coinFlipConsensus : Interaction
 coinFlipConsensus =  

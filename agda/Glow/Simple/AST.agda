@@ -380,6 +380,7 @@ module _ (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}
     open ContextEntry' public
 
 
+    
 
     record InteractionHead : Type₀ where
       constructor interactionHead
@@ -608,7 +609,7 @@ module _ (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}
 
         data BStmnt where
           BS-let : Maybe HonestParticipantId → Identifier → GType → Expr → BStmnt    
-          BS-publish! : HonestParticipantId → Identifier →  BStmnt
+          BS-publish! : HonestParticipantId → GType → Identifier →  BStmnt
 
         data NBStmnt where
           NBS-require! : Expr → NBStmnt
@@ -805,8 +806,8 @@ module _ (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}
         stmntF (bindingS (BS-let (ice scope₁ name₁ type₁) x)) = 
               U.bindingS (U.BS-let scope₁ name₁ type₁ (exprF x))
 
-        stmntF (bindingS (BS-publish! p (psof name₂ {y}))) = 
-               U.bindingS (U.BS-publish! p name₂) 
+        stmntF {Γ} (bindingS (BS-publish! p x@(psof name₂ {y}))) = 
+               U.bindingS (U.BS-publish! p (IsPrivateSymbolOf→GType Γ p _ (toWitness' y) ) name₂) 
         stmntF (nonBindingS (stmntNBS x)) = (U.nonBindingS (U.stmntNBS (h x)))
            where
              h : NBStmnt _ → U.NBStmnt
@@ -827,7 +828,11 @@ module _ (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}
         
         argsF {S = []} x = []
         argsF {S = _ ∷ []} x = [ argF x ]
-        argsF {S = _ ∷ _ ∷ _} x = argF (proj₁ x) ∷ argsF (proj₂ x) 
+        argsF {S = _ ∷ _ ∷ _} x = argF (proj₁ x) ∷ argsF (proj₂ x)
+
+        stmntsF : ∀ {Γ} → Statements Γ → List U.Stmnt
+        stmntsF []L = []
+        stmntsF (h ∷L x) = stmntF h ∷ stmntsF x
 
  
     toParamValue : ∀ (l : List IdentifierWithType)  → ParametersValue l →
@@ -836,6 +841,30 @@ module _ (Identifier : Type₀) {{IsDiscrete-Identifier : IsDiscrete Identifier}
                    GTypeAgdaRep Τ
     toParamValue (x₂ ∷ l) (x , xs) Τ s (inl p) = subst-GTypeAgdaRep (cong type (sym p)) x -- 
     toParamValue (x₂ ∷ l) (x , xs) Τ s (inr (_ , x₁)) = (toParamValue l xs Τ s x₁) --
+
+    InteractionHead≡ : {ih₀ ih₁ : InteractionHead}
+                          → InteractionHead.participantsWM ih₀ ≡ InteractionHead.participantsWM ih₁ 
+                          → InteractionHead.parameters ih₀ ≡ InteractionHead.parameters ih₁
+                          → ih₀ ≡ ih₁
+    InteractionHead.participantsWM (InteractionHead≡ x x₁ i) = x i
+    InteractionHead.parameters (InteractionHead≡ x x₁ i) = x₁ i
+    InteractionHead.uniqueParams (InteractionHead≡ {ih₀} {ih₁} x x₁ i) =
+       isOfHLevel→isOfHLevelDep 1 (λ _ → isProp-PM) (InteractionHead.uniqueParams ih₀) (InteractionHead.uniqueParams ih₁) x₁ i
+    InteractionHead.uniquePtcpnts (InteractionHead≡ {ih₀} {ih₁} x x₁ i) =
+       isOfHLevel→isOfHLevelDep 1 (λ _ → isProp-PM) (InteractionHead.uniquePtcpnts ih₀) (InteractionHead.uniquePtcpnts ih₁) x i
+
+    fixProofs : ∀ {ℓ} {ih₀ ih₁ : InteractionHead}
+                → (A : InteractionHead → Type ℓ)
+                → _ → _
+                → A ih₀ → A ih₁
+    fixProofs A x y = subst A (InteractionHead≡ x y)
+
+    fixProofs' : ∀ {ℓ} {ptps : _} {params : _} → 
+                       ∀ {p₀ p₁ p₂ p₃}
+                → (A : InteractionHead → Type ℓ)
+                → A (interactionHead ptps params {p₀} {p₁})
+                → A (interactionHead ptps params {p₂} {p₃})
+    fixProofs' A = subst A (InteractionHead≡ refl refl)
 
 
     record Interaction : Type₀ where

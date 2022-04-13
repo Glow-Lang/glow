@@ -371,6 +371,10 @@ module PropMode (b : Interval) where
   fromWitness'bck-P {A} {x} = toPathP ((isPropΠ (const (proj₂ x)) _ _))
 
 
+  isProp-P : ∀ {A x} → PathP (λ i → isProp (fst (PM-h A x (seg i)))) isProp-True (proj₂ x) 
+  isProp-P {A} {x} = isProp→PathP (λ _ → isPropIsProp) isProp-True (proj₂ x)
+
+
   toWitness'-h' : ∀ {A x} → ∀ b → fst (PM-h A x b) → A
   toWitness'-h' {A} zero = toWitness
   toWitness'-h' {A} one = idfun _
@@ -406,6 +410,14 @@ module PropMode (b : Interval) where
   _PM≡_ : ∀ {A} {{IsDiscrete-A : IsDiscrete A}} → (x y : A) → Type₀
   x PM≡ y = PM ( x DP≡ y )
 
+  isProp-PM-h : ∀ {A x} → ∀ b → isProp (fst (PM-h A x b))
+  isProp-PM-h {A} {x} zero = isProp-True
+  isProp-PM-h {A} {x} one = proj₂ x
+  isProp-PM-h {A} {x} (seg i) = isProp-P {A} {x} i
+
+
+  isProp-PM : ∀ {dp} → isProp (PM dp)
+  isProp-PM {dp} = isProp-PM-h {fst dp} {snd dp} b
 
 toWitnessDP : (dp : DecPropΣ) → PropMode.PM zero dp → PropMode.PM one dp
 toWitnessDP dp = transport λ i → PropMode.PM (seg i) dp
