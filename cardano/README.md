@@ -1,16 +1,16 @@
 # Gerbil-Cardano
 
-Gerbil-Cardano is a package to interact
+Gerbil-Cardano is a package used to interact
 with the [Cardano network](https://cardano.org/)
 from [Gerbil Scheme](https://cons.io).
-It is a layer on top of Plutus, providing various abstractions notably used by the Glow language.
+It is a layer on top of [Plutus](https://developers.cardano.org/docs/smart-contracts/plutus), providing various abstractions notably used by the Glow language.
 It is not at all a reimplementation any part of the Cardano protocol,
 and relies on an existing node to implement the Cardano protocol.
 
 ### Copyright and License
 
 Copyright 2020 Mutual Knowledge Systems, Inc. All rights reserved.
-Gerbil-Cardano is distributed under the Apache License, version 2.0. See the file [LICENSE](LICENSE).
+Gerbil-Cardano is distributed under the Apache License, version 2.0. See the file [LICENSE](/LICENSE).
 
 ### What does Gerbil Cardano do?
 
@@ -44,7 +44,7 @@ that are not yet available:
 
   - Compiling code to Plutus Core
 
-  - Applying a compiled plutus program to a set of parameters
+  - Applying a compiled Plutus program to a set of parameters
 
   - Decoding in a transaction which parameters were given to a compiled
     Plutus program.
@@ -125,7 +125,7 @@ A faucet for the test network is available at: https://testnets.cardano.org/en/c
 
 ### Bibliography
 
-- Plutus platform: https://hydra.iohk.io/build/3793507/download/1/plutus.pdf
-- Plutus Core specification: https://hydra.iohk.io/build/3877005/download/1/plutus-core-specification.pdf
-- Extended UTXO model: https://hydra.iohk.io/build/3793505/download/1/extended-utxo-specification.pdf
-- Cardano node specification: https://hydra.iohk.io/job/Cardano/ouroboros-network/native.docs.x86_64-linux/latest
+- [Plutus platform](https://hydra.iohk.io/build/3793507/download/1/plutus.pdf)
+- [Plutus Core specification](https://hydra.iohk.io/build/3877005/download/1/plutus-core-specification.pdf)
+- [Extended UTXO model](https://hydra.iohk.io/build/3793505/download/1/extended-utxo-specification.pdf)
+- [Cardano node specification](https://hydra.iohk.io/job/Cardano/ouroboros-network/native.docs.x86_64-linux/latest)
