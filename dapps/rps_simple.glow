@@ -1,10 +1,39 @@
 #lang glow
 
-let winner = (handA : Nat, handB : Nat) : Nat => {
+// This program needed a few modifications to pass the index-type/constraint
+// related checks I have in mind. Notably:
+//
+// winner's type needs to be restricted to reflect the fact that both arguments and the
+// result need to be < 3. Without this, the compiler would be right to raise at least two
+// objections:
+//
+// - If handA is sufficiently large, the addition in the body of winner could overflow.
+// - The switch statement at the bottom of rockPaperScissors is inexhaustive if the return value
+//   is >= 3.
+//
+// The solver should understand the require! statements, which will allow it to infer
+// that the constraints are satisfied at the call sites below.
+//
+// Furthermore, wagerAmount needs to be restricted to less than half the maximum value of Nat
+// (which is really UInt256), otherwise the multiplications in the withrdraw! statements
+// could overflow, trapping funds in the contract.
+//
+// An alternate solution would be to rewrite `withdraw! _ <- 2*wagerAmount as two statements:
+//
+// withdraw! A <- wagerAmount;
+// withdraw! A <- wagerAmount
+//
+// ...thus elminating the multiply.
+//
+// This is theoretically a real bug, but unlikely to comes up in practice, since the participants
+// would have to wager an absurd amount of money. Maybe if some cryptocurrency experiences
+// hyperinflation.
+
+let winner = (handA : Nat | handA < 3, handB : Nat | handB < 3) : (w : Nat | w < 3) => {
     (handA + (4 - handB)) % 3 };
 
 @interaction([A, B])
-let rockPaperScissors = (wagerAmount) => {
+let rockPaperScissors = (wagerAmount : Nat | wagerAmount < MaxNat / 2) => {
     @A let handA = input(Nat, "First player, pick your hand: 0 (Rock), 1 (Paper), 2 (Scissors)");
     @A require! (handA < 3);
     @A let salt = randomUInt256();
