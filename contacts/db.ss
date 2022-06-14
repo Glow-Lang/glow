@@ -56,13 +56,16 @@
   cid INTEGER PRIMARY KEY,
   name TEXT)"
  "CREATE UNIQUE INDEX contact_name ON contact(name)"
+
  "CREATE TABLE network (
   name TEXT PRIMARY KEY NOT NULL,
   description TEXT,
   uri TEXT,
   native_token TEXT NOT NULL)"
+
  "CREATE TABLE cipher (
   name TEXT PRIMARY KEY NOT NULL)"
+
  "CREATE TABLE identity (
   cid INTEGER REFERENCES contact ON DELETE CASCADE,
   network TEXT NOT NULL REFERENCES network,
@@ -78,12 +81,14 @@
   UNIQUE (cid, network, address),
   UNIQUE (secret_key_cipher, secret_key_iv))"
  "CREATE UNIQUE INDEX identity_nickname ON identity(nickname)"
+
  "CREATE TABLE txnlog (
   txid INTEGER PRIMARY KEY,
   timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   command TEXT NOT NULL,
   output TEXT NOT NULL DEFAULT '',
   status INTEGER)"
+
  "CREATE TABLE editlog (
   edid INTEGER PRIMARY KEY,
   timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,

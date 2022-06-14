@@ -65,16 +65,13 @@
   ;; TODO: Provide some way for entrypoint to introspect
   ;; options, maybe via gerbil-poo?
   ;; e.g. (.@ self options)
-  (def options
-       (hash
-        (name name)
-        (json json)))
+  (def options (hash (name name) (json json)))
   ;; NOTE: Added scope to avoid `name` being bound to #!void during macro expansion.
-  (let ((name (get-or-ask options 'name (lambda () (ask-string "Enter contact name: "))))
-        (cid (add-contact.db name [])))
-    (if json
-        (displayln (string<-json (hash (cid cid) (name name))))
-        (displayln "Added contact " name ", cid " cid))))
+  (set! name (get-or-ask options 'name (lambda () (ask-string "Enter contact name: "))))
+  (def cid (add-contact.db name []))
+  (if json
+    (displayln (string<-json (hash (cid cid) (name name))))
+    (displayln "Added contact " name ", cid " cid)))
 
 (define-entry-point (remove-contact
                      cid: (cid #f)
