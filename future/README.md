@@ -144,6 +144,8 @@ Cryptoscalies, video-game tokens, foo-on-the-blockchain.
 
 Include atomic swap capability so contracts can be written that atomically sell a NFT for ETH, etc.
 
+Ability to associate static (identity) *and* dynamic (e.g. DNS state, annotations) metadata to NFTs.
+
 Required Features:
 - Multiple assets
 - Open set of participants
@@ -164,6 +166,8 @@ Required Features:
 - FFI to Solidity API.
 
 ### Staking Rewards
+
+a.k.a. Yield Farming.
 
 Required features:
 - Shared state
