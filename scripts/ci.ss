@@ -96,7 +96,7 @@
           (run-process ["nix" "--extra-experimental-features" "nix-command" "eval" "--raw" "-f" "pkgs.nix" "glow-lang"]
                        coprocess: read-all-as-string))
          (loadpath (run-process ["nix" "--extra-experimental-features" "nix-command" "eval" "--raw" "-f" "pkgs.nix"
-                          "glow-lang.passthru.pre-pkg.testGerbilLoadPath"]
+                          "testGerbilLoadPath"]
                          coprocess: read-all-as-string)))
     (setenv "GERBIL_LOADPATH" loadpath)
     (setenv "PATH" (format "~a/bin:~a" glow-lang.out (getenv "PATH" "")))

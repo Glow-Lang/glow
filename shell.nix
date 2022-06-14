@@ -28,7 +28,7 @@ in
       echo ${gerbil-poo}
 
       ${glow-lang.postConfigure}
-      export GERBIL_LOADPATH="${glow-lang.passthru.pre-pkg.testGerbilLoadPath}"
+      export GERBIL_LOADPATH="${pkgs.testGerbilLoadPath}"
       PATH="${glow-lang.out}/bin:$PATH"
       GERBIL_APPLICATION_HOME="$PWD"
       GERBIL_APPLICATION_SOURCE="$PWD"
