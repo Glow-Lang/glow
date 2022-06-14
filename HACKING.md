@@ -204,12 +204,6 @@ Update cachix and Docker:
 nixglow
 ```
 
-Update dependencies on CI:
-```sh
-# Just gerbil packages
-nix-thunk update dep/gerbil-* dep/nixpkgs
-```
-
 ### After Updating
 
 - Ensure CI pipeline passes.
