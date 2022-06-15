@@ -16,12 +16,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v1
-      - run: ./scripts/ci.ss before-build
-      - run: ./scripts/ci.ss build
-      - if: ${{ github.event_name == 'push' }}
-        env:
+      - env:
           CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
-        run: ./scripts/ci.ss after-build
-      - run: ./scripts/ci.ss before-test
-      - run: ./scripts/ci.ss test
-      - run: ./scripts/ci.ss after-test
+      - run: ./scripts/ci.ss local-all

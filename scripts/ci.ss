@@ -17,7 +17,7 @@
 (set! default-application-source-directory glow-home)
 (set! default-application-home-directory glow-home)
 (current-directory glow-home)
-(register-software "Glow CI" "0.1.0")
+(register-software "Glow CI" "0.1.1")
 
 (def tmpdir (getenv "TMPDIR" "/tmp"))
 
@@ -105,7 +105,6 @@
     (setenv "GLOW_SRC" glow-home)
     (values glow-lang.out loadpath)))
 
-
 (define-entry-point (before-test)
   (help: "Prepare a test in Gitlab CI" getopt: [])
   (displayln "before-test")
@@ -143,22 +142,33 @@
 (define-entry-point (local-all)
   (help: "Do it all locally on your machine" getopt: [])
   ;; Compared to CI: doesn't build from clean filesystem and environment,
+  (local-build)
+  ;; NB: CI on github does not reset to a new docker image between build and test,
+  ;; as it used to do on gitlab. Locally, we obviously don't.
+  (local-test))
+
+(define-entry-point (local-build)
+  (help: "Do the build only locally on your machine" getopt: [])
   (before-build)
   (build)
-  (after-build)
-  ;; CI resets to a new docker image between build and test. Obviously we don't
+  (after-build))
+
+(define-entry-point (local-test)
+  (help: "Do the test only locally on your machine" getopt: [])
   (before-test)
   (test)
   (after-test))
 
 (def default-docker-image "mukn/glow:devel")
 
-;; TODO: local build on docker
-(define-entry-point (docker-all)
+(define-entry-point (docker-all docker-image: (docker-image default-docker-image))
   (help: "Build and test locally in docker containers, emulating CI" getopt: [])
-  (docker-build)
-  (docker-test)
-  #;(docker-doc)) ;; <- For now, done as part of test
+  (docker-run docker-image: docker-image "/root/glow-source/scripts/ci.ss in-docker-all"))
+
+(define-entry-point (in-docker-all)
+  (help: "(Internal) Emulate CI run inside a local docker container" getopt: [])
+  (in-docker-setup)
+  (local-all))
 
 ;; Instead of extracting these and putting them in the too-visible environment,
 ;; just mount the appropriate configuration directory
@@ -173,18 +183,19 @@
   (help: "Build locally in a docker container, emulating CI"
    getopt: (make-options [(argument 'command)] [] options/docker-image))
   (run-process/batch ["docker" "run"
+                      "--privileged" ;; <== THIS FEELS WRONG, but without it the latest nix won't work(!?)
                       "-t" "-v" (format "~a:/root/glow-source" glow-home)
                       "-v" (format "~a/.config/cachix:/root/.config/cachix:ro" (getenv "HOME"))
                       ;;"-e" (format "CACHIX_AUTH_TOKEN=~a" (get-cachix-auth-token))
                       docker-image "bash" "-c" command]))
 
 (define-entry-point (docker-build docker-image: (docker-image default-docker-image))
-  (help: "Build locally in a docker container, emulating CI"
+  (help: "Build locally in a docker container, emulating build-only part of CI"
    getopt: options/docker-image)
   (docker-run docker-image: docker-image "/root/glow-source/scripts/ci.ss in-docker-build"))
 
 (define-entry-point (docker-test docker-image: (docker-image default-docker-image))
-  (help: "Run tests locally in a docker container, emulating CI"
+  (help: "Run tests locally in a docker container, emulating test-only part of CI"
    getopt: options/docker-image)
   (docker-run docker-image: docker-image "/root/glow-source/scripts/ci.ss in-docker-test"))
 
@@ -197,21 +208,28 @@
 (define-entry-point (in-docker-setup)
   (help: "(Internal) Setup local docker container" getopt: [])
   (run-process/batch ["sh" "-c" (string-append
+                                 "set -eux ; "
+                                 "id -a ; "
                                  "rm -rf /root/glow ; "
-                                 "cp -fax /root/glow-source /root/glow && "
-                                 "cd /root/glow && "
-                                 "git fetch --depth 50 /root/glow-source")])
+                                 "cp -fax /root/glow-source /root/glow ; "
+                                 "chown -R root:root /root/glow ; "
+                                 "cd /root/glow ; "
+                                 ;; This is not meaningful on github anymore.
+                                 ;; Also, it won't work without docker run --privileged (!)
+                                 ;; and neither will nix (!)
+                                 "git fetch --depth 50 /root/glow-source ;"
+                                 "echo 'Done with local docker setup'")])
   (current-directory "/root/glow"))
 
 (define-entry-point (in-docker-build)
-  (help: "(Internal) Emulate CI build inside a local docker container" getopt: [])
+  (help: "(Internal) Emulate CI build-only inside a local docker container" getopt: [])
   (in-docker-setup)
   (run-process/batch ["./scripts/ci.ss" "before-build"])
   (run-process/batch ["./scripts/ci.ss" "build"])
   (run-process/batch ["./scripts/ci.ss" "after-build"]))
 
 (define-entry-point (in-docker-test)
-  (help: "(Internal) Emulate CI test inside a local docker container" getopt: [])
+  (help: "(Internal) Emulate CI test-only inside a local docker container" getopt: [])
   (in-docker-setup)
   (run-process/batch ["./scripts/ci.ss" "before-test"])
   (run-process/batch ["./scripts/ci.ss" "test"])
