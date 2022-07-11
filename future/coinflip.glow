@@ -1,13 +1,21 @@
-#lang glow
-@interaction([A, B])
-let coinFlip = (wagerAmount) => {
+let coinFlip =
+    @participant(A) @participant(B) (wagerAmount) => {
+
     @A assert! canReach(A_wins);
     @A let randA = randomUInt256();
     @verifiably!(A) let commitment = digest(randA);
     publish! A -> commitment; deposit! A -> wagerAmount;
+    // NB: Glow can automatically detect that A has a future transaction, and
+    // therefore will implicitly require A to additionally deposit an appropriate escrow,
+    // as if the following had been manually inserted, for some suitable value of escrowAmount:
+    //   deposit! A -> escrowAmount;
+
     @B assert! canReach(B_wins);
     @B let randB = randomUInt256();
     publish! B -> randB; deposit! B -> wagerAmount;
+    // NB: Glow can automatically detect that B has no future transaction, and
+    // therefore will not require B to additionally deposit any escrow.
+
     publish! A -> randA;
     verify! commitment;
     if (((randA ^^^ randB) &&& 1) == 0) {
@@ -15,4 +23,6 @@ let coinFlip = (wagerAmount) => {
     } else {
         B_wins: withdraw! B <- 2*wagerAmount
     }
+    // NB: Glow will automatically release A's escrow after this last transaction.
+    //   withdraw! A <- escrowAmount;
 };
