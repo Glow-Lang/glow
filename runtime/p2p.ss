@@ -1,35 +1,19 @@
 ;; ~~~~~~~~ p2p.ss ~~~~~~~~~
-;;
 ;; p2p communication methods for glow
 
 (export #t)
 
-;;~~~~~~~~~~~~~~~~~~~~Import~~~~~~~~~~~~~~~
 (import
-  :std/misc/channel
   :std/iter
   :std/net/bio
-  :std/sugar
-  :std/format
-  :std/os/pid
   :std/srfi/13
-  :clan/debug
-  :clan/exception
-  :gerbil/gambit/exceptions
-  :clan/path-config
-  :clan/shell
-  :clan/io
+  :std/misc/channel
+  :mukn/ethereum/ethereum
+  :gerbil/gambit/threads
   :clan/concurrency
-  :gerbil/gambit/ports
-  :mukn/ethereum/known-addresses
-  ./pb/private-key
-  :std/misc/uuid
-  ../compiler/project/runtime-2
-    :gerbil/gambit/threads
-    :vyzo/libp2p
-    :vyzo/libp2p/client
+  :vyzo/libp2p
+  :vyzo/libp2p/client
   :vyzo/libp2p/daemon)
-
 
 (def POLL_MAX_WINDOW 10)
 
