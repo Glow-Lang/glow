@@ -1,7 +1,7 @@
 (export #t)
 
 (import
-  :clan/poo/object :clan/poo/number :clan/poo/mop :clan/poo/type
+  :clan/poo/object (except-in :clan/poo/number Int) :clan/poo/mop :clan/poo/type
   ../poo-extensions)
 
 
