@@ -55,10 +55,10 @@ fi
 conf='n () { n="$1/etc/profile.d/nix.sh" ; [ -f "$n" ] && . "$n" ; }; n $HOME/.nix-profile || n /nix/var/nix/profiles/default || n /run/current-system/sw || n ""'
 
 if ! grep -c "/[.]nix-profile" "$HOME/.zshenv" > /dev/null 2>&1 ; then
-    echo "$conf" >> "$HOME/.zshenv"
+    (echo ; echo "$conf") >> "$HOME/.zshenv"
 fi
 if ! grep -c "/[.]nix-profile" "$HOME/.bashrc" > /dev/null 2>&1 ; then
-    echo "$conf" >> "$HOME/.bashrc"
+    (echo ; echo "$conf") >> "$HOME/.bashrc"
 fi
 eval "$conf"
 
