@@ -13,73 +13,6 @@
   (only-in :mukn/glow/compiler/common hash-kref)
   ./program)
 
-(define-type ConsensusCodeGenerator
-  (.+
-    (Record
-      program: [Program]
-      name: [Symbol]
-      static-block-ctx: [StaticBlockCtx]
-      variable-offsets: [(OrFalse (Map (Map Nat <- Symbol) <- Symbol))]
-      labels: [(OrFalse (Map Nat <- Symbol))]
-      bytes: [(OrFalse Bytes)]
-
-      ; TODO: rename params-end; its actual meaning is all statically-allocated
-      ; space in the executable, incl. globals, so the name should reflect that.
-      params-end: [(OrFalse Nat)]
-      timeout: [Nat])
-    {.make:
-      (lambda (some-program some-name some-timeout assets)
-        {program: some-program
-         name: some-name
-         static-block-ctx: (.call StaticBlockCtx .make some-program some-name assets)
-         variable-offsets: #f
-         labels: #f
-         bytes: #f
-         params-end: #f
-         timeout: some-timeout})
-     .generate:
-      (lambda (self)
-        (parameterize ((brk-start (box params-start@)))
-          (.set! self variable-offsets (make-hash-table))
-          (.set! self params-end params-start@)
-          ;; NB: the order in which we build medium and small functions is important, because they mutate
-          ;; brk-start in place. &define-medium-functions will allocate the maximum space needed by all
-          ;; medium functions, and &define-small-functions will allocate the *sum* of the space needed
-          ;; by all small functions, since the latter can be live at the same time (but so far we do
-          ;; not support recursion, so we don't need to support more than one frame of the same function).
-          ;; When computing the medium frames, we do this by setting params-end to the max of its current
-          ;; value and what is needed for the frame we're working on, so if we did small functions first
-          ;; this could go awry.
-          ;; TODO(cleanup): change the way this works internally so this isn't so delecate.
-          (def compiled-medium-functions (&define-medium-functions self))
-          (def compiled-small-functions (&define-small-functions self (.@ self program small-functions)))
-          ;; After the above have run, params-end will be set to the end of the space they need, so
-          ;; update brk-start.
-          ;; TODO: add space for global variables
-          (set-box! (brk-start) (.@ self params-end))
-
-          (def sbc (.@ self static-block-ctx))
-          (def assets-and-vars
-             (map (lambda (kv)
-                    (cons (.call StaticBlockCtx .get-asset sbc (car kv))
-                          (cdr kv)))
-                  (hash->list/sort (.@ sbc balance-vars) symbol<?)))
-
-          (defvalues (bytes-value labels-value)
-            (assemble
-              (&begin
-                (&simple-contract-prelude)
-                &define-tail-call
-                (&define-commit-contract-call/simple self)
-                (&define-check-participant-or-timeout assets-and-vars timeout: (.@ self timeout))
-                (&define-end-contract assets-and-vars)
-                compiled-small-functions
-                compiled-medium-functions
-                [&label 'brk-start@ (unbox (brk-start))])))
-          (.set! self bytes bytes-value)
-          (.set! self labels labels-value)))
-    }))
-
 ;; TODO: rename this; it has nothing to do with blocks.
 (define-type StaticBlockCtx
   {
@@ -149,6 +82,73 @@
                deposit-vars: my-deposit-vars
                balance-vars: my-balance-vars
                withdraw-vars: my-withdraw-vars }) })
+
+(define-type ConsensusCodeGenerator
+  (.+
+    (Record
+      program: [Program]
+      name: [Symbol]
+      static-block-ctx: [StaticBlockCtx]
+      variable-offsets: [(OrFalse (Map (Map Nat <- Symbol) <- Symbol))]
+      labels: [(OrFalse (Map Nat <- Symbol))]
+      bytes: [(OrFalse Bytes)]
+
+      ; TODO: rename params-end; its actual meaning is all statically-allocated
+      ; space in the executable, incl. globals, so the name should reflect that.
+      params-end: [(OrFalse Nat)]
+      timeout: [Nat])
+    {.make:
+      (lambda (some-program some-name some-timeout assets)
+        {program: some-program
+         name: some-name
+         static-block-ctx: (.call StaticBlockCtx .make some-program some-name assets)
+         variable-offsets: #f
+         labels: #f
+         bytes: #f
+         params-end: #f
+         timeout: some-timeout})
+     .generate:
+      (lambda (self)
+        (parameterize ((brk-start (box params-start@)))
+          (.set! self variable-offsets (make-hash-table))
+          (.set! self params-end params-start@)
+          ;; NB: the order in which we build medium and small functions is important, because they mutate
+          ;; brk-start in place. &define-medium-functions will allocate the maximum space needed by all
+          ;; medium functions, and &define-small-functions will allocate the *sum* of the space needed
+          ;; by all small functions, since the latter can be live at the same time (but so far we do
+          ;; not support recursion, so we don't need to support more than one frame of the same function).
+          ;; When computing the medium frames, we do this by setting params-end to the max of its current
+          ;; value and what is needed for the frame we're working on, so if we did small functions first
+          ;; this could go awry.
+          ;; TODO(cleanup): change the way this works internally so this isn't so delecate.
+          (def compiled-medium-functions (&define-medium-functions self))
+          (def compiled-small-functions (&define-small-functions self (.@ self program small-functions)))
+          ;; After the above have run, params-end will be set to the end of the space they need, so
+          ;; update brk-start.
+          ;; TODO: add space for global variables
+          (set-box! (brk-start) (.@ self params-end))
+
+          (def sbc (.@ self static-block-ctx))
+          (def assets-and-vars
+             (map (lambda (kv)
+                    (cons (.call StaticBlockCtx .get-asset sbc (car kv))
+                          (cdr kv)))
+                  (hash->list/sort (.@ sbc balance-vars) symbol<?)))
+
+          (defvalues (bytes-value labels-value)
+            (assemble
+              (&begin
+                (&simple-contract-prelude)
+                &define-tail-call
+                (&define-commit-contract-call/simple self)
+                (&define-check-participant-or-timeout assets-and-vars timeout: (.@ self timeout))
+                (&define-end-contract assets-and-vars)
+                compiled-small-functions
+                compiled-medium-functions
+                [&label 'brk-start@ (unbox (brk-start))])))
+          (.set! self bytes bytes-value)
+          (.set! self labels labels-value)))
+    }))
 
 ;; Logging the data, simple version, optimal for messages less than 6000 bytes of data.
 ;; TESTING STATUS: Used by buy-sig.
