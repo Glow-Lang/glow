@@ -1,31 +1,33 @@
 let
-  pkgs = import <nixpkgs> { inherit config; };
-
-  inherit (pkgs.lib.POP) kxPop extendPop;
-  inherit (pkgs.gerbil-support) path-src overrideSrcIfShaDiff gerbilFilterSource;
+  pkgs = import <nixpkgs> { inherit config; }; # selfPkgs
+  inherit (pkgs) lib;
+  _bar = lib.debug.traceVal "FOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO";
 
   config = {
-    packageOverrides = pkgs: rec {
+    packageOverrides = superPkgs:
+      let superGS = superPkgs.gerbil-support;
+          superPPU = superGS.prePackages-unstable;
+          inherit (superGS) path-src overrideSrcIfShaDiff gerbilFilterSource gerbilLoadPath
+                  gerbilVersionFromGit;
+          source = gerbilFilterSource ./.; in
+      rec {
+        gerbil-support = superGS // {
+          inherit pkgs;
+          # Skip extra files so we can play with CI configuration yet have the CI reuse cached builds.
+          gerbilSkippableFiles = superGS.gerbilSkippableFiles ++
+            [".gitlab.yml" ".github" "pkgs.nix" "shell.nix" "default.nix" "docs" "future" "dep"
+             "Dockerfile" "Dockerfile.nixos" "glow-install" "ci.ss" ".build"];
 
-      gerbil-support =
-        extendPop pkgs.gerbil-support (gerbil-support: superGS: {
-          # Skip extra files so that we can play with CI configuration yet have the CI reuse cached builds.
-          gerbilSkippableFiles = superGS.gerbilSkippableFiles ++ [".gitlab.yml" ".github" "pkgs.nix" "shell.nix" "default.nix" "docs" "future" "dep" "Dockerfile" "Dockerfile.nixos" "glow-install" "ci.ss" ".build"];
+          prePackages-unstable =
+            let glow-lang = superPPU.glow-lang //
+                    { pre-src = path-src source; inherit pkgs source;} //
+                    gerbilVersionFromGit source "version"; in
+            superPPU // { inherit glow-lang;};};
 
-          prePackages-unstable = extendPop superGS.prePackages-unstable (_: superPPU:
-            { "glow-lang" = extendPop superPPU.glow-lang (params: superGL:
-              let source = gerbilFilterSource ./.; in
-              { pre-src = path-src source;
-                inherit source;
-                inherit pkgs;
-                });});});
+        glow-lang = gerbil-support.gerbilPackages-unstable.glow-lang;
 
-      testGerbilLoadPath = let pre = pkgs.glow-lang.passthru.pre-pkg; in
-        "${gerbil-support.gerbilLoadPath ([pkgs.glow-lang] ++ pre.gerbilInputs)}:${pre.source}";
+        testGerbilLoadPath =
+          "${gerbilLoadPath ([glow-lang] ++ glow-lang.passthru.pre-pkg.gerbilInputs)}:${source}";
 
-    };
-
-
-  };
-in
+      };}; in
   pkgs

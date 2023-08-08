@@ -32,7 +32,7 @@
 
 ;; TODO: create version files for all overridden dependencies, too
 (define-entry-point (nix)
-  (help: "Build using nix-build")
+  (help: "Build using nix-build" getopt: [])
   (create-version-file)
   (run-process ["nix-build"] stdin-redirection: #f stdout-redirection: #f)
   (void))
@@ -43,4 +43,3 @@
         '("gerbil-utils" "gerbil-poo" "gerbil-crypto" "gerbil-persist" "gerbil-ethereum"
           "gerbil-libp2p" "smug-gerbil")) ...
    "glow-lang"])
-
