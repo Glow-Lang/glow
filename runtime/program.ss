@@ -4,8 +4,8 @@
   :std/iter :std/sugar :std/misc/list :std/srfi/1 :clan/base :clan/pure/dict/symdict :clan/poo/object
   :clan/poo/io :clan/poo/object :clan/poo/brace :clan/poo/debug
   <expander-runtime>
-  :mukn/ethereum/types
-  :mukn/ethereum/ethereum
+  :clan/ethereum/types
+  :clan/ethereum/ethereum
   (only-in ../compiler/common hash-kref)
   (only-in ../compiler/alpha-convert/alpha-convert init-syms)
   ../compiler/typecheck/type

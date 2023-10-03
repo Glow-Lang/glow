@@ -1,30 +1,72 @@
 (export #t)
 
 (import
-  :clan/debug
-  :gerbil/gambit/bits :gerbil/gambit/bytes :gerbil/gambit/threads :gerbil/gambit/ports :std/net/bio
-  :gerbil/gambit
-  :std/assert :std/crypto :std/format :std/iter
+  ;; gerbil
+  (for-syntax :std/stxutil)
+  (only-in :gerbil/runtime load-module)
+  (only-in :std/assert assert!) ;; TODO: use std/error#check-argument instead
+  :std/crypto
+  :std/format
+  :std/iter
+  :std/misc/channel
+  :std/misc/hash
+  :std/misc/list
+  :std/misc/number
+  :std/misc/path
   :std/misc/threads
-  :std/misc/hash :std/misc/list :std/misc/number :std/misc/uuid :std/misc/channel :std/text/utf8 :std/text/base64
-  :std/os/pid :std/os/signal
+  :std/misc/uuid
+  :std/text/base64
+  :std/text/utf8
+  :std/os/pid
+  :std/os/signal
   :std/pregexp
   :std/sort
-  :std/srfi/1 :std/srfi/13
+  :std/srfi/1
+  :std/srfi/13
+  :std/source
   :std/sugar
-  :std/text/base64 :std/text/json :std/text/csv :std/db/sqlite :std/db/dbi :std/iter
-  (for-syntax :std/stxutil)
-  :gerbil/gambit/exceptions
-  :clan/base :clan/exception :clan/io :clan/json :clan/net/tcp :clan/number :clan/pure/dict/assq
-  :clan/path :clan/path-config :clan/ports :clan/syntax :clan/timestamp
-  :clan/poo/object :clan/poo/brace :clan/poo/io :clan/poo/debug :clan/debug :clan/crypto/random
-  :clan/persist/content-addressing :clan/shell
-  :mukn/ethereum/hex :mukn/ethereum/ethereum :mukn/ethereum/network-config :mukn/ethereum/json-rpc
-  :mukn/ethereum/transaction :mukn/ethereum/tx-tracker :mukn/ethereum/watch :mukn/ethereum/assets
-  :mukn/ethereum/evm-runtime :mukn/ethereum/contract-config :mukn/ethereum/assembly :mukn/ethereum/types
-  :mukn/ethereum/nonce-tracker
+  :std/text/base64
+  :std/text/csv
+  :std/text/json
+  :std/db/sqlite
+  :std/db/dbi
+  :std/iter
+  ;; gerbil-utils
+  :clan/base
+  :clan/debug
+  :clan/exception
+  :clan/io
+  :clan/json
+  :clan/net/tcp
+  :clan/pure/dict/assq
+  :clan/path-config
+  :clan/ports
+  :clan/shell
+  :clan/timestamp
+  ;; gerbil-poo
+  :clan/poo/object
+  :clan/poo/brace
+  :clan/poo/io
+  :clan/poo/debug
+  ;; gerbil-crypto
+  :clan/crypto/random
+  ;; gerbil-persist
+  :clan/persist/content-addressing
+  ;; gerbil-ethereum
+  (only-in :clan/ethereum/assets Asset native-asset?)
+  (only-in :clan/ethereum/contract-config verify-contract-config
+           contract-config<-creation-receipt ContractConfig)
+  :clan/ethereum/evm-runtime
+  :clan/ethereum/hex
+  :clan/ethereum/network-config
+  :clan/ethereum/nonce-tracker
+  :clan/ethereum/transaction
+  :clan/ethereum/tx-tracker
+  :clan/ethereum/types
+  :clan/ethereum/watch
+  ;; :vyzo/libp2p
+  ;; glow
   (only-in :mukn/glow/compiler/common hash-kref)
-  :vyzo/libp2p
   (only-in ../compiler/alpha-convert/env symbol-refer)
   ./program ./block-ctx ./consensus-code-generator ./terminal-codes
   ./pb/private-key
@@ -452,7 +494,7 @@
       (.@ self current-code-block-label)
       (.@ self role)))
   (def frame-variable-bytes (marshal-product-f frame-variables))
-  (def frame-length (bytes-length frame-variable-bytes))
+  (def frame-length (u8vector-length frame-variable-bytes))
   (marshal UInt16 frame-length out)
   (marshal-product-to frame-variables out))
 
@@ -511,7 +553,7 @@
         value)))
    ((boolean? expression) expression)
    ((string? expression) (string->bytes expression))
-   ((bytes? expression) expression)
+   ((u8vector? expression) expression)
    ((integer? expression) expression)
    ;; TODO: reduce other trivial expressions
    (else
@@ -996,6 +1038,7 @@
         (.call io-channel .close)
         (.call tcp-channel .close)) }))
 
+#; ;; FIX P2P AND UNCOMMENT
 (define-type (Libp2pChannel @ [])
     .make: (lambda (my-nickname host-address contacts circuit-relay-address pubsub-node)
        (let ()
@@ -1051,7 +1094,6 @@
          ;; Get and Broadcast identity
          (def self (libp2p-identify libp2p-client))
          (for (p (peer-info->string* self))
-
            (displayln "I am " p))
 
          ;; Find your Blockchain Addr from your Nickname
@@ -1189,6 +1231,7 @@
      (let ()
        (def tcp-options (hash-ref options 'tcp-options))
        (.call TcpChannel .make tcp-options)))
+    #; ;; FIX P2P AND UNCOMMENT
     ('libp2p (let ()
      (def my-nickname (hash-ref options 'my-nickname))
      (def host-address (hash-ref options 'host-address))

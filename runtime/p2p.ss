@@ -1,19 +1,18 @@
 ;; ~~~~~~~~ p2p.ss ~~~~~~~~~
 ;; p2p communication methods for glow
-
+#| TODO: fix me, uncomment
 (export #t)
 
 (import
   :std/iter
-  :std/net/bio
+#;  :std/net/bio
   :std/srfi/13
   :std/misc/channel
-  :mukn/ethereum/ethereum
-  :gerbil/gambit/threads
+  :clan/ethereum/ethereum
   :clan/concurrency
-  :vyzo/libp2p
-  :vyzo/libp2p/client
-  :vyzo/libp2p/daemon)
+#;  :vyzo/libp2p
+#;  :vyzo/libp2p/client
+#;  :vyzo/libp2p/daemon)
 
 (def POLL_MAX_WINDOW 10)
 
@@ -178,3 +177,4 @@
 
    (pubsub-subscribe boot-c "chat")
    (values boot-c boot-d)))
+|#

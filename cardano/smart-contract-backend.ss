@@ -5,7 +5,7 @@
 
 (import
   :clan/exception :clan/logger
-  :gerbil/gambit/ports :gerbil/gambit/threads
+  :gerbil/gambit
   :std/net/request :std/text/json :std/misc/ports :std/misc/process :std/misc/repr
   :clan/poo/object :clan/poo/brace
   ./util ./haskell-types/client)

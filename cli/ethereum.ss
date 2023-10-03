@@ -2,17 +2,19 @@
 
 (import
   :gerbil/expander
-  :std/format :std/getopt :std/iter :std/misc/hash
+  :std/format :std/getopt :std/iter
+  :std/misc/decimal :std/misc/hash
   :std/sort :std/srfi/13 :std/sugar
-  :clan/basic-parsers :clan/cli :clan/decimal :clan/exit
+  :std/net/json-rpc
+  :std/text/basic-parsers
+  :clan/cli :clan/exit
   :clan/hash :clan/json :clan/list :clan/multicall :clan/path-config
-  :clan/net/json-rpc
   :clan/poo/object :clan/poo/brace :clan/poo/cli :clan/poo/debug
   :clan/persist/db
-  :mukn/ethereum/network-config :mukn/ethereum/types :mukn/ethereum/hex
-  :mukn/ethereum/ethereum :mukn/ethereum/known-addresses
-  :mukn/ethereum/json-rpc :mukn/ethereum/transaction :mukn/ethereum/cli
-  :mukn/ethereum/testing :mukn/ethereum/erc20
+  :clan/ethereum/network-config :clan/ethereum/types :clan/ethereum/hex
+  :clan/ethereum/ethereum :clan/ethereum/known-addresses
+  :clan/ethereum/json-rpc :clan/ethereum/transaction :clan/ethereum/cli
+  :clan/ethereum/testing :clan/ethereum/erc20
   ./contacts ./identities)
 
 (define-entry-point (transfer
@@ -81,7 +83,7 @@
         (json-rpc faucetUrl "faucet_sendFunds" (vector to)
                   result-decoder: bytes<-0x
                   param-encoder: (.@ (Tuple Address) .json<-)
-                  timeout: 15 log: write-json-ln))
+                  log: write-json-ln))
       (def tx (eth_getTransactionByHash txHash))
       (printf "Transaction:\n  ~s\nWaiting for confirmation...\n" (sexp<- TransactionInformation tx))
       (def receipt (debug-confirm-tx tx))
@@ -132,8 +134,7 @@
   (set! erc20 (parse-address (or erc20 (error "Missing recipient. Please use option --erc20"))))
   (set! value (with-catch
                (lambda _ (error "Missing or invalid value. Please use option --value"))
-               (cut call-with-input-string
-                    value (lambda (port) (begin0 (expect-natural port) (expect-eof port))))))
+               (cut parse-string (parse-to-eof parse-natural) value)))
   (printf "\nSending ~a tokens from ~a to ~a on ERC20 contract ~a on network ~a...\n"
           value (0x<-address from) (0x<-address to) (0x<-address to) network)
   ;; TODO: use a function to correctly print with the right number of decimals,

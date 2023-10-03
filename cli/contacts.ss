@@ -1,11 +1,38 @@
 (export #t)
 
 (import
-  :std/format :std/getopt :std/iter :std/misc/hash :std/misc/number :std/sort :std/srfi/13 :std/sugar
-  :clan/config :clan/crypto/secp256k1 :clan/files :clan/json :clan/multicall :clan/path :clan/syntax
-  :clan/poo/brace :clan/poo/cli :clan/poo/io :clan/poo/mop :clan/poo/object :clan/poo/type
+  ;; gerbil
+  :std/format
+  :std/getopt
+  :std/iter
+  :std/misc/hash
+  :std/misc/number
+  :std/misc/path
+  :std/sort
+  :std/srfi/13
+  :std/sugar
+  ;; gerbil-utils
+  :clan/config
+  :clan/files
+  :clan/json
+  :clan/multicall
+  :clan/syntax
+  ;; gerbil-poo
+  :clan/poo/brace
+  :clan/poo/cli
+  :clan/poo/io
+  :clan/poo/mop
   (only-in :clan/poo/number Nat)
-  :mukn/ethereum/cli :mukn/ethereum/hex :mukn/ethereum/ethereum :mukn/ethereum/known-addresses
+  :clan/poo/object
+  :clan/poo/type
+  ;; gerbil-crypto
+  :clan/crypto/secp256k1
+  ;; gerbil-ethereum
+  :clan/ethereum/cli
+  :clan/ethereum/hex
+  :clan/ethereum/ethereum
+  :clan/ethereum/known-addresses
+  ;; glow
   :mukn/glow/cli/utils
   (only-in ./identities Identity)
   (rename-in ../contacts/db (add-contact add-contact.db) (list-contacts list-contacts.db)))

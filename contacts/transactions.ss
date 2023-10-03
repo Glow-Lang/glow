@@ -4,8 +4,7 @@
 
 (import
  :clan/ffi
- :gerbil/gambit/ports
- :gerbil/gambit/threads
+ :gerbil/gambit
  :std/assert
  :std/db/dbi
  :std/format

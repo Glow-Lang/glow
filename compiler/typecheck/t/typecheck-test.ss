@@ -5,8 +5,7 @@
 (export #t)
 
 (import :std/test
-        :gerbil/gambit/exceptions
-        :gerbil/gambit/continuations
+        :gerbil/gambit
         :std/iter
         :std/format
         :std/misc/list

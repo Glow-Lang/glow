@@ -1,6 +1,6 @@
 (export #t)
 
-(import :gerbil/gambit/os)
+(import :gerbil/gambit)
 
 (def TTY (tty? (current-output-port)))
 (def END (if TTY "\033[0m" ""))

@@ -27,7 +27,7 @@
 (init-build-environment!
  name: "Glow"
  ;; NB: missing versions for drewc/smug-gerbil and vyzo/libp2p
- deps: '("clan" "clan/crypto" "clan/poo" "clan/persist" "mukn/ethereum")
+ deps: '("clan" "clan/crypto" "clan/poo" "clan/persist" "clan/ethereum")
  spec: files)
 
 ;; TODO: create version files for all overridden dependencies, too
@@ -41,5 +41,5 @@
   [(map (cut string-append <> "-unstable") '("gambit" "gerbil")) ...
    (map (cut string-append "gerbilPackages-unstable." <>)
         '("gerbil-utils" "gerbil-poo" "gerbil-crypto" "gerbil-persist" "gerbil-ethereum"
-          "gerbil-libp2p" "smug-gerbil")) ...
+          "gerbil-libp2p" "smug-gerbil" "ftw")) ...
    "glow-lang"])

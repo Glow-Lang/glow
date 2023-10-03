@@ -10,20 +10,51 @@
 (import
 
   ;; Gerbil
-  (only-in :gerbil/gambit/os time)
-  :gerbil/expander <expander-runtime> :std/interactive
-  :gerbil/gambit/bytes :gerbil/gambit/exact :gerbil/gambit/threads :gerbil/gambit/ports
-  :scheme/base-impl :scheme/char
-  :std/actor :std/assert :std/coroutine
-  :std/debug/heap :std/debug/memleak :std/debug/threads
-  :std/error :std/format :std/getopt :std/iter :std/logger
-  :std/misc/bytes :std/misc/deque :std/misc/hash :std/misc/list :std/misc/number
-  :std/misc/ports :std/misc/process :std/misc/queue :std/misc/repr :std/misc/string
-  :std/net/request :std/net/websocket
-  :std/pregexp :std/sort
-  :std/srfi/1 :std/srfi/13 (except-in :std/srfi/19 time) ;; :std/srfi/43
+  :gerbil/gambit
+  :gerbil/expander
+  <expander-runtime>
+  :std/interactive
+  :std/actor
+  :std/assert
+  :std/coroutine
+  :std/debug/heap
+  :std/debug/memleak
+  :std/debug/threads
+  :std/error
+  :std/format
+  :std/getopt
+  :std/io
+  :std/iter
+  :std/logger
+  :std/misc/bytes
+  :std/misc/decimal
+  :std/misc/deque
+  :std/misc/hash
+  :std/misc/list
+  :std/misc/number
+  :std/misc/path
+  :std/misc/ports
+  :std/misc/process
+  :std/misc/queue
+  :std/misc/repr
+  :std/misc/string
+  :std/net/request
+  :std/pregexp
+  :std/sort
+  :std/source
+  :std/srfi/1
+  :std/srfi/13
+  (except-in :std/srfi/19 time)
+  ;; :std/srfi/43
+  :std/srfi/141
+  :std/stxutil
   :std/sugar
-  :std/text/csv :std/text/hex :std/text/json
+  :std/text/basic-parsers
+  :std/text/basic-printers
+  :std/text/char-set
+  :std/text/csv
+  :std/text/hex
+  :std/text/json
   :std/test
 
   ;; swank
@@ -31,60 +62,123 @@
   ;; use https://github.com/fare-patches/r7rs-swank as your checkout
   ;; :ecraven/gerbil-swank
 
-  ;; Clan Utilities
-  :clan/net/json-rpc :clan/net/s3 :clan/net/simple-http-client :clan/net/websocket
-  :clan/assert :clan/base :clan/basic-parsers :clan/basic-printers
-  #;:clan/call-limiter :clan/cli :clan/concurrency :clan/config
-  :clan/debug :clan/decimal :clan/diceware
-  :clan/error :clan/exit
-  :clan/failure :clan/ffi :clan/files :clan/filesystem
-  :clan/generator :clan/git-fu :clan/hash
-  :clan/json :clan/list :clan/logger
-  :clan/maybe :clan/memo :clan/multicall :clan/number :clan/option :clan/order
-  :clan/path :clan/path-config :clan/peekable-iterator :clan/ports
+  ;; gerbil-utils
+  :clan/net/tcp
+  :clan/net/s3
+  :clan/net/websocket
+  :clan/net/whois
+  :clan/assert
+  :clan/base
+  #;:clan/call-limiter
+  :clan/cli
+  :clan/concurrency
+  :clan/config
+  :clan/debug
+  :clan/diceware
+  :clan/error
+  :clan/exit
+  :clan/failure
+  :clan/ffi
+  :clan/files
+  :clan/filesystem
+  :clan/generator
+  :clan/git-fu
+  :clan/hash
+  :clan/json
+  :clan/list
+  :clan/logger
+  :clan/maybe
+  :clan/memo
+  :clan/multicall
+  :clan/option
+  :clan/order
+  :clan/path-config
+  :clan/peekable-iterator
+  :clan/ports
   :clan/random
-  :clan/shell :clan/simple-rpc-client :clan/source
-  :clan/stateful-avl-map :clan/string :clan/subprocess :clan/syntax
-  :clan/temporary-files :clan/timestamp
-  :clan/vector :clan/versioning :clan/watch :clan/with-id
-  :clan/persist/db :clan/persist/persist :clan/persist/content-addressing
+  :clan/shell
+  :clan/simple-actor-client
+  :clan/source
+  :clan/stateful-avl-map
+  :clan/string
+  :clan/syntax
+  :clan/temporary-files
+  :clan/timestamp
+  :clan/vector
+  :clan/versioning
+  :clan/watch
 
-  ;; POO
-  :clan/poo/object :clan/poo/io :clan/poo/debug :clan/poo/cli
-  (prefix-in :clan/poo/mop poo.) (prefix-in :clan/poo/type poo.)
+  ;; gerbil-poo
+  :clan/poo/cli
+  :clan/poo/debug
+  :clan/poo/object
+  :clan/poo/io
+  :clan/poo/trie
+  (prefix-in :clan/poo/mop poo.)
+  (prefix-in :clan/poo/type poo.)
   (only-in :clan/poo/mop
            Type Type. Class Class. Slot Lens Function Fun
            .defgeneric .method proto validate element? slot-lens sexp<-)
   (only-in :clan/poo/number Number Real JsInt IntSet)
-  :clan/poo/trie
 
+  ;; gerbil-crypto
+  :clan/crypto/keccak
+  :clan/crypto/secp256k1
+
+  ;; gerbil-persist
+  :clan/persist/content-addressing
+  :clan/persist/db
+  :clan/persist/persist
+
+  ;; gerbil-ethereum
+  :clan/ethereum/abi
+  :clan/ethereum/assembly
+  :clan/ethereum/assets
+  :clan/ethereum/cli
+  :clan/ethereum/contract-config
+  :clan/ethereum/erc20
+  :clan/ethereum/ethereum
+  :clan/ethereum/evm-runtime
+  :clan/ethereum/hex
+  :clan/ethereum/json-rpc
+  :clan/ethereum/logger
+  :clan/ethereum/network-config
+  :clan/ethereum/nonce-tracker
+  :clan/ethereum/known-addresses
+  :clan/ethereum/meta-create2
+  :clan/ethereum/rlp
+  :clan/ethereum/transaction
+  :clan/ethereum/simple-apps
+  :clan/ethereum/tx-tracker
+  :clan/ethereum/types
+  :clan/ethereum/watch
+#|
   ;; Glow
-  :mukn/glow/version
-  :mukn/glow/path-config
-  :mukn/glow/compiler/syntax-context
-  :mukn/glow/compiler/passes :mukn/glow/compiler/multipass :mukn/glow/compiler/common
-  :mukn/glow/compiler/alpha-convert/symbolnat :mukn/glow/compiler/alpha-convert/fresh
+  :mukn/glow/cli/contacts
+  :mukn/glow/cli/ethereum
+  :mukn/glow/cli/identities
+  :mukn/glow/cli/interaction
   :mukn/glow/compiler/alpha-convert/alpha-convert
-  :mukn/glow/compiler/desugar/desugar
-  :mukn/glow/compiler/typecheck/typecheck
+  :mukn/glow/compiler/alpha-convert/symbolnat
+  :mukn/glow/compiler/alpha-convert/fresh
   :mukn/glow/compiler/anf/anf
-  :mukn/glow/runtime/participant-runtime
+  ;;:mukn/glow/compiler/checkpointify/checkpointify
+  :mukn/glow/compiler/common
+  :mukn/glow/compiler/desugar/desugar
+  :mukn/glow/compiler/multipass
+  :mukn/glow/compiler/passes
+  :mukn/glow/compiler/syntax-context
+  :mukn/glow/compiler/typecheck/typecheck
+  :mukn/glow/path-config
   :mukn/glow/runtime/consensus-code-generator
   :mukn/glow/runtime/glow-path
-  :mukn/glow/cli/interaction :mukn/glow/cli/contacts :mukn/glow/cli/identities :mukn/glow/cli/ethereum
-
-  ;;:mukn/glow/compiler/checkpointify/checkpointify
-  :clan/crypto/keccak :clan/crypto/secp256k1
-  :mukn/ethereum/hex :mukn/ethereum/abi :mukn/ethereum/types :mukn/ethereum/ethereum
-  :mukn/ethereum/rlp :mukn/ethereum/known-addresses :mukn/ethereum/logger
-  :mukn/ethereum/network-config :mukn/ethereum/json-rpc :mukn/ethereum/transaction :mukn/ethereum/watch
-  :mukn/ethereum/assembly :mukn/ethereum/contract-config :mukn/ethereum/evm-runtime
-  :mukn/ethereum/nonce-tracker :mukn/ethereum/tx-tracker :mukn/ethereum/simple-apps
-  :mukn/ethereum/assets :mukn/ethereum/erc20 :mukn/ethereum/cli :mukn/ethereum/meta-create2
+  :mukn/glow/runtime/participant-runtime
+  :mukn/glow/version
 
   ;; Testing Glow
   :mukn/glow/t/common
-)
+|#
+  )
 
 (import :clan/poo/brace)
 

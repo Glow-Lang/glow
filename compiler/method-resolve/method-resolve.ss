@@ -14,17 +14,13 @@
         methods-id-back-table=?)
 
 
-(import :gerbil/gambit/exact
-        :gerbil/gambit/bytes
-        :gerbil/gambit/exceptions
+(import :gerbil/gambit
         :std/format
         :std/iter
         :std/misc/list
         :std/misc/repr
         :std/misc/hash
         :std/srfi/1
-        (only-in :gerbil/gambit/ports output-port-readtable output-port-readtable-set!)
-        (only-in :gerbil/gambit/readtables readtable-sharing-allowed?-set)
         :clan/base
         :clan/pure/dict/symdict
         :mukn/glow/compiler/syntax-context

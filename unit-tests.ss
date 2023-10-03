@@ -7,7 +7,7 @@
 (import
   :clan/path-config
   :clan/crypto/secp256k1
-  :mukn/ethereum/types :mukn/ethereum/ethereum
+  :clan/ethereum/types :clan/ethereum/ethereum
   :mukn/glow/all-glow :mukn/glow/version :mukn/glow/t/common :mukn/glow/compiler/syntax-context
   :mukn/glow/cli/interaction :mukn/glow/cli/ethereum :mukn/glow/cli/contacts :mukn/glow/cli/identities
   :mukn/glow/runtime/glow-path)

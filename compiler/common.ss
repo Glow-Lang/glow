@@ -1,6 +1,6 @@
 (export #t)
 
-(import :gerbil/gambit/bytes :gerbil/gambit/hash
+(import :gerbil/gambit
         <expander-runtime>
         :std/misc/repr
         :std/format :std/iter :std/misc/list :std/misc/hash
@@ -41,7 +41,7 @@
 ;; stx-atomic-literal? : Any -> Bool
 (def (stx-atomic-literal? stx)
   (def e (stx-e stx))
-  (or (integer? e) (string? e) (bytes? e) (boolean? e) (stx-unit? e)))
+  (or (integer? e) (string? e) (u8vector? e) (boolean? e) (stx-unit? e)))
 
 (def (stx-unit? stx)
   (syntax-case stx (@tuple)

@@ -1,6 +1,6 @@
 (export #t)
 
-(import :std/format :std/iter
+(import :std/format :std/iter :std/values
         :std/misc/list :std/srfi/1
         :std/misc/repr :clan/debug ;; DEBUG
         <expander-runtime>

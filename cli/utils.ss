@@ -2,7 +2,7 @@
 ;; TODO the contents of this file should be upstreamed to gerbil-utils/cli
 ;; Not upstreamed yet because there is a dependency on
 ;; :glow/runtime/terminal-codes (which should be upstreamed eventually as well).
-(import :clan/base :gerbil/gambit/ports :mukn/glow/runtime/terminal-codes)
+(import :clan/base :gerbil/gambit :mukn/glow/runtime/terminal-codes)
 
 (def (display-prompt name)
   (displayln CYAN name)

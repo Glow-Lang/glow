@@ -1,8 +1,8 @@
 (export #t)
 (import
-        :std/generic
-        :drewc/smug
-        :std/srfi/13)
+  :std/generic
+  :std/srfi/13
+  :drewc/smug)
 
 ;; TODO: Upstream to :drewc/smug-gerbil
 (def (sat-token-reader? p (reader token-value))

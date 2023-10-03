@@ -1,11 +1,13 @@
 (export run)
+(def (run . _) (error "FIX ME")) ;; FIX and uncomment
+#|
 (import
   :std/format :std/iter :std/pregexp :std/misc/string :std/text/json
   :clan/debug :clan/ffi :clan/json
   :clan/poo/object :clan/poo/mop :clan/poo/debug
   :clan/path-config :clan/pure/dict/symdict
-  :gerbil/gambit/ports
-  :mukn/ethereum/network-config :mukn/ethereum/json-rpc
+  :gerbil/gambit
+  :clan/ethereum/network-config :clan/ethereum/json-rpc
   :mukn/glow/compiler/syntax-context :mukn/glow/compiler/multipass :mukn/glow/compiler/passes
   (only-in ../compiler/alpha-convert/env symbol-refer)
   (only-in ../compiler/common hash-kref)
@@ -60,3 +62,4 @@
               (.@ runtime current-debug-label))
    (program-environment-type-value-pairs program (.@ runtime environment))))
 
+|#

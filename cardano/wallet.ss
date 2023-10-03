@@ -4,7 +4,7 @@
 
 (import
   :clan/json :clan/logger
-  :gerbil/gambit/ports :gerbil/gambit/threads
+  :gerbil/gambit
   :std/logger :std/misc/ports :std/misc/shuffle :std/net/request :std/srfi/1 :std/text/json
   ./util)
 

@@ -1,16 +1,29 @@
 (export #t)
 
 (import
-  :gerbil/gambit/misc
+  ;; gerbil
+  :gerbil/gambit
   :gerbil/expander
-  :std/getopt :std/iter :std/sort
-  :clan/base :clan/exit :clan/filesystem :clan/multicall :clan/path :clan/path-config
+  :std/getopt
+  :std/iter
+  :std/misc/path
+  :std/sort
+  ;; gerbil-utils
+  :clan/base
+  :clan/exit
+  :clan/filesystem
+  :clan/multicall
+  :clan/path-config
+  ;; gerbil-poo
   :clan/poo/cli
+  ;; gerbil-persist
   :clan/persist/content-addressing
-  :mukn/ethereum/hex
-  :mukn/glow/path-config
+  ;; gerbil-ethereum
+  :clan/ethereum/hex
+  ;; glow
   :mukn/glow/compiler/multipass
   :mukn/glow/compiler/passes
+  :mukn/glow/path-config
   :mukn/glow/runtime/glow-path)
 
 ;; dapps-dir

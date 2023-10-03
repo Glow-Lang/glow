@@ -4,9 +4,9 @@
   :std/test
   :clan/assert
   :clan/poo/object
-  :mukn/ethereum/json-rpc
-  :mukn/ethereum/assets
-  :mukn/ethereum/test-contracts
+  :clan/ethereum/json-rpc
+  :clan/ethereum/assets
+  :clan/ethereum/test-contracts
   ../../compiler/multipass
   ../consensus-code-generator
   ../glow-path

@@ -2,7 +2,7 @@
 (package: mukn/glow
  depend: ("github.com/vyzo/gerbil-libp2p"
           "github.com/drewc/smug-gerbil"
-          "github.com/drewc/ftw"
+          #;"github.com/drewc/ftw"
           "github.com/fare/gerbil-utils"
           "github.com/fare/gerbil-crypto"
           "github.com/fare/gerbil-poo"

@@ -1,15 +1,15 @@
 (export #t)
 
 (import
-  :std/assert :std/iter
-  :std/misc/hash :std/misc/list :std/misc/number
+  :std/assert :std/iter :std/stxutil
+  :std/misc/bytes :std/misc/hash :std/misc/list :std/misc/number
   :std/sort
   :std/srfi/1
   :std/sugar
-  :clan/base :clan/number :clan/syntax
+  :clan/base
   :clan/poo/io :clan/poo/object :clan/poo/brace :clan/poo/debug
-  :mukn/ethereum/ethereum :mukn/ethereum/assembly :mukn/ethereum/evm-runtime
-  :mukn/ethereum/assets :mukn/ethereum/types
+  :clan/ethereum/ethereum :clan/ethereum/assembly :clan/ethereum/evm-runtime
+  :clan/ethereum/assets :clan/ethereum/types
   (only-in :mukn/glow/compiler/common hash-kref)
   ./program)
 
@@ -435,7 +435,7 @@
     ((<= len 32) ;; TODO: have a more general notion of immediate vs boxed type?
     (if (symbol? expr)
       (load-immediate-variable self function-name expr type) ;; reading a variable
-      (nat<-bytes (bytes<- type expr)))) ;; constant
+      (u8vector->nat (bytes<- type expr)))) ;; constant
     (else
     (if (symbol? expr)
       (lookup-variable-offset self function-name expr) ;; referring to a variable by offset
@@ -481,7 +481,7 @@
 (def (compute-variable-offsets self code-block-label)
   (assert! (symbol? code-block-label))
   (def frame-variables (make-hash-table))
-  ;; Initial offset computed by global registers, see :mukn/ethereum/evm-runtime
+  ;; Initial offset computed by global registers, see :clan/ethereum/evm-runtime
   (def frame-size params-start@)
   (def live-variables (lookup-live-variables (.@ self program) (.@ self name) code-block-label))
   (for-each

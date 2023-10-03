@@ -14,11 +14,11 @@
   :clan/poo/object :clan/poo/io :clan/poo/brace
   :clan/crypto/keccak
   :clan/persist/content-addressing :clan/persist/db
-  :mukn/ethereum/types :mukn/ethereum/ethereum :mukn/ethereum/network-config :mukn/ethereum/json-rpc
+  :clan/ethereum/types :clan/ethereum/ethereum :clan/ethereum/network-config :clan/ethereum/json-rpc
   :mukn/glow/runtime/participant-runtime :mukn/glow/runtime/reify-contract-parameters
 
   ;; TODO: make sure there's a one-stop-shop to all bindings required for the runtime to work.
-  :mukn/ethereum/assets
+  :clan/ethereum/assets
   :mukn/glow/compiler/syntax-context
   )
 

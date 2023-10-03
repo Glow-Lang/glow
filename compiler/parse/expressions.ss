@@ -1,4 +1,8 @@
-(import :drewc/smug :mukn/glow/compiler/parse/lexical :std/iter :std/misc/list)
+(import
+  :std/iter
+  :std/misc/list
+  :drewc/smug
+  :mukn/glow/compiler/parse/lexical)
 
 (export #t)
 

@@ -1,13 +1,26 @@
 (export #t)
 
 (import
-  :std/assert :std/getopt :std/iter
-  :std/misc/hash :std/misc/string
+  ;; gerbil
+  :std/assert
+  :std/getopt
+  :std/iter
+  :std/misc/hash
+  :std/misc/path
+  :std/misc/string
   :std/sort
   :std/srfi/13
   :std/sugar
-  :clan/cli :clan/config :clan/filesystem :clan/hash :clan/multicall
-  :clan/config :clan/path :clan/path-config :clan/string
+  ;; gerbil-utils
+  :clan/cli
+  :clan/config
+  :clan/filesystem
+  :clan/hash
+  :clan/multicall
+  :clan/config
+  :clan/path-config
+  :clan/string
+  ;; gerbil-poo
   :clan/poo/cli)
 
 (def glow-install-path (source-path))

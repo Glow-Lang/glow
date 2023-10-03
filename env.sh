@@ -21,12 +21,12 @@ GERBIL_PACKAGE=gerbil-unstable
 #srcdir="$(realpath "$GLOW_SRC/..")"
 ### export GERBIL_LOADPATH=$GLOW_SRC:$srcdir/gerbil-utils
 # Don't change the GERBIL_LOADPATH, instead configure your gxpkg with:
-#   gxpkg link github.com/fare/gerbil-utils $srcdir/gerbil-utils
+#   gxpkg link github.com/mighty-gerbils/gerbil-utils $srcdir/gerbil-utils
 #
 # Then you can use this, which assumes the clan utilities were installed via gxpkg:
-. "${GERBIL_PATH:-${HOME}/.gerbil}/pkg/github.com/fare/gerbil-utils/gerbil-nix-env.sh"
+. "${GERBIL_PATH:-${HOME}/.gerbil}/pkg/github.com/mighty-gerbils/gerbil-utils/gerbil-nix-env.sh"
 
-export GERBIL_ETHEREUM_SRC="${GERBIL_PATH:-${HOME}/.gerbil}/pkg/github.com/fare/gerbil-ethereum"
+export GERBIL_ETHEREUM_SRC="${GERBIL_PATH:-${HOME}/.gerbil}/pkg/github.com/mighty-gerbils/gerbil-ethereum"
 export GERBIL_LOADPATH="${GLOW_SRC}:${GERBIL_LOADPATH}:${GERBIL_ETHEREUM_SRC}"
 
 

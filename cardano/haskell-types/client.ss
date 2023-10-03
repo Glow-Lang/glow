@@ -2,7 +2,7 @@
 
 (import
   :clan/poo/object (except-in :clan/poo/number Int) :clan/poo/mop :clan/poo/type
-  (only-in :mukn/ethereum/types delay-type)
+  (only-in :clan/ethereum/types delay-type)
   ../poo-extensions)
 
 

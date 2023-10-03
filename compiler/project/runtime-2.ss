@@ -3,16 +3,16 @@
           :std/assert
           :std/misc/channel
           :std/sugar
-          :gerbil/gambit/threads
+          :gerbil/gambit
           :clan/base
           :clan/poo/object
           :clan/poo/type
           :clan/concurrency
           :clan/crypto/random
           :clan/crypto/secp256k1
-          :mukn/ethereum/types
-          :mukn/ethereum/ethereum
-          :mukn/ethereum/known-addresses))
+          :clan/ethereum/types
+          :clan/ethereum/ethereum
+          :clan/ethereum/known-addresses))
 
 (import :std/assert
         :std/format
@@ -22,9 +22,8 @@
         :std/misc/channel
         :std/sugar
         :std/text/json
-        :gerbil/gambit/threads
-        (only-in :gerbil/gambit/ports output-port-readtable output-port-readtable-set! read-u8)
-        (only-in :gerbil/gambit/readtables readtable-sharing-allowed?-set)
+        (only-in :gerbil/gambit output-port-readtable output-port-readtable-set! read-u8
+                 readtable-sharing-allowed?-set)
         :clan/base
         :clan/pure/dict/assq
         :clan/concurrency
@@ -36,9 +35,9 @@
         (only-in :clan/poo/type Sum define-sum-constructors)
         :clan/pure/dict/dicteq
         :mukn/glow/compiler/syntax-context
-        :mukn/ethereum/types
-        :mukn/ethereum/ethereum
-        :mukn/ethereum/known-addresses)
+        :clan/ethereum/types
+        :clan/ethereum/ethereum
+        :clan/ethereum/known-addresses)
 
 (def (set-caddr!  p v) (set-car! (cddr  p) v))
 (def (set-cadddr! p v) (set-car! (cdddr p) v))
@@ -305,7 +304,7 @@
 
 ;; get-balance : Address -> Nat
 (def (get-balance p)
-  ; TODO: (eth_getBalance p 'pending) from :mukn/ethereum/json-rpc
+  ; TODO: (eth_getBalance p 'pending) from :clan/ethereum/json-rpc
   1)
 
 ;; get-balances : [Listof Address] -> [Dicteqof Address Nat]

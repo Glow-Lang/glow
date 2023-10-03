@@ -13,7 +13,7 @@
 ;; should instead use programmatic interfaces directly).
 
 (import
-  :gerbil/gambit/ports
+  :gerbil/gambit
   :std/format :std/misc/hash :std/misc/list :std/pregexp
   :clan/exit)
 

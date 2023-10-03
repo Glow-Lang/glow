@@ -8,9 +8,7 @@
          :mukn/glow/compiler/typecheck/variance
          :mukn/glow/compiler/typecheck/type))
 
-(import :gerbil/gambit/exact
-        :gerbil/gambit/bytes
-        :gerbil/gambit/exceptions
+(import :gerbil/gambit
         <expander-runtime>
         :std/format
         :std/iter
@@ -1191,7 +1189,7 @@
                (else type:Nat))) ; Nat when non-negative, more specific
         ((boolean? e) type:Bool)
         ((string? e) type:Bytes) ; represent as bytess using UTF-8
-        ((bytes? e) type:Bytes)
+        ((u8vector? e) type:Bytes)
         ((and (pair? e) (length=n? e 1) (equal? (stx-e (car e)) '@tuple)) type:Unit)
         (else (error 'tc-literal "unrecognized literal"))))
 
@@ -1202,7 +1200,7 @@
   (cond ((exact-integer? e) type:Int) ; never Nat, Int is more permissive
         ((boolean? e) type:Bool)
         ((string? e) type:Bytes)
-        ((bytes? e) type:Bytes)
+        ((u8vector? e) type:Bytes)
         (else (error 'tc-pat-literal "unrecognized literal"))))
 
 ;; tc-switch-cases : MPart Env TypingScheme [Listof SwitchCaseStx] -> TypingScheme

@@ -7,8 +7,7 @@
 (import
   :std/test
   :mukn/glow/t/common
-  :gerbil/gambit/exceptions
-  :gerbil/gambit/continuations
+  :gerbil/gambit
   :std/format
   :std/iter
   :std/pregexp

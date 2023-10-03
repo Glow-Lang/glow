@@ -1,12 +1,41 @@
 (export #t)
 
 (import
-  :std/crypto :std/getopt :std/format :std/iter :std/misc/hash :std/srfi/13 :std/sugar :std/text/hex
-  :clan/base :clan/files :clan/hash :clan/json :clan/multicall :clan/path :clan/syntax
-  :clan/crypto/random :clan/crypto/secp256k1
-  :clan/poo/brace :clan/poo/cli :clan/poo/io :clan/poo/mop :clan/poo/object :clan/poo/type
-  :mukn/ethereum/cli :mukn/ethereum/hex :mukn/ethereum/ethereum :mukn/ethereum/known-addresses :mukn/ethereum/network-config
-  :mukn/ethereum/json-rpc
+  ;; gerbil
+  :std/crypto
+  :std/getopt
+  :std/format
+  :std/iter
+  :std/misc/hash
+  :std/misc/path
+  :std/srfi/13
+  :std/sugar
+  :std/text/hex
+  ;; gerbil-utils
+  :clan/base
+  :clan/files
+  :clan/hash
+  :clan/json
+  :clan/multicall
+  :clan/syntax
+  ;; gerbil-crypto
+  :clan/crypto/random
+  :clan/crypto/secp256k1
+  ;; gerbil-poo
+  :clan/poo/brace
+  :clan/poo/cli
+  :clan/poo/io
+  :clan/poo/mop
+  :clan/poo/object
+  :clan/poo/type
+  ;; gerbil-ethereum
+  :clan/ethereum/cli
+  :clan/ethereum/hex
+  :clan/ethereum/ethereum
+  :clan/ethereum/known-addresses
+  :clan/ethereum/network-config
+  :clan/ethereum/json-rpc
+  ;; glow
   (rename-in ../contacts/db (add-contact add-contact.db) (add-identity add-identity.db))
   (only-in ../contacts/keys decrypt-secret-key encrypt-secret-key secret-key-cipher))
 

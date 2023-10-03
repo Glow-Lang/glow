@@ -1,7 +1,7 @@
 (export #t)
 
 (import
-  :gerbil/gambit/os :gerbil/gambit/ports :gerbil/gambit/threads
+  :gerbil/gambit
   :std/assert :std/format :std/iter
   :std/misc/ports :std/misc/process
   :std/srfi/1
@@ -13,10 +13,10 @@
   :clan/crypto/keccak :clan/crypto/secp256k1
   :clan/persist/content-addressing :clan/persist/db
   :clan/versioning
-  :mukn/ethereum/types :mukn/ethereum/ethereum :mukn/ethereum/known-addresses :mukn/ethereum/json-rpc
-  :mukn/ethereum/simple-apps :mukn/ethereum/network-config :mukn/ethereum/assets
-  :mukn/ethereum/ethereum :mukn/ethereum/hex :mukn/ethereum/transaction :mukn/ethereum/types
-  :mukn/ethereum/testing
+  :clan/ethereum/types :clan/ethereum/ethereum :clan/ethereum/known-addresses :clan/ethereum/json-rpc
+  :clan/ethereum/simple-apps :clan/ethereum/network-config :clan/ethereum/assets
+  :clan/ethereum/ethereum :clan/ethereum/hex :clan/ethereum/transaction :clan/ethereum/types
+  :clan/ethereum/testing
   ../compiler/passes
   ../compiler/multipass
   ../compiler/syntax-context

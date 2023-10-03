@@ -18,10 +18,23 @@
 ;;   to describe how it relates to the "main" data.
 
 (import
-  :std/format :std/iter :std/misc/ports :std/misc/string
-  :std/srfi/1 :std/srfi/13 :std/sugar
-  :clan/base :clan/files :clan/path :clan/path-config
-  :mukn/glow/compiler/common :mukn/glow/path-config :mukn/glow/runtime/glow-path)
+  ;; gerbil
+  :std/format
+  :std/iter
+  :std/misc/path
+  :std/misc/ports
+  :std/misc/string
+  :std/srfi/1
+  :std/srfi/13
+  :std/sugar
+  ;; gerbil-utils
+  :clan/base
+  :clan/files
+  :clan/path-config
+  ;; glow
+  :mukn/glow/compiler/common
+  :mukn/glow/path-config
+  :mukn/glow/runtime/glow-path)
 
 ;; A "layer" of language has a name, a reader and a writer.
 ;; - The name, a symbol, is also the file extension of corresponding source files (e.g. 'glow => ".glow").

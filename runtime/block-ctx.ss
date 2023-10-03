@@ -4,7 +4,7 @@
   :std/misc/list
   :clan/base :clan/pure/dict/assq
   :clan/poo/object :clan/poo/brace :clan/poo/io
-  :mukn/ethereum/types :mukn/ethereum/assets)
+  :clan/ethereum/types :clan/ethereum/assets)
 
 ;; The state for the "monad" of consensual computations, with two variants,
 ;; depending on whether the current participant is active or passive

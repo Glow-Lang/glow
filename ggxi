@@ -11,18 +11,14 @@ here=$(dirname "$this")
 
 . "$here/env.sh"
 
+# After #936 it should be just gxi -L "${here}/all-glow.ss\" "$@"
+
+exprs="(load\"${here}/all-glow.ss\")"
 case "${1-}" in
-    --swank) swank=(-e "(spawn/name'swank\`,start-swank)") ; shift ;;
+    --swank) exprs="$expr(spawn/name'swank\`,start-swank)" ; shift ;;
     *) swank=() ;;
 esac
 if [ $# = 0 ] ; then
-    #gerbil_home=${GERBIL_HOME:-$(gxi -e '(display __gx#default-gerbil-home)')}
-    #interaction=("$gerbil_home/lib/init.ss" -)
-    interaction=(-e '(load (path-expand "lib/init.ss" (getenv "GERBIL_HOME" __gx#default-gerbil-home)))' -)
+    exprs="$exprs(gerbil/main#init-interactive!)(##repl-debug\`,#f\`,#f\`,#t)"
 fi
-command=(
-    gxi
-    "${here}/all-glow.ss"
-    "${swank[@]}" "${interaction[@]}" "$@")
-
-exec "${command[@]}"
+exec gxi -e "(begin$exprs)"

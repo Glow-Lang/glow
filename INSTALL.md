@@ -136,7 +136,7 @@ is better suited to work on *Glow* itself and can be unstable), use:
     docker run -it --mount type=volume,src=glow-home,dst=/root mukn/glow:devel bash
 
 You can build your own using `scripts/make-docker-image.ss` from
-[gerbil-utils](https://github.com/fare/gerbil-utils).
+[gerbil-utils](https://github.com/mighty-gerbils/gerbil-utils).
 
 Note that the `--mount` option is there to help you persist your working state
 between sessions of running *Glow* inside docker.
@@ -227,11 +227,12 @@ Assuming for now you won't be modifying their source code,
 just install them with `gxpkg install` and `gxpkg build`.
 
 ```
-DEPS=(github.com/fare/gerbil-utils
-      github.com/fare/gerbil-poo
-      github.com/fare/gerbil-crypto
-      github.com/fare/gerbil-persist
-      github.com/fare/gerbil-ethereum
+DEPS=(github.com/mighty-gerbils/gerbil-leveldb
+      github.com/mighty-gerbils/gerbil-utils
+      github.com/mighty-gerbils/gerbil-poo
+      github.com/mighty-gerbils/gerbil-crypto
+      github.com/mighty-gerbils/gerbil-persist
+      github.com/mighty-gerbils/gerbil-ethereum
       github.com/drewc/gerbil-swank
       github.com/drewc/drewc-r7rs-swank
       github.com/drewc/smug-gerbil
@@ -256,11 +257,12 @@ after possibly editing the script to adjust the `SRCDIR` shell variable
 to adjust where you'll install those dependencies:
 
 ```
-DEPS=(github.com/fare/gerbil-utils
-      github.com/fare/gerbil-poo
-      github.com/fare/gerbil-crypto
-      github.com/fare/gerbil-persist
-      github.com/fare/gerbil-ethereum
+DEPS=(github.com/mighty-gerbils/gerbil-leveldb
+      github.com/mighty-gerbils/gerbil-utils
+      github.com/mighty-gerbils/gerbil-poo
+      github.com/mighty-gerbils/gerbil-crypto
+      github.com/mighty-gerbils/gerbil-persist
+      github.com/mighty-gerbils/gerbil-ethereum
       github.com/drewc/gerbil-swank
       github.com/drewc/drewc-r7rs-swank
       github.com/drewc/smug-gerbil
@@ -321,8 +323,8 @@ And you can run our integration tests with:
 
 However, mind that integration tests require you
 to have a local private [`geth`](https://geth.ethereum.org/) running
-(typically using the [`script/run-ethereum-test-net.ss`](https://github.com/fare/gerbil-ethereum/blob/master/scripts/run-ethereum-test-net.ss)
-from [gerbil-ethereum](https://github.com/fare/gerbil-ethereum))
+(typically using the [`script/run-ethereum-test-net.ss`](https://github.com/mighty-gerbils/gerbil-ethereum/blob/master/scripts/run-ethereum-test-net.ss)
+from [gerbil-ethereum](https://github.com/mighty-gerbils/gerbil-ethereum))
 and may maintain state in a `run` directory
 that you might have to wipe with `rm -rf run`
 each time you restart `geth`, shortly *before* said restart

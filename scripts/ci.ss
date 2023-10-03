@@ -3,12 +3,30 @@
 ;;;; Run build and test in CI -- see glow/.github/workflows/ci.yml
 
 (import
-  :gerbil/gambit/exceptions :gerbil/gambit/ports
-  :std/format :std/getopt :std/misc/ports :std/misc/process :std/srfi/1 :std/sugar
-  :clan/base :clan/exit :clan/debug :clan/files :clan/git-fu :clan/json
-  :clan/multicall :clan/path :clan/path-config :clan/source :clan/versioning
+  ;; gerbil
+  :gerbil/gambit
+  :std/format
+  :std/getopt
+  :std/misc/path
+  :std/misc/ports
+  :std/misc/process
+  :std/srfi/1
+  :std/sugar
+  ;; gerbil-utils
+  :clan/base
+  :clan/exit
+  :clan/debug
+  :clan/files
+  :clan/git-fu
+  :clan/json
+  :clan/multicall
+  :clan/path-config
+  :clan/source
+  :clan/versioning
+  ;; gerbil-poo
   :clan/poo/cli
-  :mukn/ethereum/version)
+  ;; gerbil-ethereum
+  :clan/ethereum/version)
 
 ;; Initialize paths from the environment
 (def here (path-directory (path-maybe-normalize (this-source-file))))

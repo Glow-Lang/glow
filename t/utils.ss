@@ -3,8 +3,8 @@
 (import
   :clan/debug
   :clan/persist/db
-  :mukn/ethereum/json-rpc
-  :mukn/ethereum/testing
+  :clan/ethereum/json-rpc
+  :clan/ethereum/testing
   ../runtime/participant-runtime)
 
 (def (setup-test-env)

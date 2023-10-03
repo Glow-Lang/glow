@@ -6,24 +6,29 @@
         get-identities add-identity delete-identity-by-address delete-identity-by-nickname)
 
 (import
- (only-in :clan/base vector->values)
- (only-in :clan/config xdg-config-home)
- (only-in :clan/list remove-duplicates)
- (only-in :clan/path path-parent)
- (only-in :clan/poo/object .@ with-slots)
- (only-in :gerbil/gambit/os file-size)
- :std/crypto
- :std/db/dbi
- (only-in :std/db/sqlite sqlite-open)
- (only-in :std/iter for for/collect)
- (only-in :std/misc/hash hash-ref-set!)
- (only-in :std/sort sort)
- (only-in :std/srfi/1 append-map first)
- :std/sugar
- :std/text/json
- (only-in :mukn/ethereum/assets asset-table)
- (only-in :mukn/ethereum/network-config ethereum-networks)
- (only-in ./keys secret-key-ciphers))
+  ;; gerbil
+  (only-in :gerbil/gambit file-size)
+  (only-in :std/misc/path path-parent)
+  :std/crypto
+  :std/db/dbi
+  (only-in :std/db/sqlite sqlite-open)
+  (only-in :std/iter for for/collect)
+  (only-in :std/misc/hash hash-ref-set!)
+  (only-in :std/sort sort)
+  (only-in :std/srfi/1 append-map first)
+  :std/sugar
+  :std/text/json
+  (only-in :std/values vector->values)
+  ;; gerbil-utils
+  (only-in :clan/base vector->values)
+  (only-in :clan/config xdg-config-home)
+  (only-in :clan/list remove-duplicates)
+  (only-in :clan/poo/object .@ with-slots)
+  ;; gerbil-ethereum
+  (only-in :clan/ethereum/assets asset-table)
+  (only-in :clan/ethereum/network-config ethereum-networks)
+  ;; glow
+  (only-in ./keys secret-key-ciphers))
 
 ;; The global contacts database connection handle.
 (def contact-db #f)
