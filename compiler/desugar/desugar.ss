@@ -128,7 +128,7 @@
   (let ((verification (hash-get (current-verifications) (syntax-e var))))
     (unless verification
       ;; TODO: properly report location, etc.
-      (error "cannot verify variable not defined verifiably" var))
+      (error "cannot verify variable not defined verifiably" (syntax-e var) (AST-source var)))
     (restx var verification)))
 
 ;; desugar-verify : Stx -> Stx

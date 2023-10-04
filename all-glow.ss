@@ -152,7 +152,7 @@
   :clan/ethereum/tx-tracker
   :clan/ethereum/types
   :clan/ethereum/watch
-#|
+
   ;; Glow
   :mukn/glow/cli/contacts
   :mukn/glow/cli/ethereum
@@ -177,7 +177,6 @@
 
   ;; Testing Glow
   :mukn/glow/t/common
-|#
   )
 
 (import :clan/poo/brace)
