@@ -5,6 +5,9 @@
 (import :clan/testing)
 (init-test-environment!)
 (import
+  (only-in :std/getopt rest-arguments)
+  (only-in :clan/exit silent-exit)
+  (only-in :clan/multicall define-entry-point set-default-entry-point!)
   :clan/path-config
   :clan/crypto/secp256k1
   :clan/ethereum/types :clan/ethereum/ethereum

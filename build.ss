@@ -21,6 +21,7 @@
   (!> (all-gerbil-modules)
       (cut filter (lambda (module-name) (not (string-prefix? "dep" module-name))) <>)
       (cut cons "t/common.ss" <>)
+      (cut remove-file <> "runtime/pb/private-key.ss") ;; reenable when gerbil protobuf & p2p fixed
       ;;(cut cons [exe: "main.ss" bin: "glowrun"] <>)
       (cut add/options <> "compiler/parse/expressions" "-cc-options" "-U___SINGLE_HOST")))
 

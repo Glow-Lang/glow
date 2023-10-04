@@ -69,7 +69,7 @@
   (only-in :mukn/glow/compiler/common hash-kref)
   (only-in ../compiler/alpha-convert/env symbol-refer)
   ./program ./block-ctx ./consensus-code-generator ./terminal-codes
-  ./pb/private-key
+  ;;./pb/private-key
   ../compiler/method-resolve/method-resolve
   ../compiler/project/runtime-2
   ./p2p)
