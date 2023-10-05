@@ -2,26 +2,25 @@
 
 (import
   ;; gerbil
-  :std/assert
-  :std/getopt
-  :std/iter
-  :std/misc/hash
-  :std/misc/path
-  :std/misc/string
-  :std/sort
-  :std/srfi/13
-  :std/sugar
+  (only-in :std/assert assert!)
+  (only-in :std/getopt option)
+  (only-in :std/iter for)
+  (only-in :std/misc/hash hash->list/sort)
+  (only-in :std/misc/path absolute-path? path-absolute? subpath path-enough)
+  (only-in :std/misc/string string-trim-suffix)
+  (only-in :std/sort sort)
+  (only-in :std/srfi/13 string-suffix?)
+  (only-in :std/sugar hash)
   ;; gerbil-utils
-  :clan/cli
-  :clan/config
-  :clan/filesystem
-  :clan/hash
-  :clan/multicall
-  :clan/config
-  :clan/path-config
-  :clan/string
+  (only-in :clan/filesystem find-files)
+  (only-in :clan/hash hash-removed)
+  (only-in :clan/multicall define-entry-point)
+  (only-in :clan/config getenv-absolute-paths split-dirs xdg-data-home xdg-data-dirs)
+  (only-in :clan/path-config source-path)
+  (only-in :clan/string co-pad-strings)
   ;; gerbil-poo
-  :clan/poo/cli)
+  (only-in :clan/poo/cli make-options)
+  ../path-config) ;; needed for side-effects
 
 (def glow-install-path (source-path))
 (def glow-path #f)
