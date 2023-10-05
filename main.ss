@@ -3,15 +3,13 @@
 (export #t)
 
 (import
-  :std/pregexp
-  :clan/path-config
-  :clan/multicall :clan/versioning
-  :clan/crypto/secp256k1
-  :clan/ethereum/ethereum :clan/ethereum/types
-  :mukn/glow/all-glow :mukn/glow/compiler/syntax-context :mukn/glow/t/common
+  :mukn/glow/all-glow ;; required for the side-effect of importing everything that matters
+  (only-in :clan/multicall define-multicall-main current-program)
+  (only-in :mukn/glow/runtime/glow-path initialize-glow-path!)
+  :mukn/glow/compiler/syntax-context ;; make sure the syntax-context is here
+  ;; other cli entry-points
   :mukn/glow/cli/contacts :mukn/glow/cli/interaction :mukn/glow/cli/identities
-  :mukn/glow/contacts/server
-  :mukn/glow/runtime/glow-path)
+  :mukn/glow/contacts/server)
 
 (current-program "glow")
 (initialize-glow-path!)

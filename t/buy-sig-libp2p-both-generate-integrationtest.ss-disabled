@@ -7,7 +7,7 @@
   :std/srfi/1
   :std/sugar :std/test
   :std/text/hex :std/text/json
-  :clan/base :clan/concurrency :clan/debug :clan/decimal :clan/exception
+  :clan/base :clan/concurrency :clan/debug :clan/exception
   :clan/io :clan/json :clan/path-config :clan/ports :clan/ffi
   :clan/poo/object :clan/poo/io :clan/poo/debug
   :clan/crypto/keccak :clan/crypto/secp256k1
@@ -221,7 +221,6 @@
             (.@ Ether .string<-) seller-balance-before
             (.@ Ether .string<-) buyer-balance-after
             (.@ Ether .string<-) seller-balance-after)
-
 
        (DBG "Verify gas balance")
 

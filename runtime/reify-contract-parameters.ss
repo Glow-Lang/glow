@@ -1,6 +1,5 @@
 (export run)
-(def (run . _) (error "FIX ME")) ;; FIX and uncomment
-#|
+
 (import
   :std/format :std/iter :std/pregexp :std/misc/string :std/text/json
   :clan/debug :clan/ffi :clan/json
@@ -61,5 +60,3 @@
    (hash-kref (hash-kref (.@ program compiler-output) 'DebugLabelTable)
               (.@ runtime current-debug-label))
    (program-environment-type-value-pairs program (.@ runtime environment))))
-
-|#

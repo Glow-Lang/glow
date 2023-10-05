@@ -19,22 +19,19 @@
 
 (import
   ;; gerbil
-  :std/format
-  :std/iter
-  :std/misc/path
-  :std/misc/ports
-  :std/misc/string
-  :std/srfi/1
-  :std/srfi/13
-  :std/sugar
+  (only-in :std/format format eprintf)
+  (only-in :std/iter for for/fold)
+  (only-in :std/misc/path subpath?)
+  (only-in :std/misc/string string-trim-suffix)
+  (only-in :std/srfi/1 find-tail)
+  (only-in :std/srfi/13 string-suffix?)
+  (only-in :std/sugar hash defrule)
   ;; gerbil-utils
-  :clan/base
-  :clan/files
-  :clan/path-config
+  (only-in :clan/base λ)
+  (only-in :clan/files clobber-file)
+  (only-in :clan/path-config application-source-directory)
   ;; glow
-  :mukn/glow/compiler/common
-  :mukn/glow/path-config
-  :mukn/glow/runtime/glow-path)
+  (only-in :mukn/glow/runtime/glow-path find-dapp-path))
 
 ;; A "layer" of language has a name, a reader and a writer.
 ;; - The name, a symbol, is also the file extension of corresponding source files (e.g. 'glow => ".glow").

@@ -3,12 +3,14 @@
 (export #t)
 
 (import
-  :std/text/json
-  :mukn/glow/compiler/multipass :mukn/glow/compiler/common
-  :mukn/glow/compiler/parse/parse
-  :mukn/glow/compiler/debug-label/debug-label
-  :mukn/glow/compiler/alpha-convert/alpha-convert
-  :mukn/glow/compiler/desugar/desugar
+  (only-in :std/text/json write-json)
+  (only-in :mukn/glow/compiler/multipass default-strategy define-strategy define-pass define-layer)
+  (only-in :mukn/glow/compiler/common read-sexp-module write-sexp-module stx-sexpr=?)
+  (only-in :mukn/glow/compiler/parse/parse parse)
+  (only-in :mukn/glow/compiler/debug-label/debug-label debug-label)
+  (only-in :mukn/glow/compiler/alpha-convert/alpha-convert alpha-convert
+           read-alpha-back-table write-alpha-back-table alpha-back-table=?)
+  (only-in :mukn/glow/compiler/desugar/desugar desugar)
   (only-in :mukn/glow/compiler/typecheck/typecheck
     typecheck read-type-env-file write-type-env type-env=?)
   (only-in :mukn/glow/compiler/method-resolve/method-resolve
@@ -16,13 +18,14 @@
     read-type-table-file write-type-table type-table=?
     read-tysym-methods-table-file write-tysym-methods-table tysym-methods-table=?
     read-methods-id-back-table-file write-methods-id-back-table methods-id-back-table=?)
-  :mukn/glow/compiler/anf/anf
-  :mukn/glow/compiler/checkpointify/checkpointify
-  :mukn/glow/compiler/checkpointify/checkpoint-info-table
-  :mukn/glow/compiler/liveness/checkpoint-liveness
-  :mukn/glow/compiler/project/project
-  :mukn/glow/compiler/schema/schema
-  )
+  (only-in :mukn/glow/compiler/anf/anf anf)
+  (only-in :mukn/glow/compiler/checkpointify/checkpointify checkpointify)
+  (only-in :mukn/glow/compiler/checkpointify/checkpoint-info-table
+           read-checkpoint-info-table write-checkpoint-info-table checkpoint-info-table=?)
+  (only-in :mukn/glow/compiler/liveness/checkpoint-liveness checkpoint-liveness
+           read-checkpoint-liveness-table write-checkpoint-liveness-table checkpoint-liveness-table=?)
+  (only-in :mukn/glow/compiler/project/project project)
+  (only-in :mukn/glow/compiler/schema/schema schema))
 
 ;;; Layers, passes and strategies
 

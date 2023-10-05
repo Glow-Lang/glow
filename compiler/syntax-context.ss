@@ -7,8 +7,7 @@
   :gerbil/core
   :std/assert :std/sugar
   ;;:clan/base
-  :mukn/glow/runtime/context
-  )
+  :mukn/glow/runtime/context)
 
 (export
   ;;@make-interaction

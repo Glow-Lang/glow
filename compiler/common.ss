@@ -1,11 +1,13 @@
 (export #t)
 
-(import :gerbil/gambit
-        <expander-runtime>
-        :std/misc/repr
-        :std/format :std/iter :std/misc/list :std/misc/hash
-        :clan/base :clan/files :clan/list :clan/exception
-        :mukn/glow/compiler/syntax-context
+(import <expander-runtime>
+        (only-in :std/format format fprintf)
+        (only-in :std/iter for for/collect for/fold)
+        (only-in :std/misc/list length=n?)
+        (only-in :std/misc/hash hash->list/sort hash-ref/default)
+        (only-in :std/misc/symbol symbol<?)
+        (only-in :clan/exception with-logged-exceptions)
+        :mukn/glow/compiler/syntax-context ;; import the syntax context
         (for-template :mukn/glow/compiler/syntax-context))
 
 ;; hash-kref : [Hashof K V] K [-> V] -> V
