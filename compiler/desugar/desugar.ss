@@ -1,13 +1,16 @@
 (export #t)
 
-(import :std/format :std/iter
-        :std/misc/list :std/srfi/1
-        :std/misc/repr :clan/debug ;; DEBUG
-        <expander-runtime>
-        (for-template :mukn/glow/compiler/syntax-context)
-        :mukn/glow/compiler/syntax-context
-        :mukn/glow/compiler/alpha-convert/fresh
-        :mukn/glow/compiler/common)
+(import
+  <expander-runtime>
+  (for-template :mukn/glow/compiler/syntax-context)
+  :mukn/glow/compiler/syntax-context
+  (only-in :std/iter for/collect)
+  (only-in :std/srfi/1 map-in-order)
+  (only-in :clan/base left-to-right)
+  (only-in :clan/source explain-location)
+  (only-in :mukn/glow/compiler/common restx restx1 retail-stx stx-atomic-literal?
+           unsplice-stmts)
+  (only-in :mukn/glow/compiler/alpha-convert/fresh current-unused-table symbol-fresh))
 
 ;; Desugaring away these: @verifiably! verify! @publicly! defdata deftype and or
 ;; In the future, let users control desuraging of defdata and deftype with @deriving annotations (?)
@@ -115,7 +118,6 @@
 
 ;; desugar-verifiably : Identifier Stx -> Stx
 (def (desugar-verifiably stx p definition)
-  ;;(std/misc/repr#prn ['desugar-verifiably stx p definition])
   (syntax-case definition (def)
     ((def name expr)
      (begin
@@ -128,7 +130,8 @@
   (let ((verification (hash-get (current-verifications) (syntax-e var))))
     (unless verification
       ;; TODO: properly report location, etc.
-      (error "cannot verify variable not defined verifiably" (syntax-e var) (AST-source var)))
+      (error "cannot verify variable not defined verifiably"
+        (syntax-e var) (explain-location (AST-source var))))
     (restx var verification)))
 
 ;; desugar-verify : Stx -> Stx
@@ -139,9 +142,11 @@
 (def (desugar-publicly stx p definition)
   (syntax-case definition (def)
     ((def name expr)
-     (restx1 stx [#'splice [#'@ p (desugar-verifiably stx p definition)]
-                           [#'publish! p #'name]
-                           (desugar-verify [#'name])]))))
+     ;; Make sure the side-effects from desugar-verifiably happen before desugar-verify!
+     (let (verifiably (desugar-verifiably stx p definition))
+       (restx1 stx [#'splice [#'@ p verifiably]
+                             [#'publish! p #'name]
+                             (desugar-verify [#'name])])))))
 
 ;; desugar-def : Stx -> Stx
 (def (desugar-def stx)
