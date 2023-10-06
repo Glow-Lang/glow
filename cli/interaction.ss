@@ -485,7 +485,7 @@
       (def other-agreement (.call off-chain-channel .try-receive-agreement))
       (cond 
         ;;  - yes: check match, FOR NOW: error on mismatch, TODO LATER: possible negotiations on failure
-        (other-agreement 
+        (other-agreement
          (unless (equal? (json<- InteractionAgreement agreement)
                          (json<- InteractionAgreement other-agreement))
            (DDT "agreements-mismatch: generated agreement doesn't match received agreement"

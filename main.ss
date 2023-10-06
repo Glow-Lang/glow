@@ -14,3 +14,4 @@
 (current-program "glow")
 (initialize-glow-path!)
 (define-multicall-main)
+(gerbil-load-expander!)
