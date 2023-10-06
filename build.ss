@@ -21,8 +21,10 @@
   (!> (all-gerbil-modules)
       (cut filter (lambda (module-name) (not (string-prefix? "dep" module-name))) <>)
       (cut cons "t/common.ss" <>)
-      (cut remove-file <> "runtime/pb/private-key.ss") ;; TODO reenable when gerbil libp2p fixed
-      ;; (cut cons [exe: "main.ss" bin: "glowrun" "-ld-options" "-lleveldb -lsecp256k1"] <>) ;; TODO reenable when gerbil startup fixed
+      ;; TODO reenable when gerbil libp2p is fixed:
+      (cut remove-file <> "runtime/pb/private-key.ss")
+      ;; TODO enable the below after we get our package story updated to deal with it:
+      ;;(cut cons [exe: "main.ss" bin: "glowrun" "-ld-options" "-lleveldb -lsecp256k1"] <>)
       (cut add/options <> "compiler/parse/expressions" "-cc-options" "-U___SINGLE_HOST")))
 
 (init-build-environment!

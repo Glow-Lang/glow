@@ -4,7 +4,7 @@
 
 (import
   :mukn/glow/all-glow ;; required for the side-effect of importing everything that matters
-  (only-in :clan/multicall define-multicall-main current-program)
+  (only-in :clan/multicall call-entry-point current-program)
   (only-in :mukn/glow/runtime/glow-path initialize-glow-path!)
   :mukn/glow/compiler/syntax-context ;; make sure the syntax-context is here
   ;; other cli entry-points
@@ -13,5 +13,7 @@
 
 (current-program "glow")
 (initialize-glow-path!)
-(define-multicall-main)
-(gerbil-load-expander!)
+
+(def (main . args)
+  (gerbil-load-expander!) ;; NB: it will fail if called at the toplevel
+  (apply call-entry-point args))
