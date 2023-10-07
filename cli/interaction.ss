@@ -16,7 +16,6 @@
   :std/sort
   :std/srfi/1
   :std/srfi/13
-  (only-in :std/stxutil symbolify)
   :std/sugar
   :std/text/json
   ;; gerbil-utils
@@ -331,7 +330,7 @@
   ;; 1. Update integration tests to answer prompts earlier,
   ;; 2. before agreements are generated / consumed (start-interaction/generate-agreement / start-interaction/with-agreement).
   ;; Once 1, 2 are done, we can remove the conditional for this.
-  (def off-chain-channel-symbol (symbolify off-chain-channel-selection))
+  (def off-chain-channel-symbol (make-symbol off-chain-channel-selection))
   (def my-nickname
     (match off-chain-channel-symbol
       ('libp2p (or identity (prompt-identity)))
@@ -374,14 +373,14 @@
                (start-interaction/with-agreement options agreement)))
         (else (start-interaction/try-agreement options contacts off-chain-channel))))
     (def environment
-      (let ((role (symbolify selected-role)))
+      (let ((role (make-symbol selected-role)))
         (run role agreement off-chain-channel)))
     (displayln "Final environment:")
     ;; TODO: get run to include type t and pre-alpha-converted labels,
     ;; and output the entire thing as JSON omitting shadowed variables (rather than having conflicts)
     ;; TODO: highlight the returned value in the interaction, and have buy_sig return signature
     (for-each (match <> ([k t . v]
-      (if (equal? (symbolify k) 'signature)
+      (if (equal? (make-symbol k) 'signature)
         (display-object-ln BOLD k END " => " t v)
         (display-object-ln k " => " t v))))
       (hash->list/sort environment symbol<?))
@@ -406,7 +405,7 @@
          (interaction (.@ agreement interaction))
          (application.glow (find-dapp-file (extract-application-source-path interaction)))
          (program (compile-contract application.glow))
-         (interaction-name (symbolify (cadr (string-split interaction #\#))))
+         (interaction-name (make-symbol (cadr (string-split interaction #\#))))
          (interaction-info (hash-get (.@ program interactions) interaction-name))
          (role-names (sort (filter identity (hash-keys (.@ interaction-info specific-interactions))) symbol<?))
          (selected-role (ask-role options role-names)))
@@ -440,7 +439,7 @@
            (get-or-ask-participants
              (hash-ref options 'participants)
              selected-identity
-             (symbolify selected-role)
+             (make-symbol selected-role)
              role-names
              contacts)))
     (let (network (ethereum-config)))

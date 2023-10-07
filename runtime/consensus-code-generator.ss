@@ -243,7 +243,7 @@
 (def (make-checkpoint-label name checkpoint)
   (unless (symbol? name)
     (error 'make-checkpoint-label "expected a symbol, given" name))
-  (symbolify name "--" checkpoint))
+  (make-symbol name "--" checkpoint))
 
 ;; (List Directive) <- ConsensusCodeGenerator Symbol Sexp
 (def (compile-consensus-statement self function-name statement)
@@ -461,7 +461,7 @@
       ;; TODO: If other guy, put NUMBER, otherwise, reuse current timer-start.
       NUMBER
       ;; TODO: Define only once for every callee.
-      ;; [&jumpdest (symbolify 'tail-call-into- next-code-block-label)]
+      ;; [&jumpdest (make-symbol 'tail-call-into- next-code-block-label)]
       (make-checkpoint-label (.@ self name) next-code-block-label) pc-set!
       timer-start-set!
       (&begin*
