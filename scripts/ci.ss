@@ -261,5 +261,5 @@
 
 (set-default-entry-point! docker-all)
 (abort-on-error? #t)
-(backtrace-on-abort? #f)
+#;(dump-stack-trace? #f) ;; only in v0.19
 (def main call-entry-point)

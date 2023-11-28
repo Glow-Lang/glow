@@ -225,4 +225,4 @@
         [key (read)]))))
 
 (abort-on-error? #t)
-(backtrace-on-abort? #t)
+#;(dump-stack-trace? #f) ;; only in v0.19
