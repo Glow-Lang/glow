@@ -6,9 +6,6 @@
 (init-test-environment!) ;; sets up the path to load things in mukn/glow
 
 (import
-  (only-in :std/getopt rest-arguments)
-  (only-in :clan/exit silent-exit)
-  (only-in :clan/multicall define-entry-point set-default-entry-point!)
   (only-in :clan/path-config source-path)
   (only-in :mukn/glow/runtime/glow-path initialize-glow-path!)
 

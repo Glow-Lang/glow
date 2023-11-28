@@ -2,8 +2,9 @@
 
 (import
   ;; gerbil
+  :std/cli/getopt
+  :std/cli/multicall
   :std/format
-  :std/getopt
   :std/iter
   :std/misc/hash
   :std/misc/number
@@ -15,14 +16,12 @@
   :clan/config
   :clan/files
   :clan/json
-  :clan/multicall
   :clan/syntax
   ;; gerbil-poo
   :clan/poo/brace
   :clan/poo/cli
   :clan/poo/io
   :clan/poo/mop
-  (only-in :clan/poo/number Nat)
   :clan/poo/object
   :clan/poo/type
   ;; gerbil-crypto
@@ -31,6 +30,7 @@
   :clan/ethereum/cli
   :clan/ethereum/hex
   :clan/ethereum/ethereum
+  (only-in :clan/ethereum/types Nat)
   :clan/ethereum/known-addresses
   ;; glow
   :mukn/glow/cli/utils

@@ -2,8 +2,9 @@
 
 (import
   ;; gerbil
+  :std/cli/getopt
+  :std/cli/multicall
   :std/crypto
-  :std/getopt
   :std/format
   :std/iter
   :std/misc/hash
@@ -16,7 +17,6 @@
   :clan/files
   :clan/hash
   :clan/json
-  :clan/multicall
   :clan/syntax
   ;; gerbil-crypto
   :clan/crypto/random

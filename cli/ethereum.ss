@@ -2,13 +2,16 @@
 
 (import
   :gerbil/expander
-  :std/format :std/getopt :std/iter
+  :std/cli/getopt
+  :std/cli/multicall
+  :std/cli/print-exit
+  :std/format :std/iter
   :std/misc/decimal :std/misc/hash
   :std/sort :std/srfi/13 :std/sugar
   :std/net/json-rpc
   :std/text/basic-parsers
-  :clan/cli :clan/exit
-  :clan/hash :clan/json :clan/list :clan/multicall :clan/path-config
+  :clan/cli
+  :clan/hash :clan/json :clan/list :clan/path-config
   :clan/poo/object :clan/poo/brace :clan/poo/cli :clan/poo/debug
   :clan/persist/db
   :clan/ethereum/network-config :clan/ethereum/types :clan/ethereum/hex

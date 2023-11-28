@@ -14,8 +14,11 @@
 
 (import
   :gerbil/gambit
-  :std/format :std/misc/hash :std/misc/list :std/pregexp
-  :clan/exit)
+  :std/cli/print-exit
+  :std/format
+  :std/misc/hash
+  :std/misc/list
+  :std/pregexp)
 
 (def (with-io-port port fn)
   ;; Run (fn) with both current input and output ports redirected

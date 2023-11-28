@@ -4,7 +4,7 @@
 
 (import
   :mukn/glow/all-glow ;; required for the side-effect of importing everything that matters
-  (only-in :clan/multicall call-entry-point current-program)
+  (only-in :std/cli/multicall call-entry-point current-program)
   (only-in :mukn/glow/runtime/glow-path initialize-glow-path!)
   :mukn/glow/compiler/syntax-context ;; make sure the syntax-context is here
   ;; other cli entry-points

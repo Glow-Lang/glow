@@ -1,13 +1,13 @@
 ;; The Glow language
 (package: mukn/glow
- depend: ("github.com/vyzo/gerbil-libp2p"
+ depend: (#;"github.com/vyzo/gerbil-libp2p"
           "github.com/drewc/smug-gerbil"
           #;"github.com/drewc/ftw"
-          "github.com/fare/gerbil-utils"
-          "github.com/fare/gerbil-crypto"
-          "github.com/fare/gerbil-poo"
-          "github.com/fare/gerbil-persist"
-          "github.com/fare/gerbil-ethereum"
+          "github.com/mighty-gerbils/gerbil-utils"
+          "github.com/mighty-gerbils/gerbil-crypto"
+          "github.com/mighty-gerbils/gerbil-poo"
+          "github.com/mighty-gerbils/gerbil-persist"
+          "github.com/mighty-gerbils/gerbil-ethereum"
           #;"github.com/fare-patches/r7rs-swank"
           #;"github.com/drewc/js-syntax")
  ;; Base version this is relative to

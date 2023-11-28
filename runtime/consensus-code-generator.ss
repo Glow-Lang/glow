@@ -435,7 +435,7 @@
     ((<= len 32) ;; TODO: have a more general notion of immediate vs boxed type?
     (if (symbol? expr)
       (load-immediate-variable self function-name expr type) ;; reading a variable
-      (u8vector->nat (bytes<- type expr)))) ;; constant
+      (u8vector->uint (bytes<- type expr)))) ;; constant
     (else
     (if (symbol? expr)
       (lookup-variable-offset self function-name expr) ;; referring to a variable by offset

@@ -3,7 +3,8 @@
 (import
   ;; gerbil
   (only-in :std/assert assert!)
-  (only-in :std/getopt option)
+  (only-in :std/cli/getopt option)
+  (only-in :std/cli/multicall define-entry-point)
   (only-in :std/iter for)
   (only-in :std/misc/hash hash->list/sort)
   (only-in :std/misc/path absolute-path? path-absolute? subpath path-enough)
@@ -14,7 +15,6 @@
   ;; gerbil-utils
   (only-in :clan/filesystem find-files)
   (only-in :clan/hash hash-removed)
-  (only-in :clan/multicall define-entry-point)
   (only-in :clan/config getenv-absolute-paths split-dirs xdg-data-home xdg-data-dirs)
   (only-in :clan/path-config source-path)
   (only-in :clan/string co-pad-strings)

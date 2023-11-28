@@ -65,3 +65,7 @@ each in its own separate universe.
   - Use ulimit to prevent coredumps for any process holding those keys
   - Move those keys to their own process and communicate over RPC,
     so they are never in the same process as something else?
+
+## UI
+
+https://notadesigner.io/

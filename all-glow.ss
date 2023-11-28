@@ -15,6 +15,10 @@
   <expander-runtime>
   :std/interactive
   :std/actor
+  :std/cli/getopt
+  :std/cli/multicall
+  :std/cli/print-exit
+  :std/cli/shell
   :std/assert
   :std/coroutine
   :std/debug/heap
@@ -22,7 +26,6 @@
   :std/debug/threads
   :std/error
   :std/format
-  :std/getopt
   :std/io
   :std/iter
   :std/logger
@@ -64,7 +67,6 @@
 
   ;; gerbil-utils
   :clan/net/tcp
-  :clan/net/s3
   :clan/net/websocket
   :clan/net/whois
   :clan/assert
@@ -76,7 +78,6 @@
   :clan/debug
   :clan/diceware
   :clan/error
-  :clan/exit
   :clan/failure
   :clan/ffi
   :clan/files
@@ -89,14 +90,12 @@
   :clan/logger
   :clan/maybe
   :clan/memo
-  :clan/multicall
   :clan/option
   :clan/order
   :clan/path-config
   :clan/peekable-iterator
   :clan/ports
   :clan/random
-  :clan/shell
   :clan/simple-actor-client
   :clan/source
   :clan/stateful-avl-map
@@ -129,6 +128,7 @@
   :clan/persist/content-addressing
   :clan/persist/db
   :clan/persist/persist
+  :clan/persist/merkle-trie
 
   ;; gerbil-ethereum
   :clan/ethereum/abi
@@ -141,14 +141,16 @@
   :clan/ethereum/evm-runtime
   :clan/ethereum/hex
   :clan/ethereum/json-rpc
+  :clan/ethereum/known-addresses
   :clan/ethereum/logger
+  :clan/ethereum/meta-create2
   :clan/ethereum/network-config
   :clan/ethereum/nonce-tracker
-  :clan/ethereum/known-addresses
-  :clan/ethereum/meta-create2
+  :clan/ethereum/presigned
   :clan/ethereum/rlp
-  :clan/ethereum/transaction
   :clan/ethereum/simple-apps
+  ;;:clan/ethereum/testing
+  :clan/ethereum/transaction
   :clan/ethereum/tx-tracker
   :clan/ethereum/types
   :clan/ethereum/watch

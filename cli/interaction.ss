@@ -4,9 +4,11 @@
   ;; gerbil
   :gerbil/expander
   :gerbil/gambit
+  :std/cli/getopt
+  :std/cli/multicall
+  :std/cli/print-exit
   :std/format
   :std/generic
-  :std/getopt
   :std/iter
   :std/misc/hash
   :std/misc/path
@@ -22,11 +24,9 @@
   :clan/base
   :clan/cli
   :clan/config
-  :clan/exit
   :clan/filesystem
   :clan/hash
   :clan/json
-  :clan/multicall
   :clan/path-config
   :clan/string
   ;; gerbil-poo

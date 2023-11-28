@@ -5,8 +5,10 @@
 (import
   ;; gerbil
   :gerbil/gambit
+  :std/cli/getopt
+  :std/cli/multicall
+  :std/cli/print-exit
   :std/format
-  :std/getopt
   :std/misc/path
   :std/misc/ports
   :std/misc/process
@@ -14,12 +16,10 @@
   :std/sugar
   ;; gerbil-utils
   :clan/base
-  :clan/exit
   :clan/debug
   :clan/files
   :clan/git-fu
   :clan/json
-  :clan/multicall
   :clan/path-config
   :clan/source
   :clan/versioning

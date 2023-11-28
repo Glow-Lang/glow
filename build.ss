@@ -6,7 +6,7 @@
 ;;     gxpkg install github.com/fare/gerbil-ethereum
 ;; See HACKING.md for details.
 
-(import :std/misc/process :clan/base :clan/building :clan/multicall)
+(import :std/cli/multicall :std/misc/process :clan/base :clan/building)
 
 (def (remove-file files file) ;; TODO: handle foo vs foo.ss ?
   (filter (match <>
@@ -22,6 +22,7 @@
       (cut filter (lambda (module-name) (not (string-prefix? "dep" module-name))) <>)
       (cut cons "t/common.ss" <>)
       ;; TODO reenable when gerbil libp2p is fixed:
+      (cut remove-file <> "runtime/pb/private-key.ss")
       (cut remove-file <> "runtime/pb/private-key.ss")
       ;; TODO enable the below after we get our package story updated to deal with it:
       ;;(cut cons [exe: "main.ss" bin: "glowrun" "-ld-options" "-lleveldb -lsecp256k1"] <>)

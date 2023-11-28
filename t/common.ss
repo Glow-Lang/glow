@@ -4,15 +4,15 @@
   ;; gerbil
   :gerbil/gambit
   :gerbil/expander
-  :std/getopt
+  :std/cli/getopt
+  :std/cli/multicall
+  :std/cli/print-exit
   :std/iter
   :std/misc/path
   :std/sort
   ;; gerbil-utils
   :clan/base
-  :clan/exit
   :clan/filesystem
-  :clan/multicall
   :clan/path-config
   ;; gerbil-poo
   :clan/poo/cli

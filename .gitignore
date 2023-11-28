@@ -1,6 +1,7 @@
 # Build-generated files
 compiled/
 build-deps
+manifest.ss
 version.ss
 result
 .build

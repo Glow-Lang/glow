@@ -8,12 +8,12 @@
  (only-in :clan/config xdg-config-home)
  (only-in :gerbil/gambit path-expand error-exception?)
  ;;(only-in :gerbil/gambit thread-join! thread-state thread-state-running?)
+ :std/cli/getopt
+ (only-in :std/cli/multicall define-entry-point)
  (only-in :std/srfi/1 first)
  (only-in :std/srfi/13 string-trim)
- (only-in :clan/multicall define-entry-point)
  :drewc/ftw
  :std/format
- :std/getopt
  :std/iter
  :std/misc/hash
  :std/net/uri
