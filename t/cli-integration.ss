@@ -15,6 +15,7 @@
 (import
   :gerbil/gambit
   :std/cli/print-exit
+  :std/error
   :std/format
   :std/misc/hash
   :std/misc/list
@@ -224,5 +225,5 @@
         (read) ; skip over the =>
         [key (read)]))))
 
-(abort-on-error? #t)
+(exit-on-error? #t)
 #;(dump-stack-trace? #f) ;; only in v0.19
