@@ -7,9 +7,9 @@
   :std/cli/print-exit
   :std/format :std/iter
   :std/misc/decimal :std/misc/hash
+  (only-in :std/parser/ll1 ll1/string ll1-uint)
   :std/sort :std/srfi/13 :std/sugar
   :std/net/json-rpc
-  :std/text/basic-parsers
   :clan/cli
   :clan/hash :clan/json :clan/list :clan/path-config
   :clan/poo/object :clan/poo/brace :clan/poo/cli :clan/poo/debug
@@ -137,7 +137,7 @@
   (set! erc20 (parse-address (or erc20 (error "Missing recipient. Please use option --erc20"))))
   (set! value (with-catch
                (lambda _ (error "Missing or invalid value. Please use option --value"))
-               (cut parse-string (parse-to-eof parse-natural) value)))
+               (cut ll1/string ll1-uint value)))
   (printf "\nSending ~a tokens from ~a to ~a on ERC20 contract ~a on network ~a...\n"
           value (0x<-address from) (0x<-address to) (0x<-address to) network)
   ;; TODO: use a function to correctly print with the right number of decimals,

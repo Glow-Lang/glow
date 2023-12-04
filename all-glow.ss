@@ -42,6 +42,7 @@
   :std/misc/repr
   :std/misc/string
   :std/net/request
+  :std/parser/ll1
   :std/pregexp
   :std/sort
   :std/source
@@ -52,7 +53,6 @@
   :std/srfi/141
   :std/stxutil
   :std/sugar
-  :std/text/basic-parsers
   :std/text/basic-printers
   :std/text/char-set
   :std/text/csv
