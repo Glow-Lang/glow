@@ -11,7 +11,7 @@
         get-has-type
         has-same-type!)
 
-(import <expander-runtime>
+(import :gerbil/expander
         :std/format)
 
 (def is-type-table (make-hash-table-eq weak-keys: #t))

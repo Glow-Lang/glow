@@ -1,7 +1,7 @@
 (export #t)
 
 (import
-  <expander-runtime>
+  :gerbil/expander
   (for-template :mukn/glow/compiler/syntax-context)
   :mukn/glow/compiler/syntax-context
   (only-in :std/iter for/collect)

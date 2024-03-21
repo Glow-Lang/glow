@@ -1,15 +1,16 @@
 (export #t read-alpha-back-table write-alpha-back-table alpha-back-table=?)
 
-(import :std/iter
-        :std/format
-        :clan/pure/dict/symdict
-        <expander-runtime>
-        (for-template :mukn/glow/compiler/syntax-context)
-        :mukn/glow/compiler/syntax-context
-        :mukn/glow/compiler/common
-        :mukn/glow/compiler/alpha-convert/env
-        :mukn/glow/compiler/alpha-convert/at-prefix-normalize
-        :mukn/glow/compiler/alpha-convert/fresh)
+(import
+  :gerbil/expander
+  :std/iter
+  :std/format
+  :clan/pure/dict/symdict
+  (for-template :mukn/glow/compiler/syntax-context)
+  :mukn/glow/compiler/syntax-context
+  :mukn/glow/compiler/common
+  :mukn/glow/compiler/alpha-convert/env
+  :mukn/glow/compiler/alpha-convert/at-prefix-normalize
+  :mukn/glow/compiler/alpha-convert/fresh)
 
 ;; alpha-convert
 

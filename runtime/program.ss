@@ -1,11 +1,11 @@
 (export #t)
 
 (import
-  :std/iter :std/sugar :std/misc/list :std/srfi/1 :clan/base :clan/pure/dict/symdict :clan/poo/object
+  :gerbil/expander
   :clan/poo/io :clan/poo/object :clan/poo/brace :clan/poo/debug
-  <expander-runtime>
   :clan/ethereum/types
   :clan/ethereum/ethereum
+  :std/iter :std/sugar :std/misc/list :std/srfi/1 :clan/base :clan/pure/dict/symdict :clan/poo/object
   (only-in ../compiler/common hash-kref)
   (only-in ../compiler/alpha-convert/alpha-convert init-syms)
   ../compiler/typecheck/type

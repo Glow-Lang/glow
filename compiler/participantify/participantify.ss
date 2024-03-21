@@ -1,14 +1,15 @@
 (export #t)
 
-(import :std/format :std/iter :std/values
-        :std/misc/list :std/srfi/1
-        :std/misc/repr :clan/debug ;; DEBUG
-        <expander-runtime>
-        (for-template :mukn/glow/compiler/syntax-context)
-        :mukn/glow/compiler/syntax-context
-        :mukn/glow/compiler/alpha-convert/fresh
-        :mukn/glow/compiler/common
-        :clan/base)
+(import
+  :gerbil/expander
+  :std/format :std/iter :std/values
+  :std/misc/list :std/srfi/1
+  :std/misc/repr :clan/debug ;; DEBUG
+  :clan/base
+  (for-template :mukn/glow/compiler/syntax-context)
+  :mukn/glow/compiler/syntax-context
+  :mukn/glow/compiler/alpha-convert/fresh
+  :mukn/glow/compiler/common)
 (import :clan/debug :std/misc/repr)
 
 ;; participantify: Introduce participant-checkpoints everywhere that might

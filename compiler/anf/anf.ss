@@ -1,13 +1,14 @@
 (export #t)
 
-(import :std/assert :std/iter :std/misc/hash :std/srfi/1 :std/sugar
-        <expander-runtime>
-        (for-template :mukn/glow/compiler/syntax-context)
-        :mukn/glow/compiler/syntax-context
-        :mukn/glow/compiler/typecheck/stx-prop
-        :clan/base
-        ../common
-        ../alpha-convert/fresh)
+(import
+  :gerbil/expander
+  :std/assert :std/iter :std/misc/hash :std/srfi/1 :std/sugar
+  :clan/base
+  (for-template :mukn/glow/compiler/syntax-context)
+  :mukn/glow/compiler/syntax-context
+  :mukn/glow/compiler/typecheck/stx-prop
+  ../common
+  ../alpha-convert/fresh)
 (import :std/misc/repr :clan/debug) ;; XXX DEBUG
 
 ;; Conversion to A-Normal Form https://en.wikipedia.org/wiki/A-normal_form

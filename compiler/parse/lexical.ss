@@ -253,7 +253,7 @@
 
 (defstruct lex-tokens (vector list) transparent: #t)
 (defmethod (input-item (ts lex-tokens)) (input-item (String 0 ts)))
-(defmethod (input-item-ref (t lex-tokens) (n <t>))
+(defmethod (input-item-ref (t lex-tokens) (n :t))
   (input-item-ref (lex-tokens-vector t) n))
 
 (def (lexify thing (rem '(Comment WhiteSpace LineTerminator)))

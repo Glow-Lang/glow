@@ -9,7 +9,7 @@
         add-debug-label!)
 
 (import
-  <expander-runtime>
+  :gerbil/expander
   :clan/pure/dict/symdict)
 
 ;; An Env is a [Symdictof Entry]

@@ -12,7 +12,7 @@
   ;; Gerbil
   :gerbil/gambit
   :gerbil/expander
-  <expander-runtime>
+  :gerbil/expander
   :std/interactive
   :std/actor
   :std/cli/getopt
@@ -21,6 +21,7 @@
   :std/cli/shell
   :std/assert
   :std/coroutine
+  :std/debug/DBG
   :std/debug/heap
   :std/debug/memleak
   :std/debug/threads
@@ -32,6 +33,7 @@
   :std/misc/bytes
   :std/misc/decimal
   :std/misc/deque
+  :std/misc/evector
   :std/misc/hash
   :std/misc/list
   :std/misc/number
@@ -41,16 +43,17 @@
   :std/misc/queue
   :std/misc/repr
   :std/misc/string
+  :std/misc/vector
   :std/net/request
   :std/parser/ll1
   :std/pregexp
   :std/sort
   :std/source
-  :std/srfi/1
-  :std/srfi/13
+  :std/srfi/1 ;; lists
+  :std/srfi/13 ;; strings
   (except-in :std/srfi/19 time)
-  ;; :std/srfi/43
-  :std/srfi/141
+  :std/srfi/133 ;; vectors
+  :std/srfi/141 ;; integer division
   :std/stxutil
   :std/sugar
   :std/text/basic-printers
@@ -75,7 +78,6 @@
   :clan/cli
   :clan/concurrency
   :clan/config
-  :clan/debug
   :clan/diceware
   :clan/error
   :clan/failure
@@ -103,7 +105,6 @@
   :clan/syntax
   :clan/temporary-files
   :clan/timestamp
-  :clan/vector
   :clan/versioning
   :clan/watch
 

@@ -1,13 +1,14 @@
 (export #t)
 
-(import :std/iter
-        :std/format
-        :clan/pure/dict/symdict
-        <expander-runtime>
-        (for-template :mukn/glow/compiler/syntax-context)
-        :mukn/glow/compiler/syntax-context
-        :mukn/glow/compiler/common
-        :mukn/glow/compiler/alpha-convert/fresh)
+(import
+  :gerbil/expander
+  :std/iter
+  :std/format
+  :clan/pure/dict/symdict
+  (for-template :mukn/glow/compiler/syntax-context)
+  :mukn/glow/compiler/syntax-context
+  :mukn/glow/compiler/common
+  :mukn/glow/compiler/alpha-convert/fresh)
 
 ;; debug-label
 

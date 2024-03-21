@@ -3,14 +3,15 @@
         write-checkpoint-info-table
         checkpoint-info-table=?)
 
-(import :std/iter
-        :std/format
-        :std/misc/repr
-        :std/misc/hash
-        <expander-runtime>
-        :clan/base
-        :mukn/glow/compiler/common
-        :mukn/glow/compiler/checkpointify/checkpointify)
+(import
+  :gerbil/expander
+  :std/iter
+  :std/format
+  :std/misc/repr
+  :std/misc/hash
+  :clan/base
+  :mukn/glow/compiler/common
+  :mukn/glow/compiler/checkpointify/checkpointify)
 
 ;; type CheckpointInfoTable
 ;; from :mukn/glow/compiler/checkpointify/checkpointify

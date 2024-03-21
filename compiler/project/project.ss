@@ -1,16 +1,17 @@
 (export #t)
 
-(import :std/format :std/iter :std/stxutil
-        :std/misc/list :std/sort :std/srfi/1
-        (only-in :std/misc/rbtree symbol-cmp)
-        <expander-runtime>
-        (for-template :mukn/glow/compiler/syntax-context)
-        :mukn/glow/compiler/syntax-context
-        :mukn/glow/compiler/common
-        :mukn/glow/compiler/alpha-convert/fresh
-        :mukn/glow/compiler/typecheck/stx-prop
-        :mukn/glow/compiler/checkpointify/checkpointify
-        :clan/base)
+(import
+  :gerbil/expander
+  :std/format :std/iter :std/stxutil
+  :std/misc/list :std/sort :std/srfi/1
+  (only-in :std/misc/rbtree symbol-cmp)
+  (for-template :mukn/glow/compiler/syntax-context)
+  :mukn/glow/compiler/syntax-context
+  :mukn/glow/compiler/common
+  :mukn/glow/compiler/alpha-convert/fresh
+  :mukn/glow/compiler/typecheck/stx-prop
+  :mukn/glow/compiler/checkpointify/checkpointify
+  :clan/base)
 
 (def pure-stmt list)
 

@@ -1,7 +1,7 @@
 (export #t)
 
 (import
-  <expander-runtime>
+  :gerbil/expander
   :std/format
   :clan/base
   ../common.ss

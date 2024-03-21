@@ -21,4 +21,4 @@ esac
 if [ $# = 0 ] ; then
     exprs="$exprs(gerbil/main#init-interactive!)(##repl-debug\`,#f\`,#f\`,#t)"
 fi
-exec gxi -e "(begin$exprs)"
+exec gxi -e "(begin$exprs)" "$@"

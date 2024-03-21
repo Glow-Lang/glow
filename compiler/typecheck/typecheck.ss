@@ -8,24 +8,27 @@
          :mukn/glow/compiler/typecheck/variance
          :mukn/glow/compiler/typecheck/type))
 
-(import :gerbil/gambit
-        <expander-runtime>
-        :std/format
-        :std/iter
-        :std/misc/list
-        :std/misc/repr
-        :clan/pure/dict/assq
-        :clan/pure/dict/symdict
-        :clan/debug ;; TODO: remove after debugging
-        :mukn/glow/compiler/syntax-context
-        (for-template :mukn/glow/compiler/syntax-context)
-        :mukn/glow/compiler/common
-        :mukn/glow/compiler/alpha-convert/env
-        :mukn/glow/compiler/alpha-convert/fresh
-        :mukn/glow/compiler/typecheck/variance
-        :mukn/glow/compiler/typecheck/type
-        :mukn/glow/compiler/typecheck/stx-prop)
+(import
+  :gerbil/gambit
+  :gerbil/expander
+  :std/format
+  :std/iter
+  (only-in :std/srfi/1 map-in-order)
+  :std/misc/list
+  :std/misc/repr
+  :clan/pure/dict/assq
+  :clan/pure/dict/symdict
+  :clan/debug ;; TODO: remove after debugging
+  :mukn/glow/compiler/syntax-context
+  (for-template :mukn/glow/compiler/syntax-context)
+  :mukn/glow/compiler/common
+  :mukn/glow/compiler/alpha-convert/env
+  :mukn/glow/compiler/alpha-convert/fresh
+  :mukn/glow/compiler/typecheck/variance
+  :mukn/glow/compiler/typecheck/type
+  :mukn/glow/compiler/typecheck/stx-prop)
 
+(def map map-in-order) ;; I suspect side-effects make order important
 ;; Typechecking glow-sexpr
 
 ;; Type system and scoping rules are closest

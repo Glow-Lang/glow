@@ -1,14 +1,15 @@
 (export #t)
 
-(import :std/format :std/iter
-        :std/misc/list :std/srfi/1
-        <expander-runtime>
-        :std/values
-        (for-template :mukn/glow/compiler/syntax-context)
-        :mukn/glow/compiler/syntax-context
-        :mukn/glow/compiler/alpha-convert/fresh
-        :mukn/glow/compiler/common
-        :clan/base)
+(import
+  :gerbil/expander
+  :std/format :std/iter
+  :std/misc/list :std/srfi/1
+  :std/values
+  (for-template :mukn/glow/compiler/syntax-context)
+  :mukn/glow/compiler/syntax-context
+  :mukn/glow/compiler/alpha-convert/fresh
+  :mukn/glow/compiler/common
+  :clan/base)
 (import :clan/debug :std/misc/repr) ;; DEBUG
 
 ;; Forward-analysis of *static* flow through variables within each scope of the program.

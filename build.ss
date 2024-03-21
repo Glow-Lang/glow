@@ -8,25 +8,16 @@
 
 (import :std/cli/multicall :std/misc/process :clan/base :clan/building)
 
-(def (remove-file files file) ;; TODO: handle foo vs foo.ss ?
-  (filter (match <>
-            ((? (cut equal? <> file)) #f)
-            ([gxc: (? (cut equal? <> file)) . _] #f)
-            (_ #t)) files))
-
-(def (add/options files file . options)
-  (cons (cons* gxc: file options) (remove-file files file)))
-
 (def (files)
   (!> (all-gerbil-modules)
       (cut filter (lambda (module-name) (not (string-prefix? "dep" module-name))) <>)
       (cut cons "t/common.ss" <>)
       ;; TODO reenable when gerbil libp2p is fixed:
-      (cut remove-file <> "runtime/pb/private-key.ss")
-      (cut remove-file <> "runtime/pb/private-key.ss")
+      (cut remove-build-file <> "runtime/pb/private-key.ss")
+      (cut remove-build-file <> "runtime/pb/private-key.ss")
       ;; TODO enable the below after we get our package story updated to deal with it:
       ;;(cut cons [exe: "main.ss" bin: "glowrun" "-ld-options" "-lleveldb -lsecp256k1"] <>)
-      (cut add/options <> "compiler/parse/expressions" "-cc-options" "-U___SINGLE_HOST")))
+      (cut add-build-options <> "compiler/parse/expressions" "-cc-options" "-U___SINGLE_HOST")))
 
 (init-build-environment!
  name: "Glow"
