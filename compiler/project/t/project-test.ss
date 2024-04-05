@@ -5,6 +5,7 @@
 (export #t)
 
 (import
+  :gerbil/expander
   :std/test
   :mukn/glow/t/common
   :gerbil/gambit
@@ -16,7 +17,6 @@
   :std/misc/string
   :clan/pure/dict
   :clan/exception
-  <expander-runtime>
   :mukn/glow/compiler/syntax-context
   :mukn/glow/compiler/common
   :mukn/glow/compiler/multipass

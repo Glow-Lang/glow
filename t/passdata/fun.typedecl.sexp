@@ -15,20 +15,20 @@
             (symdict)
             (type:arrow
              (@list (ntype:intersection
-                     (@list (type:arrow (@list (type:var 'z1)) (type:var 'x5))
+                     (@list (type:arrow (@list (type:var 'z0)) (type:var 'x5))
                             (type:var 'x4)
                             (type:arrow
-                             (@list (type:var 'z1))
+                             (@list (type:var 'z0))
                              (ntype:intersection
                               (@list (type:var 'x5)
-                                     (type:arrow (@list (type:var 'xz1)) (type:var 'xz0))))))))
+                                     (type:arrow (@list (type:var 'xz0)) (type:var 'xz1))))))))
              (type:arrow
               (@list (ntype:intersection
                       (@list (type:var 'y1)
                              (type:arrow
-                              (@list (type:var 'z3))
-                              (ntype:intersection (@list (type:var 'y2) (type:var 'xz1)))))))
+                              (@list (type:var 'z2))
+                              (ntype:intersection (@list (type:var 'y2) (type:var 'xz0)))))))
               (type:arrow
                (@list (ntype:intersection
-                       (@list (type:var 'z0) (type:var 'z1) (type:var 'z2) (type:var 'z3))))
-               (type:var 'xz0))))))))
+                       (@list (type:var 'z1) (type:var 'z0) (type:var 'z3) (type:var 'z2))))
+               (type:var 'xz1))))))))

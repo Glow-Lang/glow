@@ -6,9 +6,9 @@
             (type:arrow
              (@list (ntype:intersection
                      (@list (type:var 'x3)
-                            (type:arrow (@list (type:var 'x6)) (type:var 'x5))
-                            (type:var 'x4)
-                            (type:var 'x6))))
+                            (type:arrow (@list (type:var 'x4)) (type:var 'x5))
+                            (type:var 'x6)
+                            (type:var 'x4))))
              (type:var 'x5)))))
          ('id_on_int
           (entry:known
@@ -28,10 +28,11 @@
              (@list (ntype:intersection
                      (@list (type:var 'p0)
                             (type:arrow
-                             (@list (type:var 'v1))
+                             (@list (type:var 'v0))
                              (ntype:intersection
                               (@list (type:var 'p1) (type:name 'Bool))))))
-                    (ntype:intersection (@list (type:var 'v2) (type:var 'v0) (type:var 'v1)))
+                    (ntype:intersection
+                     (@list (type:var 'v2) (type:var 'v1) (type:var 'v0)))
                     (type:var 'd0))
              (ptype:union (@list (type:var 'v2) (type:var 'd0)))))))
          ('pick_one
@@ -40,7 +41,8 @@
            (typing-scheme
             (symdict)
             (type:arrow
-             (@list (ntype:intersection (@list (type:var 'b0) (type:name 'Bool)))
+             (@list (ntype:intersection
+                     (@list (type:var 'b0) (type:name 'Bool)))
                     (type:var 'x2)
                     (type:var 'y0))
              (ptype:union (@list (type:var 'x2) (type:var 'y0))))))))
