@@ -164,7 +164,7 @@
             (cond ((string? command) command)
                   ((symbol? command) (symbol->string command))
                   (else (error "Command must designate a string")))
-            (with-output-to-string
+            (call-with-output-string
               (lambda () (write-json args)))))
 
 ;; Define and register a function that automatically inserts

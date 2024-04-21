@@ -99,9 +99,10 @@
 
 ; glow-cardano-0.1.0.0-inplace
 ; Glow.Types:GlowRedeemer
+(def __Tuple Tuple)
 (define-type GlowRedeemer
   (Record
-    (Tuple: [(Tuple ExecutionPoint VariableMap)])))
+   Tuple: [(__Tuple ExecutionPoint VariableMap)]))
 
 ; glow-cardano-0.1.0.0-inplace
 ; Glow.Types:GlowDatum

@@ -169,7 +169,7 @@
 
 ; plutus-ledger-api-0.1.0.0-9872ce8cc16813f46ec5ada8ab54c7343df5e9cbe3b9938bc3031abb23c78b71
 ; Plutus.V1.Ledger.Slot:SlotRange
-(define-type SlotRange (Interval Slot))
+(define-type SlotRange Interval) ;; an Interval of Slot
 
 ; plutus-ledger-api-0.1.0.0-9872ce8cc16813f46ec5ada8ab54c7343df5e9cbe3b9938bc3031abb23c78b71
 ; Plutus.V1.Ledger.Value:Value

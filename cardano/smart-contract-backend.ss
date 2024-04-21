@@ -126,7 +126,7 @@
   (run-process (cons "plutus-scb" cmd)
     stdout-redirection: #f
     stderr-redirection: #f
-    check-status: (lambda (_ _) #t)))
+    check-status: (lambda (_ __) #t)))
 
 (def (to-hash-table obj)
   (let (fields (make-pairs (cdr (class->list obj))))
