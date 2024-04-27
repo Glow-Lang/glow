@@ -60,7 +60,7 @@
 (def (check-answers input-lines answers output)
   (def input (string-join input-lines #\newline))
   (assert-equal!
-    (call-with-output-string
+    (with-output-to-string
       (lambda ()
         (with-input-from-string input
           (lambda ()
@@ -81,14 +81,14 @@
   (assert-equal!
     (with-input-from-string input
       (lambda ()
-        (call-with-output-string
+        (with-output-to-string
           (lambda ()
             (supply-parameters params)))))
     output))
 
 (def (check-initial-block input output)
   (assert-equal!
-    (call-with-output-string
+    (with-output-to-string
       (lambda ()
         (with-input-from-string input
           (lambda ()

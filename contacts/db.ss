@@ -22,6 +22,7 @@
   ;; gerbil-utils
   (only-in :clan/base vector->values)
   (only-in :clan/config xdg-config-home)
+  (only-in :clan/json string<-json)
   (only-in :clan/list remove-duplicates)
   (only-in :clan/poo/object .@ with-slots)
   ;; gerbil-ethereum
@@ -164,8 +165,7 @@
             (cond ((string? command) command)
                   ((symbol? command) (symbol->string command))
                   (else (error "Command must designate a string")))
-            (call-with-output-string
-              (lambda () (write-json args)))))
+            (string<-json args)))
 
 ;; Define and register a function that automatically inserts
 ;; an entry into the editlog if its body succeeds.

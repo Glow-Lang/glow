@@ -196,7 +196,7 @@
 (define-endpoint schema "^/contacts/schema/(.*)$")
 (def (schema/GET path)
   (respond/JSON
-   (call-with-output-string
+   (with-output-to-string
      (lambda ()
        (run-passes (uri-decode path)
                    strategy: 'schema

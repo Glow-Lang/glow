@@ -107,8 +107,8 @@
     (match stmts
       ([] (reverse accstmts))
       ([stmt . rst]
-       (let ((dlb (symbol-fresh 'dlb))
-             (stmt2 (debug-label-stmt stmt)))
+       (let* ((dlb (symbol-fresh 'dlb))
+              (stmt2 (debug-label-stmt stmt)))
          (loop rst (cons* stmt2 ['@debug-label dlb] accstmts)))))))
 
 ;; debug-label-stmt : StmtStx -> StmtStx
