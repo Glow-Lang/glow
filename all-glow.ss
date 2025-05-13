@@ -22,9 +22,6 @@
   :std/assert
   :std/coroutine
   :std/debug/DBG
-  :std/debug/heap
-  :std/debug/memleak
-  :std/debug/threads
   :std/error
   :std/format
   :std/io
@@ -52,7 +49,7 @@
   :std/srfi/1 ;; lists
   :std/srfi/13 ;; strings
   (except-in :std/srfi/19 time)
-  :std/srfi/133 ;; vectors
+  :std/srfi/133 ;; vectors (instead of 43)
   :std/srfi/141 ;; integer division
   :std/stxutil
   :std/sugar

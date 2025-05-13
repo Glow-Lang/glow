@@ -69,3 +69,6 @@ each in its own separate universe.
 ## UI
 
 https://notadesigner.io/
+
+## Typechecking
+https://twitter.com/effectfully/status/1868298441241309394
