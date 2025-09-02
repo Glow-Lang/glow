@@ -4,6 +4,7 @@
   :gerbil/expander
   :std/iter
   :std/format
+  (only-in :std/srfi/1 map-in-order)
   :clan/pure/dict/symdict
   (for-template :mukn/glow/compiler/syntax-context)
   :mukn/glow/compiler/syntax-context
@@ -516,8 +517,8 @@
   ;;  * alpha-convert pats using an env binding the common symbols as ctors
   (def syms
     (symbol-list-set-intersect
-     (map (lambda (p) (pattern-variable-symbols env p)) pats)))
-  (def new-syms (map symbol-fresh* syms))
+     (map-in-order (lambda (p) (pattern-variable-symbols env p)) pats)))
+  (def new-syms (map-in-order symbol-fresh* syms))
   (def env/vars
     (for/fold (acc empty-symdict) ((s1 syms) (s2 new-syms))
       (symdict-put acc s1 (entry-val s2))))
@@ -525,10 +526,9 @@
     (for/fold (acc env) ((s1 syms) (s2 new-syms))
       (symdict-put acc s1 (entry-ctor s2))))
   (values env/vars
-          (map (lambda (p)
-                 (let-values (((env3 p3) (alpha-convert-pat env/ctors p)))
-                   p3))
-               pats)))
+          (map-in-order
+           (lambda (p) (let-values (((env3 p3) (alpha-convert-pat env/ctors p))) p3))
+           pats)))
 
 ;; pattern-variable-symbols : Env PatStx -> [Listof Symbol]
 (def (pattern-variable-symbols env pat)

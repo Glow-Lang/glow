@@ -7,6 +7,7 @@
   (only-in :std/misc/list length=n?)
   (only-in :std/misc/hash hash->list/sort hash-ref/default)
   (only-in :std/misc/symbol symbol<?)
+  (only-in :std/srfi/1 map-in-order)
   (only-in :clan/exception with-logged-exceptions)
   :mukn/glow/compiler/syntax-context ;; import the syntax context
   (for-template :mukn/glow/compiler/syntax-context))
@@ -194,10 +195,10 @@
 
 ;; list->repr-sexpr : [Listof V] [V -> Sexpr] -> Sexpr
 ;; repr-sexpr->list : Sexpr [Sexpr -> V] -> [Listof V]
-(def (list->repr-sexpr l v->s) `(@list ,@(map v->s l)))
+(def (list->repr-sexpr l v->s) `(@list ,@(map-in-order v->s l)))
 (def (repr-sexpr->list s s->v)
   (match s
-    ((cons '@list l) (map s->v l))
+    ((cons '@list l) (map-in-order s->v l))
     (_ (error 'repr-sexpr->list "expected `@list`"))))
 
 ;; hash->repr-sexpr : [K -> Sexpr] [V -> Sexpr] [K K -> Bool] -> [[Hashof K V]  -> Sexpr]

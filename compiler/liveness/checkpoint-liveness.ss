@@ -11,6 +11,7 @@
   :std/misc/list
   :std/misc/repr
   :std/misc/hash
+  (only-in :std/srfi/1 map-in-order)
   :clan/base
   :mukn/glow/compiler/common
   :mukn/glow/compiler/checkpointify/checkpointify)
@@ -39,7 +40,7 @@
        (def cpi (hash-ref cpit at))
        (def cpl (hash-ref cplt at))
        (def intis (ci-incoming-transitions cpi))
-       (def incps (map ti-from intis))
+       (def incps (map-in-order ti-from intis))
        (for ((inti intis))
          (def ds (ti-variables-publicly-introduced inti))
          (def us (ti-variables-publicly-used inti))

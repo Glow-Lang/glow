@@ -1,6 +1,7 @@
 (export parse
         parseStr) ;; for testing
 (import :drewc/smug
+        (only-in :std/srfi/1 map-in-order)
         :mukn/glow/compiler/parse/lexical
         :mukn/glow/compiler/parse/expressions
         (only-in :mukn/glow/compiler/alpha-convert/alpha-convert keyword-syms))
@@ -18,7 +19,7 @@
 
 ;; stmts->module : StatementList -> SExpr
 (def (stmts->module fsl)
-  `(@module ,@(map stat->sexpr fsl)))
+  `(@module ,@(map-in-order stat->sexpr fsl)))
 
 ;; id->sexpr : Identifier -> SExpr
 (def (id->sexpr x)
@@ -58,9 +59,9 @@
     ((type-with-attribute attr type) `(@ ,(attr->sexpr attr) ,(type->sexpr type)))
     ((type-name id) (string->symbol id))
     ((type-var id) `',(string->symbol id))
-    ((type-tuple args) `(@tuple ,@(map type->sexpr args)))
+    ((type-tuple args) `(@tuple ,@(map-in-order type->sexpr args)))
     ((type-record entries)
-     `(@record ,@(map (match <> ([k . v] [(string->symbol k) (type->sexpr v)])) entries)))))
+     `(@record ,@(map-in-order (match <> ([k . v] [(string->symbol k) (type->sexpr v)])) entries)))))
 
 ;; expr->sexpr : Expression -> SExpr
 (def (expr->sexpr x)

@@ -57,7 +57,9 @@
 ;; and compare these results to pre-recorded results if available;
 ;; unless the pre-recorded results exist and match, print the pass results.
 ;; Either way, print test results.
-(define-entry-point (process-to-pass pass strategy: (strategy default-strategy) . files)
+(define-entry-point (process-to-pass pass
+                                     strategy: (strategy default-strategy) overwrite: (overwrite? #f)
+                                     . files)
   (name: 'pass
    help: "Process files until the end of the given pass"
    getopt: (make-options
@@ -68,11 +70,15 @@
              (option 'strategy "-S" "--strategy"
                      default: default-strategy
                      value: string->symbol
-                     help: "compiler strategy (list of passes) to use")]
+                     help: "compiler strategy (list of passes) to use")
+             (flag 'overwrite "-O" "--overwrite"
+                    help: "if enable, overwrite passdata for last pass with new value")]
             []
             [options/glow-path]))
+  ;; Disable sharing of (potentially circular) data structures on output
+  (output-port-readtable-set! (current-output-port) (readtable-sharing-allowed?-set (output-port-readtable (current-output-port)) #f))
   (for (file files)
-    (run-passes file strategy: strategy pass: pass)))
+    (run-passes file strategy: strategy save?: overwrite? pass: pass)))
 
 ;; TODO: make the choice of the digest algorithm controllable,
 ;; with the defualt dependent on the current network type, etc.

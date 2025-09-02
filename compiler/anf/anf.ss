@@ -103,7 +103,7 @@
 (def (anf-at-participant k stx)
   (syntax-case stx ()
     ((at p s) (identifier? #'p)
-     (map (lambda (s2) (restx1 stx [#'at #'p s2])) (anf-stmt k #'s [])))))
+     (map-in-order (lambda (s2) (restx1 stx [#'at #'p s2])) (anf-stmt k #'s [])))))
 
 ;; anf-def : StmtStx [Listof StmtStx] -> [Listof StmtStx]
 (def (anf-def stx acc)
@@ -185,7 +185,7 @@
      (and (stx-andmap identifier? #'(x ...))
           (check-duplicate-identifiers #'(x ...)))
      (let-values (((rs acc2) (anf-arg-exprs (syntax->list #'(e ...)) acc)))
-       (anf-k-reduced-expr k (retail-stx stx (map list (syntax->list #'(x ...)) rs)) acc2)))
+       (anf-k-reduced-expr k (retail-stx stx (map-in-order list (syntax->list #'(x ...)) rs)) acc2)))
     ((@dot x f)
      (let-values (((reduced-expr acc2) (anf-arg-expr #'x acc)))
        (anf-k-reduced-expr k (retail-stx stx [reduced-expr #'f]) acc2)))

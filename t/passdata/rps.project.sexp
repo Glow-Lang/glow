@@ -10,25 +10,25 @@
                  (return x)
                  (@label end0)))
          (def tmp0
-              (λ (x0)
+              (λ (x1)
                  (begin1 end1)
                  (@label begin1)
                  (@label begin-switch)
-                 (switch x0
-                   ((@app-ctor Rock) (return 0))
-                   ((@app-ctor Paper) (return 1))
-                   ((@app-ctor Scissors) (return 2)))
+                 (switch x1
+                         ((@app-ctor Rock) (return 0))
+                         ((@app-ctor Paper) (return 1))
+                         ((@app-ctor Scissors) (return 2)))
                  (@label end-switch)
                  (@label end1)))
          (def tmp1
-              (λ (x1)
+              (λ (x0)
                  (begin2 end2)
                  (@label begin2)
                  (@label begin-switch0)
-                 (switch x1
-                   (0 (return Rock))
-                   (1 (return Paper))
-                   (2 (return Scissors)))
+                 (switch x0
+                         (0 (return Rock))
+                         (1 (return Paper))
+                         (2 (return Scissors)))
                  (@label end-switch0)
                  (@label end2)))
          (def Hand1 (@record (input tmp) (toNat tmp0) (ofNat tmp1)))
@@ -42,25 +42,25 @@
                  (return x2)
                  (@label end3)))
          (def tmp3
-              (λ (x3)
+              (λ (x4)
                  (begin4 end4)
                  (@label begin4)
                  (@label begin-switch1)
-                 (switch x3
-                   ((@app-ctor B_Wins) (return 0))
-                   ((@app-ctor Draw) (return 1))
-                   ((@app-ctor A_Wins) (return 2)))
+                 (switch x4
+                         ((@app-ctor B_Wins) (return 0))
+                         ((@app-ctor Draw) (return 1))
+                         ((@app-ctor A_Wins) (return 2)))
                  (@label end-switch1)
                  (@label end4)))
          (def tmp4
-              (λ (x4)
+              (λ (x3)
                  (begin5 end5)
                  (@label begin5)
                  (@label begin-switch2)
-                 (switch x4
-                   (0 (return B_Wins))
-                   (1 (return Draw))
-                   (2 (return A_Wins)))
+                 (switch x3
+                         (0 (return B_Wins))
+                         (1 (return Draw))
+                         (2 (return A_Wins)))
                  (@label end-switch2)
                  (@label end5)))
          (def Outcome1 (@record (input tmp2) (toNat tmp3) (ofNat tmp4)))
@@ -83,7 +83,7 @@
          (@debug-label dlb3)
          (def rockPaperScissors
               (@make-interaction
-               ((@record (participants (@list A B)) (assets (@list DefaultToken))))
+               ((@record (participants [A B]) (assets [DefaultToken])))
                (wagerAmount)
                (begin7 end7)
                (#f
@@ -129,19 +129,23 @@
                 (@debug-label dlb15)
                 (@label begin-switch3)
                 (switch outcome
-                  ((@app-ctor A_Wins)
-                   (@debug-label dlb16)
-                   (def tmp19 (@app * 2 wagerAmount))
-                   (consensus:withdraw A (@record (DefaultToken tmp19))))
-                  ((@app-ctor B_Wins)
-                   (@debug-label dlb17)
-                   (def tmp20 (@app * 2 wagerAmount))
-                   (consensus:withdraw B (@record (DefaultToken tmp20))))
-                  ((@app-ctor Draw)
-                   (@debug-label dlb18)
-                   (consensus:withdraw A (@record (DefaultToken wagerAmount)))
-                   (@debug-label dlb19)
-                   (consensus:withdraw B (@record (DefaultToken wagerAmount)))))
+                        ((@app-ctor A_Wins)
+                         (@debug-label dlb16)
+                         (def tmp19 (@app * 2 wagerAmount))
+                         (consensus:withdraw A (@record (DefaultToken tmp19))))
+                        ((@app-ctor B_Wins)
+                         (@debug-label dlb17)
+                         (def tmp20 (@app * 2 wagerAmount))
+                         (consensus:withdraw B (@record (DefaultToken tmp20))))
+                        ((@app-ctor Draw)
+                         (@debug-label dlb18)
+                         (consensus:withdraw
+                          A
+                          (@record (DefaultToken wagerAmount)))
+                         (@debug-label dlb19)
+                         (consensus:withdraw
+                          B
+                          (@record (DefaultToken wagerAmount)))))
                 (@label end-switch3)
                 (@debug-label dlb20)
                 (return outcome)
@@ -152,8 +156,7 @@
                   (set-participant A)
                   (def tmp13 (@dot Hand1 input))
                   (set-participant A)
-                  (def handA0
-                       (@app tmp13 "First player, pick your hand"))
+                  (def handA0 (@app tmp13 "First player, pick your hand"))
                   (@debug-label dlb5)
                   (set-participant A)
                   (def salt (@app randomUInt256))
@@ -194,19 +197,27 @@
                   (@debug-label dlb15)
                   (@label begin-switch3)
                   (switch outcome
-                    ((@app-ctor A_Wins)
-                     (@debug-label dlb16)
-                     (def tmp19 (@app * 2 wagerAmount))
-                     (participant:withdraw A (@record (DefaultToken tmp19))))
-                    ((@app-ctor B_Wins)
-                     (@debug-label dlb17)
-                     (def tmp20 (@app * 2 wagerAmount))
-                     (participant:withdraw B (@record (DefaultToken tmp20))))
-                    ((@app-ctor Draw)
-                     (@debug-label dlb18)
-                     (participant:withdraw A (@record (DefaultToken wagerAmount)))
-                     (@debug-label dlb19)
-                     (participant:withdraw B (@record (DefaultToken wagerAmount)))))
+                          ((@app-ctor A_Wins)
+                           (@debug-label dlb16)
+                           (def tmp19 (@app * 2 wagerAmount))
+                           (participant:withdraw
+                            A
+                            (@record (DefaultToken tmp19))))
+                          ((@app-ctor B_Wins)
+                           (@debug-label dlb17)
+                           (def tmp20 (@app * 2 wagerAmount))
+                           (participant:withdraw
+                            B
+                            (@record (DefaultToken tmp20))))
+                          ((@app-ctor Draw)
+                           (@debug-label dlb18)
+                           (participant:withdraw
+                            A
+                            (@record (DefaultToken wagerAmount)))
+                           (@debug-label dlb19)
+                           (participant:withdraw
+                            B
+                            (@record (DefaultToken wagerAmount)))))
                   (@label end-switch3)
                   (@debug-label dlb20)
                   (return outcome)
@@ -232,8 +243,7 @@
                   (set-participant B)
                   (def tmp15 (@dot Hand1 input))
                   (set-participant B)
-                  (def handB0
-                       (@app tmp15 "Second player, pick your hand"))
+                  (def handB0 (@app tmp15 "Second player, pick your hand"))
                   (@debug-label dlb10)
                   (set-participant B)
                   (add-to-publish 'handB0 handB0)
@@ -256,19 +266,27 @@
                   (@debug-label dlb15)
                   (@label begin-switch3)
                   (switch outcome
-                    ((@app-ctor A_Wins)
-                     (@debug-label dlb16)
-                     (def tmp19 (@app * 2 wagerAmount))
-                     (participant:withdraw A (@record (DefaultToken tmp19))))
-                    ((@app-ctor B_Wins)
-                     (@debug-label dlb17)
-                     (def tmp20 (@app * 2 wagerAmount))
-                     (participant:withdraw B (@record (DefaultToken tmp20))))
-                    ((@app-ctor Draw)
-                     (@debug-label dlb18)
-                     (participant:withdraw A (@record (DefaultToken wagerAmount)))
-                     (@debug-label dlb19)
-                     (participant:withdraw B (@record (DefaultToken wagerAmount)))))
+                          ((@app-ctor A_Wins)
+                           (@debug-label dlb16)
+                           (def tmp19 (@app * 2 wagerAmount))
+                           (participant:withdraw
+                            A
+                            (@record (DefaultToken tmp19))))
+                          ((@app-ctor B_Wins)
+                           (@debug-label dlb17)
+                           (def tmp20 (@app * 2 wagerAmount))
+                           (participant:withdraw
+                            B
+                            (@record (DefaultToken tmp20))))
+                          ((@app-ctor Draw)
+                           (@debug-label dlb18)
+                           (participant:withdraw
+                            A
+                            (@record (DefaultToken wagerAmount)))
+                           (@debug-label dlb19)
+                           (participant:withdraw
+                            B
+                            (@record (DefaultToken wagerAmount)))))
                   (@label end-switch3)
                   (@debug-label dlb20)
                   (return outcome)

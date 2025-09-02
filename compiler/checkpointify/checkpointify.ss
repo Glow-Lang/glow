@@ -406,7 +406,7 @@
     ((switch e cases ...)
      (let-values (((label-begin ti2) (make-intermediate-checkpoint [ti] 'begin-switch)))
       (let* ((ti3 (merge-ssi ti2 (make-ssi #f [] [] (used<-arg #'e))))
-             (cts (map (cut checkpointify-swcase <> ti3) (syntax->list #'(cases ...))))
+             (cts (map-in-order (cut checkpointify-swcase <> ti3) (syntax->list #'(cases ...))))
             ; cs : [Listof SwcaseStx]
              (cs (map first cts))
             ; ts : [Listof TI]

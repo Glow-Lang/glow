@@ -16,7 +16,7 @@
 ;; In the future, let users control desuraging of defdata and deftype with @deriving annotations (?)
 
 ;; desugar-stmts : [Listof StmtStx] -> [Listof StmtStx]
-(def (desugar-stmts stmts) (unsplice-stmts (map desugar-stmt stmts)))
+(def (desugar-stmts stmts) (unsplice-stmts (map-in-order desugar-stmt stmts)))
 
 ;; desugar-stmt : StmtStx -> StmtStx
 ;; accumulate new reduced statements for the current unreduced statement,

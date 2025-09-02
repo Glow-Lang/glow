@@ -85,8 +85,8 @@
          (defdata ymn Yes Maybe No)
          (def ymn1
               (@record (input (λ (tag0) (def x2 (input ymn tag0)) x2))
-                       (toNat (λ (x3) (switch x3 ((@app-ctor Yes) 0) ((@app-ctor Maybe) 1) ((@app-ctor No) 2))))
-                       (ofNat (λ (x4) (switch x4 (0 Yes) (1 Maybe) (2 No))))))
+                       (toNat (λ (x4) (switch x4 ((@app-ctor Yes) 0) ((@app-ctor Maybe) 1) ((@app-ctor No) 2))))
+                       (ofNat (λ (x3) (switch x3 (0 Yes) (1 Maybe) (2 No))))))
          (@debug-label dlb37)
          (def ans Maybe)
          (@debug-label dlb38)

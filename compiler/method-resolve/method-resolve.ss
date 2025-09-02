@@ -243,7 +243,7 @@
        (partition (lambda (x) (type:var? (symdict-ref menv x)))
                   xs))
      (def other-ts
-       (map (lambda (x) (symdict-ref menv x)) other-xs))
+       (map-in-order (lambda (x) (symdict-ref menv x)) other-xs))
      (def other-t-vars
        (flatten1 (map type-vars other-ts)))
      (def t-vars (type-vars t))
