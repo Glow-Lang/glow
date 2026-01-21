@@ -23,4 +23,4 @@ and/or illustrative of some features of the language:
   In this particular contract, two participants play a simple game of rock-paper-scissors.
 
 Further examples of the language as it is envisioned, that are not yet fully supported
-by the current compiler, are in the [futures](../futures/) directory.
+by the current compiler, are in the [future](../future/) directory.
