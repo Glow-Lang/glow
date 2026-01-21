@@ -1,7 +1,12 @@
 #lang glow
 // TODO: insert escrow in a compiler pass
 @interaction([A, B])
-let coinFlip = (wagerAmount, escrowAmount) => {
+let coinFlip = (wagerAmount : UInt256, escrowAmount : UInt256)
+
+ // required to ensure that the withdraw! statements do not overflow.
+ | (wagerAmount / 2) < MaxUInt256 - escrowAmount
+
+ => {
     // @A assert! canReach(A_wins);
     @A let randA = randomUInt256();
     @verifiably!(A) let commitment = digest(randA);
